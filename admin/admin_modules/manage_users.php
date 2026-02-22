@@ -1,5 +1,5 @@
 <?php
-include '../config/database.php';
+include_once '../config/database.php';
 
 $action = $_GET['action'] ?? '';
 $user_type = $_GET['type'] ?? 'users'; // 'users' or 'patients'

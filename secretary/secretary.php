@@ -1,6 +1,8 @@
 <?php
 include '../config/session_check.php';
 check_session(['secretary']);
+// include database to show queue counts in sidebar (use include_once to avoid re-definitions)
+include_once '../config/database.php';
 
 // Handle AJAX API requests before HTML output
 $page = $_GET['page'] ?? '';
@@ -10,6 +12,25 @@ if ($page === 'billing' && $action === 'record_payment' && $_SERVER['REQUEST_MET
     header('Content-Type: application/json');
     include 'secretary_modules/billing.php';
     exit;
+}
+// Handle appointments POST actions before any HTML output to avoid headers-sent warnings
+if ($page === 'appointments' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    include 'secretary_modules/appointments.php';
+    exit;
+}
+
+// Compute today's waiting queue count for sidebar badge
+$today = date('Y-m-d');
+$waitingCount = 0;
+$stmt = $conn->prepare("SELECT COUNT(*) AS c FROM check_in_queue WHERE DATE(checkin_time) = ? AND status = 'waiting'");
+if ($stmt) {
+    $stmt->bind_param('s', $today);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res && ($r = $res->fetch_assoc())) {
+        $waitingCount = (int)($r['c'] ?? 0);
+    }
+    $stmt->close();
 }
 ?>
 
@@ -27,11 +48,7 @@ if ($page === 'billing' && $action === 'record_payment' && $_SERVER['REQUEST_MET
     <link href="../assets/img/main_logo.png" rel="icon">
     <link href="../assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.gstatic.com" rel="preconnect">
-    <link
-        href="https://fonts.googleapis.com/css?family=Mothwing:300,300i,400,400i,600,600i,700,700i"
-        rel="stylesheet">
+    <!-- Google Fonts removed to avoid cross-origin stylesheet issues -->
 
     <!-- Vendor CSS Files -->
     <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -133,15 +150,16 @@ if ($page === 'billing' && $action === 'record_payment' && $_SERVER['REQUEST_MET
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=billing">
-                    <i class="bi bi-receipt"></i>
-                    <span>Billing</span>
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=queue">
+                    <i class="bi bi-list-ol"></i>
+                    <span class="ms-2">Queue</span>
+                    <span class="badge bg-primary ms-auto" id="secretaryQueueBadge"><?php echo (int)$waitingCount; ?></span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=system_logs">
-                    <i class="bi bi-file-text"></i>
-                    <span>System Logs</span>
+                <a class="nav-link collapsed" href="secretary.php?page=billing">
+                    <i class="bi bi-receipt"></i>
+                    <span>Billing</span>
                 </a>
             </li>
 
@@ -177,6 +195,9 @@ if ($page === 'billing' && $action === 'record_payment' && $_SERVER['REQUEST_MET
                                     break;
                                 case "billing":
                                     include "secretary_modules/billing.php";
+                                    break;
+                                case "queue":
+                                    include "secretary_modules/queue.php";
                                     break;
                                 default:
                                     include "secretary_modules/dashboard.php";

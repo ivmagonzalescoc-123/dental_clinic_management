@@ -2,6 +2,24 @@
 include '../config/session_check.php';
 check_session(['doctor']);
 
+// Get today's queue count for this doctor (for sidebar badge)
+include_once '../config/database.php';
+$doctor_queue_count = 0;
+$doctor_id = $_SESSION['user_id'] ?? 0;
+if ($doctor_id && $conn) {
+    $today_for_count = date('Y-m-d');
+    $qc_stmt = $conn->prepare("SELECT COUNT(*) AS c FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called')");
+    if ($qc_stmt) {
+        $qc_stmt->bind_param('is', $doctor_id, $today_for_count);
+        $qc_stmt->execute();
+        $qc_res = $qc_stmt->get_result();
+        if ($qc_res && ($qc_row = $qc_res->fetch_assoc())) {
+            $doctor_queue_count = (int)($qc_row['c'] ?? 0);
+        }
+        $qc_stmt->close();
+    }
+}
+
 // Handle page logic for modules that need to send headers (before any output)
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
 
@@ -29,11 +47,7 @@ if ($page === 'appointments') {
     <link href="../assets/img/main_logo.png" rel="icon">
     <link href="../assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.gstatic.com" rel="preconnect">
-    <link
-        href="https://fonts.googleapis.com/css?family=Mothwing:300,300i,400,400i,600,600i,700,700i"
-        rel="stylesheet">
+    <!-- Google Fonts removed to avoid cross-origin stylesheet issues -->
 
     <!-- Vendor CSS Files -->
     <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -63,7 +77,7 @@ if ($page === 'appointments') {
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search">
+            <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search" aria-label="Search">
             <button class="search-btn">Search</button>
         </div>
 
@@ -127,6 +141,15 @@ if ($page === 'appointments') {
                 <a class="nav-link collapsed" href="doctor.php?page=appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span>Appointments</span>
+                    <span id="doctorApptIndicator" class="badge bg-info ms-auto" style="margin-left:8px;display:none;font-size:0.75rem;">New</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=queue">
+                    <i class="bi bi-people-fill"></i>
+                    <span>Queue</span>
+                    <span id="doctorQueueBadge" class="badge bg-danger ms-auto" style="margin-left:8px;"><?php echo (int)$doctor_queue_count; ?></span>
                 </a>
             </li>
 
@@ -154,10 +177,15 @@ if ($page === 'appointments') {
                                 case "dashboard":
                                     include "doctor_modules/dashboard.php";
                                     break;
-                            
+
                                 case "appointments":
                                     include "doctor_modules/appointments.php";
                                     break;
+
+                                case "queue":
+                                    include "doctor_modules/queue.php";
+                                    break;
+
                                 default:
                                     include "doctor_modules/dashboard.php";
                                     break;
@@ -227,6 +255,317 @@ if ($page === 'appointments') {
                 console.error('Logout error:', error);
                 window.location.href = '../index.php';
             });
+        }
+    </script>
+
+    <script>
+        // Poll doctor queue every 5 seconds and update badge and queue list
+        async function fetchDoctorQueue() {
+            try {
+                const resp = await fetch('../assets/api/queue/get_doctor_queue.php', { cache: 'no-store' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data.success) return;
+
+                // Update badge
+                const badge = document.getElementById('doctorQueueBadge');
+                if (badge) badge.textContent = data.count || 0;
+
+                // If on appointments page, update queue list
+                const params = new URLSearchParams(window.location.search);
+                const currentPage = params.get('page') || 'dashboard';
+                if (currentPage === 'queue') {
+                    const container = document.getElementById('doctorQueueList');
+                    if (container) {
+                        // build inner HTML
+                        let html = '<div class="list-group">';
+                        data.queue.forEach(p => {
+                            const fullName = (p.first_name || '') + ' ' + (p.last_name || '');
+                            html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
+                            html += '<div class="d-flex justify-content-between align-items-start">';
+                            html += '<div>'; 
+                            html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
+                            html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
+                            html += '</div>';
+                            html += '<div class="btn-group-vertical ms-2">';
+                            html += '<button type="button" class="btn btn-sm btn-danger mb-1" onclick="declinePatientAjax(' + (p.appointment_id || '') + ')">Decline</button>';
+                            html += '<button type="button" class="btn btn-sm btn-success" onclick="acceptPatientAjax(' + (p.appointment_id || '') + ')">Accept</button>';
+                            html += '</div></div></div>';
+                        });
+                        html += '</div>';
+                        container.innerHTML = html;
+                    }
+                }
+            } catch (err) {
+                console.error('Queue poll error', err);
+            }
+        }
+
+        // Start polling
+        // Prefer WebSocket for live updates, then SSE, then polling
+        function startDoctorRealtime() {
+            // Try WebSocket first
+            const currentDoctorId = <?php echo (int)$doctor_id; ?>;
+            try {
+                if (window.WebSocket) {
+                    const ws = new WebSocket('ws://localhost:8080');
+                    ws.addEventListener('open', () => console.log('WebSocket connected'));
+                    ws.addEventListener('message', (evt) => {
+                        try {
+                            const msg = JSON.parse(evt.data);
+                            if (msg.type === 'queue_update') {
+                                const data = msg.data || {};
+                                const badge = document.getElementById('doctorQueueBadge');
+                                const apptInd = document.getElementById('doctorApptIndicator');
+                                if (badge) badge.textContent = data.count || 0;
+                                if (apptInd) {
+                                    if ((data.count || 0) > 0) {
+                                        apptInd.style.display = 'inline-block';
+                                        apptInd.classList.add('blink');
+                                        setTimeout(() => apptInd.classList.remove('blink'), 2500);
+                                    } else {
+                                        apptInd.style.display = 'none';
+                                    }
+                                }
+                                const params = new URLSearchParams(window.location.search);
+                                const currentPage = params.get('page') || 'dashboard';
+                                if (currentPage === 'queue') {
+                                    const container = document.getElementById('doctorQueueList');
+                                    if (container) {
+                                        let html = '<div class="list-group">';
+                                        (data.queue || []).forEach(p => {
+                                            const fullName = (p.first_name || '') + ' ' + (p.last_name || '');
+                                            const ownerId = parseInt(p.owner_id || 0, 10);
+                                            const ownerName = ((p.owner_first || '') + ' ' + (p.owner_last || '')).trim();
+                                            const isMine = (ownerId === currentDoctorId);
+                                            html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
+                                            html += '<div class="d-flex justify-content-between align-items-start">';
+                                            html += '<div>'; 
+                                            html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
+                                            html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
+                                            if (ownerName && !isMine) html += '<p class="mb-1 small text-muted">Assigned to: ' + ownerName + '</p>';
+                                            html += '</div>';
+                                            html += '<div class="btn-group-vertical ms-2">';
+                                            const patientJson = encodeURIComponent(JSON.stringify(p));
+                                            html += '<button type="button" class="btn btn-sm btn-primary mb-1" onclick="loadPatientEHR(JSON.parse(decodeURIComponent(\\'' + patientJson + '\\')))"> <i class="bi bi-file-earmark-medical"></i> See Patient</button>';
+                                            if (isMine && p.queue_status === 'waiting') {
+                                                html += '<button type="button" class="btn btn-sm btn-warning mb-1" onclick="callPatientAjax(' + (p.appointment_id || '') + ')">Call</button>';
+                                            }
+                                            if (!isMine) {
+                                                html += '<button type="button" class="btn btn-sm btn-secondary mb-1" onclick="claimPatientAjax(' + (p.appointment_id || '') + ')">Claim</button>';
+                                            }
+                                            html += '<button type="button" class="btn btn-sm btn-success" onclick="acceptPatientAjax(' + (p.appointment_id || '') + ')">Accept</button>';
+                                            html += '</div></div></div>';
+                                        });
+                                        html += '</div>';
+                                        container.innerHTML = html;
+                                    }
+                                }
+                            }
+                        } catch(err) { console.error('WS parse error', err); }
+                    });
+                    ws.addEventListener('error', (err) => {
+                        console.error('WebSocket error', err);
+                        // fallback to SSE
+                        tryStartSSE();
+                    });
+                    ws.addEventListener('close', () => { console.log('WebSocket closed'); tryStartSSE(); });
+                    return;
+                }
+            } catch(e) { console.error('WebSocket init failed', e); }
+
+            // WebSocket not available or failed — try SSE
+            tryStartSSE();
+        }
+
+        function tryStartSSE(){
+            if (window.EventSource) {
+                try {
+                    const es = new EventSource('../assets/api/queue/stream_doctor_queue.php');
+                    es.onmessage = function(e) {
+                        try {
+                            const data = JSON.parse(e.data);
+                            const badge = document.getElementById('doctorQueueBadge');
+                            const apptInd = document.getElementById('doctorApptIndicator');
+                            if (badge) badge.textContent = data.count || 0;
+                            if (apptInd) {
+                                if ((data.count || 0) > 0) {
+                                    apptInd.style.display = 'inline-block';
+                                    apptInd.classList.add('blink');
+                                    setTimeout(() => apptInd.classList.remove('blink'), 2500);
+                                } else {
+                                    apptInd.style.display = 'none';
+                                }
+                            }
+                            const params = new URLSearchParams(window.location.search);
+                            const currentPage = params.get('page') || 'dashboard';
+                            if (currentPage === 'queue') {
+                                const container = document.getElementById('doctorQueueList');
+                                if (container) {
+                                    let html = '<div class="list-group">';
+                                    (data.queue || []).forEach(p => {
+                                        const fullName = (p.first_name || '') + ' ' + (p.last_name || '');
+                                        const ownerId = parseInt(p.owner_id || 0, 10);
+                                        const ownerName = ((p.owner_first || '') + ' ' + (p.owner_last || '')).trim();
+                                        const isMine = (ownerId === currentDoctorId);
+                                        html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
+                                        html += '<div class="d-flex justify-content-between align-items-start">';
+                                        html += '<div>'; 
+                                        html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
+                                        html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
+                                        if (ownerName && !isMine) html += '<p class="mb-1 small text-muted">Assigned to: ' + ownerName + '</p>';
+                                        html += '</div>';
+                                        html += '<div class="btn-group-vertical ms-2">';
+                                        const patientJson = encodeURIComponent(JSON.stringify(p));
+                                        html += '<button type="button" class="btn btn-sm btn-primary mb-1" onclick="loadPatientEHR(JSON.parse(decodeURIComponent(\\'' + patientJson + '\\')))"> <i class="bi bi-file-earmark-medical"></i> See Patient</button>';
+                                        if (isMine && p.queue_status === 'waiting') {
+                                            html += '<button type="button" class="btn btn-sm btn-warning mb-1" onclick="callPatientAjax(' + (p.appointment_id || '') + ')">Call</button>';
+                                        }
+                                        if (!isMine) {
+                                            html += '<button type="button" class="btn btn-sm btn-secondary mb-1" onclick="claimPatientAjax(' + (p.appointment_id || '') + ')">Claim</button>';
+                                        }
+                                        html += '<button type="button" class="btn btn-sm btn-success" onclick="acceptPatientAjax(' + (p.appointment_id || '') + ')">Accept</button>';
+                                        html += '</div></div></div>';
+                                    });
+                                    html += '</div>';
+                                    container.innerHTML = html;
+                                }
+                            }
+                        } catch(err) { console.error('SSE parse error', err); }
+                    };
+                    es.onerror = function(err) { console.error('SSE error', err); es.close(); startPollingFallback(); };
+                    return;
+                } catch(e) {
+                    console.error('EventSource failed', e);
+                }
+            }
+            // fallback to polling
+            startPollingFallback();
+        }
+
+        function startPollingFallback(){
+            fetchDoctorQueue();
+            setInterval(fetchDoctorQueue, 5000);
+        }
+
+        // add simple blink CSS
+        (function addBlinkCss(){
+            const s = document.createElement('style');
+            s.innerHTML = '.blink{animation:blink-ani 0.6s linear 4;} @keyframes blink-ani{50%{opacity:0.2}}';
+            document.head.appendChild(s);
+        })();
+
+        // initial
+        document.addEventListener('DOMContentLoaded', startDoctorRealtime);
+    </script>
+
+    <script>
+        // AJAX call to mark patient as called
+        async function callPatientAjax(appointmentId) {
+            try {
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                const resp = await fetch('../assets/api/queue/call.php', { method: 'POST', body: fd });
+                const j = await resp.json();
+                if (j.success) {
+                    // update badge count immediately
+                    const badge = document.getElementById('doctorQueueBadge');
+                    if (badge) {
+                        const n = parseInt(badge.textContent || '0', 10) || 0;
+                        badge.textContent = Math.max(0, n);
+                    }
+                    // update list item status to 'called'
+                    const item = document.querySelector('[data-appointment-id="' + appointmentId + '"]');
+                    if (item) {
+                        const btn = item.querySelector('.btn-warning');
+                        if (btn) {
+                            btn.textContent = 'Called';
+                            btn.disabled = true;
+                        }
+                    }
+                    showToast('Patient called', 'success');
+                } else {
+                    showToast('Call failed: ' + (j.message || 'unknown'), 'danger');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Call error', 'danger');
+            }
+        }
+
+        // AJAX call to claim a patient (assign appointment to this doctor)
+        async function claimPatientAjax(appointmentId) {
+            try {
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                const resp = await fetch('../assets/api/queue/claim.php', { method: 'POST', body: fd });
+                const j = await resp.json();
+                if (j.success) {
+                    showToast('Appointment claimed', 'success');
+                    // refresh queue list (will also be updated via WS)
+                    fetchDoctorQueue();
+                } else {
+                    showToast('Claim failed: ' + (j.message || 'unknown'), 'danger');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Claim error', 'danger');
+            }
+        }
+
+        // AJAX call to accept patient (start visit)
+        async function acceptPatientAjax(appointmentId) {
+            if (!confirm('Start visit for this patient?')) return;
+            try {
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                const resp = await fetch('../assets/api/queue/accept.php', { method: 'POST', body: fd });
+                const j = await resp.json();
+                if (j.success) {
+                    // remove item from list immediately
+                    const item = document.querySelector('[data-appointment-id="' + appointmentId + '"]');
+                    if (item) item.remove();
+                    // decrement badge
+                    const badge = document.getElementById('doctorQueueBadge');
+                    if (badge) {
+                        const n = parseInt(badge.textContent || '0', 10) || 0;
+                        badge.textContent = Math.max(0, n - 1);
+                    }
+                    showToast('Visit started', 'success');
+                } else {
+                    showToast('Accept failed: ' + (j.message || 'unknown'), 'danger');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Accept error', 'danger');
+            }
+        }
+    </script>
+
+    <script>
+        // quick bootstrap-like toast using alert banners
+        function showToast(message, type) {
+            // type: success, danger, info, warning
+            const containerId = 'toastContainer';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.style.position = 'fixed';
+                container.style.top = '16px';
+                container.style.right = '16px';
+                container.style.zIndex = 1060;
+                document.body.appendChild(container);
+            }
+            const el = document.createElement('div');
+            el.className = 'alert alert-' + (type || 'info') + ' alert-dismissible';
+            el.role = 'alert';
+            el.style.minWidth = '200px';
+            el.innerHTML = message + '<button type="button" class="btn-close" aria-label="Close" style="float:right;"></button>';
+            container.appendChild(el);
+            const closeBtn = el.querySelector('.btn-close');
+            closeBtn.addEventListener('click', () => el.remove());
+            setTimeout(() => { try { el.remove(); } catch(e){} }, 4000);
         }
     </script>
 

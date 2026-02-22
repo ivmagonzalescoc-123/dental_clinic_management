@@ -136,6 +136,77 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
         header('Location: doctor.php?page=appointments');
         exit;
     }
+    
+    // Handle CALL patient (mark queue as called)
+    if ($action === 'call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $appointmentId = (int)($_POST['appointment_id'] ?? 0);
+        if ($appointmentId <= 0) {
+            $_SESSION['message'] = 'Invalid appointment.';
+            $_SESSION['message_type'] = 'warning';
+            header('Location: doctor.php?page=appointments');
+            exit;
+        }
+
+        try {
+            $stmt = $conn->prepare('UPDATE check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id SET q.status = ?, q.called_time = NOW() WHERE q.appointment_id = ? AND a.user_id = ?');
+            if ($stmt) {
+                $status = 'called';
+                $stmt->bind_param('sii', $status, $appointmentId, $doctor_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            $_SESSION['message'] = 'Patient called.';
+            $_SESSION['message_type'] = 'success';
+        } catch (Throwable $e) {
+            $_SESSION['message'] = 'Error calling patient: ' . $e->getMessage();
+            $_SESSION['message_type'] = 'danger';
+        }
+
+        header('Location: doctor.php?page=appointments');
+        exit;
+    }
+
+    // Handle ACCEPT patient (start visit) - set queue status in_progress and appointment status
+    if ($action === 'accept' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $appointmentId = (int)($_POST['appointment_id'] ?? 0);
+        if ($appointmentId <= 0) {
+            $_SESSION['message'] = 'Invalid appointment.';
+            $_SESSION['message_type'] = 'warning';
+            header('Location: doctor.php?page=appointments');
+            exit;
+        }
+
+        $conn->begin_transaction();
+        try {
+            $queueStatus = 'in_progress';
+            $stmt = $conn->prepare('UPDATE check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id SET q.status = ?, q.served_time = NOW() WHERE q.appointment_id = ? AND a.user_id = ?');
+            if ($stmt) {
+                $stmt->bind_param('sii', $queueStatus, $appointmentId, $doctor_id);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            $apptStatus = 'in_progress';
+            $ust = $conn->prepare('UPDATE appointments SET status = ? WHERE appointment_id = ? AND user_id = ?');
+            if ($ust) {
+                $ust->bind_param('sii', $apptStatus, $appointmentId, $doctor_id);
+                $ust->execute();
+                $ust->close();
+            }
+
+            $conn->commit();
+            $_SESSION['message'] = 'Patient accepted. Visit started.';
+            $_SESSION['message_type'] = 'success';
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $_SESSION['message'] = 'Error accepting patient: ' . $e->getMessage();
+            $_SESSION['message_type'] = 'danger';
+        }
+
+        header('Location: doctor.php?page=appointments');
+        exit;
+    }
 } // End of header processing conditional
 
 // Fetch queue - only checked-in patients for today
@@ -244,53 +315,9 @@ if ($stmt) {
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<!-- Queue View -->
+<!-- Recent Appointments (full width on appointments page) -->
 <div class="row">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h2 class="card-title mb-0">
-                    <i class="bi bi-people-fill"></i> Patient Queue (<?php echo count($queue); ?>)
-                </h2>
-            </div>
-            <div class="card-body">
-                <?php if (empty($queue)): ?>
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i> No patients in queue yet.
-                    </div>
-                <?php else: ?>
-                    <div class="list-group">
-                        <?php foreach ($queue as $patient): ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h5 class="mb-1">
-                                            <span class="badge bg-warning">Queue #<?php echo htmlspecialchars($patient['que_number']); ?></span>
-                                            <?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?>
-                                        </h5>
-                                        <p class="mb-1 small text-muted">
-                                            <i class="bi bi-telephone"></i> <?php echo htmlspecialchars($patient['phone_number']); ?>
-                                        </p>
-                                        <p class="mb-0 small text-muted">
-                                            <i class="bi bi-clock"></i> <?php echo htmlspecialchars($patient['appointment_time']); ?> | 
-                                            Reason: <?php echo htmlspecialchars($patient['reason']); ?>
-                                        </p>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#ehrModal"
-                                            onclick="loadPatientEHR(<?php echo htmlspecialchars(json_encode($patient)); ?>)">
-                                        <i class="bi bi-file-earmark-medical"></i> See Patient
-                                    </button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Appointments -->
-    <div class="col-lg-6">
+    <div class="col-lg-12">
         <div class="card">
             <div class="card-header">
                 <h2 class="card-title mb-0">

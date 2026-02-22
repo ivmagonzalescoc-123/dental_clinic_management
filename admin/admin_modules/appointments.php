@@ -503,27 +503,31 @@ function createAppointment() {
         method: 'POST',
         body: formData
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.text();
-    })
-    .then(text => {
+    .then(async response => {
+        let data = null;
         try {
-            const data = JSON.parse(text);
-            if (data.success) {
-                messageDiv.innerHTML = '<div class="alert alert-success">Appointment created successfully!</div>';
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                messageDiv.innerHTML = '<div class="alert alert-danger">' + data.message + '</div>';
-            }
+            data = await response.json();
         } catch (e) {
-            messageDiv.innerHTML = '<div class="alert alert-danger">Server Error: ' + text.substring(0, 200) + '</div>';
-            console.error('JSON Parse Error:', e);
-            console.error('Response:', text);
+            const text = await response.text();
+            throw new Error('Server returned invalid JSON: ' + text.substring(0,200));
+        }
+
+        if (response.ok) {
+            return data;
+        }
+
+        // response not ok: surface server message if available
+        const errMsg = data && data.message ? data.message : ('HTTP error ' + response.status);
+        throw new Error(errMsg);
+    })
+    .then(data => {
+        if (data.success) {
+            messageDiv.innerHTML = '<div class="alert alert-success">Appointment created successfully!</div>';
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        } else {
+            messageDiv.innerHTML = '<div class="alert alert-danger">' + (data.message || 'Unknown error') + '</div>';
         }
     })
     .catch(error => {

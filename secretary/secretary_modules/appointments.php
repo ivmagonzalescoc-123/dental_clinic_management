@@ -99,6 +99,11 @@ if ($action === 'checkin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $_SESSION['message'] = 'Patient accepted and checked-in (Queue #' . $nextQueueNo . ').';
         $_SESSION['message_type'] = 'success';
+        // Prepare print ticket for secretary to print the queue number
+        $_SESSION['print_ticket'] = [
+            'appointment_id' => $appointmentId,
+            'queue_number' => $nextQueueNo
+        ];
     } catch (Throwable $e) {
         $conn->rollback();
         $_SESSION['message'] = $e->getMessage();
@@ -183,6 +188,74 @@ if ($action === 'cancel' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
+// Handle APPROVE (secretary confirms/approves appointment)
+if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $appointmentId = (int)($_POST['appointment_id'] ?? 0);
+
+    if ($appointmentId <= 0) {
+        $_SESSION['message'] = 'Invalid appointment.';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
+
+    // Get appointment date
+    $stmt = $conn->prepare('SELECT appointment_date FROM appointments WHERE appointment_id = ?');
+    if ($stmt) {
+        $stmt->bind_param('i', $appointmentId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $appt = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+    }
+
+    if (!$appt) {
+        $_SESSION['message'] = 'Appointment not found.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
+
+    $apptDate = $appt['appointment_date'];
+
+    // Count already approved/confirmed for that date
+    $cap_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')");
+    if ($cap_stmt) {
+        $cap_stmt->bind_param('s', $apptDate);
+        $cap_stmt->execute();
+        $cap_res = $cap_stmt->get_result();
+        $cap_row = $cap_res ? $cap_res->fetch_assoc() : null;
+        $cap_count = (int)($cap_row['cnt'] ?? 0);
+        $cap_stmt->close();
+
+        if ($cap_count >= 15) {
+            $_SESSION['message'] = 'Cannot approve: the selected date already has maximum approved appointments.';
+            $_SESSION['message_type'] = 'danger';
+            header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+            exit;
+        }
+    }
+
+    try {
+        $status = 'confirmed';
+        $stmt = $conn->prepare('UPDATE appointments SET status = ? WHERE appointment_id = ?');
+        if ($stmt) {
+            $stmt->bind_param('si', $status, $appointmentId);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        $_SESSION['message'] = 'Appointment approved.';
+        $_SESSION['message_type'] = 'success';
+    } catch (Exception $e) {
+        $_SESSION['message'] = 'Error approving appointment: ' . $e->getMessage();
+        $_SESSION['message_type'] = 'danger';
+    }
+
+    header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+    exit;
+}
+
 // Counts for tabs - ALL APPOINTMENTS (no filtering)
 $totalCount = 0;
 $todayCount = 0;
@@ -261,6 +334,14 @@ if ($view === 'today') {
     </div>
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
+
+<?php if (isset($_SESSION['print_ticket'])):
+    $pt = $_SESSION['print_ticket'];
+?>
+    <script>
+        window.open('secretary/print_ticket.php?appointment_id=<?php echo (int)$pt['appointment_id']; ?>&queue_number=<?php echo (int)$pt['queue_number']; ?>', '_blank', 'width=400,height=600');
+    </script>
+<?php unset($_SESSION['print_ticket']); endif; ?>
 
 <!-- Tab Navigation (All vs Today) -->
 <div class="mb-3">
@@ -344,9 +425,23 @@ if ($view === 'today') {
                                         $isCancelled = ($appointment['status'] === 'cancelled');
                                         $isDisabled = $isCompleted || $isCancelled;
                                     ?>
-                                    <?php if ($isTodayAppt && !$isDisabled): ?>
+                                    <?php
+                                        $status = $appointment['status'];
+                                    ?>
+                                    <?php if ($status === 'scheduled' && !$isDisabled): ?>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=approve" style="display:inline-block;" onsubmit="return confirm('Approve this appointment?');">
+                                                <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="bi bi-check2-square"></i> Approve
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)">
+                                                <i class="bi bi-x-circle"></i> Decline
+                                            </button>
+                                        </div>
+                                    <?php elseif ($status === 'confirmed' && $isTodayAppt && !$isDisabled): ?>
                                         <?php if ($alreadyCheckedIn): ?>
-                                            <!-- Already checked-in: show Cancel button only, Decline disabled -->
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <span class="badge bg-success me-2">Queue #<?php echo htmlspecialchars((string)$appointment['que_number']); ?></span>
                                                 <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=cancel" style="display:inline-block;" onsubmit="return confirm('Remove this patient from queue?');">
@@ -357,7 +452,6 @@ if ($view === 'today') {
                                                 </form>
                                             </div>
                                         <?php else: ?>
-                                            <!-- Not checked-in: show Accept and Decline buttons -->
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=checkin" style="display:inline-block;" onsubmit="return confirm('Accept and check-in this patient?');">
                                                     <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
@@ -373,7 +467,7 @@ if ($view === 'today') {
                                     <?php elseif ($isCompleted || $isCancelled): ?>
                                         <span class="badge bg-<?php echo $isCompleted ? 'success' : 'danger'; ?>"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
                                     <?php else: ?>
-                                        <span class="text-muted small">Future appointment</span>
+                                        <span class="text-muted small"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
                                     <?php endif; ?>
                                 </td>
                             </tr>

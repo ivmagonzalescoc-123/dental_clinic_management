@@ -5,12 +5,12 @@
  * Server: MariaDB 10.4.32
  */
 
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'capstone_dental');
-define('DB_PORT', 3306);
+// Database configuration (define only if not already defined)
+if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
+if (!defined('DB_USER')) define('DB_USER', 'root');
+if (!defined('DB_PASS')) define('DB_PASS', '');
+if (!defined('DB_NAME')) define('DB_NAME', 'capstone_dental');
+if (!defined('DB_PORT')) define('DB_PORT', 3306);
 
 // Create connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
