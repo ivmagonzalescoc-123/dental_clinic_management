@@ -1,0 +1,465 @@
+<?php
+include dirname(dirname(__DIR__)) . '/config/database.php';
+
+// Get date range from query
+$reportType = $_GET['type'] ?? 'appointments';
+$startDate = $_GET['start_date'] ?? date('Y-m-d', strtotime('-30 days'));
+$endDate = $_GET['end_date'] ?? date('Y-m-d');
+$doctorId = $_GET['doctor_id'] ?? '';
+$status = $_GET['status'] ?? '';
+
+// Validate dates
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) $startDate = date('Y-m-d', strtotime('-30 days'));
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) $endDate = date('Y-m-d');
+
+// Fetch all doctors for filter dropdown
+$doctors = [];
+$doctorRes = $conn->query("SELECT user_id, first_name, last_name FROM users u 
+    INNER JOIN role r ON r.role_id = u.role_id 
+    WHERE r.role_name = 'doctor' 
+    ORDER BY u.first_name ASC");
+if ($doctorRes) {
+    while ($row = $doctorRes->fetch_assoc()) {
+        $doctors[] = $row;
+    }
+}
+
+// APPOINTMENTS REPORT
+$appointmentsData = [];
+if ($reportType === 'appointments') {
+    $sql = "SELECT a.appointment_id, a.appointment_date, a.status, a.reason,
+            NULL AS start_time, NULL AS end_time,
+            p.first_name AS patient_first, p.last_name AS patient_last,
+            d.first_name AS doctor_first, d.last_name AS doctor_last,
+            s.service_name,
+            TIMESTAMPDIFF(MINUTE, NULL, NULL) AS duration_mins
+        FROM appointments a
+        -- timeslot removed; duration/time not available
+        LEFT JOIN patients p ON p.patient_id = a.patient_id
+        LEFT JOIN users d ON d.user_id = a.user_id
+        LEFT JOIN selected_services ss ON ss.appointment_id = a.appointment_id
+        LEFT JOIN services s ON s.service_id = ss.service_id
+        WHERE DATE(a.appointment_date) BETWEEN ? AND ?";
+    
+    if ($doctorId) $sql .= " AND a.user_id = ?";
+    if ($status) $sql .= " AND a.status = ?";
+    
+    $sql .= " ORDER BY a.appointment_date DESC, a.created_at DESC";
+    
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $params = [$startDate, $endDate];
+        $types = 'ss';
+        if ($doctorId) {
+            $params[] = $doctorId;
+            $types .= 'i';
+        }
+        if ($status) {
+            $params[] = $status;
+            $types .= 's';
+        }
+        
+        $bind = [$types];
+        foreach ($params as $k => $v) {
+            $bind[] = &$params[$k];
+        }
+        call_user_func_array([$stmt, 'bind_param'], $bind);
+        
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $appointmentsData[] = $row;
+        }
+        $stmt->close();
+    }
+}
+
+// SERVICES REPORT
+$servicesData = [];
+$serviceStats = [];
+if ($reportType === 'services') {
+    $sql = "SELECT s.service_id, s.service_name, COUNT(ss.selected_service_id) AS usage_count,
+            GROUP_CONCAT(DISTINCT u.first_name, ' ', u.last_name) AS performed_by
+        FROM services s
+        LEFT JOIN selected_services ss ON ss.service_id = s.service_id
+        LEFT JOIN appointments a ON a.appointment_id = ss.appointment_id
+        LEFT JOIN users u ON u.user_id = a.user_id
+        WHERE s.is_active = 1 OR s.is_active IS NULL
+        GROUP BY s.service_id, s.service_name
+        ORDER BY usage_count DESC";
+    
+    $res = $conn->query($sql);
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $servicesData[] = $row;
+        }
+    }
+}
+
+// DOCTOR PERFORMANCE REPORT
+$doctorPerformanceData = [];
+if ($reportType === 'doctor_performance') {
+    $sql = "SELECT u.user_id, u.first_name, u.last_name, u.email,
+            COUNT(a.appointment_id) AS total_appointments,
+            SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END) AS completed_count,
+            SUM(CASE WHEN a.status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
+            ROUND(AVG(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END) * 100, 2) AS completion_rate
+        FROM users u
+        INNER JOIN role r ON r.role_id = u.role_id
+        LEFT JOIN appointments a ON a.user_id = u.user_id AND DATE(a.appointment_date) BETWEEN ? AND ?
+        WHERE r.role_name = 'doctor'
+        GROUP BY u.user_id, u.first_name, u.last_name, u.email
+        ORDER BY total_appointments DESC";
+    
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        $stmt->bind_param('ss', $startDate, $endDate);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $doctorPerformanceData[] = $row;
+        }
+        $stmt->close();
+    }
+}
+
+// PATIENT ANALYTICS REPORT
+$patientAnalyticsData = [];
+$totalPatients = 0;
+$newPatients = 0;
+$patientsWithAppts = 0;
+// Always load patient analytics data (not just when tab is selected)
+{
+    // Total patients
+    $totalRes = $conn->query("SELECT COUNT(*) AS total FROM patients");
+    $totalPatients = $totalRes ? $totalRes->fetch_assoc()['total'] : 0;
+    
+    // New patients in date range
+    $newRes = $conn->query("SELECT COUNT(*) AS total FROM patients WHERE DATE(created_at) BETWEEN '$startDate' AND '$endDate'");
+    $newPatients = $newRes ? $newRes->fetch_assoc()['total'] : 0;
+    
+    // Patients with appointments
+    $appointRes = $conn->query("SELECT COUNT(DISTINCT patient_id) AS total FROM appointments WHERE DATE(appointment_date) BETWEEN '$startDate' AND '$endDate'");
+    $patientsWithAppts = $appointRes ? $appointRes->fetch_assoc()['total'] : 0;
+}
+
+if ($reportType === 'patient_analytics') {
+    // Top patients (most appointments) - filtered by date range
+    $topRes = $conn->query("SELECT p.patient_id, p.first_name, p.last_name, p.email, p.phone,
+        COUNT(a.appointment_id) AS appointment_count,
+        MAX(a.appointment_date) AS last_appointment
+        FROM patients p
+        LEFT JOIN appointments a ON a.patient_id = p.patient_id
+        WHERE DATE(a.appointment_date) BETWEEN '$startDate' AND '$endDate' OR a.appointment_id IS NULL
+        GROUP BY p.patient_id, p.first_name, p.last_name, p.email, p.phone
+        HAVING appointment_count > 0
+        ORDER BY appointment_count DESC
+        LIMIT 20");
+    if ($topRes) {
+        while ($row = $topRes->fetch_assoc()) {
+            $patientAnalyticsData[] = $row;
+        }
+    }
+}
+
+// Appointment status summary
+$statusSummary = [];
+$statusRes = $conn->query("SELECT status, COUNT(*) AS count FROM appointments 
+    WHERE DATE(appointment_date) BETWEEN '$startDate' AND '$endDate'
+    GROUP BY status");
+if ($statusRes) {
+    while ($row = $statusRes->fetch_assoc()) {
+        $statusSummary[] = $row;
+    }
+}
+?>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2" style="flex-wrap: nowrap;">
+        <div class="d-flex align-items-center gap-2" style="min-width:0;">
+            <h2 class="card-title mb-0">Reports</h2>
+            <span class="text-muted small d-none d-lg-inline">Analytics & Performance</span>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs border-bottom" role="tablist" style="padding: 0 1rem; margin-top: 1rem;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $reportType === 'appointments' ? 'active' : ''; ?>" 
+                id="appointments-tab" data-bs-toggle="tab" data-bs-target="#appointments-pane" type="button" role="tab">
+                <i class="bi bi-calendar-event"></i> Appointments
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $reportType === 'services' ? 'active' : ''; ?>" 
+                id="services-tab" data-bs-toggle="tab" data-bs-target="#services-pane" type="button" role="tab">
+                <i class="bi bi-wrench"></i> Services
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $reportType === 'doctor_performance' ? 'active' : ''; ?>" 
+                id="doctor-tab" data-bs-toggle="tab" data-bs-target="#doctor-pane" type="button" role="tab">
+                <i class="bi bi-person-badge"></i> Doctors
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $reportType === 'patient_analytics' ? 'active' : ''; ?>" 
+                id="patient-tab" data-bs-toggle="tab" data-bs-target="#patient-pane" type="button" role="tab">
+                <i class="bi bi-people"></i> Patients
+            </button>
+        </li>
+    </ul>
+
+    <div class="card-body">
+        <!-- Filter Section -->
+        <div class="row mb-3">
+            <div class="col-md-2">
+                <label class="form-label small">From</label>
+                <input type="date" class="form-control form-control-sm" id="startDate" value="<?php echo htmlspecialchars($startDate); ?>">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">To</label>
+                <input type="date" class="form-control form-control-sm" id="endDate" value="<?php echo htmlspecialchars($endDate); ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Doctor</label>
+                <select class="form-control form-control-sm" id="doctorFilter">
+                    <option value="">All Doctors</option>
+                    <?php foreach ($doctors as $doc): ?>
+                        <option value="<?php echo $doc['user_id']; ?>" <?php echo $doctorId == $doc['user_id'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Status</label>
+                <select class="form-control form-control-sm" id="statusFilter">
+                    <option value="">All Status</option>
+                    <option value="scheduled" <?php echo $status === 'scheduled' ? 'selected' : ''; ?>>Scheduled</option>
+                    <option value="confirmed" <?php echo $status === 'confirmed' ? 'selected' : ''; ?>>Confirmed</option>
+                    <option value="completed" <?php echo $status === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                    <option value="cancelled" <?php echo $status === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+                <button class="btn btn-primary btn-sm w-100" onclick="applyFilters()">
+                    <i class="bi bi-search"></i> Filter
+                </button>
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Appointments Tab -->
+            <div class="tab-pane fade <?php echo $reportType === 'appointments' ? 'show active' : ''; ?>" id="appointments-pane">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Service</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($appointmentsData) > 0): ?>
+                                <?php foreach ($appointmentsData as $appt): ?>
+                                    <tr>
+                                        <td><?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?></td>
+                                        <td><?php echo $appt['start_time'] ? substr($appt['start_time'], 0, 5) : '—'; ?></td>
+                                        <td><?php echo htmlspecialchars($appt['patient_first'] . ' ' . $appt['patient_last']); ?></td>
+                                        <td><?php echo htmlspecialchars($appt['doctor_first'] . ' ' . $appt['doctor_last']); ?></td>
+                                        <td><?php echo htmlspecialchars($appt['service_name'] ?? '—'); ?></td>
+                                        <td><?php echo $appt['duration_mins'] ? $appt['duration_mins'] . ' min' : '—'; ?></td>
+                                        <td>
+                                            <span class="badge bg-<?php
+                                                echo $appt['status'] === 'completed' ? 'success' : 
+                                                     ($appt['status'] === 'cancelled' ? 'danger' : 
+                                                      ($appt['status'] === 'confirmed' ? 'info' : 'warning'));
+                                            ?>">
+                                                <?php echo ucfirst($appt['status']); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-3">No appointments found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-muted small mt-2">
+                    Total: <?php echo count($appointmentsData); ?> appointments
+                </div>
+            </div>
+
+            <!-- Services Tab -->
+            <div class="tab-pane fade <?php echo $reportType === 'services' ? 'show active' : ''; ?>" id="services-pane">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Service</th>
+                                <th>Usage Count</th>
+                                <th>Performed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($servicesData) > 0): ?>
+                                <?php foreach ($servicesData as $svc): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($svc['service_name']); ?></td>
+                                        <td>
+                                            <span class="badge bg-primary"><?php echo $svc['usage_count']; ?></span>
+                                        </td>
+                                        <td><?php echo htmlspecialchars($svc['performed_by'] ?? '—'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">No services found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Doctor Performance Tab -->
+            <div class="tab-pane fade <?php echo $reportType === 'doctor_performance' ? 'show active' : ''; ?>" id="doctor-pane">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Doctor</th>
+                                <th>Email</th>
+                                <th>Total Appts</th>
+                                <th>Completed</th>
+                                <th>Cancelled</th>
+                                <th>Completion %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($doctorPerformanceData) > 0): ?>
+                                <?php foreach ($doctorPerformanceData as $doc): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($doc['email']); ?></td>
+                                        <td><?php echo $doc['total_appointments']; ?></td>
+                                        <td><span class="badge bg-success"><?php echo $doc['completed_count']; ?></span></td>
+                                        <td><span class="badge bg-danger"><?php echo $doc['cancelled_count']; ?></span></td>
+                                        <td><?php echo $doc['completion_rate'] ?? '0'; ?>%</td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-3">No doctors found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Patient Analytics Tab -->
+            <div class="tab-pane fade <?php echo $reportType === 'patient_analytics' ? 'show active' : ''; ?>" id="patient-pane">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <h5 class="card-title small text-muted">Total Patients</h5>
+                                <h2 class="text-primary"><?php echo $totalPatients; ?></h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <h5 class="card-title small text-muted">New Patients</h5>
+                                <h2 class="text-success"><?php echo $newPatients; ?></h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light border-0">
+                            <div class="card-body text-center">
+                                <h5 class="card-title small text-muted">With Appointments</h5>
+                                <h2 class="text-info"><?php echo $patientsWithAppts; ?></h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="mt-4 mb-3">Top Patients by Appointment Count</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Patient</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Appointments</th>
+                                <th>Last Visit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (count($patientAnalyticsData) > 0): ?>
+                                <?php foreach ($patientAnalyticsData as $pat): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($pat['first_name'] . ' ' . $pat['last_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($pat['email']); ?></td>
+                                        <td><?php echo htmlspecialchars($pat['phone']); ?></td>
+                                        <td><span class="badge bg-primary"><?php echo $pat['appointment_count']; ?></span></td>
+                                        <td><?php echo $pat['last_appointment'] ? date('M d, Y', strtotime($pat['last_appointment'])) : '—'; ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">No patient data found</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function applyFilters() {
+    const type = document.querySelector('.nav-link.active')?.getAttribute('data-bs-target')?.replace('#', '').replace('-pane', '') || 'appointments';
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    const doctorId = document.getElementById('doctorFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    const params = new URLSearchParams({
+        page: 'reports',
+        type: type,
+        start_date: startDate,
+        end_date: endDate,
+        doctor_id: doctorId,
+        status: status
+    });
+
+    window.location.href = 'admin.php?' + params.toString();
+}
+
+// Allow Enter key to apply filters
+document.getElementById('startDate')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') applyFilters();
+});
+document.getElementById('endDate')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') applyFilters();
+});
+</script>

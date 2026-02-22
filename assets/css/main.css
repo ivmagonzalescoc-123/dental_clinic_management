@@ -1,0 +1,724 @@
+/* ========================================
+   KCI Inc. Admin Dashboard Stylesheet
+   ======================================== */
+
+:root {
+    --primary-color: #0066ff;
+    --primary-hover: #0052cc;
+    --sidebar-bg: #f8f9fa;
+    --sidebar-text: #333;
+    --header-bg: #fff;
+    --border-color: #ddd;
+    --light-bg: #f5f6fa;
+    --text-muted: #6c757d;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --info: #17a2b8;
+}
+
+body {
+    font-family: 'Mothwing', sans-serif;
+    background-color: var(--light-bg);
+    color: var(--sidebar-text);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* ========== HEADER ========== */
+#header {
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    z-index: 100;
+    width: 100%;
+    top: 0;
+}
+
+#header .logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--sidebar-text);
+    font-weight: 600;
+}
+
+#header .logo img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+#header .logo span {
+    font-size: 18px;
+    font-weight: 700;
+    display: block;
+}
+
+#header .logo small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.toggle-sidebar-btn {
+    cursor: pointer;
+    font-size: 24px;
+    color: var(--sidebar-text);
+    display: inline-block;
+    padding: 8px 12px;
+    margin-left: 15px;
+    border: none;
+    background: none;
+    transition: all 0.3s ease;
+}
+
+.toggle-sidebar-btn:hover {
+    color: var(--primary-color);
+}
+
+.header-search {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 0 auto;
+    flex: 1;
+    max-width: 600px;
+    justify-content: center;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #f0f1f3;
+    min-width: 350px;
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-btn {
+    padding: 8px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.search-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.header-nav {
+    margin-left: auto;
+}
+
+.header-nav .nav-item {
+    list-style: none;
+}
+
+.header-nav .nav-link {
+    position: relative;
+    color: var(--sidebar-text) !important;
+    text-decoration: none;
+    padding: 8px 15px;
+    margin: 0 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.header-nav .nav-link:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.header-nav .nav-link:active {
+    background-color: var(--primary-color);
+    color: white !important;
+}
+
+.header-nav .nav-icon {
+    font-size: 18px;
+}
+
+.header-nav .badge-number {
+    position: absolute;
+    top: -5px;
+    right: 5px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 10px;
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+.nav-profile img {
+    width: 35px;
+    height: 35px;
+    margin-right: 10px;
+}
+
+/* ========== SIDEBAR ========== */
+#sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    background-color: var(--sidebar-bg);
+    padding-top: 90px;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    z-index: 99;
+    transition: width 0.3s ease;
+}
+
+/* Sidebar toggle state for desktop */
+body.toggle-sidebar #sidebar {
+    width: 0;
+}
+
+body.toggle-sidebar #main {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+    width: 100%;
+}
+
+body.toggle-sidebar .footer {
+    margin-left: 0;
+    transition: margin-left 0.3s ease;
+    width: 100%;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav .nav-item {
+    margin: 0;
+}
+
+.sidebar-nav .nav-link {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 20px !important;
+    margin: 6px 10px !important;
+    color: var(--sidebar-text) !important;
+    text-decoration: none !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    border-left: none !important;
+    border-radius: 30px !important;
+    background-color: transparent !important;
+    position: relative !important;
+}
+
+.sidebar-nav .nav-link:not(.active):hover,
+.sidebar-nav .nav-link:not(.active):focus {
+    background-color: rgba(0, 0, 0, 0.08) !important;
+    color: var(--sidebar-text) !important;
+    border-left-color: transparent !important;
+    border-radius: 30px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    padding: 12px 20px !important;
+}
+
+.sidebar-nav .nav-link.active {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+    border-left-color: transparent !important;
+    border-radius: 30px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+    padding: 12px 20px !important;
+    font-weight: 600 !important;
+}
+
+.sidebar-nav .nav-link.active:hover,
+.sidebar-nav .nav-link.active:focus {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+}
+
+.sidebar-nav .nav-link:active {
+    transform: none !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+}
+
+.sidebar-nav .nav-link.collapsed {
+    border-radius: 30px !important;
+}
+
+.sidebar-nav .nav-link i {
+    margin-right: 12px;
+    font-size: 18px;
+}
+
+.sidebar-nav .nav-link span {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sidebar-nav .nav-content {
+    padding-left: 20px;
+}
+
+.sidebar-nav .nav-content .nav-link {
+    padding: 10px 20px !important;
+    font-size: 14px;
+}
+
+/* ========== MAIN CONTENT ========== */
+#main {
+    margin-left: 260px;
+    margin-top: 80px;
+    padding: 20px;
+    min-height: calc(100vh - 80px);
+    transition: margin-left 0.3s ease;
+    width: calc(100% - 260px);
+    box-sizing: border-box;
+}
+
+.pagetitle {
+    margin-bottom: 20px;
+}
+
+.pagetitle h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--sidebar-text);
+    margin: 0;
+}
+
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+}
+
+/* ========== SECTION & CARD ========== */
+.section {
+    margin-bottom: 30px;
+}
+
+.card {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    background-color: white;
+}
+
+.card-body {
+    padding: 25px;
+}
+
+/* ========== SEARCH & BUTTONS ========== */
+.search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.search-bar input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    background-color: #f0f1f3;
+}
+
+.search-bar input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-bar button {
+    padding: 12px 30px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s ease;
+}
+
+.search-bar button:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-add-new {
+    padding: 10px 20px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+    float: right;
+    margin-bottom: 15px;
+}
+
+.btn-add-new:hover {
+    background-color: var(--primary-hover);
+}
+
+/* ========== TABLE STYLES ========== */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.table-header h5 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--sidebar-text);
+    margin: 0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table thead {
+    background-color: var(--light-bg);
+    border-bottom: 2px solid var(--border-color);
+}
+
+table thead th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 700;
+    color: var(--sidebar-text);
+    font-size: 14px;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+table tbody td {
+    padding: 15px;
+    font-size: 14px;
+    color: var(--sidebar-text);
+}
+
+table a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+table a:hover {
+    text-decoration: underline;
+}
+
+/* ========== ACTION BUTTONS ========== */
+.btn-view, .btn-edit, .btn-remove {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 5px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-view {
+    background-color: #e7f3ff;
+    color: var(--primary-color);
+}
+
+.btn-view:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-edit {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.btn-edit:hover {
+    background-color: var(--warning);
+    color: white;
+}
+
+.btn-remove {
+    background-color: #f8d7da;
+    color: var(--danger);
+}
+
+.btn-remove:hover {
+    background-color: var(--danger);
+    color: white;
+}
+
+/* ========== FOOTER ========== */
+.footer {
+    margin-left: 260px;
+    background-color: var(--light-bg);
+    border-top: 1px solid var(--border-color);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    width: calc(100% - 260px);
+    box-sizing: border-box;
+    transition: margin-left 0.3s ease;
+}
+
+.footer span {
+    font-size: 14px;
+}
+
+/* ========== BACK TO TOP ========== */
+.back-to-top {
+    position: fixed;
+    visibility: hidden;
+    opacity: 0;
+    right: 40px;
+    bottom: 40px;
+    z-index: 9999;
+    background-color: var(--primary-color);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-to-top.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+.back-to-top:hover {
+    background-color: var(--primary-hover);
+    bottom: 50px;
+}
+
+/* ========== DROPDOWN MENU ========== */
+.dropdown-menu {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.dropdown-menu .dropdown-header {
+    padding: 12px 20px;
+    background-color: var(--light-bg);
+    font-weight: 600;
+    color: var(--sidebar-text);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-menu .dropdown-item {
+    padding: 10px 20px;
+    color: var(--sidebar-text);
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu .dropdown-item:hover {
+    background-color: var(--light-bg);
+    color: var(--primary-color);
+}
+
+.dropdown-menu .dropdown-divider {
+    margin: 5px 0;
+    border-color: var(--border-color);
+}
+
+.dropdown-menu .dropdown-footer {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--light-bg);
+}
+
+.dropdown-menu .dropdown-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    #sidebar {
+        width: 200px;
+    }
+
+    #main {
+        margin-left: 200px;
+    }
+
+    .footer {
+        margin-left: 200px;
+    }
+
+    #header .logo span {
+        display: none;
+    }
+
+    .header-search {
+        display: none;
+    }
+
+    .search-bar {
+        flex-direction: column;
+    }
+
+    .btn-add-new {
+        float: none;
+        width: 100%;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    table td, table th {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1000;
+    }
+
+    body.toggle-sidebar #sidebar {
+        transform: translateX(0);
+        width: 260px;
+    }
+
+    #main {
+        margin-left: 0;
+        padding: 15px;
+    }
+
+    .footer {
+        margin-left: 0;
+    }
+
+    .header-nav {
+        margin-left: auto;
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+
+    .search-bar button {
+        width: 100%;
+    }
+}
+
+/* ========== FOOTER STYLES ========== */
+.footer-minimal {
+    background: #1e293b;
+    color: #cbd5e1;
+    padding: 3rem 0 1rem 0;
+    text-align: left;
+    font-size: 0.85rem;
+    margin-top: 3rem;
+    border-top: 1px solid #334155;
+}
+
+.footer-minimal .container {
+    text-align: left !important;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.footer-grid > div {
+    text-align: left;
+    padding: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-grid > div:last-child {
+    border-right: none;
+}
+
+.footer-grid h5,
+.footer-grid h6 {
+    text-align: left !important;
+    margin: 0 0 6px 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.footer-grid p {
+    text-align: left !important;
+    margin: 4px 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.footer-grid a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.footer-grid a:hover {
+    text-decoration: underline;
+}
+
+.footer-copy {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 0;
+    text-align: left;
+}
+
+@media (max-width: 768px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .footer-grid > div {
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 20px;
+    }
+    
+    .footer-grid > div:last-child {
+        border-bottom: none;
+    }
+}
+

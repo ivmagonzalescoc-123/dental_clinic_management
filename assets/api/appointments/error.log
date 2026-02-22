@@ -1,0 +1,5 @@
+[25-Jan-2026 01:20:29 UTC] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\capstone\assets\api\appointments\create_appointment.php:77
+Stack trace:
+#0 C:\xampp\htdocs\capstone\assets\api\appointments\create_appointment.php(77): mysqli_stmt->bind_param('isiiissi', 1, '2026-01-26', 77, 1, 'Brace', 0, 'None', 'scheduled', 1)
+#1 {main}
+  thrown in C:\xampp\htdocs\capstone\assets\api\appointments\create_appointment.php on line 77
