@@ -27,21 +27,62 @@ try {
         exit;
     }
 
-    // Enforce daily approval/confirmed limit: do not allow booking if the date already has 15 approved/confirmed appointments
-    $cap_sql = "SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')";
-    $cap_stmt = $conn->prepare($cap_sql);
-    if ($cap_stmt) {
-        $cap_stmt->bind_param('s', $appointment_date);
-        $cap_stmt->execute();
-        $cap_res = $cap_stmt->get_result();
-        $cap_row = $cap_res ? $cap_res->fetch_assoc() : null;
-        $cap_count = (int)($cap_row['cnt'] ?? 0);
-        $cap_stmt->close();
+        // Verify the selected doctor exists and is active
+        $doc_check_sql = 'SELECT user_id, is_active, role_id FROM users WHERE user_id = ? LIMIT 1';
+        $doc_stmt = $conn->prepare($doc_check_sql);
+        if ($doc_stmt) {
+            $doc_stmt->bind_param('i', $user_id);
+            $doc_stmt->execute();
+            $doc_res = $doc_stmt->get_result();
+            $doc = $doc_res ? $doc_res->fetch_assoc() : null;
+            $doc_stmt->close();
 
-        if ($cap_count >= 15) {
-            echo json_encode(['success' => false, 'message' => 'The selected date has reached the maximum number of approved appointments. Please choose another date.']);
+            if (!$doc || (int)($doc['is_active'] ?? 0) !== 1 || (int)($doc['role_id'] ?? 0) !== 2) {
+                echo json_encode(['success' => false, 'message' => 'Selected doctor is not available. Please choose another doctor.']);
+                exit;
+            }
+        }
+
+    // Verify the patient exists
+    $pat_check_sql = 'SELECT patient_id FROM patients WHERE patient_id = ? LIMIT 1';
+    $pat_stmt = $conn->prepare($pat_check_sql);
+    if ($pat_stmt) {
+        $pat_stmt->bind_param('i', $patient_id);
+        $pat_stmt->execute();
+        $pat_res = $pat_stmt->get_result();
+        $patient = $pat_res ? $pat_res->fetch_assoc() : null;
+        $pat_stmt->close();
+
+        if (!$patient) {
+            echo json_encode(['success' => false, 'message' => 'Selected patient not found. Please select or create a patient account first.']);
             exit;
         }
+    }
+
+    // Enforce daily approval/confirmed limit only for patient-side bookings (keep room for walk-ins)
+    // If the requester is a patient (session), we enforce max 15 approved/confirmed appointments per day
+    $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
+    if ($isPatientRequester) {
+        $cap_sql = "SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')";
+        $cap_stmt = $conn->prepare($cap_sql);
+        if ($cap_stmt) {
+            $cap_stmt->bind_param('s', $appointment_date);
+            $cap_stmt->execute();
+            $cap_res = $cap_stmt->get_result();
+            $cap_row = $cap_res ? $cap_res->fetch_assoc() : null;
+            $cap_count = (int)($cap_row['cnt'] ?? 0);
+            $cap_stmt->close();
+
+            if ($cap_count >= 15) {
+                echo json_encode(['success' => false, 'message' => 'The selected date has reached the maximum number of patient appointments (15). Please choose another date.']);
+                exit;
+            }
+        }
+    }
+
+    // Patients may only create online appointments. Secretary/staff can create walk-ins.
+    if ($isPatientRequester) {
+        $is_online_appointment = 1;
     }
 
     // Insert appointment (timeslot and branch removed)
@@ -65,61 +106,8 @@ try {
     $appointment_id = $conn->insert_id;
     $stmt->close();
 
-    // If appointment is for today, automatically check-in and add to queue
-    $today = date('Y-m-d');
-    $queue_number = null;
-    if ($appointment_date === $today) {
-        $conn->begin_transaction();
-        try {
-            // determine next queue number for today
-            $nextQueueNo = 1;
-            $qstmt = $conn->prepare('SELECT COALESCE(MAX(que_number), 0) + 1 AS next_no FROM check_in_queue WHERE DATE(checkin_time) = ?');
-            if ($qstmt) {
-                $qstmt->bind_param('s', $today);
-                $qstmt->execute();
-                $qres = $qstmt->get_result();
-                if ($qres && ($qrow = $qres->fetch_assoc())) {
-                    $nextQueueNo = (int)($qrow['next_no'] ?? 1);
-                    if ($nextQueueNo <= 0) $nextQueueNo = 1;
-                }
-                $qstmt->close();
-            }
-
-            $status_queue = 'waiting';
-            $ins = $conn->prepare('INSERT INTO check_in_queue (status, que_number, appointment_id) VALUES (?, ?, ?)');
-            if (!$ins) {
-                throw new Exception('Prepare queue insert failed: ' . $conn->error);
-            }
-            $ins->bind_param('sii', $status_queue, $nextQueueNo, $appointment_id);
-            if (!$ins->execute()) {
-                throw new Exception('Queue insert failed: ' . $ins->error);
-            }
-            $ins->close();
-
-            // update appointment status to checked_in
-            $newApptStatus = 'checked_in';
-            $ustmt = $conn->prepare('UPDATE appointments SET status = ? WHERE appointment_id = ?');
-            if ($ustmt) {
-                $ustmt->bind_param('si', $newApptStatus, $appointment_id);
-                $ustmt->execute();
-                $ustmt->close();
-            }
-
-            $conn->commit();
-            $queue_number = $nextQueueNo;
-        } catch (Exception $qe) {
-            $conn->rollback();
-            // log but don't fail the whole request — still return appointment id
-            error_log('Queue insert error: ' . $qe->getMessage());
-        }
-    }
-
-    $response = ['success' => true, 'message' => 'Appointment created successfully!', 'appointment_id' => $appointment_id];
-    if (!is_null($queue_number)) {
-        $response['queue_number'] = $queue_number;
-        $response['message'] = 'Appointment created and checked-in (Queue #' . $queue_number . ').';
-    }
-
+    // Return success for appointment creation. Do not auto check-in or queue patients.
+    $response = ['success' => true, 'message' => 'Appointment created successfully! Awaiting secretary approval.', 'appointment_id' => $appointment_id];
     echo json_encode($response);
 
 } catch (Exception $e) {

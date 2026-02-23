@@ -149,7 +149,14 @@ CREATE TABLE `patients` (
   `created_at` datetime DEFAULT current_timestamp(),
   `added_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
--- Table structure for table `schedule` (branch_id removed)
+
+--
+-- Seed minimal patient records referenced by appointments
+-- (added to prevent foreign-key errors during import)
+--
+INSERT INTO `patients` (`patient_id`, `first_name`, `last_name`, `middle_name`, `username`, `password_hash`, `date_of_birth`, `gender`, `phone_number`, `email`, `address`, `created_at`, `added_by`) VALUES
+(1, 'Paul', 'Gonzales', 'Gomez', 'patient1', 'password1', '1990-01-01', 'Unspecified', '0927562616', 'patient1@example.com', 'Brgy 7 CDO', '2026-01-23 15:50:00', NULL),
+(2, 'Harry', 'Tan', 'Richard', 'patient2', 'password2', '1985-02-02', 'Unspecified', '0920912616', 'patient2@example.com', 'Gusa CDO', '2026-01-23 15:50:00', NULL);
 
 CREATE TABLE `schedule` (
   `schedule_id` int(11) NOT NULL,
@@ -180,24 +187,6 @@ INSERT INTO `schedule` (`schedule_id`, `status`, `available_from`, `available_to
 (20, 'active', '08:00:00', '14:00:00', 'Saturday', 3),
 (21, 'inactive', '10:00:00', '14:00:00', 'Sunday', 3);
 
-CREATE TABLE `payment` (
-  `payment_id` int(11) NOT NULL,
-  `billing_id` int(11) NOT NULL,
-  `payment_method` varchar(100) DEFAULT NULL,
-  `payment_date` date DEFAULT curdate(),
-  `amount_paid` decimal(12,2) NOT NULL,
-  `reference_no` varchar(200) DEFAULT NULL,
-  `remarks` text DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `payment`
---
-
-INSERT INTO `payment` (`payment_id`, `billing_id`, `payment_method`, `payment_date`, `amount_paid`, `reference_no`, `remarks`) VALUES
-(1, 1, 'GCash', '0000-00-00', 2000.00, 'RCP-20260125-074148-00001', 'Paid');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `prescriptions`
@@ -238,43 +227,6 @@ INSERT INTO `role` (`role_id`, `role_name`, `description`) VALUES
 (4, 'patient', 'Patient - Can view appointments and medical records');
 
 -- --------------------------------------------------------
-
---
--- Table structure for table `schedule`
---
-
-CREATE TABLE `schedule` (
-  `schedule_id` int(11) NOT NULL,
-  `status` enum('active','inactive','suspended') DEFAULT 'active',
-  `branch_id` int(11) NOT NULL,
-  `available_from` time NOT NULL,
-  `available_to` time NOT NULL,
-  `day_of_week` varchar(20) NOT NULL,
-  `user_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `schedule`
---
-
-INSERT INTO `schedule` (`schedule_id`, `status`, `branch_id`, `available_from`, `available_to`, `day_of_week`, `user_id`) VALUES
-(8, 'active', 1, '09:00:00', '17:00:00', 'Monday', 2),
-(9, 'active', 1, '09:00:00', '17:00:00', 'Tuesday', 2),
-(10, 'active', 1, '09:00:00', '17:00:00', 'Wednesday', 2),
-(11, 'active', 1, '09:00:00', '17:00:00', 'Thursday', 2),
-(12, 'active', 1, '09:00:00', '17:00:00', 'Friday', 2),
-(13, 'active', 1, '09:00:00', '14:00:00', 'Saturday', 2),
-(14, 'inactive', 1, '10:00:00', '14:00:00', 'Sunday', 2),
-(15, 'active', 1, '08:00:00', '17:00:00', 'Monday', 3),
-(16, 'active', 1, '08:00:00', '17:00:00', 'Tuesday', 3),
-(17, 'active', 1, '08:00:00', '17:00:00', 'Wednesday', 3),
-(18, 'active', 1, '08:00:00', '17:00:00', 'Thursday', 3),
-(19, 'active', 1, '08:00:00', '17:00:00', 'Friday', 3),
-(20, 'active', 1, '08:00:00', '14:00:00', 'Saturday', 3),
-(21, 'inactive', 1, '10:00:00', '14:00:00', 'Sunday', 3);
-
--- --------------------------------------------------------
-
 --
 -- Table structure for table `selected_services`
 --
@@ -556,8 +508,7 @@ CREATE TABLE `user_logs` (
   `user_id` int(11) NOT NULL,
   `login_time` datetime DEFAULT NULL,
   `logout_time` datetime DEFAULT NULL,
-  `ip_address` varchar(100) DEFAULT NULL,
-  `branch_id` int(11) DEFAULT NULL
+  `ip_address` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -613,12 +564,6 @@ ALTER TABLE `patients`
   ADD KEY `fk_patients_added_by` (`added_by`);
 
 --
--- Indexes for table `payment`
---
-ALTER TABLE `payment`
-  ADD PRIMARY KEY (`payment_id`),
-  ADD KEY `fk_payment_billing` (`billing_id`);
-
 --
 -- Indexes for table `prescriptions`
 --
@@ -638,7 +583,6 @@ ALTER TABLE `role`
 --
 ALTER TABLE `schedule`
   ADD PRIMARY KEY (`schedule_id`),
-  ADD KEY `fk_schedule_branch` (`branch_id`),
   ADD KEY `fk_schedule_user` (`user_id`);
 
 --
@@ -728,7 +672,7 @@ ALTER TABLE `user_access_modules`
 --
 ALTER TABLE `user_logs`
   ADD PRIMARY KEY (`user_log_id`),
-  ADD KEY `fk_user_logs_user` (`user_id`),
+  ADD KEY `fk_user_logs_user` (`user_id`);
 
 
 --
@@ -749,12 +693,7 @@ ALTER TABLE `backup`
 ALTER TABLE `billing`
   MODIFY `billing_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT for table `branch`
---
--- branch table removed; auto_increment omitted
 
---
 -- AUTO_INCREMENT for table `check_in_queue`
 --
 ALTER TABLE `check_in_queue`
@@ -771,12 +710,6 @@ ALTER TABLE `medical_history`
 --
 ALTER TABLE `patients`
   MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `payment`
---
-ALTER TABLE `payment`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `prescriptions`
@@ -899,8 +832,6 @@ ALTER TABLE `billing`
   ADD CONSTRAINT `fk_billing_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_billing_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `branch`
 
 -- Constraints for table `check_in_queue`
 --
@@ -919,11 +850,6 @@ ALTER TABLE `medical_history`
 ALTER TABLE `patients`
   ADD CONSTRAINT `fk_patients_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `payment`
---
-ALTER TABLE `payment`
-  ADD CONSTRAINT `fk_payment_billing` FOREIGN KEY (`billing_id`) REFERENCES `billing` (`billing_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `prescriptions`

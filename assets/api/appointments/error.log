@@ -3,3 +3,6 @@ Stack trace:
 #0 C:\xampp\htdocs\capstone\assets\api\appointments\create_appointment.php(77): mysqli_stmt->bind_param('isiiissi', 1, '2026-01-26', 77, 1, 'Brace', 0, 'None', 'scheduled', 1)
 #1 {main}
   thrown in C:\xampp\htdocs\capstone\assets\api\appointments\create_appointment.php on line 77
+[23-Feb-2026 00:01:05 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\appointments\create_appointment.php on line 7
+[23-Feb-2026 00:02:12 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\appointments\create_appointment.php on line 7
+[23-Feb-2026 00:34:20 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\appointments\create_appointment.php on line 7

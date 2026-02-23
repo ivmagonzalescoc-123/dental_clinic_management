@@ -116,12 +116,6 @@ check_session(['patient']);
                     <span>Appointments</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="patient.php?page=system_logs">
-                    <i class="bi bi-file-text"></i>
-                    <span>System Logs</span>
-                </a>
-            </li>
 
         </ul>
     </aside>
@@ -152,6 +146,9 @@ check_session(['patient']);
                                     break;
                                 case "appointments":
                                     include "patient_modules/appointments.php";
+                                    break;
+                                case "appointment_confirmation":
+                                    include "patient_modules/appointment_confirmation.php";
                                     break;
                                 default:
                                     include "patient_modules/dashboard.php";

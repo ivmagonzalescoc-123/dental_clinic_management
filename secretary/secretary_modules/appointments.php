@@ -38,7 +38,9 @@ if ($action === 'checkin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Appointment not found.');
         }
 
-        if (($appt['appointment_date'] ?? '') !== $today) {
+        $apptDateRaw = $appt['appointment_date'] ?? '';
+        $apptDateOnly = $apptDateRaw ? date('Y-m-d', strtotime($apptDateRaw)) : '';
+        if ($apptDateOnly !== $today) {
             throw new Exception('You can only check-in appointments scheduled for today.');
         }
 
@@ -265,7 +267,7 @@ if ($countResult && ($r = $countResult->fetch_assoc())) {
     $totalCount = (int)($r['c'] ?? 0);
 }
 
-$stmt = $conn->prepare('SELECT COUNT(*) AS c FROM appointments WHERE appointment_date = ?');
+$stmt = $conn->prepare('SELECT COUNT(*) AS c FROM appointments WHERE DATE(appointment_date) = ?');
 if ($stmt) {
     $stmt->bind_param('s', $today);
     $stmt->execute();
@@ -298,10 +300,33 @@ $appointments_sql = "
 ";
 
 if ($view === 'today') {
-    $appointments_sql .= " WHERE a.appointment_date = ? ";
+    $appointments_sql .= " WHERE DATE(a.appointment_date) = ? ";
+}
+// Fetch doctors for the booking dropdown (role_id = 2)
+$doctors = [];
+$doc_stmt = $conn->prepare('SELECT user_id, first_name, last_name FROM users WHERE role_id = 2 AND is_active = 1');
+if ($doc_stmt) {
+    $doc_stmt->execute();
+    $doc_res = $doc_stmt->get_result();
+    while ($d = $doc_res->fetch_assoc()) {
+        $doctors[] = $d;
+    }
+    $doc_stmt->close();
 }
 
-$appointments_sql .= " ORDER BY a.appointment_date DESC, a.created_at DESC";
+// Fetch patients for the patient dropdown (secretary selection)
+$patients = [];
+$pat_stmt = $conn->prepare('SELECT patient_id, first_name, middle_name, last_name, email FROM patients ORDER BY last_name, first_name');
+if ($pat_stmt) {
+    $pat_stmt->execute();
+    $pat_res = $pat_stmt->get_result();
+    while ($p = $pat_res->fetch_assoc()) {
+        $patients[] = $p;
+    }
+    $pat_stmt->close();
+}
+
+$appointments_sql .= " ORDER BY  a.created_at DESC";
 
 if ($view === 'today') {
     $stmt = $conn->prepare($appointments_sql);
@@ -382,21 +407,23 @@ if ($view === 'today') {
                         <th>Date</th>
                         <th>Reason</th>
                         <th>Type</th>
-                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($appointments)): ?>
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 No appointments found.
                             </td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($appointments as $appointment): ?>
                             <?php
-                                $isTodayAppt = (($appointment['appointment_date'] ?? '') === $today);
+                                $isTodayAppt = false;
+                                if (!empty($appointment['appointment_date'])) {
+                                    $isTodayAppt = (date('Y-m-d', strtotime($appointment['appointment_date'])) === $today);
+                                }
                                 $alreadyCheckedIn = !empty($appointment['checkin_id']);
                             ?>
                             <tr>
@@ -414,11 +441,7 @@ if ($view === 'today') {
                                         <span class="badge bg-secondary">Walk-In</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <span class="badge bg-<?php echo $appointment['status'] === 'completed' ? 'success' : ($appointment['status'] === 'cancelled' ? 'danger' : 'warning'); ?>">
-                                        <?php echo htmlspecialchars(ucfirst($appointment['status'])); ?>
-                                    </span>
-                                </td>
+                                
                                 <td>
                                     <?php 
                                         $isCompleted = ($appointment['status'] === 'completed');
@@ -440,7 +463,7 @@ if ($view === 'today') {
                                                 <i class="bi bi-x-circle"></i> Decline
                                             </button>
                                         </div>
-                                    <?php elseif ($status === 'confirmed' && $isTodayAppt && !$isDisabled): ?>
+                                    <?php elseif (in_array($status, ['confirmed','checked_in']) && $isTodayAppt && !$isDisabled): ?>
                                         <?php if ($alreadyCheckedIn): ?>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <span class="badge bg-success me-2">Queue #<?php echo htmlspecialchars((string)$appointment['que_number']); ?></span>
@@ -453,10 +476,10 @@ if ($view === 'today') {
                                             </div>
                                         <?php else: ?>
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=checkin" style="display:inline-block;" onsubmit="return confirm('Accept and check-in this patient?');">
+                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=checkin" style="display:inline-block;" onsubmit="return confirm('Mark patient as arrived and add to queue?');">
                                                     <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
                                                     <button type="submit" class="btn btn-sm btn-success">
-                                                        <i class="bi bi-check-circle"></i> Accept
+                                                        <i class="bi bi-person-check"></i> Arrived
                                                     </button>
                                                 </form>
                                                 <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)">
@@ -490,40 +513,51 @@ if ($view === 'today') {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
                     <form id="bookAppointmentForm" method="POST" action="#">
-                        <input type="hidden" name="patient_id" id="bookPatientId" value="">
-                        <input type="hidden" name="user_id" id="bookUserId" value="<?= htmlspecialchars($_SESSION['user_id'] ?? ''); ?>">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="bookPatientName" class="form-label"><strong>Patient Name</strong></label>
-                        <input type="text" class="form-control" id="bookPatientName" name="patient_name" placeholder="Enter patient name" required>
-                        <div class="form-text">If patient is not registered, a walk-in account will be created automatically.</div>
+                    <!-- Step 1: Patient Info -->
+                    <div id="stepPatient" class="modal-step">
+                        <!-- Patient selection (single dropdown below) -->
+
+                        <div class="mb-3">
+                            <label for="bookPatientSelect" class="form-label"><strong>Select Patient</strong></label>
+                            <select id="bookPatientSelect" name="patient_id" class="form-select" required>
+                                <option value="">-- Select Patient --</option>
+                                <?php foreach ($patients as $p): ?>
+                                    <?php $fullname = trim($p['first_name'] . ' ' . ($p['middle_name'] ? $p['middle_name'] . ' ' : '') . $p['last_name']); ?>
+                                    <option value="<?php echo htmlspecialchars($p['patient_id']); ?>"><?php echo htmlspecialchars($fullname . ($p['email'] ? ' — ' . $p['email'] : '')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="bookPatientEmail" class="form-label"><strong>Email</strong></label>
-                        <input type="email" class="form-control" id="bookPatientEmail" name="patient_email" placeholder="Enter patient email">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="bookPatientPhone" class="form-label"><strong>Phone</strong></label>
-                        <input type="tel" class="form-control" id="bookPatientPhone" name="patient_phone" placeholder="Enter patient phone">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="bookAppointmentDate" class="form-label"><strong>Appointment Date</strong></label>
-                        <input type="date" class="form-control" id="bookAppointmentDate" name="appointment_date" required>
-                    </div>
-                    
-                    <!-- timeslot removed -->
-                    
-                    <div class="mb-3">
-                        <label for="bookReason" class="form-label"><strong>Reason for Appointment</strong></label>
-                        <textarea class="form-control" id="bookReason" name="reason" rows="3" placeholder="Enter reason for appointment" required></textarea>
+
+                    <!-- Step 2: Booking Info -->
+                    <div id="stepBooking" class="modal-step" style="display:none;">
+                        <div class="mb-3">
+                            <label for="bookDoctorSelect" class="form-label"><strong>Select Doctor</strong></label>
+                            <select id="bookDoctorSelect" name="user_id" class="form-select" required>
+                                <option value="">-- Select Doctor --</option>
+                                <?php foreach ($doctors as $d): ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bookAppointmentDate" class="form-label"><strong>Appointment Date</strong></label>
+                            <input type="hidden" id="bookAppointmentDateInput" name="appointment_date" required>
+                            <div id="bookCalendar" class="d-flex flex-wrap gap-2">Loading available dates...</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bookReason" class="form-label"><strong>Reason for Appointment</strong></label>
+                            <textarea class="form-control" id="bookReason" name="reason" rows="3" placeholder="Enter reason for appointment" required></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" id="bookSubmitBtn" class="btn btn-success">
                         <i class="bi bi-check-circle"></i> Book Appointment
                     </button>
                 </div>
@@ -578,48 +612,222 @@ if ($view === 'today') {
             });
         }
 
-        // Handle book appointment form: create walk-in patient (if needed) then create appointment
+        // Handle book appointment form: booking requires existing patient_id
         const bookForm = document.getElementById('bookAppointmentForm');
         if (bookForm) {
+            const stepPatient = document.getElementById('stepPatient');
+            const stepBooking = document.getElementById('stepBooking');
+            // Show both sections for secretary: select patient + booking details
+            if (stepPatient) stepPatient.style.display = '';
+            if (stepBooking) stepBooking.style.display = '';
+
+            // Patient selection (single dropdown)
+            const bookPatientSelect = document.getElementById('bookPatientSelect');
+            if (bookPatientSelect) {
+                // keep the select value as the patient id submitted by the form
+                bookPatientSelect.addEventListener('change', function() {
+                    // no-op: value is read directly on submit
+                });
+            }
+
+            // Load available dates into a simple calendar grid for secretary
+            async function loadAvailableDates(days = 30) {
+                const cal = document.getElementById('bookCalendar');
+                const hid = document.getElementById('bookAppointmentDateInput');
+                if (!cal || !hid) return;
+                cal.innerHTML = '';
+                try {
+                    const res = await fetch('../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(days));
+                    const j = await res.json();
+                    if (!j.success || !Array.isArray(j.dates)) {
+                        cal.innerHTML = '<div class="text-muted">Unable to load dates</div>';
+                        return;
+                    }
+                    const dates = j.dates || [];
+                    if (dates.length === 0) {
+                        cal.innerHTML = '<div class="text-muted">No available dates in range</div>';
+                        return;
+                    }
+
+                    // Render month-style calendars for secretary (full dates selectable)
+                    // Build mapping of monthKey -> items; always include next 5 months
+                    const byMonth = {};
+                    const monthsToShow = 5;
+                    const startDate = new Date();
+                    for (let m = 0; m < monthsToShow; m++) {
+                        const d = new Date(startDate.getFullYear(), startDate.getMonth() + m, 1);
+                        const key = d.getFullYear() + '-' + (d.getMonth() + 1);
+                        byMonth[key] = [];
+                    }
+                    // populate items into months (if present)
+                    dates.forEach(d => {
+                        const dt = new Date(d.date + 'T00:00:00');
+                        const key = dt.getFullYear() + '-' + (dt.getMonth() + 1);
+                        if (!byMonth[key]) byMonth[key] = [];
+                        byMonth[key].push(d);
+                    });
+
+                    // create viewport + sliding track for secretary calendar
+                    const viewport = document.createElement('div');
+                    viewport.className = 'calendar-viewport';
+                    viewport.style.position = 'relative';
+                    viewport.style.overflow = 'hidden';
+                    viewport.style.minHeight = '360px';
+                    cal.innerHTML = '';
+                    cal.appendChild(viewport);
+
+                    const track = document.createElement('div');
+                    track.className = 'calendar-track';
+                    track.style.display = 'flex';
+                    track.style.transition = 'transform 320ms ease';
+                    // will set explicit width after monthKeys computed
+                    viewport.appendChild(track);
+
+                    function createMonthCard(monthKey, items) {
+                        const parts = monthKey.split('-');
+                        const year = parseInt(parts[0], 10);
+                        const month = parseInt(parts[1], 10) - 1;
+
+                        const monthStart = new Date(year, month, 1);
+                        const monthName = monthStart.toLocaleString(undefined, { month: 'long' });
+
+                        const card = document.createElement('div');
+                        card.className = 'calendar-card card p-2 mb-2';
+                        const pct = 100 / monthKeys.length;
+                        card.style.flex = '0 0 ' + pct + '%';
+                        card.style.boxSizing = 'border-box';
+
+                        const hdr = document.createElement('div');
+                        hdr.className = 'mb-2';
+                        hdr.innerHTML = '<strong>' + monthName + ' ' + year + '</strong>';
+                        card.appendChild(hdr);
+
+                        const table = document.createElement('table');
+                        table.className = 'table table-bordered mb-0';
+                        const thead = document.createElement('thead');
+                        const tr = document.createElement('tr');
+                        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(w => { const th = document.createElement('th'); th.style.width = '14%'; th.style.textAlign = 'center'; th.textContent = w; tr.appendChild(th); });
+                        thead.appendChild(tr);
+                        table.appendChild(thead);
+
+                        const tbody = document.createElement('tbody');
+
+                        const firstWeekday = monthStart.getDay();
+                        let curDay = 1 - firstWeekday;
+                        while (curDay <= 31) {
+                            const row = document.createElement('tr');
+                            let emptyRow = true;
+                            for (let wd = 0; wd < 7; wd++, curDay++) {
+                                const cell = document.createElement('td');
+                                cell.style.height = '60px';
+                                cell.style.verticalAlign = 'top';
+                                if (curDay < 1 || curDay > new Date(year, month + 1, 0).getDate()) {
+                                    cell.innerHTML = '';
+                                } else {
+                                    emptyRow = false;
+                                    const dateStr = new Date(year, month, curDay).toISOString().slice(0,10);
+                                    const item = items.find(it => it.date === dateStr);
+                                    const dayDiv = document.createElement('div');
+                                    dayDiv.style.cursor = 'pointer';
+                                    const dayHeader = document.createElement('div');
+                                    dayHeader.innerHTML = '<small class="text-muted">' + curDay + '</small>';
+                                    dayDiv.appendChild(dayHeader);
+                                    if (item && item.count) {
+                                        const countDiv = document.createElement('div');
+                                        countDiv.innerHTML = '<small>' + item.count + ' booked</small>';
+                                        dayDiv.appendChild(countDiv);
+                                    }
+                                    if (item && !item.available) {
+                                        const badge = document.createElement('div');
+                                        badge.innerHTML = '<small class="text-danger">FULL</small>';
+                                        dayDiv.appendChild(badge);
+                                    }
+                                    // always allow selection for secretary
+                                    dayDiv.addEventListener('click', function() {
+                                        hid.value = dateStr;
+                                        document.querySelectorAll('#bookCalendar .selected').forEach(el => el.classList.remove('selected'));
+                                        dayDiv.classList.add('selected');
+                                    });
+                                    dayDiv.title = item && item.count ? (item.count + ' booked') : (item && !item.available ? 'FULL' : '');
+                                    cell.appendChild(dayDiv);
+                                }
+                                row.appendChild(cell);
+                            }
+                            if (emptyRow) break;
+                            tbody.appendChild(row);
+                        }
+                        table.appendChild(tbody);
+                        card.appendChild(table);
+                        track.appendChild(card);
+                        return card;
+                    }
+
+                    const monthKeys = Object.keys(byMonth).sort((a,b) => {
+                        const pa = a.split('-').map(Number); const pb = b.split('-').map(Number);
+                        return (pa[0] - pb[0]) || (pa[1] - pb[1]);
+                    });
+                    let currentIndex = 0;
+                    const header = document.createElement('div');
+                    header.className = 'd-flex justify-content-between align-items-center mb-2';
+                    const prevBtn = document.createElement('button'); prevBtn.type='button'; prevBtn.className='btn btn-light btn-sm'; prevBtn.textContent='◀';
+                    const nextBtn = document.createElement('button'); nextBtn.type='button'; nextBtn.className='btn btn-light btn-sm'; nextBtn.textContent='▶';
+                    const title = document.createElement('div'); title.className='fw-bold';
+                    header.appendChild(prevBtn); header.appendChild(title); header.appendChild(nextBtn);
+                    cal.parentNode.insertBefore(header, cal);
+
+                    function showMonthIndex(i) {
+                        if (i < 0) i = 0; if (i >= monthKeys.length) i = monthKeys.length - 1;
+                        currentIndex = i;
+                        const key = monthKeys[currentIndex];
+                        const parts = key.split('-');
+                        const dt = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+                        title.textContent = dt.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+                        // ensure track width equals number of months
+                        track.style.width = (monthKeys.length * 100) + '%';
+                        const shift = -currentIndex * (100 / monthKeys.length);
+                        track.style.transform = 'translateX(' + shift + '%)';
+                    }
+                    prevBtn.addEventListener('click', () => showMonthIndex(currentIndex - 1));
+                    nextBtn.addEventListener('click', () => showMonthIndex(currentIndex + 1));
+                    // build all month cards on track
+                    monthKeys.forEach(k => createMonthCard(k, byMonth[k] || []));
+                    showMonthIndex(0);
+
+                    if (!document.getElementById('book-calendar-style')) {
+                        const s = document.createElement('style');
+                        s.id = 'book-calendar-style';
+                        s.textContent = '#bookCalendar .selected{background:#0d6efd;color:#fff;padding:2px;border-radius:4px;} #bookCalendar .card{width:100%;} #bookCalendar .has-bookings{background:#fff3cd;} #bookCalendar .full-day{background:#f8d7da;color:#721c24;} .calendar-viewport{position:relative;} .calendar-track{width:100%;} .calendar-card{will-change:transform,opacity;flex:0 0 100%;} .calendar-card table td{vertical-align:top;}';
+                        document.head.appendChild(s);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    cal.innerHTML = '<div class="text-danger">Error loading dates</div>';
+                }
+            }
+
+            // Load dates when modal opens
+            const bookModal = document.getElementById('bookAppointmentModal');
+            if (bookModal) {
+                bookModal.addEventListener('shown.bs.modal', function () {
+                    loadAvailableDates(30);
+                });
+            }
+
+            // Booking submit
             bookForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
-                const patientIdInput = document.getElementById('bookPatientId');
-                let patientId = patientIdInput.value ? parseInt(patientIdInput.value) : 0;
-                const name = document.getElementById('bookPatientName').value.trim();
-                const email = document.getElementById('bookPatientEmail').value.trim();
-                const phone = document.getElementById('bookPatientPhone').value.trim();
-                const appointmentDate = document.getElementById('bookAppointmentDate').value;
+                const patientId = bookPatientSelect ? parseInt(bookPatientSelect.value) || 0 : 0;
+                const appointmentDate = document.getElementById('bookAppointmentDateInput') ? document.getElementById('bookAppointmentDateInput').value : '';
                 const reason = document.getElementById('bookReason').value.trim();
-                const userId = document.getElementById('bookUserId').value || '';
+                const userSelect = document.getElementById('bookDoctorSelect');
+                const userId = userSelect ? userSelect.value : '';
 
-                if (!appointmentDate || !name) {
-                    alert('Patient name and appointment date are required');
+                if (!appointmentDate || !patientId || !userId) {
+                    alert('Please select a patient, a doctor, and an appointment date.');
                     return;
                 }
 
                 try {
-                    if (!patientId) {
-                        // Split name into first/last
-                        const parts = name.split(' ');
-                        const first_name = parts.shift() || name;
-                        const last_name = parts.length ? parts.pop() : '';
-                        const middle_name = parts.length ? parts.join(' ') : '';
-
-                        const pd = new FormData();
-                        pd.append('first_name', first_name);
-                        pd.append('middle_name', middle_name);
-                        pd.append('last_name', last_name);
-                        pd.append('email', email);
-                        pd.append('phone_number', phone);
-
-                        const resp = await fetch('../assets/api/patients/create_walkin.php', { method: 'POST', body: pd });
-                        const json = await resp.json();
-                        if (!json.success) throw new Error(json.message || 'Failed to create patient');
-                        patientId = json.patient_id;
-                        patientIdInput.value = patientId;
-                    }
-
-                    // Now create appointment
                     const ad = new FormData();
                     ad.append('patient_id', patientId);
                     ad.append('appointment_date', appointmentDate);
@@ -634,10 +842,9 @@ if ($view === 'today') {
                     } else {
                         alert('Error creating appointment: ' + (ajson.message || 'unknown'));
                     }
-
                 } catch (err) {
                     console.error(err);
-                    alert('Error: ' + err.message);
+                    alert('Error: ' + (err.message || err));
                 }
             });
         }
