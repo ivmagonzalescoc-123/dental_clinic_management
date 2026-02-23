@@ -81,6 +81,24 @@ function updateStatusUI() {
   }
 }
 
+function serializeToothState() {
+  const out = {};
+  for (let i = 1; i <= 32; i++) {
+    out[i] = [...toothState[i].statuses];
+  }
+  return out;
+}
+
+function sendStateToParent() {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'odontogram_update', toothState: serializeToothState() }, '*');
+    }
+  } catch (e) {
+    console.warn('postMessage odontogram failed', e);
+  }
+}
+
 statusButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
     if (!selectedTooth) return;
@@ -91,6 +109,7 @@ statusButtons.forEach((btn) => {
 
     applyVisualStatus(selectedTooth);
     updateStatusUI();
+    sendStateToParent();
   });
 });
 
@@ -99,6 +118,7 @@ clearStatusBtn.addEventListener("click", () => {
   toothState[selectedTooth].statuses.clear();
   applyVisualStatus(selectedTooth);
   updateStatusUI();
+  sendStateToParent();
 });
 
 // --------------------
@@ -446,4 +466,20 @@ buildOdontogramUI();
 layoutTeeth();
 updateStatusUI();
 animate();
+
+// Listen for parent messages to load initial state
+window.addEventListener('message', (ev)=>{
+  try {
+    if (!ev.data) return;
+    if (ev.data.type === 'load_odontogram' && ev.data.toothState) {
+      const ts = ev.data.toothState;
+      for (let i = 1; i <= 32; i++) {
+        toothState[i].statuses = new Set(Array.isArray(ts[i]) ? ts[i] : []);
+        applyVisualStatus(i);
+      }
+      updateStatusUI();
+      sendStateToParent();
+    }
+  } catch(e){ console.warn('odontogram load failed', e); }
+});
 

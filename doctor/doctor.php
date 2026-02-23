@@ -1,5 +1,5 @@
 <?php
-include '../config/session_check.php';
+include_once '../config/session_check.php';
 check_session(['doctor']);
 
 // Get today's queue count for this doctor (for sidebar badge)
@@ -156,6 +156,20 @@ if ($page === 'appointments') {
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=profiling">
+                    <i class="bi bi-journal-medical"></i>
+                    <span>Profiling</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=records">
+                    <i class="bi bi-folder2-open"></i>
+                    <span>Clinical Records</span>
+                </a>
+            </li>
+
         </ul>
     </aside>
 
@@ -187,6 +201,14 @@ if ($page === 'appointments') {
 
                                 case "queue":
                                     include "doctor_modules/queue.php";
+                                    break;
+
+                                case "profiling":
+                                    include "doctor_modules/profiling.php";
+                                    break;
+
+                                case "records":
+                                    include "doctor_modules/records.php";
                                     break;
 
                                 default:
@@ -525,16 +547,8 @@ if ($page === 'appointments') {
                 const resp = await fetch('../assets/api/queue/accept.php', { method: 'POST', body: fd });
                 const j = await resp.json();
                 if (j.success) {
-                    // remove item from list immediately
-                    const item = document.querySelector('[data-appointment-id="' + appointmentId + '"]');
-                    if (item) item.remove();
-                    // decrement badge
-                    const badge = document.getElementById('doctorQueueBadge');
-                    if (badge) {
-                        const n = parseInt(badge.textContent || '0', 10) || 0;
-                        badge.textContent = Math.max(0, n - 1);
-                    }
-                    showToast('Visit started', 'success');
+                    // redirect to profiling module to complete the clinical record
+                    window.location.href = 'doctor.php?page=profiling&appointment_id=' + appointmentId;
                 } else {
                     showToast('Accept failed: ' + (j.message || 'unknown'), 'danger');
                 }

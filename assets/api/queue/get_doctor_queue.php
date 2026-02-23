@@ -1,5 +1,5 @@
 <?php
-include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 check_session(['doctor']);
 header('Content-Type: application/json');
 

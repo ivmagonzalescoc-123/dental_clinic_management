@@ -1,5 +1,5 @@
 <?php
-include '../config/session_check.php';
+include_once '../config/session_check.php';
 check_session(['secretary']);
 // include database to show queue counts in sidebar (use include_once to avoid re-definitions)
 include_once '../config/database.php';

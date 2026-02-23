@@ -382,7 +382,15 @@ $paymentMethods = ['Cash', 'Check', 'Credit Card', 'Debit Card', 'Online Transfe
 <!-- Initialize DataTable -->
 <script>
     function viewInvoice(billing) {
-        const invoiceHtml = `
+        // fetch clinical record for this appointment to include in invoice (secretary view)
+        fetch('/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
+            .then(r=>r.json()).then(data=>{
+                const rec = (data && data.record) ? data.record : null;
+                const svcHtml = rec && rec.recommended_services ? (Array.isArray(rec.recommended_services) ? rec.recommended_services.join(', ') : JSON.stringify(rec.recommended_services)) : 'N/A';
+                const materialsHtml = rec && rec.materials_used ? (Array.isArray(rec.materials_used) ? rec.materials_used.map(m=>`${m.name} (x${m.qty}) ₱${m.price}`).join('<br>') : '') : '';
+                const notes = rec && rec.doctor_notes ? rec.doctor_notes : '';
+
+                const invoiceHtml = `
             <div class="container mt-4">
                 <div class="text-center mb-4">
                     <img src="../assets/img/main_logo.png" alt="Clinic Logo" style="max-height: 80px; margin-bottom: 10px;">
@@ -441,10 +449,20 @@ $paymentMethods = ['Cash', 'Check', 'Credit Card', 'Debit Card', 'Online Transfe
                 </div>
                 
                 <hr>
+                <h6>Clinical Summary (Doctor)</h6>
+                <p class="mb-1"><strong>Recommended Services:</strong> ${svcHtml}</p>
+                <p class="mb-1"><strong>Treatment Plan:</strong> ${rec && rec.treatment_plan ? (typeof rec.treatment_plan === 'string' ? rec.treatment_plan : JSON.stringify(rec.treatment_plan)) : 'N/A'}</p>
+                <p class="mb-1"><strong>Materials Used:</strong><br>${materialsHtml || 'N/A'}</p>
+                <p class="mb-1"><strong>Follow-up Date:</strong> ${rec && rec.follow_up_date ? rec.follow_up_date : 'N/A'}</p>
+                <p class="mb-1"><strong>Doctor Notes:</strong><br>${notes ? notes.replace(/\n/g,'<br>') : 'N/A'}</p>
+                <hr>
                 <p class="text-center text-muted small">Thank you for choosing Azucena's Dental Clinic!</p>
             </div>
         `;
-        document.getElementById('invoiceContent').innerHTML = invoiceHtml;
+                document.getElementById('invoiceContent').innerHTML = invoiceHtml;
+            }).catch(err=>{
+                console.error('Could not load clinical record', err);
+            });
     }
     
     function setPaymentBilling(billingId, totalAmount, totalPaid) {

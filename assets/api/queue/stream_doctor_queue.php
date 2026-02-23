@@ -2,7 +2,7 @@
 // SSE stream for doctor's queue
 set_time_limit(0);
 ignore_user_abort(true);
-include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 check_session(['doctor']);
 header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache');

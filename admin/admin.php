@@ -1,5 +1,5 @@
 <?php
-include '../config/session_check.php';
+include_once '../config/session_check.php';
 check_session(['admin']);
 ?>
 

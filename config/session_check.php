@@ -8,9 +8,12 @@
  * check_session(['admin']);
  */
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-function check_session($allowed_roles = []) {
+if (!function_exists('check_session')) {
+    function check_session($allowed_roles = []) {
     // Check if user is logged in
     if (!isset($_SESSION['user_id']) && !isset($_SESSION['patient_id'])) {
         header('Location: ../index.php');
@@ -38,23 +41,28 @@ function check_session($allowed_roles = []) {
     // Update last activity time
     $_SESSION['last_activity'] = time();
 }
-
-function logout() {
-    session_destroy();
-    header('Location: ../index.php');
-    exit;
 }
 
-function get_user_info() {
-    return [
-        'user_id' => $_SESSION['user_id'] ?? $_SESSION['patient_id'] ?? null,
-        'username' => $_SESSION['username'] ?? '',
-        'first_name' => $_SESSION['first_name'] ?? '',
-        'last_name' => $_SESSION['last_name'] ?? '',
-        'email' => $_SESSION['email'] ?? '',
-        'role' => $_SESSION['role'] ?? '',
-        'user_type' => $_SESSION['user_type'] ?? ''
-    ];
+if (!function_exists('logout')) {
+    function logout() {
+        session_destroy();
+        header('Location: ../index.php');
+        exit;
+    }
+}
+
+if (!function_exists('get_user_info')) {
+    function get_user_info() {
+        return [
+            'user_id' => $_SESSION['user_id'] ?? $_SESSION['patient_id'] ?? null,
+            'username' => $_SESSION['username'] ?? '',
+            'first_name' => $_SESSION['first_name'] ?? '',
+            'last_name' => $_SESSION['last_name'] ?? '',
+            'email' => $_SESSION['email'] ?? '',
+            'role' => $_SESSION['role'] ?? '',
+            'user_type' => $_SESSION['user_type'] ?? ''
+        ];
+    }
 }
 
 ?>
