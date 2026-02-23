@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>3D Odontogram (Clickable Teeth)</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+  </head>
+  <body>
+    <div class="app">
+      <aside class="panel">
+        <header class="panel__header">
+          <h1>3D Odontogram</h1>
+          <p>Click a tooth number to focus in 3D and update its status.</p>
+        </header>
+
+        <section class="section">
+          <h2>Teeth</h2>
+          <div id="odontogram" class="odontogram"></div>
+        </section>
+
+        <section class="section">
+          <h2>Selected Tooth</h2>
+          <div class="selected">
+            <div class="selected__row">
+              <span class="label">Tooth #</span>
+              <strong id="selectedTooth">—</strong>
+            </div>
+            <div class="selected__row">
+              <span class="label">Status</span>
+              <span id="statusSummary" class="pill">—</span>
+            </div>
+          </div>
+
+          <div class="statusControls">
+            <button class="btn" data-status="missing">Missing</button>
+            <button class="btn" data-status="rootMissing">Root Missing</button>
+            <button class="btn" data-status="caries">Caries</button>
+            <button class="btn" data-status="filled">Filled</button>
+            <button class="btn" data-status="crown">Crown</button>
+            <button class="btn" data-status="implant">Implant</button>
+            <button class="btn btn--ghost" id="clearStatus">Clear</button>
+          </div>
+
+          <div class="hint">
+            Tip: If a tooth is marked <b>Missing</b>, it becomes semi-transparent in 3D.
+          </div>
+        </section>
+
+        <footer class="panel__footer">
+          <small>
+            Controls: drag to orbit • scroll to zoom • right-drag to pan
+          </small>
+        </footer>
+      </aside>
+
+      <main class="viewport">
+        <canvas id="c"></canvas>
+      </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

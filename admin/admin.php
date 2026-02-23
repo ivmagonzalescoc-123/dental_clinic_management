@@ -47,6 +47,9 @@ check_session(['admin']);
                     <span class="d-none d-lg-block fw-bold">Azucena's Dental Clinic</span>
                 </div>
             </a>
+            <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-list"></i>
+            </button>
         </div>
 
         <div class="header-search">

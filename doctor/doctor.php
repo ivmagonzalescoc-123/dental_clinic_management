@@ -74,6 +74,9 @@ if ($page === 'appointments') {
                     <small class="d-none d-lg-block text-muted">Doctor</small>
                 </div>
             </a>
+            <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-list"></i>
+            </button>
         </div>
 
         <div class="header-search">

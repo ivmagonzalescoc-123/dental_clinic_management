@@ -48,6 +48,9 @@ check_session(['patient']);
                     <small class="d-none d-lg-block text-muted">Patient</small>
                 </div>
             </a>
+            <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-list"></i>
+            </button>
         </div>
 
         <div class="header-search">
