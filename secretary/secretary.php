@@ -95,6 +95,18 @@ if ($stmt) {
 
                 
 
+                <li class="nav-item dropdown pe-2">
+                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell" style="font-size:1.1rem;"></i>
+                        <span class="badge bg-danger" id="navNotificationBadge" style="font-size:0.65rem;position:relative;top:-10px;left:-8px;">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" id="navNotificationList" style="min-width:280px;">
+                        <li class="dropdown-header">Notifications</li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="text-center small text-muted">Loading...</li>
+                    </ul>
+                </li>
+
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">

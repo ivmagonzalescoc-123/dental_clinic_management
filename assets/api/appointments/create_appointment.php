@@ -63,10 +63,14 @@ try {
     // If the requester is a patient (session), we enforce max 15 approved/confirmed appointments per day
     $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
     if ($isPatientRequester) {
-        $cap_sql = "SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')";
+        // Count both appointments and schedules for the selected doctor on that date to enforce daily cap
+        $cap_sql = "SELECT (
+            (SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND user_id = ? AND status IN ('confirmed','checked_in','in_progress','completed'))
+            + (SELECT COUNT(*) FROM schedules WHERE DATE(scheduled_start) = ? AND user_id = ? AND status IN ('scheduled','rescheduled'))
+        ) AS cnt";
         $cap_stmt = $conn->prepare($cap_sql);
         if ($cap_stmt) {
-            $cap_stmt->bind_param('s', $appointment_date);
+            $cap_stmt->bind_param('siss', $appointment_date, $user_id, $appointment_date, $user_id);
             $cap_stmt->execute();
             $cap_res = $cap_stmt->get_result();
             $cap_row = $cap_res ? $cap_res->fetch_assoc() : null;
@@ -74,7 +78,7 @@ try {
             $cap_stmt->close();
 
             if ($cap_count >= 15) {
-                echo json_encode(['success' => false, 'message' => 'The selected date has reached the maximum number of patient appointments (15). Please choose another date.']);
+                echo json_encode(['success' => false, 'message' => 'The selected date has reached the maximum number of bookings (appointments + schedules) (15). Please choose another date.']);
                 exit;
             }
         }

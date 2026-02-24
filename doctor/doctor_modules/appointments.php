@@ -258,7 +258,12 @@ $all_sql = "
         a.status,
         p.first_name,
         p.last_name,
-        NULL as appointment_time
+        NULL as appointment_time,
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history,
+        -- latest schedule summary for this appointment (if any)
+        (SELECT s.status FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
+        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
+        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end
     FROM appointments a
     INNER JOIN patients p ON a.patient_id = p.patient_id
     -- timeslot removed; appointment_time not available
@@ -333,6 +338,7 @@ if ($stmt) {
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -346,6 +352,23 @@ if ($stmt) {
                                             <?php echo htmlspecialchars(ucfirst($appt['status'])); ?>
                                         </span>
                                     </td>
+                                    <td>
+                                        <?php if (!empty($appt['schedule_status'])): ?>
+                                            <div><small class="text-muted">Schedule:</small>
+                                                <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
+                                                    <?php echo ($appt['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
+                                                </span>
+                                                <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="mt-1">
+                                        <?php if (!empty($appt['has_history'])): ?>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">History</button>
+                                        <?php else: ?>
+                                            <span class="text-muted small">No history</span>
+                                        <?php endif; ?>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -355,6 +378,69 @@ if ($stmt) {
         </div>
     </div>
 </div>
+
+            <!-- History Modal (read-only) -->
+            <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Appointment History</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" style="max-height:75vh; overflow:auto;">
+                            <div id="historyContent">
+                                <div class="mb-3"><strong>Patient:</strong> <span id="histPatientName"></span></div>
+                                <div class="mb-3"><strong>Appointment Date:</strong> <span id="histApptDate"></span></div>
+
+                                <div class="mb-3" id="histProfilingWrap">
+                                    <h6>Profiling / EHR Overview</h6>
+                                    <div class="row">
+                                        <div class="col-md-6"><strong>Medical History:</strong> <div id="histMedicalHistory" class="small text-muted"></div></div>
+                                        <div class="col-md-6"><strong>Medications:</strong> <div id="histMedications" class="small text-muted"></div></div>
+                                        <div class="col-md-4"><strong>Allergies:</strong> <div id="histAllergies" class="small text-muted"></div></div>
+                                        <div class="col-md-4"><strong>Smoking:</strong> <div id="histSmoking" class="small text-muted"></div></div>
+                                        <div class="col-md-4"><strong>Alcohol:</strong> <div id="histAlcohol" class="small text-muted"></div></div>
+                                        <div class="col-md-4"><strong>ASA:</strong> <div id="histASA" class="small text-muted"></div></div>
+                                        <div class="col-md-4"><strong>Last Visit:</strong> <div id="histLastVisit" class="small text-muted"></div></div>
+                                        <div class="col-12"><strong>Periodontal / Oral Exam:</strong> <div id="histPeriodontal" class="small text-muted"></div></div>
+                                        <div class="col-12"><strong>Dental Chart / Findings:</strong> <div id="histDentalChart" class="small text-muted"></div></div>
+                                        <div class="col-12"><strong>Radiographs / Imaging Notes:</strong> <div id="histRadiographs" class="small text-muted"></div></div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3"><strong>Clinical Notes:</strong>
+                                    <pre id="histNotes" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
+                                </div>
+                                <div class="mb-3"><strong>Recommended Services:</strong>
+                                    <ul id="histServices"></ul>
+                                </div>
+                                <div class="mb-3"><strong>Treatment Plan:</strong>
+                                    <pre id="histTreatment" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
+                                </div>
+                                <div class="mb-3"><strong>Materials Used:</strong>
+                                    <pre id="histMaterials" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
+                                </div>
+                                <div class="mb-3"><strong>Images:</strong>
+                                    <div id="histImages" class="d-flex flex-wrap gap-2"></div>
+                                </div>
+
+                                <div class="mb-3"><strong>Related Schedules</strong>
+                                    <div id="histSchedules" class="list-group small"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label"><strong>Odontogram (read-only)</strong></label>
+                                    <div id="histOdontogramWrap" style="border:1px solid #ddd; height:420px;">
+                                        <iframe id="histOdontoFrame" src="../odontogram/index.html" style="width:100%;height:100%;border:0;" ></iframe>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
 <!-- EHR Modal -->
 <div class="modal fade" id="ehrModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -513,4 +599,342 @@ function loadPatientEHR(patient) {
     document.getElementById('clinicalNotes').value = '';
     document.getElementById('followUpDate').value = '';
 }
+
+// Service map for resolving service IDs to names
+const serviceMap = {
+    <?php foreach ($services as $s): ?>
+        "<?php echo $s['service_id']; ?>": "<?php echo htmlspecialchars(addslashes($s['service_name'])); ?>",
+    <?php endforeach; ?>
+};
+
+// Current session role/user for client-side role checks
+const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
+const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+
+// If page requested to show history on load, trigger modal
+<?php if (!empty($_GET['show_history']) && !empty($_GET['appointment_id'])): ?>
+document.addEventListener('DOMContentLoaded', function(){
+    try { openHistoryModal(<?php echo (int)$_GET['appointment_id']; ?>); } catch(e){}
+});
+<?php endif; ?>
+
+// Open history modal and fetch clinical record (read-only)
+async function openHistoryModal(appointmentId) {
+    const modalEl = document.getElementById('historyModal');
+    const bs = new bootstrap.Modal(modalEl);
+    // clear
+    document.getElementById('histPatientName').textContent = '';
+    document.getElementById('histApptDate').textContent = '';
+    document.getElementById('histNotes').textContent = '';
+    document.getElementById('histServices').innerHTML = '';
+    document.getElementById('histTreatment').textContent = '';
+    document.getElementById('histMaterials').textContent = '';
+
+        try {
+            const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
+            const j = await res.json();
+            if (!j.success) {
+                alert('Could not load history: ' + (j.message || ''));
+                return;
+            }
+            const rec = j.record;
+            const schedules = j.schedules || [];
+        if (!rec) {
+            alert('No clinical record found for this appointment.');
+            return;
+        }
+        // show patient+date
+        // fetch patient name from DOM or server: we'll try to pull patient via appointment list row
+        document.getElementById('histPatientName').textContent = rec._patient_name || ('Patient ID: ' + (rec.patient_id || ''));
+        document.getElementById('histApptDate').textContent = rec._appointment_date || rec.follow_up_date || (rec.submitted_at ?? '');
+        document.getElementById('histNotes').textContent = rec.doctor_notes || '';
+
+        // profiling: prefer clinical-record-level `profiling` then patient-level `patient_profiling`
+        const pf = rec.profiling || rec.patient_profiling || null;
+        if (pf) {
+            try {
+                const p = (typeof pf === 'string') ? JSON.parse(pf) : pf;
+                document.getElementById('histMedicalHistory').textContent = p.medical_history || '';
+                document.getElementById('histMedications').textContent = p.medications || '';
+                document.getElementById('histAllergies').textContent = p.allergies || '';
+                document.getElementById('histSmoking').textContent = p.smoking || '';
+                document.getElementById('histAlcohol').textContent = p.alcohol || '';
+                document.getElementById('histASA').textContent = p.asa || '';
+                document.getElementById('histLastVisit').textContent = p.last_visit || '';
+                document.getElementById('histPeriodontal').textContent = p.periodontal || '';
+                document.getElementById('histDentalChart').textContent = p.dental_chart || '';
+            } catch (e) { console.warn('parse profiling', e); }
+        } else {
+            // clear
+            ['histMedicalHistory','histMedications','histAllergies','histSmoking','histAlcohol','histASA','histLastVisit','histPeriodontal','histDentalChart'].forEach(id => document.getElementById(id).textContent = '');
+        }
+
+        // radiographs notes
+        document.getElementById('histRadiographs').textContent = rec.radiographs_notes || '';
+
+        // services
+        const ul = document.getElementById('histServices');
+        if (Array.isArray(rec.recommended_services)) {
+            rec.recommended_services.forEach(sid => {
+                const li = document.createElement('li');
+                const name = (sid in serviceMap) ? serviceMap[sid] : ('Service ID: ' + sid);
+                li.textContent = name;
+                ul.appendChild(li);
+            });
+        }
+
+        // treatment plan and materials
+        document.getElementById('histTreatment').textContent = JSON.stringify(rec.treatment_plan || {}, null, 2);
+        document.getElementById('histMaterials').textContent = JSON.stringify(rec.materials_used || {}, null, 2);
+
+        // images
+        const imgWrap = document.getElementById('histImages');
+        imgWrap.innerHTML = '';
+        if (Array.isArray(rec.images) && rec.images.length) {
+            rec.images.forEach(src => {
+                const a = document.createElement('a');
+                a.href = src;
+                a.target = '_blank';
+                const img = document.createElement('img');
+                img.src = src;
+                img.style.maxWidth = '150px';
+                img.style.maxHeight = '120px';
+                img.className = 'img-thumbnail';
+                a.appendChild(img);
+                imgWrap.appendChild(a);
+            });
+        }
+
+        // odontogram: send to iframe via postMessage if present
+        try {
+            const odf = document.getElementById('histOdontoFrame');
+            if (rec.odontogram && odf && odf.contentWindow) {
+                odf.contentWindow.postMessage({ type: 'load_odontogram', toothState: rec.odontogram, readonly: true }, '*');
+            }
+        } catch (e) {}
+
+        // schedules: list all related schedules with expand/collapse and actions
+        try {
+            const wrap = document.getElementById('histSchedules');
+            wrap.innerHTML = '';
+            if (Array.isArray(schedules) && schedules.length) {
+                schedules.forEach(s => {
+                    const id = s.schedule_id || Math.random().toString(36).substr(2,6);
+                    const start = s.scheduled_start ? s.scheduled_start : '(no start)';
+                    const end = s.scheduled_end ? (' — ' + s.scheduled_end) : '';
+
+                    const item = document.createElement('div');
+                    item.className = 'list-group-item';
+
+                    const header = document.createElement('div');
+                    header.className = 'd-flex w-100 justify-content-between align-items-center';
+                    header.innerHTML = `<div><strong>${(s.status||'').toUpperCase()}</strong> <span class="text-muted">${start}${end}</span></div>`;
+
+                    const toggleBtn = document.createElement('a');
+                    toggleBtn.setAttribute('data-bs-toggle','collapse');
+                    toggleBtn.href = '#sch-details-' + id;
+                    toggleBtn.className = 'btn btn-sm btn-outline-secondary';
+                    toggleBtn.textContent = 'Details';
+                    header.appendChild(toggleBtn);
+                    item.appendChild(header);
+
+                    const details = document.createElement('div');
+                    details.className = 'collapse mt-2';
+                    details.id = 'sch-details-' + id;
+
+                    let inner = `<div class="small text-muted">Created: ${s.created_at || 'N/A'}</div>`;
+                    if (s.priority) inner += `<div class="small text-muted">Priority: ${s.priority}</div>`;
+                    inner += `<div class="pt-2">Schedule notes: ${s.notes || ''}</div>`;
+
+                    // actions container
+                    inner += '<div class="mt-2">';
+
+                    // Mark Arrived - only secretary/admin allowed (server enforces too)
+                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') {
+                        inner += `<button class="btn btn-sm btn-success me-1" data-action="arrive" data-sid="${s.schedule_id}">Mark Arrived</button>`;
+                    }
+
+                    // Cancel - admin/secretary can cancel any; doctors can cancel their own (server enforces)
+                    if (['admin','secretary','doctor'].includes(CURRENT_ROLE)) {
+                        inner += `<button class="btn btn-sm btn-danger me-1" data-action="cancel" data-sid="${s.schedule_id}">Cancel</button>`;
+                    }
+
+                    // Reschedule - show if admin/secretary or doctor-owner
+                    if (CURRENT_ROLE === 'admin' || CURRENT_ROLE === 'secretary' || (CURRENT_ROLE === 'doctor' && s.user_id == CURRENT_USER)) {
+                        inner += `<button class="btn btn-sm btn-warning me-1" data-action="reschedule" data-sid="${s.schedule_id}">Reschedule</button>`;
+                    }
+
+                    inner += '</div>';
+                    details.innerHTML = inner;
+                    item.appendChild(details);
+
+                    // wire event delegation for the buttons
+                    item.addEventListener('click', async function(e){
+                        const btn = e.target.closest('button[data-action]');
+                        if (!btn) return;
+                        const act = btn.getAttribute('data-action');
+                        const sid = btn.getAttribute('data-sid');
+                        if (act === 'arrive') {
+                            btn.disabled = true;
+                            try {
+                                const fd = new FormData(); fd.append('schedule_id', sid);
+                                const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd });
+                                const j = await r.json();
+                                if (j.success) {
+                                    btn.textContent = 'Arrived';
+                                    btn.classList.remove('btn-success');
+                                    btn.classList.add('btn-secondary');
+                                } else alert(j.message || 'Failed');
+                            } catch (e) { alert('Error'); }
+                            btn.disabled = false;
+                        } else if (act === 'cancel') {
+                            if (!confirm('Cancel this schedule?')) return;
+                            btn.disabled = true;
+                            try {
+                                const fd = new FormData(); fd.append('schedule_id', sid);
+                                const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
+                                const j = await r.json();
+                                if (j.success) {
+                                    // update header status
+                                    header.querySelector('strong').textContent = 'CANCELLED';
+                                } else alert(j.message || 'Failed');
+                            } catch (e) { alert('Error'); }
+                            btn.disabled = false;
+                        } else if (act === 'reschedule') {
+                            openRescheduleModal(s);
+                        }
+                    });
+
+                    wrap.appendChild(item);
+                });
+            } else {
+                wrap.innerHTML = '<div class="text-muted small">No schedules found for this appointment.</div>';
+            }
+        } catch (e) { console.warn('render schedules', e); }
+
+        bs.show();
+    } catch (e) {
+        console.error(e);
+        alert('Error loading history');
+    }
+}
+</script>
+
+<!-- Reschedule Modal -->
+<!-- flatpickr CSS/JS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reschedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="rescheduleScheduleId" />
+                <div class="mb-2"><label class="form-label">Start</label><input id="rescheduleStart" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEnd" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2"><button id="rescheduleSuggest" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
+                <div id="rescheduleSuggestions" class="list-group"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button id="rescheduleSaveBtn" type="button" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
+// initialize flatpickr on modal inputs
+let fpStart = null, fpEnd = null;
+function initReschedulePickers() {
+    try {
+        if (typeof flatpickr !== 'undefined') {
+            fpStart = flatpickr('#rescheduleStart', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+            fpEnd = flatpickr('#rescheduleEnd', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+        }
+    } catch (e) { console.warn('flatpickr init', e); }
+}
+initReschedulePickers();
+function toLocalInput(dtStr) {
+    if (!dtStr) return '';
+    // dtStr expected 'YYYY-MM-DD HH:MM:SS' or 'YYYY-MM-DD HH:MM'
+    const s = dtStr.replace(' ', 'T').replace(/:00$/,'');
+    return s;
+}
+function toServerFormat(localVal) {
+    if (!localVal) return '';
+    // localVal like '2026-02-25T09:30'
+    return localVal.replace('T',' ');
+}
+
+async function openRescheduleModal(schedule) {
+    document.getElementById('rescheduleScheduleId').value = schedule.schedule_id || '';
+    document.getElementById('rescheduleStart').value = toLocalInput(schedule.scheduled_start || '');
+    document.getElementById('rescheduleEnd').value = toLocalInput(schedule.scheduled_end || '');
+    document.getElementById('rescheduleSuggestions').innerHTML = '';
+    resModal.show();
+    // attach suggest handler
+}
+
+document.getElementById('rescheduleSuggest').addEventListener('click', async function(){
+    const sid = document.getElementById('rescheduleScheduleId').value;
+    if (!sid) return alert('No schedule selected');
+    // attempt to find schedule owner by querying schedules endpoint (we have no dedicated get-schedule api); reuse smart_schedule with user_id
+    // We'll derive user_id from the DOM by searching rendered schedule item if possible
+    const btn = this; btn.disabled = true;
+    try {
+        // fetch schedule info for accurate user_id / duration
+        const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
+        const gs = await g.json();
+        if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+        const user_id = gs.schedule.user_id || CURRENT_USER;
+        const duration = gs.schedule.duration || 30;
+        // Post to smart_schedule
+        const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
+        const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
+        const j = await res.json();
+        const wrap = document.getElementById('rescheduleSuggestions'); wrap.innerHTML = '';
+        if (!j.success) return alert(j.message || 'No suggestions');
+            (j.slots || []).slice(0,10).forEach(slot => {
+            const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action';
+            a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
+            a.addEventListener('click', function(e){
+                e.preventDefault();
+                const startLocal = slot.start.replace(' ', 'T').replace(/:00$/,'');
+                const endLocal = slot.end ? slot.end.replace(' ', 'T').replace(/:00$/,'') : '';
+                if (fpStart && typeof fpStart.setDate === 'function') fpStart.setDate(startLocal);
+                else document.getElementById('rescheduleStart').value = startLocal;
+                if (endLocal) {
+                  if (fpEnd && typeof fpEnd.setDate === 'function') fpEnd.setDate(endLocal);
+                  else document.getElementById('rescheduleEnd').value = endLocal;
+                }
+            });
+            wrap.appendChild(a);
+        });
+    } catch (e) { console.error(e); alert('Error fetching suggestions'); }
+    btn.disabled = false;
+});
+
+document.getElementById('rescheduleSaveBtn').addEventListener('click', async function(){
+    const sid = document.getElementById('rescheduleScheduleId').value;
+    const start = toServerFormat(document.getElementById('rescheduleStart').value);
+    const end = toServerFormat(document.getElementById('rescheduleEnd').value);
+    if (!sid || !start) return alert('Start datetime required');
+    this.disabled = true;
+    try {
+        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
+        const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
+        const j = await res.json();
+        if (!j.success) return alert(j.message || 'Failed to reschedule');
+        alert('Rescheduled');
+        resModal.hide();
+        // reload page or update UI: simple approach reload
+        location.reload();
+    } catch (e) { console.error(e); alert('Error'); }
+    this.disabled = false;
+});
 </script>

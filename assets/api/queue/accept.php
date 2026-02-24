@@ -39,8 +39,37 @@ try {
     $ust->execute();
     $ust->close();
 
+    // Ensure there is a schedule for this appointment and mark it in_progress
+    $schStmt = $conn->prepare('SELECT schedule_id FROM schedules WHERE appointment_id = ? AND status IN ("scheduled","rescheduled") ORDER BY scheduled_start LIMIT 1');
+    if ($schStmt) {
+        $schStmt->bind_param('i', $appointment_id);
+        $schStmt->execute();
+        $sres = $schStmt->get_result();
+        $srow = $sres ? $sres->fetch_assoc() : null;
+        $schStmt->close();
+
+            if ($srow && isset($srow['schedule_id'])) {
+                $schedule_id = (int)$srow['schedule_id'];
+                $updSch = $conn->prepare('UPDATE schedules SET status = "in_progress" WHERE schedule_id = ?');
+                $updSch->bind_param('i', $schedule_id);
+                $updSch->execute();
+                $updSch->close();
+            } else {
+            // create an ad-hoc schedule starting now
+            $now = (new DateTime())->format('Y-m-d H:i:s');
+            $insSch = $conn->prepare('INSERT INTO schedules (appointment_id, user_id, scheduled_start, status) VALUES (?, ?, ?, "in_progress")');
+            $doc_id = $doctor_id;
+            $insSch->bind_param('iis', $appointment_id, $doc_id, $now);
+            $insSch->execute();
+                $newScheduleId = $conn->insert_id;
+            $insSch->close();
+        }
+    }
+
     $conn->commit();
-    echo json_encode(['success' => true, 'message' => 'Patient accepted, visit started']);
+        // return schedule_id when available
+        $sid = $schedule_id ?? ($newScheduleId ?? null);
+        echo json_encode(['success' => true, 'message' => 'Patient accepted, visit started', 'schedule_id' => $sid]);
 } catch (Exception $e) {
     $conn->rollback();
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

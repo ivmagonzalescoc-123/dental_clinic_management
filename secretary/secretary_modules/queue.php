@@ -30,9 +30,8 @@ if ($stmt) {
 ?>
 
 <div class="mb-3">
-    <h4>Today's Queue (Read-only)</h4>
-    <p class="text-muted">Secretary view: can monitor who is waiting or called. Actions reserved for doctors.</p>
-</div>
+    <h4>Today's Queue</h4>
+    </div>
 
 <div class="card">
     <div class="card-body">
@@ -77,12 +76,39 @@ if ($stmt) {
                 const tr = document.createElement('tr');
                 const patient = item.patient_name || ((item.patient_first || '') + ' ' + (item.patient_last || '')).trim() || 'Unknown';
                 const doctor = item.doctor_name || ((item.doctor_first || '') + ' ' + (item.doctor_last || '')).trim() || 'Unassigned';
+
+                // Map queue status to friendly badge
+                const rawStatus = (item.queue_status || '').toString().toLowerCase();
+                let statusHtml = '';
+                switch (rawStatus) {
+                    case 'waiting':
+                        statusHtml = '<span class="badge bg-secondary">Waiting</span>';
+                        break;
+                    case 'called':
+                        statusHtml = '<span class="badge bg-primary">Called</span>';
+                        break;
+                    case 'in_progress':
+                    case 'in-progress':
+                        statusHtml = '<span class="badge bg-info text-dark">In Progress</span>';
+                        break;
+                    case 'served':
+                    case 'completed':
+                        statusHtml = '<span class="badge bg-success">Served</span>';
+                        break;
+                    case 'cancelled':
+                    case 'declined':
+                        statusHtml = '<span class="badge bg-danger">Cancelled</span>';
+                        break;
+                    default:
+                        statusHtml = '<span class="badge bg-light text-dark">' + escapeHtml(item.queue_status || '') + '</span>';
+                }
+
                 tr.innerHTML = `
                     <td>${parseInt(item.que_number || 0)}</td>
                     <td>${escapeHtml(patient)}</td>
                     <td>${escapeHtml(doctor)}</td>
                     <td>${escapeHtml(item.checkin_time || '')}</td>
-                    <td>${escapeHtml(item.queue_status || '')}</td>
+                    <td>${statusHtml}</td>
                 `;
                 tbody.appendChild(tr);
             });

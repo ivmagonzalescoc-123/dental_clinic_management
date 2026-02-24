@@ -27,6 +27,7 @@ const toothState = {};
 for (let i = 1; i <= 32; i++) toothState[i] = { statuses: new Set() };
 
 let selectedTooth = null;
+let readonlyMode = false;
 
 // --------------------
 // UI
@@ -46,9 +47,10 @@ function buildOdontogramUI() {
     btn.type = "button";
     btn.innerHTML = `${i}<span class="sub">tooth</span>`;
     btn.addEventListener("click", () => {
-      // toggle: clicking the same tooth again clears selection
-      if (selectedTooth === i) clearSelection();
-      else selectTooth(i);
+        if (readonlyMode) return;
+        // toggle: clicking the same tooth again clears selection
+        if (selectedTooth === i) clearSelection();
+        else selectTooth(i);
     });
 
     odontogramEl.appendChild(btn);
@@ -101,6 +103,7 @@ function sendStateToParent() {
 
 statusButtons.forEach((btn) => {
   btn.addEventListener("click", () => {
+    if (readonlyMode) return;
     if (!selectedTooth) return;
     const key = btn.dataset.status;
     const set = toothState[selectedTooth].statuses;
@@ -114,6 +117,7 @@ statusButtons.forEach((btn) => {
 });
 
 clearStatusBtn.addEventListener("click", () => {
+  if (readonlyMode) return;
   if (!selectedTooth) return;
   toothState[selectedTooth].statuses.clear();
   applyVisualStatus(selectedTooth);
@@ -395,6 +399,7 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 canvas.addEventListener("pointerdown", (e) => {
+  if (readonlyMode) return;
   if (e.button !== 0) return;
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -473,10 +478,17 @@ window.addEventListener('message', (ev)=>{
     if (!ev.data) return;
     if (ev.data.type === 'load_odontogram' && ev.data.toothState) {
       const ts = ev.data.toothState;
+      readonlyMode = !!ev.data.readonly;
       for (let i = 1; i <= 32; i++) {
         toothState[i].statuses = new Set(Array.isArray(ts[i]) ? ts[i] : []);
         applyVisualStatus(i);
       }
+      // disable/hide status buttons when readonly
+      for (const b of statusButtons) {
+        b.disabled = readonlyMode;
+        b.classList.toggle('disabled', readonlyMode);
+      }
+      clearStatusBtn.disabled = readonlyMode;
       updateStatusUI();
       sendStateToParent();
     }

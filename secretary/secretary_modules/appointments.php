@@ -292,7 +292,12 @@ $appointments_sql = "
         q.checkin_id,
         q.status AS queue_status,
         q.checkin_time,
-        q.que_number
+        q.que_number,
+        -- latest schedule info
+        (SELECT s.status FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
+        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
+        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end,
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history
     FROM appointments a
     LEFT JOIN patients p ON a.patient_id = p.patient_id
     LEFT JOIN users u ON a.user_id = u.user_id
@@ -401,6 +406,7 @@ if ($view === 'today') {
                     <tr>
                         <th>ID</th>
                         <th>Patient Name</th>
+                        <th>Schedule</th>
                         <th>Doctor</th>
                         <th>Email</th>
                         <th>Phone</th>
@@ -408,6 +414,7 @@ if ($view === 'today') {
                         <th>Reason</th>
                         <th>Type</th>
                         <th>Actions</th>
+                        <th>History</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -429,6 +436,15 @@ if ($view === 'today') {
                             <tr>
                                 <td><?php echo htmlspecialchars($appointment['appointment_id']); ?></td>
                                 <td><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></td>
+                                <td>
+                                    <?php if (!empty($appointment['schedule_status'])): ?>
+                                        <div><span class="badge bg-<?php echo ($appointment['schedule_status'] === 'scheduled' ? 'primary' : ($appointment['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($appointment['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($appointment['schedule_status'])); ?></span>
+                                        <div class="small text-muted"><?php echo htmlspecialchars($appointment['schedule_start'] ?? ''); ?> <?php echo $appointment['schedule_end'] ? '&ndash; ' . htmlspecialchars($appointment['schedule_end']) : ''; ?></div>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-muted small">No schedule</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo htmlspecialchars(($appointment['doctor_first_name'] ?? 'N/A') . ' ' . ($appointment['doctor_last_name'] ?? '')); ?></td>
                                 <td><?php echo htmlspecialchars($appointment['email']); ?></td>
                                 <td><?php echo htmlspecialchars($appointment['phone_number']); ?></td>
@@ -453,12 +469,11 @@ if ($view === 'today') {
                                     ?>
                                     <?php if ($status === 'scheduled' && !$isDisabled): ?>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=approve" style="display:inline-block;" onsubmit="return confirm('Approve this appointment?');">
-                                                <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
-                                                <button type="submit" class="btn btn-sm btn-primary">
+                                            <div style="display:inline-block;">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="confirmAppointment(<?php echo (int)$appointment['appointment_id']; ?>)">
                                                     <i class="bi bi-check2-square"></i> Approve
                                                 </button>
-                                            </form>
+                                            </div>
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)">
                                                 <i class="bi bi-x-circle"></i> Decline
                                             </button>
@@ -492,6 +507,9 @@ if ($view === 'today') {
                                     <?php else: ?>
                                         <span class="text-muted small"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
                                     <?php endif; ?>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModalSec(<?php echo (int)$appointment['appointment_id']; ?>)">History</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -544,7 +562,7 @@ if ($view === 'today') {
                         </div>
 
                         <div class="mb-3">
-                            <label for="bookAppointmentDate" class="form-label"><strong>Appointment Date</strong></label>
+                            <label for="bookAppointmentDateInput" class="form-label"><strong>Appointment Date</strong></label>
                             <input type="hidden" id="bookAppointmentDateInput" name="appointment_date" required>
                             <div id="bookCalendar" class="d-flex flex-wrap gap-2">Loading available dates...</div>
                         </div>
@@ -629,6 +647,27 @@ if ($view === 'today') {
                     // no-op: value is read directly on submit
                 });
             }
+
+            // Confirm appointment via AJAX (calls confirm_appointment.php)
+            window.confirmAppointment = async function(appointmentId) {
+                if (!confirm('Approve and schedule this appointment?')) return;
+                try {
+                    const fd = new FormData();
+                    fd.append('appointment_id', appointmentId);
+                    const resp = await fetch('../assets/api/appointments/confirm_appointment.php', { method: 'POST', body: fd });
+                    const j = await resp.json();
+                    if (j.success) {
+                        // reload to reflect changes; show simple alert
+                        alert(j.message || 'Appointment approved');
+                        window.location.reload();
+                    } else {
+                        alert('Approve failed: ' + (j.message || 'unknown'));
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Approve error');
+                }
+            };
 
             // Load available dates into a simple calendar grid for secretary
             async function loadAvailableDates(days = 30) {
@@ -725,10 +764,11 @@ if ($view === 'today') {
                                     cell.innerHTML = '';
                                 } else {
                                     emptyRow = false;
-                                    const dateStr = new Date(year, month, curDay).toISOString().slice(0,10);
+                                    const dtLocal = new Date(year, month, curDay);
+                                    const weekday = dtLocal.getDay();
+                                    const dateStr = dtLocal.getFullYear() + '-' + String(dtLocal.getMonth() + 1).padStart(2,'0') + '-' + String(dtLocal.getDate()).padStart(2,'0');
                                     const item = items.find(it => it.date === dateStr);
                                     const dayDiv = document.createElement('div');
-                                    dayDiv.style.cursor = 'pointer';
                                     const dayHeader = document.createElement('div');
                                     dayHeader.innerHTML = '<small class="text-muted">' + curDay + '</small>';
                                     dayDiv.appendChild(dayHeader);
@@ -737,18 +777,30 @@ if ($view === 'today') {
                                         countDiv.innerHTML = '<small>' + item.count + ' booked</small>';
                                         dayDiv.appendChild(countDiv);
                                     }
-                                    if (item && !item.available) {
+                                    if (weekday === 0) {
+                                        // Sunday - clinic closed
+                                        const badge = document.createElement('div');
+                                        badge.innerHTML = '<small class="text-danger">CLOSED</small>';
+                                        dayDiv.appendChild(badge);
+                                        dayDiv.className = 'full-day text-muted';
+                                        dayDiv.title = 'Clinic closed (Sunday)';
+                                    } else if (item && !item.available) {
                                         const badge = document.createElement('div');
                                         badge.innerHTML = '<small class="text-danger">FULL</small>';
                                         dayDiv.appendChild(badge);
+                                        dayDiv.className = 'full-day text-muted';
+                                        dayDiv.title = (item.count ? (item.count + ' booked') : '') + ' — FULL';
+                                    } else {
+                                        // selectable
+                                        dayDiv.className = item && item.count ? 'has-bookings' : 'selectable-date';
+                                        dayDiv.style.cursor = 'pointer';
+                                        dayDiv.addEventListener('click', function() {
+                                            hid.value = dateStr;
+                                            document.querySelectorAll('#bookCalendar .selected').forEach(el => el.classList.remove('selected'));
+                                            dayDiv.classList.add('selected');
+                                        });
+                                        dayDiv.title = item && item.count ? (item.count + ' booked') : '';
                                     }
-                                    // always allow selection for secretary
-                                    dayDiv.addEventListener('click', function() {
-                                        hid.value = dateStr;
-                                        document.querySelectorAll('#bookCalendar .selected').forEach(el => el.classList.remove('selected'));
-                                        dayDiv.classList.add('selected');
-                                    });
-                                    dayDiv.title = item && item.count ? (item.count + ' booked') : (item && !item.available ? 'FULL' : '');
                                     cell.appendChild(dayDiv);
                                 }
                                 row.appendChild(cell);
@@ -796,7 +848,7 @@ if ($view === 'today') {
                     if (!document.getElementById('book-calendar-style')) {
                         const s = document.createElement('style');
                         s.id = 'book-calendar-style';
-                        s.textContent = '#bookCalendar .selected{background:#0d6efd;color:#fff;padding:2px;border-radius:4px;} #bookCalendar .card{width:100%;} #bookCalendar .has-bookings{background:#fff3cd;} #bookCalendar .full-day{background:#f8d7da;color:#721c24;} .calendar-viewport{position:relative;} .calendar-track{width:100%;} .calendar-card{will-change:transform,opacity;flex:0 0 100%;} .calendar-card table td{vertical-align:top;}';
+                        s.textContent = '#bookCalendar .selected{background:#0b5ed7 !important;color:#fff;padding:4px;border-radius:6px;border:2px solid #084298;box-shadow:none;} #bookCalendar .card{width:100%;} #bookCalendar .text-muted{opacity:0.65;} #bookCalendar .selectable-date{background:linear-gradient(180deg,#e9f7ef 0%,#dff6e8 100%);border-radius:6px;} #bookCalendar .has-bookings{background:linear-gradient(180deg,#fff8dc 0%,#fff3cd 100%);border-radius:6px;} #bookCalendar .full-day{background:#f8d7da;color:#721c24;font-weight:700;border-radius:6px;} #bookCalendar .calendar-card table td{border:1px solid #e9ecef;padding:6px;} #bookCalendar .calendar-card table th{background:#f1f3f5;color:#495057;text-align:center;} #bookCalendar .calendar-card td div{min-height:48px;display:flex;flex-direction:column;gap:4px;} #bookCalendar .calendar-card td small{font-weight:700;color:#0d6efd;font-size:1rem;} /* hover: no padding/size change; only background and border to avoid enlargement */ #bookCalendar .selectable-date:hover,#bookCalendar .has-bookings:hover{background:#0d6efd;color:#fff;border:1px solid rgba(11,94,215,0.9);border-radius:6px;box-shadow:none;} .calendar-viewport{position:relative;} .calendar-track{width:100%;} .calendar-card{will-change:transform,opacity;flex:0 0 100%;} .calendar-card table td{vertical-align:top;}';
                         document.head.appendChild(s);
                     }
                 } catch (e) {
@@ -849,4 +901,190 @@ if ($view === 'today') {
             });
         }
     });
+</script>
+
+<!-- Reschedule Modal (secretary) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<div class="modal fade" id="rescheduleModalSec" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reschedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="rescheduleScheduleIdSec" />
+                <div class="mb-2"><label class="form-label">Start</label><input id="rescheduleStartSec" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEndSec" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2"><button id="rescheduleSuggestSec" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
+                <div id="rescheduleSuggestionsSec" class="list-group"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button id="rescheduleSaveBtnSec" type="button" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const resModalSec = new bootstrap.Modal(document.getElementById('rescheduleModalSec'));
+let fpStartSec = null, fpEndSec = null;
+function initSecPickers() {
+    try {
+        if (typeof flatpickr !== 'undefined') {
+            fpStartSec = flatpickr('#rescheduleStartSec', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+            fpEndSec = flatpickr('#rescheduleEndSec', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+        }
+    } catch(e){ console.warn('flatpickr sec init', e); }
+}
+initSecPickers();
+function toLocalInputSec(dtStr) { if (!dtStr) return ''; return dtStr.replace(' ', 'T').replace(/:00$/,''); }
+function toServerFormatSec(localVal) { if (!localVal) return ''; return localVal.replace('T',' '); }
+function openRescheduleModalSec(schedule) {
+    document.getElementById('rescheduleScheduleIdSec').value = schedule.schedule_id || '';
+    const startLocal = toLocalInputSec(schedule.scheduled_start || '');
+    const endLocal = toLocalInputSec(schedule.scheduled_end || '');
+    if (fpStartSec && typeof fpStartSec.setDate === 'function') fpStartSec.setDate(startLocal);
+    else document.getElementById('rescheduleStartSec').value = startLocal;
+    if (fpEndSec && typeof fpEndSec.setDate === 'function') fpEndSec.setDate(endLocal);
+    else document.getElementById('rescheduleEndSec').value = endLocal;
+    document.getElementById('rescheduleSuggestionsSec').innerHTML = '';
+    resModalSec.show();
+}
+document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
+    const btn = this; btn.disabled = true;
+    try { const fd = new FormData(); fd.append('user_id', CURRENT_USER); fd.append('days_ahead', 14); fd.append('duration', 30); const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd }); const j = await res.json(); const wrap = document.getElementById('rescheduleSuggestionsSec'); wrap.innerHTML = ''; if (!j.success) return alert(j.message || 'No suggestions'); (j.slots || []).slice(0,10).forEach(slot => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : ''); a.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('rescheduleStartSec').value = slot.start.replace(' ', 'T'); document.getElementById('rescheduleEndSec').value = slot.end ? slot.end.replace(' ', 'T') : ''; }); wrap.appendChild(a); }); } catch(e){ console.error(e); alert('Error fetching suggestions'); } btn.disabled = false; });
+document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
+    const sid = document.getElementById('rescheduleScheduleIdSec').value;
+    if (!sid) return alert('No schedule selected');
+    const btn = this; btn.disabled = true;
+    try {
+        const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
+        const gs = await g.json();
+        if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+        const user_id = gs.schedule.user_id || CURRENT_USER;
+        const duration = gs.schedule.duration || 30;
+        const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
+        const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
+        const j = await res.json();
+        const wrap = document.getElementById('rescheduleSuggestionsSec'); wrap.innerHTML = '';
+        if (!j.success) return alert(j.message || 'No suggestions');
+        (j.slots || []).slice(0,10).forEach(slot => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : ''); a.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('rescheduleStartSec').value = slot.start.replace(' ', 'T'); document.getElementById('rescheduleEndSec').value = slot.end ? slot.end.replace(' ', 'T') : ''; }); wrap.appendChild(a); });
+    } catch(e){ console.error(e); alert('Error fetching suggestions'); }
+    btn.disabled = false;
+});
+document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async function(){
+    const sid = document.getElementById('rescheduleScheduleIdSec').value; const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value); const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
+    if (!sid || !start) return alert('Start datetime required'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return alert(j.message || 'Failed to reschedule'); alert('Rescheduled'); resModalSec.hide(); location.reload(); } catch(e){ console.error(e); alert('Error'); } this.disabled = false; });
+</script>
+
+<!-- History Modal for Secretary -->
+<div class="modal fade" id="historyModalSec" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Appointment History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="max-height:75vh; overflow:auto;">
+                <div id="histSecContent">
+                    <div class="mb-3"><strong>Patient:</strong> <span id="histSecPatientName"></span></div>
+                    <div class="mb-3"><strong>Appointment Date:</strong> <span id="histSecApptDate"></span></div>
+                    <div class="mb-3"><strong>Clinical Notes:</strong>
+                        <pre id="histSecNotes" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
+                    </div>
+                    <div class="mb-3"><strong>Images:</strong>
+                        <div id="histSecImages" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                    <div class="mb-3"><strong>Related Schedules</strong>
+                        <div id="histSecSchedules" class="list-group small"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
+const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+async function openHistoryModalSec(appointmentId) {
+    const modalEl = document.getElementById('historyModalSec');
+    const bs = new bootstrap.Modal(modalEl);
+    document.getElementById('histSecPatientName').textContent = '';
+    document.getElementById('histSecApptDate').textContent = '';
+    document.getElementById('histSecNotes').textContent = '';
+    document.getElementById('histSecImages').innerHTML = '';
+    document.getElementById('histSecSchedules').innerHTML = '';
+    try {
+        const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
+        const j = await res.json();
+        if (!j.success) { alert('Could not load history'); return; }
+        const rec = j.record || {};
+        const schedules = j.schedules || [];
+        document.getElementById('histSecPatientName').textContent = rec._patient_name || ('Patient ID: ' + (rec.patient_id || ''));
+        document.getElementById('histSecApptDate').textContent = rec._appointment_date || rec.follow_up_date || (rec.submitted_at ?? '');
+        document.getElementById('histSecNotes').textContent = rec.doctor_notes || '';
+        // images
+        try {
+            const wrap = document.getElementById('histSecImages');
+            wrap.innerHTML = '';
+            if (Array.isArray(rec.images)) rec.images.forEach(src => {
+                const a = document.createElement('a'); a.href = src; a.target = '_blank';
+                const img = document.createElement('img'); img.src = src; img.style.maxWidth = '150px'; img.style.maxHeight = '120px'; img.className = 'img-thumbnail';
+                a.appendChild(img); wrap.appendChild(a);
+            });
+        } catch (e) {}
+        // schedules with actions
+        try {
+            const wrap = document.getElementById('histSecSchedules');
+            wrap.innerHTML = '';
+            if (Array.isArray(schedules) && schedules.length) {
+                schedules.forEach(s => {
+                    const id = s.schedule_id || Math.random().toString(36).substr(2,6);
+                    const start = s.scheduled_start ? s.scheduled_start : '(no start)';
+                    const end = s.scheduled_end ? (' — ' + s.scheduled_end) : '';
+                    const item = document.createElement('div'); item.className = 'list-group-item';
+                    const header = document.createElement('div');
+                    header.className = 'd-flex w-100 justify-content-between align-items-center';
+                    header.innerHTML = `<div><strong>${(s.status||'').toUpperCase()}</strong> <span class="text-muted">${start}${end}</span></div>`;
+                    const toggleBtn = document.createElement('a'); toggleBtn.setAttribute('data-bs-toggle','collapse'); toggleBtn.href = '#sch-sec-' + id; toggleBtn.className = 'btn btn-sm btn-outline-secondary'; toggleBtn.textContent = 'Details';
+                    header.appendChild(toggleBtn);
+                    item.appendChild(header);
+                    const details = document.createElement('div'); details.className = 'collapse mt-2'; details.id = 'sch-sec-' + id;
+                    let inner = `<div class="small text-muted">Created: ${s.created_at || 'N/A'}</div>`;
+                    inner += `<div class="pt-2">Notes: ${s.notes || ''}</div>`;
+                    inner += '<div class="mt-2">';
+                    // Secretary: show mark arrived and cancel/reschedule for admin/secretary
+                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-success me-1" data-action="arrive" data-sid="${s.schedule_id}">Mark Arrived</button>`;
+                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-warning me-1" data-action="reschedule" data-sid="${s.schedule_id}">Reschedule</button>`;
+                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-danger me-1" data-action="cancel" data-sid="${s.schedule_id}">Cancel</button>`;
+                    inner += '</div>';
+                    details.innerHTML = inner;
+                    item.appendChild(details);
+                    item.addEventListener('click', async function(e){
+                        const btn = e.target.closest('button[data-action]'); if (!btn) return;
+                        const act = btn.getAttribute('data-action'); const sid = btn.getAttribute('data-sid');
+                        if (act === 'arrive') {
+                            btn.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd }); const j = await r.json(); if (j.success) { btn.textContent = 'Arrived'; btn.classList.remove('btn-success'); btn.classList.add('btn-secondary'); } else alert(j.message || 'Failed'); } catch(e){ alert('Error'); } btn.disabled = false;
+                        } else if (act === 'cancel') {
+                            if (!confirm('Cancel this schedule?')) return; btn.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (j.success) header.querySelector('strong').textContent = 'CANCELLED'; else alert(j.message || 'Failed'); } catch(e){ alert('Error'); } btn.disabled = false;
+                        } else if (act === 'reschedule') {
+                            openRescheduleModalSec(s);
+                        }
+                    });
+                    wrap.appendChild(item);
+                });
+            } else {
+                wrap.innerHTML = '<div class="text-muted small">No schedules found for this appointment.</div>';
+            }
+        } catch (e) { console.warn(e); }
+        bs.show();
+    } catch (e) { console.error(e); alert('Error loading history'); }
+}
 </script>

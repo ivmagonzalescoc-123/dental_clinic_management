@@ -334,4 +334,52 @@
     }, 200);
   }
 
+  // Notifications poller (simple polling, returns unread count and items)
+  async function fetchNotifications() {
+    try {
+      const resp = await fetch('/assets/api/notifications/get_notifications.php', { cache: 'no-store' });
+      if (!resp.ok) return;
+      const j = await resp.json();
+      if (!j.success) return;
+      // update badge if present
+      const nb = document.getElementById('navNotificationBadge');
+      if (nb) nb.textContent = j.unread || 0;
+      // optionally populate dropdown list
+      const list = document.getElementById('navNotificationList');
+      if (list) {
+        list.innerHTML = '';
+        (j.notifications || []).slice(0,10).forEach(n => {
+          const a = document.createElement('a');
+          a.href = n.link || '#';
+          a.className = 'dropdown-item d-flex justify-content-between align-items-start';
+          a.dataset.notificationId = n.notification_id || '';
+          const left = document.createElement('div');
+          left.innerHTML = '<div class="fw-bold">' + (n.title || '') + '</div><div class="small text-muted">' + (n.body || '') + '</div>';
+          const right = document.createElement('small');
+          right.className = 'text-muted';
+          right.textContent = new Date(n.created_at).toLocaleString();
+          a.appendChild(left);
+          a.appendChild(right);
+          a.addEventListener('click', async function(e){
+            // mark read then navigate
+            e.preventDefault();
+            const nid = this.dataset.notificationId;
+            if (nid) {
+              try { await fetch('/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
+            }
+            const href = this.getAttribute('href') || '#';
+            if (href && href !== '#') window.location.href = href;
+          });
+          list.appendChild(a);
+        });
+      }
+    } catch (e) {
+      // silent
+    }
+  }
+  // start polling notifications every 30s
+  setInterval(fetchNotifications, 30000);
+  // initial
+  fetchNotifications();
+
 })();

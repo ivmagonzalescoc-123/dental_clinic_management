@@ -94,6 +94,18 @@ if ($page === 'appointments') {
 
                 
 
+                <li class="nav-item dropdown pe-2">
+                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-bell" style="font-size:1.1rem;"></i>
+                        <span class="badge bg-danger" id="navNotificationBadge" style="font-size:0.65rem;position:relative;top:-10px;left:-8px;">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" id="navNotificationList" style="min-width:280px;">
+                        <li class="dropdown-header">Notifications</li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="text-center small text-muted">Loading...</li>
+                    </ul>
+                </li>
+
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
@@ -157,11 +169,12 @@ if ($page === 'appointments') {
             </li>
 
             <li class="nav-item">
-                <a class="nav-link collapsed" href="doctor.php?page=profiling">
+                <a class="nav-link collapsed" href="doctor.php?page=ehr">
                     <i class="bi bi-journal-medical"></i>
                     <span>Profiling</span>
                 </a>
             </li>
+            <!-- Profiling link removed from sidebar (access via direct URL remains) -->
 
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=records">
@@ -201,6 +214,10 @@ if ($page === 'appointments') {
 
                                 case "queue":
                                     include "doctor_modules/queue.php";
+                                    break;
+
+                                case "ehr":
+                                    include "doctor_modules/ehr.php";
                                     break;
 
                                 case "profiling":
@@ -547,8 +564,10 @@ if ($page === 'appointments') {
                 const resp = await fetch('../assets/api/queue/accept.php', { method: 'POST', body: fd });
                 const j = await resp.json();
                 if (j.success) {
-                    // redirect to profiling module to complete the clinical record
-                    window.location.href = 'doctor.php?page=profiling&appointment_id=' + appointmentId;
+                    // redirect to EHR module to complete the clinical record
+                    var url = 'doctor.php?page=ehr&appointment_id=' + appointmentId;
+                    if (j.schedule_id) url += '&schedule_id=' + j.schedule_id;
+                    window.location.href = url;
                 } else {
                     showToast('Accept failed: ' + (j.message || 'unknown'), 'danger');
                 }

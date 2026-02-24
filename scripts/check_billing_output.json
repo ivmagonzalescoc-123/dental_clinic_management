@@ -1,0 +1,12 @@
+﻿{
+    "appointment_id": 1,
+    "rows": [
+        {
+            "billing_id": 2,
+            "appointment_id": 1,
+            "user_id": 2,
+            "total_amount": "510.00",
+            "created_at": "2026-02-24 09:59:36"
+        }
+    ]
+}

@@ -62,19 +62,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Fetch available dates for next 30 days and render a simple calendar grid
-    fetch('../assets/api/appointments/get_available_dates.php?days=30')
-    .then(r => r.json())
-    .then(data => {
+    (async function loadDates(){
         const cal = document.getElementById('appointmentCalendar');
         dateSelect.value = '';
         cal.innerHTML = '';
-        if (!data.success || !Array.isArray(data.dates)) {
-            cal.innerHTML = '<div class="text-muted">Unable to load dates</div>';
-            showAlert('Unable to load available dates.', 'warning');
-            return;
-        }
+        try {
+            const r = await fetch('../assets/api/appointments/get_available_dates.php?days=30');
+            if (!r.ok) throw new Error('Network response was not ok');
+            const data = await r.json();
+            if (!data.success || !Array.isArray(data.dates)) {
+                cal.innerHTML = '<div class="text-muted">Unable to load dates</div>';
+                showAlert('Unable to load available dates.', 'warning');
+                return;
+            }
 
-        const dates = data.dates || [];
+            const dates = data.dates || [];
         if (dates.length === 0) {
             cal.innerHTML = '<div class="text-muted">No available dates in range</div>';
             showAlert('No available dates found. Please try again later or contact the clinic.', 'warning');
@@ -164,10 +166,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         cell.innerHTML = '';
                     } else {
                         emptyRow = false;
-                        const dateStr = new Date(year, month, curDay).toISOString().slice(0,10);
-                        const item = items.find(it => it.date === dateStr);
+                                    const dtLocal = new Date(year, month, curDay);
+                                    // format date as local YYYY-MM-DD to avoid UTC shift issues
+                                    const pad = (n) => String(n).padStart(2,'0');
+                                    const dateStr = dtLocal.getFullYear() + '-' + pad(dtLocal.getMonth() + 1) + '-' + pad(dtLocal.getDate());
+                                    const weekday = dtLocal.getDay();
+                                    const item = items.find(it => it.date === dateStr);
                         const dayDiv = document.createElement('div');
-                        dayDiv.style.cursor = item && item.available ? 'pointer' : 'default';
+                        // default: make selectable unless explicitly unavailable
                         const dayHeader = document.createElement('div');
                         dayHeader.innerHTML = '<small class="text-muted">' + curDay + '</small>';
                         dayDiv.appendChild(dayHeader);
@@ -176,9 +182,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             countDiv.innerHTML = '<small>' + item.count + ' booked</small>';
                             dayDiv.appendChild(countDiv);
                         }
-                        if (item) {
+                        // Sundays: clinic closed — override to non-clickable
+                        if (weekday === 0) {
+                            dayDiv.className = 'full-day text-muted';
+                            dayDiv.title = 'Clinic closed (Sunday)';
+                        } else if (item) {
                             if (item.available) {
                                 dayDiv.className = item.count ? 'has-bookings' : 'selectable-date';
+                                dayDiv.style.cursor = 'pointer';
                                 dayDiv.addEventListener('click', function() {
                                     dateSelect.value = dateStr;
                                     // clear active
@@ -187,11 +198,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                                 dayDiv.title = item.count ? (item.count + ' booked') : '';
                             } else {
+                                // explicitly unavailable (doctor not present)
                                 dayDiv.className = 'full-day text-muted';
                                 dayDiv.title = (item.count ? (item.count + ' booked') : '') + ' — FULL';
                             }
                         } else {
-                            dayDiv.className = 'text-muted';
+                            // no availability info -> allow selection by default
+                            dayDiv.className = 'selectable-date';
+                            dayDiv.style.cursor = 'pointer';
+                            dayDiv.addEventListener('click', function() {
+                                dateSelect.value = dateStr;
+                                document.querySelectorAll('#appointmentCalendar .selected').forEach(el => el.classList.remove('selected'));
+                                dayDiv.classList.add('selected');
+                            });
+                            dayDiv.title = '';
                         }
                         cell.appendChild(dayDiv);
                     }
@@ -240,16 +260,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!document.getElementById(styleId)) {
             const s = document.createElement('style');
             s.id = styleId;
-            s.textContent = '\n#appointmentCalendar .selected{background:#0d6efd;color:#fff;padding:2px;border-radius:4px;}\n#appointmentCalendar .card{width:100%;}\n#appointmentCalendar .text-muted{opacity:0.6;}\n#appointmentCalendar .selectable-date{background:#e9f7ef;}\n#appointmentCalendar .has-bookings{background:#fff3cd;}\n#appointmentCalendar .full-day{background:#f8d7da;color:#721c24;}\n.calendar-viewport { position: relative; }\n.calendar-track { width:100%; }\n.calendar-card { will-change: transform, opacity; flex:0 0 100%; }\n.calendar-card table td { vertical-align: top; }\n';
+            s.textContent = '\n#appointmentCalendar .selected{background:#0b5ed7 !important;color:#fff;padding:4px;border-radius:6px;border:2px solid #084298;box-shadow:none;}\n#appointmentCalendar .card{width:100%;}\n#appointmentCalendar .text-muted{opacity:0.65;}\n#appointmentCalendar .selectable-date{background:linear-gradient(180deg,#e9f7ef 0%,#dff6e8 100%);border-radius:6px;}\n#appointmentCalendar .has-bookings{background:linear-gradient(180deg,#fff8dc 0%,#fff3cd 100%);border-radius:6px;}\n#appointmentCalendar .full-day{background:#f8d7da;color:#721c24;font-weight:700;border-radius:6px;}\n#appointmentCalendar .calendar-card table td { border:1px solid #e9ecef; padding:6px; }\n#appointmentCalendar .calendar-card table th { background:#f1f3f5;color:#495057;text-align:center; }\n#appointmentCalendar .calendar-card td div { min-height:48px; display:flex; flex-direction:column; gap:4px; }\n#appointmentCalendar .calendar-card td small { font-weight:700; color:#0d6efd; font-size:1rem; }\n/* hover: no padding/size change; only background and border to avoid enlargement */\n#appointmentCalendar .selectable-date:hover, #appointmentCalendar .has-bookings:hover { background:#0d6efd; color:#fff; border:1px solid rgba(11,94,215,0.9); border-radius:6px; box-shadow:none; }\n#appointmentCalendar .selected small { color:#fff; }\n.calendar-viewport { position: relative; }\n.calendar-track { width:100%; }\n.calendar-card { will-change: transform, opacity; flex:0 0 100%; }\n.calendar-card table td { vertical-align: top; }\n';
             document.head.appendChild(s);
         }
-    })
-    .catch(err => {
-        console.error(err);
-        const cal = document.getElementById('appointmentCalendar');
-        if (cal) cal.innerHTML = '<div class="text-danger">Error loading dates</div>';
-        showAlert('Error loading available dates.', 'danger');
-    });
+        } catch (err) {
+            console.error(err);
+            if (cal) cal.innerHTML = '<div class="text-danger">Error loading dates</div>';
+            showAlert('Error loading available dates.', 'danger');
+        }
+    })();
 
     // Form submit
     const form = document.getElementById('createApptForm');
