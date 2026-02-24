@@ -14,7 +14,7 @@ if ($doctor_id && $conn) {
         $qc_stmt->execute();
         $qc_res = $qc_stmt->get_result();
         if ($qc_res && ($qc_row = $qc_res->fetch_assoc())) {
-            $doctor_queue_count = (int)($qc_row['c'] ?? 0);
+            $doctor_queue_count = (int) ($qc_row['c'] ?? 0);
         }
         $qc_stmt->close();
     }
@@ -80,7 +80,8 @@ if ($page === 'appointments') {
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search" aria-label="Search">
+            <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search"
+                aria-label="Search">
             <button class="search-btn">Search</button>
         </div>
 
@@ -92,16 +93,19 @@ if ($page === 'appointments') {
                     </a>
                 </li>
 
-                
+
 
                 <li class="nav-item dropdown pe-2">
                     <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-bell" style="font-size:1.1rem;"></i>
-                        <span class="badge bg-danger" id="navNotificationBadge" style="font-size:0.65rem;position:relative;top:-10px;left:-8px;">0</span>
+                        <span class="badge bg-danger" id="navNotificationBadge"
+                            style="font-size:0.65rem;position:relative;top:-10px;left:-8px;">0</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" id="navNotificationList" style="min-width:280px;">
                         <li class="dropdown-header">Notifications</li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li class="text-center small text-muted">Loading...</li>
                     </ul>
                 </li>
@@ -111,10 +115,10 @@ if ($page === 'appointments') {
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
-                
+
                         <li>
                             <a class="dropdown-item d-flex align-items-center" href="doctor.php?page=profile">
-                         
+
                                 <span>My Profile</span>
                             </a>
                         </li>
@@ -123,7 +127,7 @@ if ($page === 'appointments') {
                         </li>
                         <li>
                             <a class="dropdown-item d-flex align-items-center" href="doctor.php?page=settings">
-                             
+
                                 <span>Account Settings</span>
                             </a>
                         </li>
@@ -132,7 +136,7 @@ if ($page === 'appointments') {
                         </li>
                         <li>
                             <a class="dropdown-item d-flex align-items-center" href="#" onclick="logout()">
-                             
+
                                 <span>Log Out</span>
                             </a>
                         </li>
@@ -151,20 +155,27 @@ if ($page === 'appointments') {
                     <span>Dashboard</span>
                 </a>
             </li>
-            
+
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span>Appointments</span>
-                    <span id="doctorApptIndicator" class="badge bg-info ms-auto" style="margin-left:8px;display:none;font-size:0.75rem;">New</span>
+                    <span id="doctorApptIndicator" class="badge bg-info ms-auto"
+                        style="margin-left:8px;display:none;font-size:0.75rem;">New</span>
                 </a>
             </li>
-
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=patient_schedule">
+                    <i class="bi bi-calendar2-week"></i>
+                    <span>Scheduling</span>
+                </a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=queue">
                     <i class="bi bi-people-fill"></i>
                     <span>Queue</span>
-                    <span id="doctorQueueBadge" class="badge bg-danger ms-auto" style="margin-left:8px;"><?php echo (int)$doctor_queue_count; ?></span>
+                    <span id="doctorQueueBadge" class="badge bg-danger ms-auto"
+                        style="margin-left:8px;"><?php echo (int) $doctor_queue_count; ?></span>
                 </a>
             </li>
 
@@ -182,6 +193,7 @@ if ($page === 'appointments') {
                     <span>Clinical Records</span>
                 </a>
             </li>
+
 
         </ul>
     </aside>
@@ -227,6 +239,9 @@ if ($page === 'appointments') {
                                 case "records":
                                     include "doctor_modules/records.php";
                                     break;
+                                case "patient_schedule":
+                                    include "doctor_modules/patient_schedule.php";
+                                    break;
 
                                 default:
                                     include "doctor_modules/dashboard.php";
@@ -266,18 +281,18 @@ if ($page === 'appointments') {
 
     <!-- Active Navigation Highlight -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Get current page from URL
             const params = new URLSearchParams(window.location.search);
             const currentPage = params.get('page') || 'dashboard';
-            
+
             // Get all sidebar nav links
             const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
-            
+
             // Remove active class from all links and add to current page
             navLinks.forEach(link => {
                 link.classList.remove('active');
-                
+
                 // Check if this link matches current page
                 if (link.href.includes('page=' + currentPage)) {
                     link.classList.add('active');
@@ -291,12 +306,12 @@ if ($page === 'appointments') {
             fetch('../assets/api/auth/logout_api.php', {
                 method: 'POST'
             }).then(response => response.json())
-            .then(data => {
-                window.location.href = '../index.php';
-            }).catch(error => {
-                console.error('Logout error:', error);
-                window.location.href = '../index.php';
-            });
+                .then(data => {
+                    window.location.href = '../index.php';
+                }).catch(error => {
+                    console.error('Logout error:', error);
+                    window.location.href = '../index.php';
+                });
         }
     </script>
 
@@ -325,7 +340,7 @@ if ($page === 'appointments') {
                             const fullName = (p.first_name || '') + ' ' + (p.last_name || '');
                             html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
                             html += '<div class="d-flex justify-content-between align-items-start">';
-                            html += '<div>'; 
+                            html += '<div>';
                             html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
                             html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
                             html += '</div>';
@@ -347,7 +362,7 @@ if ($page === 'appointments') {
         // Prefer WebSocket for live updates, then SSE, then polling
         function startDoctorRealtime() {
             // Try WebSocket first
-            const currentDoctorId = <?php echo (int)$doctor_id; ?>;
+            const currentDoctorId = <?php echo (int) $doctor_id; ?>;
             try {
                 if (window.WebSocket) {
                     const ws = new WebSocket('ws://localhost:8080');
@@ -382,7 +397,7 @@ if ($page === 'appointments') {
                                             const isMine = (ownerId === currentDoctorId);
                                             html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
                                             html += '<div class="d-flex justify-content-between align-items-start">';
-                                            html += '<div>'; 
+                                            html += '<div>';
                                             html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
                                             html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
                                             if (ownerName && !isMine) html += '<p class="mb-1 small text-muted">Assigned to: ' + ownerName + '</p>';
@@ -404,7 +419,7 @@ if ($page === 'appointments') {
                                     }
                                 }
                             }
-                        } catch(err) { console.error('WS parse error', err); }
+                        } catch (err) { console.error('WS parse error', err); }
                     });
                     ws.addEventListener('error', (err) => {
                         console.error('WebSocket error', err);
@@ -414,17 +429,17 @@ if ($page === 'appointments') {
                     ws.addEventListener('close', () => { console.log('WebSocket closed'); tryStartSSE(); });
                     return;
                 }
-            } catch(e) { console.error('WebSocket init failed', e); }
+            } catch (e) { console.error('WebSocket init failed', e); }
 
             // WebSocket not available or failed — try SSE
             tryStartSSE();
         }
 
-        function tryStartSSE(){
+        function tryStartSSE() {
             if (window.EventSource) {
                 try {
                     const es = new EventSource('../assets/api/queue/stream_doctor_queue.php');
-                    es.onmessage = function(e) {
+                    es.onmessage = function (e) {
                         try {
                             const data = JSON.parse(e.data);
                             const badge = document.getElementById('doctorQueueBadge');
@@ -452,7 +467,7 @@ if ($page === 'appointments') {
                                         const isMine = (ownerId === currentDoctorId);
                                         html += '<div class="list-group-item" data-appointment-id="' + (p.appointment_id || '') + '">';
                                         html += '<div class="d-flex justify-content-between align-items-start">';
-                                        html += '<div>'; 
+                                        html += '<div>';
                                         html += '<h5 class="mb-1"><span class="badge bg-warning">Queue #' + (p.que_number || '') + '</span> ' + fullName + '</h5>';
                                         html += '<p class="mb-1 small text-muted"><i class="bi bi-telephone"></i> ' + (p.phone_number || '') + '</p>';
                                         if (ownerName && !isMine) html += '<p class="mb-1 small text-muted">Assigned to: ' + ownerName + '</p>';
@@ -473,11 +488,11 @@ if ($page === 'appointments') {
                                     container.innerHTML = html;
                                 }
                             }
-                        } catch(err) { console.error('SSE parse error', err); }
+                        } catch (err) { console.error('SSE parse error', err); }
                     };
-                    es.onerror = function(err) { console.error('SSE error', err); es.close(); startPollingFallback(); };
+                    es.onerror = function (err) { console.error('SSE error', err); es.close(); startPollingFallback(); };
                     return;
-                } catch(e) {
+                } catch (e) {
                     console.error('EventSource failed', e);
                 }
             }
@@ -485,13 +500,13 @@ if ($page === 'appointments') {
             startPollingFallback();
         }
 
-        function startPollingFallback(){
+        function startPollingFallback() {
             fetchDoctorQueue();
             setInterval(fetchDoctorQueue, 5000);
         }
 
         // add simple blink CSS
-        (function addBlinkCss(){
+        (function addBlinkCss() {
             const s = document.createElement('style');
             s.innerHTML = '.blink{animation:blink-ani 0.6s linear 4;} @keyframes blink-ani{50%{opacity:0.2}}';
             document.head.appendChild(s);
@@ -601,7 +616,7 @@ if ($page === 'appointments') {
             container.appendChild(el);
             const closeBtn = el.querySelector('.btn-close');
             closeBtn.addEventListener('click', () => el.remove());
-            setTimeout(() => { try { el.remove(); } catch(e){} }, 4000);
+            setTimeout(() => { try { el.remove(); } catch (e) { } }, 4000);
         }
     </script>
 

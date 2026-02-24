@@ -22,6 +22,9 @@ try {
     $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
     $status = isset($_POST['status']) ? trim($_POST['status']) : 'scheduled';
 
+    // Determine requester role (session) so staff/secretary bookings can be auto-confirmed
+    $requester_role = $_SESSION['role'] ?? '';
+
     if (empty($patient_id) || empty($appointment_date) || empty($user_id)) {
         echo json_encode(['success' => false, 'message' => 'Patient, doctor and appointment date are required!']);
         exit;
@@ -89,6 +92,11 @@ try {
         $is_online_appointment = 1;
     }
 
+    // If the requester is a secretary (staff), auto-confirm the appointment instead of leaving it pending
+    if (!$isPatientRequester && strtolower($requester_role) === 'secretary') {
+        $status = 'confirmed';
+    }
+
     // Insert appointment (timeslot and branch removed)
     $sql = "INSERT INTO appointments (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id) 
             VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -110,8 +118,14 @@ try {
     $appointment_id = $conn->insert_id;
     $stmt->close();
 
-    // Return success for appointment creation. Do not auto check-in or queue patients.
-    $response = ['success' => true, 'message' => 'Appointment created successfully! Awaiting secretary approval.', 'appointment_id' => $appointment_id];
+    // Return success for appointment creation. For secretary-created bookings we auto-confirm.
+    $responseMsg = 'Appointment created successfully!';
+    if ($status === 'confirmed') {
+        $responseMsg = 'Appointment created and confirmed.';
+    } else {
+        $responseMsg = 'Appointment created successfully! Awaiting secretary approval.';
+    }
+    $response = ['success' => true, 'message' => $responseMsg, 'appointment_id' => $appointment_id, 'status' => $status];
     echo json_encode($response);
 
 } catch (Exception $e) {
