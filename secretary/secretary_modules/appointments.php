@@ -414,13 +414,13 @@ if ($view === 'today') {
                         <th>Reason</th>
                         <th>Type</th>
                         <th>Actions</th>
-                        <th>History</th>
+                        
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($appointments)): ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 No appointments found.
                             </td>
                         </tr>
@@ -508,9 +508,7 @@ if ($view === 'today') {
                                         <span class="text-muted small"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModalSec(<?php echo (int)$appointment['appointment_id']; ?>)">History</button>
-                                </td>
+                                
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -977,114 +975,29 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
 });
 document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async function(){
     const sid = document.getElementById('rescheduleScheduleIdSec').value; const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value); const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
-    if (!sid || !start) return alert('Start datetime required'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return alert(j.message || 'Failed to reschedule'); alert('Rescheduled'); resModalSec.hide(); location.reload(); } catch(e){ console.error(e); alert('Error'); } this.disabled = false; });
+    if (!sid || !start) { alert('Start datetime required'); return; }
+    this.disabled = true;
+    try {
+        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
+        const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
+        const j = await r.json();
+        if (!j.success) {
+            alert(j.message || 'Failed to reschedule');
+        } else {
+            alert('Rescheduled');
+            resModalSec.hide();
+            location.reload();
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Error');
+    } finally {
+        this.disabled = false;
+    }
+});
 </script>
-
-<!-- History Modal for Secretary -->
-<div class="modal fade" id="historyModalSec" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Appointment History</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="max-height:75vh; overflow:auto;">
-                <div id="histSecContent">
-                    <div class="mb-3"><strong>Patient:</strong> <span id="histSecPatientName"></span></div>
-                    <div class="mb-3"><strong>Appointment Date:</strong> <span id="histSecApptDate"></span></div>
-                    <div class="mb-3"><strong>Clinical Notes:</strong>
-                        <pre id="histSecNotes" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                    </div>
-                    <div class="mb-3"><strong>Images:</strong>
-                        <div id="histSecImages" class="d-flex flex-wrap gap-2"></div>
-                    </div>
-                    <div class="mb-3"><strong>Related Schedules</strong>
-                        <div id="histSecSchedules" class="list-group small"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
 const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
-async function openHistoryModalSec(appointmentId) {
-    const modalEl = document.getElementById('historyModalSec');
-    const bs = new bootstrap.Modal(modalEl);
-    document.getElementById('histSecPatientName').textContent = '';
-    document.getElementById('histSecApptDate').textContent = '';
-    document.getElementById('histSecNotes').textContent = '';
-    document.getElementById('histSecImages').innerHTML = '';
-    document.getElementById('histSecSchedules').innerHTML = '';
-    try {
-        const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
-        const j = await res.json();
-        if (!j.success) { alert('Could not load history'); return; }
-        const rec = j.record || {};
-        const schedules = j.schedules || [];
-        document.getElementById('histSecPatientName').textContent = rec._patient_name || ('Patient ID: ' + (rec.patient_id || ''));
-        document.getElementById('histSecApptDate').textContent = rec._appointment_date || rec.follow_up_date || (rec.submitted_at ?? '');
-        document.getElementById('histSecNotes').textContent = rec.doctor_notes || '';
-        // images
-        try {
-            const wrap = document.getElementById('histSecImages');
-            wrap.innerHTML = '';
-            if (Array.isArray(rec.images)) rec.images.forEach(src => {
-                const a = document.createElement('a'); a.href = src; a.target = '_blank';
-                const img = document.createElement('img'); img.src = src; img.style.maxWidth = '150px'; img.style.maxHeight = '120px'; img.className = 'img-thumbnail';
-                a.appendChild(img); wrap.appendChild(a);
-            });
-        } catch (e) {}
-        // schedules with actions
-        try {
-            const wrap = document.getElementById('histSecSchedules');
-            wrap.innerHTML = '';
-            if (Array.isArray(schedules) && schedules.length) {
-                schedules.forEach(s => {
-                    const id = s.schedule_id || Math.random().toString(36).substr(2,6);
-                    const start = s.scheduled_start ? s.scheduled_start : '(no start)';
-                    const end = s.scheduled_end ? (' — ' + s.scheduled_end) : '';
-                    const item = document.createElement('div'); item.className = 'list-group-item';
-                    const header = document.createElement('div');
-                    header.className = 'd-flex w-100 justify-content-between align-items-center';
-                    header.innerHTML = `<div><strong>${(s.status||'').toUpperCase()}</strong> <span class="text-muted">${start}${end}</span></div>`;
-                    const toggleBtn = document.createElement('a'); toggleBtn.setAttribute('data-bs-toggle','collapse'); toggleBtn.href = '#sch-sec-' + id; toggleBtn.className = 'btn btn-sm btn-outline-secondary'; toggleBtn.textContent = 'Details';
-                    header.appendChild(toggleBtn);
-                    item.appendChild(header);
-                    const details = document.createElement('div'); details.className = 'collapse mt-2'; details.id = 'sch-sec-' + id;
-                    let inner = `<div class="small text-muted">Created: ${s.created_at || 'N/A'}</div>`;
-                    inner += `<div class="pt-2">Notes: ${s.notes || ''}</div>`;
-                    inner += '<div class="mt-2">';
-                    // Secretary: show mark arrived and cancel/reschedule for admin/secretary
-                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-success me-1" data-action="arrive" data-sid="${s.schedule_id}">Mark Arrived</button>`;
-                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-warning me-1" data-action="reschedule" data-sid="${s.schedule_id}">Reschedule</button>`;
-                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') inner += `<button class="btn btn-sm btn-danger me-1" data-action="cancel" data-sid="${s.schedule_id}">Cancel</button>`;
-                    inner += '</div>';
-                    details.innerHTML = inner;
-                    item.appendChild(details);
-                    item.addEventListener('click', async function(e){
-                        const btn = e.target.closest('button[data-action]'); if (!btn) return;
-                        const act = btn.getAttribute('data-action'); const sid = btn.getAttribute('data-sid');
-                        if (act === 'arrive') {
-                            btn.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd }); const j = await r.json(); if (j.success) { btn.textContent = 'Arrived'; btn.classList.remove('btn-success'); btn.classList.add('btn-secondary'); } else alert(j.message || 'Failed'); } catch(e){ alert('Error'); } btn.disabled = false;
-                        } else if (act === 'cancel') {
-                            if (!confirm('Cancel this schedule?')) return; btn.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (j.success) header.querySelector('strong').textContent = 'CANCELLED'; else alert(j.message || 'Failed'); } catch(e){ alert('Error'); } btn.disabled = false;
-                        } else if (act === 'reschedule') {
-                            openRescheduleModalSec(s);
-                        }
-                    });
-                    wrap.appendChild(item);
-                });
-            } else {
-                wrap.innerHTML = '<div class="text-muted small">No schedules found for this appointment.</div>';
-            }
-        } catch (e) { console.warn(e); }
-        bs.show();
-    } catch (e) { console.error(e); alert('Error loading history'); }
-}
 </script>

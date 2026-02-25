@@ -13,6 +13,12 @@ $sql = "SELECT r.reminder_id, r.schedule_id, r.remind_at, r.channel, r.payload, 
         JOIN schedules s ON s.schedule_id = r.schedule_id
         WHERE r.sent_at IS NULL AND r.remind_at <= NOW()";
 
+// Guard: ensure schedule_reminders and schedules tables exist
+if (!function_exists('table_exists') || !table_exists($conn, 'schedule_reminders') || !table_exists($conn, 'schedules')) {
+    error_log('send_reminders: required scheduling tables missing; aborting reminders run');
+    exit(0);
+}
+
 $res = $conn->query($sql);
 if (!$res) {
     error_log('Reminder fetch failed: ' . $conn->error);
@@ -44,24 +50,49 @@ while ($row = $res->fetch_assoc()) {
     $patient_user_id = $ap['patient_id'] ?? null;
     $doctor_user_id = $ap['user_id'] ?? null;
 
-    // Insert notification for patient
-    if ($patient_user_id) {
-        $ni = $conn->prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)');
-        if ($ni) {
-            $ni->bind_param('isss', $patient_user_id, $title, $body, $link);
-            $ni->execute();
-            $ni->close();
+    // Insert notification for patient and doctor if notifications table exists
+    if (function_exists('table_exists') && table_exists($conn, 'notifications')) {
+        if ($patient_user_id) {
+            $ni = $conn->prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)');
+            if ($ni) {
+                $ni->bind_param('isss', $patient_user_id, $title, $body, $link);
+                $ni->execute();
+                $ni->close();
+            }
         }
-    }
 
-    // Insert notification for doctor (if present)
-    if ($doctor_user_id) {
-        $ni2 = $conn->prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)');
-        if ($ni2) {
-            $ni2->bind_param('isss', $doctor_user_id, $title, $body, $link);
-            $ni2->execute();
-            $ni2->close();
+        if ($doctor_user_id) {
+            $ni2 = $conn->prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)');
+            if ($ni2) {
+                $ni2->bind_param('isss', $doctor_user_id, $title, $body, $link);
+                $ni2->execute();
+                $ni2->close();
+            }
         }
+        // Also notify all secretaries about upcoming reminders (optional: limit to active secretaries)
+        try {
+            if (function_exists('table_exists') && table_exists($conn, 'users') && table_exists($conn, 'role')) {
+                $secStmt = $conn->prepare("SELECT u.user_id FROM users u INNER JOIN role r ON r.role_id = u.role_id WHERE r.role_name = 'secretary' AND u.is_active = 1");
+                if ($secStmt) {
+                    $secStmt->execute();
+                    $sres = $secStmt->get_result();
+                    while ($s = $sres->fetch_assoc()) {
+                        $sid = (int)$s['user_id'];
+                        $ni3 = $conn->prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)');
+                        if ($ni3) {
+                            $ni3->bind_param('isss', $sid, $title, $body, $link);
+                            $ni3->execute();
+                            $ni3->close();
+                        }
+                    }
+                    $secStmt->close();
+                }
+            }
+        } catch (Throwable $e) {
+            error_log('send_reminders: failed to notify secretaries: ' . $e->getMessage());
+        }
+    } else {
+        error_log('send_reminders: notifications table missing; skipping in-app notifications');
     }
 
     // Mark reminder as sent

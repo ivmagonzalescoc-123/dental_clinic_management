@@ -237,13 +237,10 @@ try {
         $qst->execute();
         $qst->close();
 
-        // Calculate billing: sum of selected service prices + materials total
+        // Calculate billing: sum of services + materials total + optional doctor fee
         $total = 0.0;
+        // Services (recommended services or treatment plan service_ids)
         if ($recommended_services && is_array($recommended_services)) {
-            // recommended_services expected as array of service_ids
-            $placeholders = implode(',', array_fill(0, count($recommended_services), '?'));
-            // build dynamic query safely using prepared statement by looping
-            $prices = [];
             foreach ($recommended_services as $sid) {
                 $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
                 $sstmt->bind_param('i', $sid);
@@ -253,6 +250,21 @@ try {
                 $sstmt->close();
             }
         }
+        // If treatment_plan contains service references, try to include those too
+        if ($treatment_plan && is_array($treatment_plan)) {
+            foreach ($treatment_plan as $tp) {
+                if (is_array($tp) && isset($tp['service_id'])) {
+                    $sid = (int)$tp['service_id'];
+                    $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
+                    $sstmt->bind_param('i', $sid);
+                    $sstmt->execute();
+                    $res = $sstmt->get_result();
+                    if ($res && ($r = $res->fetch_assoc())) $total += (float)$r['initial_price'];
+                    $sstmt->close();
+                }
+            }
+        }
+        // Materials
         if ($materials_used && is_array($materials_used)) {
             foreach ($materials_used as $m) {
                 $qty = isset($m['qty']) ? (float)$m['qty'] : 0;
@@ -260,6 +272,9 @@ try {
                 $total += $qty * $price;
             }
         }
+        // Doctor fee (optional POST param)
+        $doctor_fee = isset($_POST['doctor_fee']) ? (float)$_POST['doctor_fee'] : 0.0;
+        if ($doctor_fee > 0) $total += $doctor_fee;
 
         // Insert or update billing record. If a billing exists for this appointment, update it instead of inserting.
         $bcheck = $conn->prepare('SELECT billing_id FROM billing WHERE appointment_id = ? LIMIT 1');
@@ -303,7 +318,8 @@ try {
         'finalized' => $submit_and_finalize,
         'billing_amount' => isset($total) ? $total : null,
         'schedule_id' => $created_schedule_id,
-        'needs_scheduling' => ($will_need_scheduling && !$created_schedule_id) ? true : false
+        // Do not prompt suggested scheduling after profiling submission
+        'needs_scheduling' => false
     ]);
 } catch (Exception $e) {
     $conn->rollback();

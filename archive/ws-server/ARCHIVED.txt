@@ -1,0 +1,2 @@
+This directory contains an archived copy of the project's WebSocket server.
+Disabled and moved to archive on 2026-02-25. Restore to ws-server/ when needed.

@@ -23,6 +23,10 @@ $toothData = isset($_POST['tooth_data']) ? (array)$_POST['tooth_data'] : [];
 $treatmentIds = isset($_POST['treatment_ids']) ? (array)$_POST['treatment_ids'] : [];
 $notes = $_POST['notes'] ?? '';
 $followUpDate = $_POST['follow_up_date'] ?? null;
+// Optional billing extras
+$materials_used = isset($_POST['materials_used']) ? json_decode($_POST['materials_used'], true) : null;
+$doctor_fee = isset($_POST['doctor_fee']) ? (float)$_POST['doctor_fee'] : 0.0;
+$recommended_services = isset($_POST['recommended_services']) ? json_decode($_POST['recommended_services'], true) : null;
 
 if ($appointmentId <= 0 || $serviceId <= 0) {
     http_response_code(400);
@@ -95,9 +99,29 @@ try {
         }
         $stmt->close();
     }
-    
-    // Insert billing record (consultation fee only)
-    $billingAmount = $servicePrice;
+
+    // Calculate billing total: service + materials + doctor fee + any recommended services
+    $billingAmount = 0.0;
+    $billingAmount += $servicePrice;
+    if ($materials_used && is_array($materials_used)) {
+        foreach ($materials_used as $m) {
+            $qty = isset($m['qty']) ? (float)$m['qty'] : 0;
+            $price = isset($m['price']) ? (float)$m['price'] : 0;
+            $billingAmount += $qty * $price;
+        }
+    }
+    if ($recommended_services && is_array($recommended_services)) {
+        foreach ($recommended_services as $sid) {
+            $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
+            $sstmt->bind_param('i', $sid);
+            $sstmt->execute();
+            $sres = $sstmt->get_result();
+            if ($sres && ($srow = $sres->fetch_assoc())) $billingAmount += (float)$srow['initial_price'];
+            $sstmt->close();
+        }
+    }
+    if ($doctor_fee > 0) $billingAmount += $doctor_fee;
+
     $billingStatus = 'pending';
     $stmt = $conn->prepare('
         INSERT INTO billing (appointment_id, patient_id, amount, status, created_at)

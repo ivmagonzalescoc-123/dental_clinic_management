@@ -3,6 +3,15 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 
 $today = date('Y-m-d');
 $last7Start = date('Y-m-d', strtotime('-6 days'));
+// Optional user filter for per-user dashboard
+$selectedUserId = isset($_GET['user_id']) && is_numeric($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+
+// Fetch users for filter dropdown
+$usersList = [];
+$ures = $conn->query("SELECT u.user_id, u.first_name, u.last_name, r.role_name FROM users u INNER JOIN role r ON r.role_id = u.role_id ORDER BY u.first_name ASC");
+if ($ures) {
+	while ($ur = $ures->fetch_assoc()) $usersList[] = $ur;
+}
 
 function scalar_int(mysqli $conn, string $sql, ?string $types = null, array $params = []): int
 {
@@ -107,21 +116,26 @@ for ($i = 0; $i < 7; $i++) {
 	$seriesValues[] = 0;
 }
 
-$stmt = $conn->prepare('SELECT appointment_date, COUNT(*) AS c FROM appointments WHERE appointment_date BETWEEN ? AND ? GROUP BY appointment_date ORDER BY appointment_date ASC');
+// Build appointments per-day for last 7 days (optionally filtered by user)
+$sql = 'SELECT appointment_date, COUNT(*) AS c FROM appointments WHERE appointment_date BETWEEN ? AND ?';
+if ($selectedUserId) $sql .= ' AND user_id = ?';
+$sql .= ' GROUP BY appointment_date ORDER BY appointment_date ASC';
+$stmt = $conn->prepare($sql);
 if ($stmt) {
-	$stmt->bind_param('ss', $last7Start, $today);
-	$stmt->execute();
-	$res = $stmt->get_result();
-	if ($res) {
-		$map = [];
-		while ($r = $res->fetch_assoc()) {
-			$map[$r['appointment_date']] = (int)($r['c'] ?? 0);
-		}
-		foreach ($seriesLabels as $idx => $d) {
-			if (isset($map[$d])) $seriesValues[$idx] = $map[$d];
-		}
-	}
-	$stmt->close();
+    if ($selectedUserId) $stmt->bind_param('ssi', $last7Start, $today, $selectedUserId);
+    else $stmt->bind_param('ss', $last7Start, $today);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res) {
+        $map = [];
+        while ($r = $res->fetch_assoc()) {
+            $map[$r['appointment_date']] = (int)($r['c'] ?? 0);
+        }
+        foreach ($seriesLabels as $idx => $d) {
+            if (isset($map[$d])) $seriesValues[$idx] = $map[$d];
+        }
+    }
+    $stmt->close();
 }
 
 // Today's appointments (top list)
@@ -272,7 +286,15 @@ function fmt_time(?string $dt): string
 		<div class="card">
 			<div class="card-body">
 				<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-					<h5 class="card-title mb-0">Appointments <span>| Last 7 days</span></h5>
+					<div class="d-flex align-items-center gap-2">
+						<h5 class="card-title mb-0">Appointments <span>| Last 7 days</span></h5>
+						<select id="dashboardUserFilter" class="form-select form-select-sm ms-2" style="width:220px;">
+							<option value="">All Users</option>
+							<?php foreach ($usersList as $u): ?>
+								<option value="<?php echo (int)$u['user_id']; ?>" <?php echo $selectedUserId == $u['user_id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($u['first_name'] . ' ' . $u['last_name'] . ' (' . $u['role_name'] . ')'); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
 					<div class="text-muted small">Services active: <?php echo (int)$servicesTotal; ?> • Appointments total: <?php echo (int)$appointmentsTotal; ?></div>
 				</div>
 				<div id="appt7Chart" style="min-height: 260px;"></div>
@@ -384,7 +406,7 @@ function fmt_time(?string $dt): string
 
 <script>
 	(function () {
-		if (typeof ApexCharts === 'undefined') return;
+			if (typeof ApexCharts === 'undefined') return;
 
 		const labels = <?php echo json_encode($seriesLabels); ?>;
 		const values = <?php echo json_encode($seriesValues); ?>;
@@ -405,6 +427,15 @@ function fmt_time(?string $dt): string
 		if (!el) return;
 		const chart = new ApexCharts(el, options);
 		chart.render();
+
+			// Dashboard user filter wiring
+			document.getElementById('dashboardUserFilter')?.addEventListener('change', function () {
+				const uid = this.value || '';
+				const params = new URLSearchParams(window.location.search);
+				if (uid) params.set('user_id', uid); else params.delete('user_id');
+				params.set('page', 'dashboard');
+				window.location.href = 'admin.php?' + params.toString();
+			});
 	})();
 </script>
 

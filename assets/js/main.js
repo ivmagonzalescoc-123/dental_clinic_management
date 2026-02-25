@@ -335,9 +335,32 @@
   }
 
   // Notifications poller (simple polling, returns unread count and items)
+  // Derive app root reliably from the script src or pathname.
+  let appRoot = '';
+  try {
+    const script = document.querySelector('script[src*="assets/js/main.js"]');
+    if (script && script.src) {
+      const p = new URL(script.src, window.location.origin).pathname;
+      const segs = p.split('/').filter(Boolean);
+      if (segs.length && segs[0] !== 'assets') {
+        appRoot = '/' + segs[0];
+      } else {
+        appRoot = '';
+      }
+    } else {
+      const segs = window.location.pathname.split('/').filter(Boolean);
+      appRoot = segs.length ? ('/' + segs[0]) : '';
+    }
+  } catch (e) {
+    const segs = window.location.pathname.split('/').filter(Boolean);
+    appRoot = segs.length ? ('/' + segs[0]) : '';
+  }
+  // Expose for debugging: show computed app root in console
+  try { console.debug('appRoot computed:', appRoot); } catch(e) {}
+  
   async function fetchNotifications() {
     try {
-      const resp = await fetch('/assets/api/notifications/get_notifications.php', { cache: 'no-store' });
+      const resp = await fetch(appRoot + '/assets/api/notifications/get_notifications.php', { cache: 'no-store' });
       if (!resp.ok) return;
       const j = await resp.json();
       if (!j.success) return;
@@ -365,7 +388,7 @@
             e.preventDefault();
             const nid = this.dataset.notificationId;
             if (nid) {
-              try { await fetch('/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
+              try { await fetch(appRoot + '/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
             }
             const href = this.getAttribute('href') || '#';
             if (href && href !== '#') window.location.href = href;

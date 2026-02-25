@@ -156,9 +156,10 @@ if ($stmt) {
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">' + escapeHtml(msg) + '</td></tr>';
         }
 
-        // Prefer WebSocket for live updates, then SSE, then polling
+        // Realtime updates: WebSocket temporarily disabled — use SSE then polling
         function startSecretaryRealtime(){
-            // Try WebSocket first
+            // Original WebSocket code commented out for temporary disablement:
+            /*
             try {
                 if (window.WebSocket) {
                     const ws = new WebSocket('ws://localhost:8080');
@@ -181,8 +182,9 @@ if ($stmt) {
                     return;
                 }
             } catch(e) { console.error('WebSocket init failed', e); }
+            */
 
-            // WebSocket not available or failed — try SSE
+            // Fall back to SSE/polling
             tryStartSSE();
         }
 

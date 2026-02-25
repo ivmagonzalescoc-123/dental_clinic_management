@@ -114,23 +114,12 @@ check_session(['admin']);
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=patients">
-                    <i class="bi bi-person-lines-fill"></i>
-                    <span>Patients Records</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=manage_users">
                     <i class="bi bi-person"></i>
                     <span>Manage Users</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=appointments">
-                    <i class="bi bi-calendar2-week"></i>
-                    <span>Appointments</span>
-                </a>
-            </li>
+            
             <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=queue">
                     <i class="bi bi-list-ol"></i>
@@ -180,14 +169,8 @@ check_session(['admin']);
                                 case "dashboard":
                                     include "admin_modules/dashboard.php";
                                     break;
-                                case "patients":
-                                    include "admin_modules/patients.php";
-                                    break;
                                 case "manage_users":
                                     include "admin_modules/manage_users.php";
-                                    break;
-                                case "appointments":
-                                    include "admin_modules/appointments.php";
                                     break;
                                 case "queue":
                                     include "admin_modules/queue.php";

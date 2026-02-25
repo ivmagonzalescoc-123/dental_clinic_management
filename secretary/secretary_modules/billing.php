@@ -8,7 +8,9 @@ $today = date('Y-m-d');
 $billings = [];
 
 // Fetch billing records (include queue number and allow viewing outstanding/paid)
-$billing_sql = "
+// Guard: ensure required tables exist before running the query
+if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table_exists($conn, 'appointments') && table_exists($conn, 'patients'))) {
+    $billing_sql = "
     SELECT
         b.billing_id,
         b.appointment_id,
@@ -30,14 +32,14 @@ $billing_sql = "
     LEFT JOIN check_in_queue q ON a.appointment_id = q.appointment_id
     GROUP BY b.billing_id
     ORDER BY b.created_at DESC
-";
+    ";
 
-$result = null;
-try {
-    $result = $conn->query($billing_sql);
-} catch (mysqli_sql_exception $e) {
-    // If query fails because the `payment` table doesn't exist, fall back to a safe query
-    $billing_sql_no_payment = "
+    $result = null;
+    try {
+        $result = $conn->query($billing_sql);
+    } catch (mysqli_sql_exception $e) {
+        // If query fails because the `payment` table doesn't exist, fall back to a safe query
+        $billing_sql_no_payment = "
         SELECT
             b.billing_id,
             b.appointment_id,
@@ -59,12 +61,16 @@ try {
         GROUP BY b.billing_id
         ORDER BY b.created_at DESC
     ";
-    $result = $conn->query($billing_sql_no_payment);
-}
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $billings[] = $row;
+        $result = $conn->query($billing_sql_no_payment);
     }
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $billings[] = $row;
+        }
+    }
+} else {
+    // required tables missing; log and leave $billings empty to avoid fatal errors
+    error_log('Billing page: missing required tables (billing/appointments/patients). Skipping billing query.');
 }
 
 // Payments removed: no payment methods
@@ -198,8 +204,9 @@ if ($result) {
 <script>
     function viewInvoice(billing) {
         // fetch clinical record for this appointment to include in invoice (secretary view)
-        fetch('/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
-            .then(r=>r.json()).then(data=>{
+            const appRoot = window.location.pathname.split('/').slice(0,2).join('/') || '';
+            fetch(appRoot + '/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
+                .then(r=>r.json()).then(data=>{
                 const rec = (data && data.record) ? data.record : null;
                 const svcHtml = rec && rec.recommended_services ? (Array.isArray(rec.recommended_services) ? rec.recommended_services.join(', ') : JSON.stringify(rec.recommended_services)) : 'N/A';
                 const materialsHtml = rec && rec.materials_used ? (Array.isArray(rec.materials_used) ? rec.materials_used.map(m=>`${m.name} (x${m.qty}) ₱${m.price}`).join('<br>') : '') : '';

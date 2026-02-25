@@ -87,6 +87,22 @@ try {
         }
     }
 
+    // Prevent a patient from being booked more than once on the same date by any requester
+    $dup_sql = 'SELECT COUNT(*) AS cnt FROM appointments WHERE patient_id = ? AND appointment_date = ? AND status != "cancelled"';
+    $dup_stmt = $conn->prepare($dup_sql);
+    if ($dup_stmt) {
+        $dup_stmt->bind_param('is', $patient_id, $appointment_date);
+        $dup_stmt->execute();
+        $dup_res = $dup_stmt->get_result();
+        $dup_row = $dup_res ? $dup_res->fetch_assoc() : null;
+        $dup_stmt->close();
+        $existingForDay = (int)($dup_row['cnt'] ?? 0);
+        if ($existingForDay > 0) {
+            echo json_encode(['success' => false, 'message' => 'Patient already has an appointment on the selected date. Cannot book more than one appointment per day.']);
+            exit;
+        }
+    }
+
     // Patients may only create online appointments. Secretary/staff can create walk-ins.
     if ($isPatientRequester) {
         $is_online_appointment = 1;

@@ -10,21 +10,37 @@ if (!$user_id) {
     exit;
 }
 
-$stmt = $conn->prepare('SELECT notification_id, title, body, link, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50');
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$res = $stmt->get_result();
+// Guard: ensure notifications table exists
 $rows = [];
-while ($r = $res->fetch_assoc()) $rows[] = $r;
-$stmt->close();
+$unread = 0;
+try {
+    if (function_exists('table_exists') && table_exists($conn, 'notifications')) {
+        $stmt = $conn->prepare('SELECT notification_id, title, body, link, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50');
+        if ($stmt) {
+            $stmt->bind_param('i', $user_id);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($r = $res->fetch_assoc()) $rows[] = $r;
+            $stmt->close();
+        }
 
-// unread count
-$uc = $conn->prepare('SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND is_read = 0');
-$uc->bind_param('i', $user_id);
-$uc->execute();
-$ucr = $uc->get_result()->fetch_assoc();
-$uc->close();
+        // unread count
+        $uc = $conn->prepare('SELECT COUNT(*) AS cnt FROM notifications WHERE user_id = ? AND is_read = 0');
+        if ($uc) {
+            $uc->bind_param('i', $user_id);
+            $uc->execute();
+            $ucr = $uc->get_result()->fetch_assoc();
+            $unread = (int)($ucr['cnt'] ?? 0);
+            $uc->close();
+        }
+    } else {
+        // notifications table missing — return empty safe response
+        error_log('get_notifications: notifications table missing');
+    }
+} catch (Throwable $e) {
+    error_log('get_notifications error: ' . $e->getMessage());
+}
 
-echo json_encode(['success'=>true,'notifications'=>$rows,'unread'=>(int)($ucr['cnt']??0)]);
+echo json_encode(['success'=>true,'notifications'=>$rows,'unread'=>$unread]);
 
 ?>

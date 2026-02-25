@@ -171,6 +171,12 @@ if ($page === 'appointments') {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=patients">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <span>Patients</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=queue">
                     <i class="bi bi-people-fill"></i>
                     <span>Queue</span>
@@ -238,6 +244,9 @@ if ($page === 'appointments') {
 
                                 case "records":
                                     include "doctor_modules/records.php";
+                                    break;
+                                case "patients":
+                                    include "doctor_modules/patients.php";
                                     break;
                                 case "patient_schedule":
                                     include "doctor_modules/patient_schedule.php";
@@ -358,11 +367,12 @@ if ($page === 'appointments') {
             }
         }
 
-        // Start polling
-        // Prefer WebSocket for live updates, then SSE, then polling
+        // Start realtime updates: WebSocket temporarily disabled — use SSE then polling
+        const currentDoctorId = <?php echo (int) $doctor_id; ?>;
         function startDoctorRealtime() {
+            // Original WebSocket code commented out for temporary disablement:
+            /*
             // Try WebSocket first
-            const currentDoctorId = <?php echo (int) $doctor_id; ?>;
             try {
                 if (window.WebSocket) {
                     const ws = new WebSocket('ws://localhost:8080');
@@ -432,6 +442,10 @@ if ($page === 'appointments') {
             } catch (e) { console.error('WebSocket init failed', e); }
 
             // WebSocket not available or failed — try SSE
+            tryStartSSE();
+            */
+
+            // Fall back to SSE/polling
             tryStartSSE();
         }
 

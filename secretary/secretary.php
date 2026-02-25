@@ -19,18 +19,28 @@ if ($page === 'appointments' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Compute today's waiting queue count for sidebar badge
+// Compute today's waiting queue count for sidebar badge (guard table existence)
 $today = date('Y-m-d');
 $waitingCount = 0;
-$stmt = $conn->prepare("SELECT COUNT(*) AS c FROM check_in_queue WHERE DATE(checkin_time) = ? AND status = 'waiting'");
-if ($stmt) {
-    $stmt->bind_param('s', $today);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    if ($res && ($r = $res->fetch_assoc())) {
-        $waitingCount = (int)($r['c'] ?? 0);
+try {
+    if (function_exists('table_exists') && table_exists($conn, 'check_in_queue')) {
+        $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM check_in_queue WHERE DATE(checkin_time) = ? AND status = 'waiting'");
+        if ($stmt) {
+            $stmt->bind_param('s', $today);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($res && ($r = $res->fetch_assoc())) {
+                $waitingCount = (int)($r['c'] ?? 0);
+            }
+            $stmt->close();
+        }
+    } else {
+        error_log('check_in_queue table missing; sidebar waitingCount set to 0');
+        $waitingCount = 0;
     }
-    $stmt->close();
+} catch (Throwable $e) {
+    error_log('Error computing waitingCount: ' . $e->getMessage());
+    $waitingCount = 0;
 }
 ?>
 
@@ -165,6 +175,12 @@ if ($stmt) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="secretary.php?page=scheduling">
+                    <i class="bi bi-calendar-range"></i>
+                    <span>Scheduling</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=queue">
                     <i class="bi bi-list-ol"></i>
                     <span class="ms-2">Queue</span>
@@ -197,26 +213,30 @@ if ($stmt) {
                             <!-- Dynamic Content Area -->
                             <?php
                             $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
-
-                            switch ($page) {
-                                case "dashboard":
-                                    include "secretary_modules/dashboard.php";
-                                    break;
-                                case "manage_patients":
-                                    include "secretary_modules/manage_patients.php";
-                                    break;
-                                case "appointments":
-                                    include "secretary_modules/appointments.php";
-                                    break;
-                                case "billing":
-                                    include "secretary_modules/billing.php";
-                                    break;
-                                case "queue":
-                                    include "secretary_modules/queue.php";
-                                    break;
-                                default:
-                                    include "secretary_modules/dashboard.php";
-                                    break;
+                            try {
+                                switch ($page) {
+                                    case "dashboard":
+                                        include "secretary_modules/dashboard.php";
+                                        break;
+                                    case "manage_patients":
+                                        include "secretary_modules/manage_patients.php";
+                                        break;
+                                    case "appointments":
+                                        include "secretary_modules/appointments.php";
+                                        break;
+                                    case "billing":
+                                        include "secretary_modules/billing.php";
+                                        break;
+                                    case "queue":
+                                        include "secretary_modules/queue.php";
+                                        break;
+                                    default:
+                                        include "secretary_modules/dashboard.php";
+                                        break;
+                                }
+                            } catch (Throwable $e) {
+                                error_log('Error including secretary page ' . $page . ': ' . $e->getMessage());
+                                echo '<div class="alert alert-danger">An internal error occurred loading this page. Please contact the administrator.</div>';
                             }
                             ?>
                         </div>

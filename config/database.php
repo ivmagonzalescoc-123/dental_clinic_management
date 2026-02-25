@@ -29,4 +29,28 @@ if (!$conn->set_charset("utf8mb4")) {
 // Set timezone
 date_default_timezone_set('UTC');
 
+// Disable mysqli throwing exceptions by default here (we will use explicit checks)
+if (function_exists('mysqli_report')) {
+    // Turn off automatic reporting to avoid uncaught mysqli_sql_exception
+    mysqli_report(MYSQLI_REPORT_OFF);
+}
+
+// Helper: check if a table exists in the current database
+if (!function_exists('table_exists')) {
+    function table_exists($conn, $tableName) {
+        if (!($conn instanceof mysqli)) return false;
+        try {
+            $tn = $conn->real_escape_string($tableName);
+            $sql = "SELECT COUNT(*) AS c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '" . $tn . "'";
+            $res = $conn->query($sql);
+            if (!$res) return false;
+            $row = $res->fetch_assoc();
+            return (int)($row['c'] ?? 0) > 0;
+        } catch (Throwable $e) {
+            error_log('table_exists check failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+}
+
 ?>

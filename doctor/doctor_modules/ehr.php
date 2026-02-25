@@ -48,165 +48,165 @@ if ($sstmt) {
 ?>
 
 <div class="card border-0 shadow-none">
-            <input type="hidden" name="appointment_id" id="appointment_id_hidden"
-                value="<?php echo (int) $appointment_id; ?>">
-            <input type="hidden" name="schedule_id" id="schedule_id_hidden"
-                value="<?php echo isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : ''; ?>">
+    <input type="hidden" name="appointment_id" id="appointment_id_hidden" value="<?php echo (int) $appointment_id; ?>">
+    <input type="hidden" name="schedule_id" id="schedule_id_hidden"
+        value="<?php echo isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : ''; ?>">
 
-            <!-- Integrated Profiling Fields (top of form) -->
-            <div class="mb-3">
-                <div class="row g-2">
-                    <div class="mb-3" id="queueSelectorWrap">
-                        <label class="form-label">Select Queue Number / Patient</label>
-                        <select id="queueSelector" class="form-select">
-                            <option value="">-- Select queue / appointment --</option>
-                            <?php foreach ($queueItems as $qi): ?>
-                                <?php $display = trim(($qi['que_number'] ? ('Queue #' . $qi['que_number'] . ' - ') : '') . ($qi['first_name'] . ' ' . $qi['last_name'])); ?>
-                                <option value="<?php echo (int) $qi['appointment_id']; ?>"
-                                    data-que="<?php echo htmlspecialchars($qi['que_number']); ?>">
-                                    <?php echo htmlspecialchars($display); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <div class="form-text">If you arrived from queue accept, the appointment will already be
-                            selected.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Medical History (conditions)</label>
-                        <textarea id="pf_medical_history_ehr" name="pf_medical_history" class="form-control" rows="2"
-                            placeholder="e.g., Diabetes, Hypertension"></textarea>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Medications</label>
-                        <input id="pf_medications_ehr" name="pf_medications" class="form-control"
-                            placeholder="List current medications">
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Allergies</label>
-                        <input id="pf_allergies_ehr" name="pf_allergies" class="form-control"
-                            placeholder="Allergies (e.g., Penicillin)">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Smoking</label>
-                        <select id="pf_smoking_ehr" name="pf_smoking" class="form-select">
-                            <option value="never">Never</option>
-                            <option value="former">Former</option>
-                            <option value="current">Current</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Alcohol</label>
-                        <select id="pf_alcohol_ehr" name="pf_alcohol" class="form-select">
-                            <option value="none">None</option>
-                            <option value="social">Social</option>
-                            <option value="regular">Regular</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">ASA Class</label>
-                        <select id="pf_asa_ehr" name="pf_asa" class="form-select">
-                            <option value="I">I</option>
-                            <option value="II">II</option>
-                            <option value="III">III</option>
-                            <option value="IV">IV</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Last Dental Visit</label>
-                        <input type="date" id="pf_last_visit_ehr" name="pf_last_visit" class="form-control">
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">Periodontal / Oral Exam Notes</label>
-                        <textarea id="pf_periodontal_ehr" name="pf_periodontal" class="form-control" rows="2"
-                            placeholder="BPE, pocket depths, recession notes"></textarea>
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label">Dental Chart / Findings</label>
-                        <textarea id="pf_dental_chart_ehr" name="pf_dental_chart" class="form-control" rows="2"
-                            placeholder="e.g., caries: #16, restored: #11"></textarea>
-                    </div>
-                </div>
-            </div>
-
-
-            <div class="mb-3">
-                <label class="form-label">Recommended Services</label>
-                <div>
-                    <?php foreach ($services as $s): ?>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="<?php echo (int) $s['service_id']; ?>"
-                                id="srv-<?php echo (int) $s['service_id']; ?>"
-                                data-default-duration="<?php echo (int) $s['default_duration_minutes']; ?>">
-                            <label class="form-check-label"
-                                for="srv-<?php echo (int) $s['service_id']; ?>"><?php echo htmlspecialchars($s['service_name']); ?>
-                                — ₱<?php echo number_format($s['initial_price'], 2); ?></label>
-                        </div>
+    <!-- Integrated Profiling Fields (top of form) -->
+    <div class="mb-3">
+        <div class="row g-2">
+            <div class="mb-3" id="queueSelectorWrap">
+                <label class="form-label">Select Queue Number / Patient</label>
+                <select id="queueSelector" class="form-select">
+                    <option value="">-- Select queue / appointment --</option>
+                    <?php foreach ($queueItems as $qi): ?>
+                        <?php $display = trim(($qi['que_number'] ? ('Queue #' . $qi['que_number'] . ' - ') : '') . ($qi['first_name'] . ' ' . $qi['last_name'])); ?>
+                        <option value="<?php echo (int) $qi['appointment_id']; ?>"
+                            data-que="<?php echo htmlspecialchars($qi['que_number']); ?>">
+                            <?php echo htmlspecialchars($display); ?>
+                        </option>
                     <?php endforeach; ?>
-                </div>
+                </select>
+                <div class="form-text">If you arrived from queue accept, the appointment will already be
+                    selected.</div>
             </div>
-
             <div class="mb-3">
-                <label class="form-label">Treatment Plan (structured JSON allowed)</label>
-                <textarea class="form-control" name="treatment_plan" id="treatment_plan" rows="3"></textarea>
+                <button id="btnEditHealthRecord" type="button" class="btn btn-sm btn-outline-secondary">Edit Health
+                    Record</button>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Medical History (conditions)</label>
+                <textarea id="pf_medical_history_ehr" name="pf_medical_history" class="form-control" rows="2"
+                    placeholder="e.g., Diabetes, Hypertension"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Medications</label>
+                <input id="pf_medications_ehr" name="pf_medications" class="form-control"
+                    placeholder="List current medications">
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">Materials Used</label>
-                <div id="materialsList"></div>
-                <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addMaterialBtn">Add
-                    Material</button>
+            <div class="col-md-6">
+                <label class="form-label">Allergies</label>
+                <input id="pf_allergies_ehr" name="pf_allergies" class="form-control"
+                    placeholder="Any allergies">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Smoking</label>
+                <select id="pf_smoking_ehr" name="pf_smoking" class="form-select">
+                    <option value="never">Never</option>
+                    <option value="former">Former</option>
+                    <option value="current">Current</option>
+                </select>
             </div>
 
-
-            <div class="mb-3">
-                <label class="form-label">Doctor Notes</label>
-                <textarea class="form-control" name="doctor_notes" id="doctor_notes" rows="3"></textarea>
+            <div class="col-md-4">
+                <label class="form-label">Alcohol</label>
+                <select id="pf_alcohol_ehr" name="pf_alcohol" class="form-select">
+                    <option value="none">None</option>
+                    <option value="social">Social</option>
+                    <option value="regular">Regular</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">ASA Class</label>
+                <select id="pf_asa_ehr" name="pf_asa" class="form-select">
+                    <option value="I">I</option>
+                    <option value="II">II</option>
+                    <option value="III">III</option>
+                    <option value="IV">IV</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Last Dental Visit</label>
+                <input type="date" id="pf_last_visit_ehr" name="pf_last_visit" class="form-control">
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">Radiographs / Imaging Notes</label>
-                <input id="radiographs_notes" name="radiographs_notes" class="form-control"
-                    placeholder="e.g., OPG 2025-08-01">
-                <small class="text-muted">Enter radiograph references or imaging notes.</small>
+            <div class="col-12">
+                <label class="form-label">Periodontal / Oral Exam Notes</label>
+                <textarea id="pf_periodontal_ehr" name="pf_periodontal" class="form-control" rows="2"
+                    placeholder="BPE, pocket depths, recession notes"></textarea>
             </div>
 
-            <div class="mb-3">
-                <label class="form-label">Upload X‑rays / Tooth Images</label>
-                <input type="file" id="toothImagesInput" name="tooth_images[]" accept="image/*" multiple
-                    class="form-control">
-                <small class="text-muted">Upload one or more x‑ray or tooth images (max 5MB each). These will be saved
-                    to the clinical record.</small>
+            <div class="col-12">
+                <label class="form-label">Dental Chart / Findings</label>
+                <textarea id="pf_dental_chart_ehr" name="pf_dental_chart" class="form-control" rows="2"
+                    placeholder="e.g., caries: #16, restored: #11"></textarea>
             </div>
-
-            <div class="mb-3">
-                <label class="form-label">Follow-up Date</label>
-                <input type="date" name="follow_up_date" class="form-control" id="follow_up_date">
-            </div>
-
-            <!-- Odontogram moved to be the last input section -->
-            <div class="mb-3">
-                <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
-                <div class="d-flex align-items-center mb-2 gap-2">
-                    <button type="button" id="toggleOdontogramBtn"
-                        class="btn btn-sm btn-outline-secondary ms-2">Show</button>
-                </div>
-                <div id="odontogramContainer">
-                    <!-- iframe will be created here on demand -->
-                </div>
-                <input type="hidden" id="odontogram_data" name="odontogram">
-            </div>
-
-            <div class="d-flex gap-2">
-                <button type="button" id="saveDraftBtn" class="btn btn-secondary">Save Draft</button>
-                <button type="button" id="finalizeBtn" class="btn btn-primary justify-content-center">Submit & Finalize (Create
-                    Billing)</button>
-            </div>
-        </form>
+        </div>
     </div>
+
+
+    <div class="mb-3">
+        <label class="form-label">Recommended Services</label>
+        <div>
+            <?php foreach ($services as $s): ?>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="<?php echo (int) $s['service_id']; ?>"
+                        id="srv-<?php echo (int) $s['service_id']; ?>"
+                        data-default-duration="<?php echo (int) $s['default_duration_minutes']; ?>">
+                    <label class="form-check-label"
+                        for="srv-<?php echo (int) $s['service_id']; ?>"><?php echo htmlspecialchars($s['service_name']); ?>
+                        — ₱<?php echo number_format($s['initial_price'], 2); ?></label>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Treatment Plan (structured JSON allowed)</label>
+        <textarea class="form-control" name="treatment_plan" id="treatment_plan" rows="3"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Materials Used</label>
+        <div id="materialsList"></div>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addMaterialBtn">Add
+            Material</button>
+    </div>
+
+
+    <div class="mb-3">
+        <label class="form-label">Doctor Notes</label>
+        <textarea class="form-control" name="doctor_notes" id="doctor_notes" rows="3"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Upload X‑rays / Tooth Images</label>
+        <input type="file" id="toothImagesInput" name="tooth_images[]" accept="image/*" multiple class="form-control">
+        <small class="text-muted">Upload one or more x‑ray or tooth images (max 5MB each). These will be saved
+            to the clinical record.</small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Radiographs / Imaging Notes</label>
+        <input id="radiographs_notes" name="radiographs_notes" class="form-control" placeholder="e.g., OPG 2025-08-01">
+        <small class="text-muted">Enter radiograph references or imaging notes.</small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Follow-up Date</label>
+        <input type="date" name="follow_up_date" class="form-control" id="follow_up_date">
+    </div>
+
+    <!-- Odontogram moved to be the last input section -->
+    <div class="mb-3">
+        <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
+        <div class="d-flex align-items-center mb-2 gap-2">
+            <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
+        </div>
+        <div id="odontogramContainer">
+            <!-- iframe will be created here on demand -->
+        </div>
+        <input type="hidden" id="odontogram_data" name="odontogram">
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" id="saveDraftBtn" class="btn btn-secondary">Save Draft</button>
+        <button type="button" id="finalizeBtn" class="btn btn-primary justify-content-center">Submit & Finalize (Create
+            Billing)</button>
+    </div>
+    </form>
+</div>
 </div>
 
 <!-- Scheduling suggestions modal -->
@@ -304,9 +304,7 @@ if ($sstmt) {
                 if (j.success) {
                     alert('Saved' + (finalize ? ' and finalized. Billing created: ₱' + (j.billing_amount || 0) : ''));
                     if (j.schedule_id) document.getElementById('schedule_id_hidden').value = j.schedule_id;
-                    if (j.needs_scheduling) {
-                        showSchedulingModal({ appointment_id, duration: 30 });
-                    } else if (finalize) {
+                    if (finalize) {
                         window.location.href = 'doctor.php?page=appointments';
                     }
                 } else {
@@ -387,6 +385,18 @@ if ($sstmt) {
                         document.getElementById('pf_last_visit_ehr').value = p.last_visit || '';
                     }
                 } catch (e) { console.warn('prefill profiling', e); }
+
+                // If patient-level profiling exists, disable repetitive health fields to avoid redundant editing.
+                // Fields disabled: Medical History, Allergies, Smoking, ASA Class.
+                try {
+                    const patientPf = rec.patient_profiling || rec.profiling || null;
+                    const apptId = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
+                    const scheduleId = parseInt(document.getElementById('schedule_id_hidden').value || '0', 10) || 0;
+                    if (typeof setProfilingDisabled === 'function') {
+                        if (patientPf && !apptId && !scheduleId) setProfilingDisabled(true);
+                        else setProfilingDisabled(false);
+                    }
+                } catch (e) { console.warn('profiling disable logic', e); }
                 if (rec.odontogram) { document.getElementById('odontogram_data').value = JSON.stringify(rec.odontogram); }
                 if (rec.radiographs_notes) { document.getElementById('radiographs_notes').value = rec.radiographs_notes || ''; }
                 // show existing images / tooth image thumbnails
@@ -519,5 +529,32 @@ if ($sstmt) {
         });
 
         // cleanup: removed extra controls; toggle button handles show/hide and reload
+
+        // Helper to enable/disable repetitive profiling fields and update the edit button
+        function setProfilingDisabled(dis) {
+            const ids = ['pf_medical_history_ehr', 'pf_allergies_ehr', 'pf_smoking_ehr', 'pf_alcohol_ehr', 'pf_asa_ehr'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = !!dis;
+                if (dis) el.classList.add('bg-light'); else el.classList.remove('bg-light');
+            });
+            const btn = document.getElementById('btnEditHealthRecord');
+            if (btn) btn.textContent = dis ? 'Edit Health Record' : 'Lock Health Record';
+        }
+
+        // Wire the Edit Health Record button: toggles the disabled state
+        document.addEventListener('DOMContentLoaded', function () {
+            const btn = document.getElementById('btnEditHealthRecord');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                const el = document.getElementById('pf_medical_history_ehr');
+                const currentlyDisabled = el ? el.disabled : false;
+                setProfilingDisabled(!currentlyDisabled);
+            });
+            // initialize label based on current field state
+            const starter = document.getElementById('pf_medical_history_ehr');
+            setProfilingDisabled(starter ? starter.disabled : false);
+        });
     })();
 </script>

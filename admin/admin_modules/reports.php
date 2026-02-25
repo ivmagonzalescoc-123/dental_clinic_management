@@ -74,6 +74,35 @@ if ($reportType === 'appointments') {
     }
 }
 
+// Build time-series for appointments in selected range (for charts)
+$dateLabels = [];
+$dateValues = [];
+$startTs = strtotime($startDate);
+$endTs = strtotime($endDate);
+if ($startTs && $endTs && $startTs <= $endTs) {
+    for ($d = $startTs; $d <= $endTs; $d = strtotime('+1 day', $d)) {
+        $dateLabels[] = date('Y-m-d', $d);
+        $dateValues[] = 0;
+    }
+    $sql = "SELECT DATE(appointment_date) AS dt, COUNT(*) AS c FROM appointments WHERE DATE(appointment_date) BETWEEN ? AND ?";
+    $types = 'ss'; $params = [$startDate, $endDate];
+    if ($doctorId) { $sql .= ' AND user_id = ?'; $types .= 'i'; $params[] = (int)$doctorId; }
+    $sql .= ' GROUP BY dt ORDER BY dt ASC';
+    $stmt = $conn->prepare($sql);
+    if ($stmt) {
+        // bind params
+        $bind = [$types];
+        foreach ($params as $k => $v) $bind[] = &$params[$k];
+        call_user_func_array([$stmt, 'bind_param'], $bind);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $map = [];
+        if ($res) while ($r = $res->fetch_assoc()) $map[$r['dt']] = (int)$r['c'];
+        $stmt->close();
+        foreach ($dateLabels as $idx => $lbl) if (isset($map[$lbl])) $dateValues[$idx] = $map[$lbl];
+    }
+}
+
 // SERVICES REPORT
 $servicesData = [];
 $serviceStats = [];
@@ -124,23 +153,34 @@ if ($reportType === 'doctor_performance') {
 }
 
 // PATIENT ANALYTICS REPORT
-$patientAnalyticsData = [];
-$totalPatients = 0;
-$newPatients = 0;
-$patientsWithAppts = 0;
-// Always load patient analytics data (not just when tab is selected)
-{
-    // Total patients
-    $totalRes = $conn->query("SELECT COUNT(*) AS total FROM patients");
-    $totalPatients = $totalRes ? $totalRes->fetch_assoc()['total'] : 0;
-    
-    // New patients in date range
-    $newRes = $conn->query("SELECT COUNT(*) AS total FROM patients WHERE DATE(created_at) BETWEEN '$startDate' AND '$endDate'");
-    $newPatients = $newRes ? $newRes->fetch_assoc()['total'] : 0;
-    
-    // Patients with appointments
-    $appointRes = $conn->query("SELECT COUNT(DISTINCT patient_id) AS total FROM appointments WHERE DATE(appointment_date) BETWEEN '$startDate' AND '$endDate'");
-    $patientsWithAppts = $appointRes ? $appointRes->fetch_assoc()['total'] : 0;
+ $patientAnalyticsData = [];
+ $totalPatients = 0;
+ $newPatients = 0;
+ $patientsWithAppts = 0;
+ // Always load patient analytics data (not just when tab is selected)
+ if (function_exists('table_exists') && table_exists($conn, 'patients')) {
+     try {
+         // Total patients
+         $totalRes = $conn->query("SELECT COUNT(*) AS total FROM patients");
+         $totalPatients = $totalRes ? (int)$totalRes->fetch_assoc()['total'] : 0;
+
+         // New patients in date range
+         $newRes = $conn->query("SELECT COUNT(*) AS total FROM patients WHERE DATE(created_at) BETWEEN '$startDate' AND '$endDate'");
+         $newPatients = $newRes ? (int)$newRes->fetch_assoc()['total'] : 0;
+
+         // Patients with appointments (guard appointments table)
+         if (table_exists($conn, 'appointments')) {
+             $appointRes = $conn->query("SELECT COUNT(DISTINCT patient_id) AS total FROM appointments WHERE DATE(appointment_date) BETWEEN '$startDate' AND '$endDate'");
+             $patientsWithAppts = $appointRes ? (int)$appointRes->fetch_assoc()['total'] : 0;
+         } else {
+             $patientsWithAppts = 0;
+         }
+     } catch (Throwable $e) {
+         error_log('Reports patient analytics query failed: ' . $e->getMessage());
+         $totalPatients = $newPatients = $patientsWithAppts = 0;
+     }
+} else {
+     error_log('Reports: patients table missing; skipping patient analytics queries');
 }
 
 if ($reportType === 'patient_analytics') {
@@ -172,6 +212,24 @@ if ($statusRes) {
         $statusSummary[] = $row;
     }
 }
+
+// Prepare arrays for charts
+$statusLabels = [];
+$statusCounts = [];
+foreach ($statusSummary as $s) { $statusLabels[] = $s['status']; $statusCounts[] = (int)$s['count']; }
+
+$servicesLabels = [];
+$servicesCounts = [];
+foreach ($servicesData as $s) { $servicesLabels[] = $s['service_name']; $servicesCounts[] = (int)$s['usage_count']; }
+
+$doctorLabels = [];
+$doctorTotalAppts = [];
+$doctorCompletion = [];
+foreach ($doctorPerformanceData as $d) { $doctorLabels[] = $d['first_name'] . ' ' . $d['last_name']; $doctorTotalAppts[] = (int)$d['total_appointments']; $doctorCompletion[] = (float)$d['completion_rate']; }
+
+// Patient analytics pie: new vs returning
+$returning = max(0, (int)$totalPatients - (int)$newPatients);
+ $patientPie = [ 'labels' => ['New Patients','Returning Patients'], 'data' => [ (int)$newPatients, $returning ] ];
 ?>
 
 <div class="card">
@@ -255,6 +313,24 @@ if ($statusRes) {
         <div class="tab-content">
             <!-- Appointments Tab -->
             <div class="tab-pane fade <?php echo $reportType === 'appointments' ? 'show active' : ''; ?>" id="appointments-pane">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title small">Appointment Status</h6>
+                                <div id="appointmentsStatusChart" style="min-height:220px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title small">Appointments Over Time</h6>
+                                <div id="appointmentsTimeSeriesChart" style="min-height:220px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead class="table-light">
@@ -304,6 +380,9 @@ if ($statusRes) {
 
             <!-- Services Tab -->
             <div class="tab-pane fade <?php echo $reportType === 'services' ? 'show active' : ''; ?>" id="services-pane">
+                <div class="mb-3">
+                    <div id="servicesUsageChart" style="min-height:300px;"></div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead class="table-light">
@@ -336,6 +415,9 @@ if ($statusRes) {
 
             <!-- Doctor Performance Tab -->
             <div class="tab-pane fade <?php echo $reportType === 'doctor_performance' ? 'show active' : ''; ?>" id="doctor-pane">
+                <div class="mb-3">
+                    <div id="doctorPerfChart" style="min-height:300px;"></div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead class="table-light">
@@ -399,7 +481,14 @@ if ($statusRes) {
                     </div>
                 </div>
 
-                <h6 class="mt-4 mb-3">Top Patients by Appointment Count</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mt-4 mb-3">Top Patients by Appointment Count</h6>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="patientAnalyticsChart" style="min-height:220px;"></div>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm table-hover">
                         <thead class="table-light">
@@ -462,4 +551,66 @@ document.getElementById('startDate')?.addEventListener('keypress', (e) => {
 document.getElementById('endDate')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') applyFilters();
 });
+</script>
+<script>
+// Render ApexCharts for reports (if available)
+(function () {
+    if (typeof ApexCharts === 'undefined') return;
+
+    // Appointments status pie
+    const statusLabels = <?php echo json_encode($statusLabels); ?>;
+    const statusCounts = <?php echo json_encode($statusCounts); ?>;
+    if (statusLabels && statusLabels.length) {
+        const opts = {
+            chart: { type: 'donut', height: 250 },
+            series: statusCounts,
+            labels: statusLabels,
+            legend: { position: 'bottom' }
+        };
+        new ApexCharts(document.getElementById('appointmentsStatusChart'), opts).render();
+    }
+
+    // Appointments time series
+    const apptLabels = <?php echo json_encode($dateLabels); ?>;
+    const apptValues = <?php echo json_encode($dateValues); ?>;
+    if (apptLabels && apptLabels.length) {
+        const opts2 = {
+            chart: { type: 'area', height: 250, toolbar: { show: false } },
+            series: [{ name: 'Appointments', data: apptValues }],
+            xaxis: { categories: apptLabels },
+            stroke: { curve: 'smooth' },
+            colors: ['#2b8aef']
+        };
+        new ApexCharts(document.getElementById('appointmentsTimeSeriesChart'), opts2).render();
+    }
+
+    // Services usage
+    const svcLabels = <?php echo json_encode($servicesLabels); ?>;
+    const svcCounts = <?php echo json_encode($servicesCounts); ?>;
+    if (svcLabels && svcLabels.length) {
+        const opts3 = { chart: { type: 'bar', height: 320 }, series: [{ name: 'Usage', data: svcCounts }], xaxis: { categories: svcLabels }, plotOptions: { bar: { horizontal: false } } };
+        new ApexCharts(document.getElementById('servicesUsageChart'), opts3).render();
+    }
+
+    // Doctor performance
+    const docLabels = <?php echo json_encode($doctorLabels); ?>;
+    const docAppts = <?php echo json_encode($doctorTotalAppts); ?>;
+    const docComp = <?php echo json_encode($doctorCompletion); ?>;
+    if (docLabels && docLabels.length) {
+        const opts4 = {
+            chart: { type: 'bar', height: 320 },
+            series: [{ name: 'Total Appts', data: docAppts }, { name: 'Completion %', data: docComp }],
+            xaxis: { categories: docLabels },
+            yaxis: [{ title: { text: 'Count' } }, { opposite: true, title: { text: 'Completion %' } }]
+        };
+        new ApexCharts(document.getElementById('doctorPerfChart'), opts4).render();
+    }
+
+    // Patient analytics pie
+    const patientPie = <?php echo json_encode($patientPie); ?>;
+    if (patientPie && patientPie.labels) {
+        const opts5 = { chart: { type: 'donut', height: 220 }, series: patientPie.data, labels: patientPie.labels, legend: { position: 'bottom' } };
+        new ApexCharts(document.getElementById('patientAnalyticsChart'), opts5).render();
+    }
+})();
 </script>

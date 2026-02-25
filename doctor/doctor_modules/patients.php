@@ -1,5 +1,9 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
+check_session(['doctor']);
+
+$doctor_id = $_SESSION['user_id'] ?? 0;
 
 // Filters
 $q = trim((string)($_GET['q'] ?? ''));
@@ -8,10 +12,9 @@ $dateTo = trim((string)($_GET['date_to'] ?? ''));
 $year = trim((string)($_GET['year'] ?? ''));
 $sort = trim((string)($_GET['sort'] ?? 'name_asc'));
 
-// Any appointment-based filter means we only show patients with matching appointments
 $hasAppointmentFilter = ($dateFrom !== '') || ($dateTo !== '') || ($year !== '');
 
-// Fetch patients + appointments + selected services
+// Build SQL: only patients with appointments assigned to this doctor
 $sql = "
     SELECT
         p.patient_id,
@@ -30,39 +33,28 @@ $sql = "
         a.notes,
         a.created_at AS appointment_created_at,
 
-        NULL AS start_time,
-        NULL AS end_time,
+        -- latest schedule start for the appointment
+        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY s.scheduled_start DESC LIMIT 1) AS start_time,
+        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY s.scheduled_start DESC LIMIT 1) AS end_time,
+        (SELECT s.status FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY s.scheduled_start DESC LIMIT 1) AS schedule_status,
 
         ss.selected_service_id,
         s.service_name
     FROM patients p
-";
-
-if ($hasAppointmentFilter) {
-    $sql .= "    INNER JOIN appointments a ON a.patient_id = p.patient_id\n";
-} else {
-    $sql .= "    LEFT JOIN appointments a ON a.patient_id = p.patient_id\n";
-}
-
-$sql .= "
-    -- timeslot removed; time fields not available
+    INNER JOIN appointments a ON a.patient_id = p.patient_id AND a.user_id = ?
     LEFT JOIN selected_services ss ON ss.appointment_id = a.appointment_id
     LEFT JOIN services s ON s.service_id = ss.service_id
 ";
 
 $where = [];
-$types = '';
-$params = [];
+$types = 'i';
+$params = [$doctor_id];
 
 if ($q !== '') {
-    $where[] = "(p.first_name LIKE ? OR p.last_name LIKE ? OR p.email LIKE ? OR p.phone_number LIKE ? OR CONCAT(p.first_name, ' ', p.last_name) LIKE ?)";
+    $where[] = "(p.first_name LIKE ? OR p.last_name LIKE ? OR p.email LIKE ? OR p.phone_number LIKE ? OR CONCAT(p.first_name, ' ', p.last_name) LIKE ? )";
     $like = '%' . $q . '%';
     $types .= 'sssss';
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
-    $params[] = $like;
+    $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like; $params[] = $like;
 }
 
 if ($hasAppointmentFilter) {
@@ -87,25 +79,22 @@ if (!empty($where)) {
     $sql .= " WHERE " . implode(' AND ', $where);
 }
 
-// Base order to keep rows grouped; final patient sort happens in PHP
 $sql .= " ORDER BY p.last_name ASC, p.first_name ASC, a.appointment_date DESC, a.created_at DESC";
 
 $stmt = $conn->prepare($sql);
-if ($stmt && $types !== '') {
-    $stmt->bind_param($types, ...$params);
-}
-
-$result = null;
 if ($stmt) {
+    // bind dynamically
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $result = $stmt->get_result();
+} else {
+    $result = null;
 }
 
 $patients = [];
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $patientId = (int)$row['patient_id'];
-
         if (!isset($patients[$patientId])) {
             $patients[$patientId] = [
                 'patient_id' => $patientId,
@@ -120,7 +109,6 @@ if ($result) {
 
         if (!empty($row['appointment_id'])) {
             $appointmentId = (int)$row['appointment_id'];
-
             if (!isset($patients[$patientId]['appointments'][$appointmentId])) {
                 $patients[$patientId]['appointments'][$appointmentId] = [
                     'appointment_id' => $appointmentId,
@@ -131,6 +119,7 @@ if ($result) {
                     'notes' => $row['notes'],
                     'start_time' => $row['start_time'],
                     'end_time' => $row['end_time'],
+                    'schedule_status' => $row['schedule_status'],
                     'services' => [],
                 ];
             }
@@ -143,12 +132,10 @@ if ($result) {
             }
         }
     }
-}
-
-if ($stmt) {
     $stmt->close();
 }
 
+// Helpers (same as admin)
 function format_patient_name($patient)
 {
     $middle = trim((string)($patient['middle_name'] ?? ''));
@@ -201,7 +188,6 @@ function patient_latest_appointment_date($patient)
 
 $patientList = array_values($patients);
 
-// Sort patients in PHP based on requested sort
 usort($patientList, function ($a, $b) use ($sort) {
     $nameA = strtolower(trim(($a['last_name'] ?? '') . ' ' . ($a['first_name'] ?? '')));
     $nameB = strtolower(trim(($b['last_name'] ?? '') . ' ' . ($b['first_name'] ?? '')));
@@ -229,10 +215,10 @@ usort($patientList, function ($a, $b) use ($sort) {
 <div class="card">
     <div class="card-header d-flex flex-nowrap justify-content-between align-items-center gap-2">
         <div class="d-flex align-items-center gap-2" style="min-width: 0;">
-            <h2 class="card-title mb-0 text-truncate">Patients</h2>
+            <h2 class="card-title mb-0 text-truncate">My Patients</h2>
         </div>
 
-        <form class="d-flex flex-nowrap align-items-center gap-2" method="GET" action="admin.php">
+        <form class="d-flex flex-nowrap align-items-center gap-2" method="GET" action="doctor.php">
             <input type="hidden" name="page" value="patients">
 
             <div class="input-group input-group-sm" style="width: 240px;">
@@ -282,14 +268,10 @@ usort($patientList, function ($a, $b) use ($sort) {
 
                         <div class="col-12 d-flex justify-content-between align-items-center mt-1">
                             <small class="text-muted">
-                                <?php if ($hasAppointmentFilter): ?>
-                                    Shows patients with matching appointments
-                                <?php else: ?>
-                                    Filters are optional
-                                <?php endif; ?>
+                                Shows patients assigned to you (doctor).
                             </small>
                             <div class="d-flex gap-2">
-                                <a class="btn btn-outline-secondary btn-sm" href="admin.php?page=patients">Clear</a>
+                                <a class="btn btn-outline-secondary btn-sm" href="doctor.php?page=patients">Clear</a>
                                 <button class="btn btn-primary btn-sm" type="submit">Apply</button>
                             </div>
                         </div>
@@ -316,7 +298,7 @@ usort($patientList, function ($a, $b) use ($sort) {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start gap-3">
                                     <div class="flex-grow-1">
-                                        <h5 class="card-title mb-1"><?php echo htmlspecialchars(format_patient_name($patient)); ?></h5>
+                                        <h5 class="card-title mb-0"><?php echo htmlspecialchars(format_patient_name($patient)); ?></h5>
                                         <div class="text-muted small">
                                             <?php if (!empty($patient['phone_number'])): ?>
                                                 <div><i class="bi bi-telephone"></i> <?php echo htmlspecialchars($patient['phone_number']); ?></div>
@@ -345,7 +327,6 @@ usort($patientList, function ($a, $b) use ($sort) {
                                                     $apptCollapseId = 'apptCollapse' . $patientId . '-' . $apptId;
                                                     $serviceTitle = 'No service selected';
                                                     if (!empty($appt['services'])) {
-                                                        // Use first service as the title (common case: 1 service per appointment)
                                                         $serviceTitle = $appt['services'][0]['service_name'] ?? $serviceTitle;
                                                     }
                                                     $timeRange = format_time_range($appt['start_time'], $appt['end_time']);
@@ -400,10 +381,17 @@ usort($patientList, function ($a, $b) use ($sort) {
                                                                 </div>
                                                             <?php endif; ?>
 
+                                                            <?php if (!empty($appt['start_time']) || !empty($appt['end_time'])): ?>
+                                                                <div class="mb-2">
+                                                                    <div class="fw-semibold small text-muted">Scheduled</div>
+                                                                    <div><?php echo htmlspecialchars($appt['start_time'] ?? '') . ' ' . (empty($appt['end_time']) ? '' : ' — ' . htmlspecialchars($appt['end_time'])); ?></div>
+                                                                </div>
+                                                            <?php endif; ?>
+
                                                             <?php if (!empty($appt['notes'])): ?>
-                                                                <div class="mb-0">
+                                                                <div class="mb-2">
                                                                     <div class="fw-semibold small text-muted">Notes</div>
-                                                                    <div><?php echo nl2br(htmlspecialchars($appt['notes'])); ?></div>
+                                                                    <div><?php echo htmlspecialchars($appt['notes']); ?></div>
                                                                 </div>
                                                             <?php endif; ?>
                                                         </div>

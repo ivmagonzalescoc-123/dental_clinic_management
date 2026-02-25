@@ -16,11 +16,23 @@ if ($nid <= 0) {
     exit;
 }
 
-$stmt = $conn->prepare('UPDATE notifications SET is_read = 1 WHERE notification_id = ? AND user_id = ?');
-$stmt->bind_param('ii', $nid, $user_id);
-$stmt->execute();
-$stmt->close();
+try {
+    if (!function_exists('table_exists') || !table_exists($conn, 'notifications')) {
+        error_log('mark_read: notifications table missing');
+        echo json_encode(['success'=>false,'message'=>'Notifications not available']);
+        exit;
+    }
 
-echo json_encode(['success'=>true]);
+    $stmt = $conn->prepare('UPDATE notifications SET is_read = 1 WHERE notification_id = ? AND user_id = ?');
+    if ($stmt) {
+        $stmt->bind_param('ii', $nid, $user_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+    echo json_encode(['success'=>true]);
+} catch (Throwable $e) {
+    error_log('mark_read error: ' . $e->getMessage());
+    echo json_encode(['success'=>false,'message'=>'Internal error']);
+}
 
 ?>
