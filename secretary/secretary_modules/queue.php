@@ -33,7 +33,7 @@ if ($stmt) {
     <h4>Today's Queue</h4>
     </div>
 
-<div class="card">
+<div class="card border-0">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table table-striped">

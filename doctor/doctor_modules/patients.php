@@ -212,7 +212,7 @@ usort($patientList, function ($a, $b) use ($sort) {
 });
 ?>
 
-<div class="card">
+<div class="card border-0">
     <div class="card-header d-flex flex-nowrap justify-content-between align-items-center gap-2">
         <div class="d-flex align-items-center gap-2" style="min-width: 0;">
             <h2 class="card-title mb-0 text-truncate">My Patients</h2>

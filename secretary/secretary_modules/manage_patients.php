@@ -17,7 +17,7 @@ if ($res) {
 	</button>
 </div>
 
-<div class="card">
+<div class="card border-0">
 	<div class="card-body">
 		<div class="table-responsive">
 			<table class="table table-hover" id="patientsTable">

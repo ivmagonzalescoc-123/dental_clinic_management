@@ -12,9 +12,31 @@ if ($doctors_result) {
 }
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
+
+// Fetch services to display in patient view
+$services = [];
+$svcSql = "SELECT service_id, service_name, initial_price, description FROM services WHERE is_active = 1 ORDER BY service_name ASC";
+$svcRes = $conn->query($svcSql);
+if ($svcRes) {
+    while ($r = $svcRes->fetch_assoc()) $services[] = $r;
+}
+
+// Fetch recent billing history for this patient
+$billings = [];
+if ($patient_id) {
+    $billSql = "SELECT b.billing_id, b.appointment_id, b.total_amount, b.created_at, a.appointment_date
+                FROM billing b
+                INNER JOIN appointments a ON b.appointment_id = a.appointment_id
+                WHERE a.patient_id = " . (int)$patient_id . "
+                ORDER BY b.created_at DESC LIMIT 50";
+    $billRes = $conn->query($billSql);
+    if ($billRes) {
+        while ($row = $billRes->fetch_assoc()) $billings[] = $row;
+    }
+}
 ?>
 
-<div class="card">
+<div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Make an Appointment</h5>
     </div>
@@ -260,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!document.getElementById(styleId)) {
             const s = document.createElement('style');
             s.id = styleId;
-            s.textContent = '\n#appointmentCalendar .selected{background:#0b5ed7 !important;color:#fff;padding:4px;border-radius:6px;border:2px solid #084298;box-shadow:none;}\n#appointmentCalendar .card{width:100%;}\n#appointmentCalendar .text-muted{opacity:0.65;}\n#appointmentCalendar .selectable-date{background:linear-gradient(180deg,#e9f7ef 0%,#dff6e8 100%);border-radius:6px;}\n#appointmentCalendar .has-bookings{background:linear-gradient(180deg,#fff8dc 0%,#fff3cd 100%);border-radius:6px;}\n#appointmentCalendar .full-day{background:#f8d7da;color:#721c24;font-weight:700;border-radius:6px;}\n#appointmentCalendar .calendar-card table td { border:1px solid #e9ecef; padding:6px; }\n#appointmentCalendar .calendar-card table th { background:#f1f3f5;color:#495057;text-align:center; }\n#appointmentCalendar .calendar-card td div { min-height:48px; display:flex; flex-direction:column; gap:4px; }\n#appointmentCalendar .calendar-card td small { font-weight:700; color:#0d6efd; font-size:1rem; }\n/* hover: no padding/size change; only background and border to avoid enlargement */\n#appointmentCalendar .selectable-date:hover, #appointmentCalendar .has-bookings:hover { background:#0d6efd; color:#fff; border:1px solid rgba(11,94,215,0.9); border-radius:6px; box-shadow:none; }\n#appointmentCalendar .selected small { color:#fff; }\n.calendar-viewport { position: relative; }\n.calendar-track { width:100%; }\n.calendar-card { will-change: transform, opacity; flex:0 0 100%; }\n.calendar-card table td { vertical-align: top; }\n';
+            s.textContent = '\n#appointmentCalendar .selected{background:#0b5ed7 !important;color:#fff;padding:4px;border-radius:6px;border:2px solid #084298;box-shadow:none;}\n#appointmentCalendar .card{width:100%;}\n#appointmentCalendar .text-muted{opacity:0.65;}\n#appointmentCalendar .selectable-date{background:linear-gradient(180deg,#e9f7ef 0%,#dff6e8 100%);border-radius:6px;}\n#appointmentCalendar .has-bookings{background:linear-gradient(180deg,#fff8dc 0%,#fff3cd 100%);border-radius:6px;}\n#appointmentCalendar .full-day{background:#f8d7da;color:#721c24;font-weight:700;border-radius:6px;}\n#appointmentCalendar .calendar-card table td { border:1px solid #e9ecef; padding:6px; }\n#appointmentCalendar .calendar-card table th { background:#f1f3f5;color:#495057;text-align:center; }\n#appointmentCalendar .calendar-card td div { min-height:48px; display:flex; flex-direction:column; gap:4px; }\n#appointmentCalendar .calendar-card td small { font-weight:700; color:#0d6efd; font-size:1rem; }\n/* hover: no padding/size change; only background and border to avoid enlargement */\n#appointmentCalendar .selectable-date:hover, #appointmentCalendar .has-bookings:hover { background:#0d6efd; color:#fff; border:1px solid rgba(11,94,215,0.9); border-radius:6px; box-shadow:none; }\n#appointmentCalendar .selected small { color:#fff; }\n.calendar-viewport { position: relative; }\n.calendar-track { width:100%; }\n.calendar-card { will-change: transform, opacity; flex:0 0 100%; }\n.calendar-card table td { vertical-align: top; }\n\n/* Services grid */\n.services-grid { display: grid; grid-gap: 12px; }\n.service-card { cursor: pointer; border-radius: 8px; transition: transform .12s ease, box-shadow .12s ease; background: #fff; }\n.service-card:hover { transform: translateY(-6px); box-shadow: 0 8px 18px rgba(16,24,40,0.08); }\n.services-grid .service-card .service-name { color: #0b5ed7; }\n.services-grid .service-card .service-price { color: #6c757d; font-size: .95rem; }\n';
             document.head.appendChild(s);
         }
         } catch (err) {

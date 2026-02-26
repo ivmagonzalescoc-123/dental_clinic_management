@@ -119,6 +119,18 @@ check_session(['patient']);
                     <span>Appointments</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="patient.php?page=services">
+                    <i class="bi bi-receipt"></i>
+                    <span>Services</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="patient.php?page=transactions">
+                    <i class="bi bi-cart"></i>
+                    <span>Transactions</span>
+                </a>
+            </li>
 
         </ul>
     </aside>
@@ -144,14 +156,15 @@ check_session(['patient']);
                                 case "dashboard":
                                     include "patient_modules/dashboard.php";
                                     break;
-                                case "manage_users":
-                                    include "patient_modules/manage_users.php";
-                                    break;
+                                
                                 case "appointments":
                                     include "patient_modules/appointments.php";
                                     break;
-                                case "appointment_confirmation":
-                                    include "patient_modules/appointment_confirmation.php";
+                                case "services":
+                                    include "patient_modules/services.php";
+                                    break;
+                                case "transactions":
+                                    include "patient_modules/transactions.php";
                                     break;
                                 default:
                                     include "patient_modules/dashboard.php";

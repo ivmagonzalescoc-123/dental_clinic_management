@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 26, 2026 at 01:26 AM
+-- Generation Time: Feb 26, 2026 at 01:28 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -79,17 +79,19 @@ CREATE TABLE `billing` (
   `appointment_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
-  `created_at` datetime DEFAULT current_timestamp()
+  `created_at` datetime DEFAULT current_timestamp(),
+  `status` enum('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
+  `processed_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `billing`
 --
 
-INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`) VALUES
-(7, 23, 1, 1000.00, '2026-02-25 21:45:12'),
-(8, 24, 3, 1100.00, '2026-02-25 22:02:36'),
-(9, 29, 2, 0.00, '2026-02-26 08:09:28');
+INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`, `status`, `processed_by`) VALUES
+(7, 23, 1, 1000.00, '2026-02-25 21:45:12', 'paid', 3),
+(8, 24, 3, 1100.00, '2026-02-25 22:02:36', 'paid', 3),
+(9, 29, 2, 0.00, '2026-02-26 08:09:28', 'unpaid', NULL);
 
 -- --------------------------------------------------------
 
@@ -682,7 +684,8 @@ ALTER TABLE `backup`
 ALTER TABLE `billing`
   ADD PRIMARY KEY (`billing_id`),
   ADD UNIQUE KEY `appointment_id` (`appointment_id`),
-  ADD KEY `fk_billing_user` (`user_id`);
+  ADD KEY `fk_billing_user` (`user_id`),
+  ADD KEY `fk_billing_processed_by` (`processed_by`);
 
 --
 -- Indexes for table `check_in_queue`
@@ -1038,6 +1041,7 @@ ALTER TABLE `backup`
 --
 ALTER TABLE `billing`
   ADD CONSTRAINT `fk_billing_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_billing_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
 --

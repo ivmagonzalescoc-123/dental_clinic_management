@@ -166,7 +166,7 @@ if ($page === 'appointments') {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=patient_schedule">
-                    <i class="bi bi-calendar2-week"></i>
+                    <i class="bi bi-calendar-range"></i>
                     <span>Scheduling</span>
                 </a>
             </li>

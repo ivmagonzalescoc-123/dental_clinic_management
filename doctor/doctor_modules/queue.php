@@ -91,7 +91,7 @@ if ($stmt) {
     <p class="text-muted">Patients checked-in for today. You can claim patients assigned to others.</p>
 </div>
 
-<div class="card">
+<div class="card border-0">
     <div class="card-body">
         <?php if (empty($queue)): ?>
             <div class="alert alert-info">

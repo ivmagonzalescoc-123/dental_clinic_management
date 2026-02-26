@@ -408,7 +408,7 @@ if ($view === 'today') {
 </div>
 
 <!-- Appointments List -->
-<div class="card">
+<div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="card-title mb-0">All Appointments</h2>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookAppointmentModal">

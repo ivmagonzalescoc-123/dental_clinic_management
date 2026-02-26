@@ -221,26 +221,8 @@ if ($sstmt) {
             Billing)</button>
     </div>
     </form>
-</div>
-</div>
-
-<!-- Scheduling suggestions modal -->
-<div class="modal fade" id="scheduleModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Suggested Time Slots</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div id="slotsContainer">Loading...</div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
     </div>
-</div>
+    </div>
 
 <?php
 // The original profiling.js logic is intentionally preserved in this file to
@@ -331,45 +313,7 @@ if ($sstmt) {
         document.getElementById('saveDraftBtn')?.addEventListener('click', () => saveClinical(false));
         document.getElementById('finalizeBtn')?.addEventListener('click', () => { if (confirm('Finalize and create billing?')) saveClinical(true); });
 
-        // Show scheduling modal (lightweight)
-        async function showSchedulingModal(opts) {
-            const modalEl = document.getElementById('scheduleModal');
-            const bsModal = new bootstrap.Modal(modalEl);
-            const slotsContainer = document.getElementById('slotsContainer');
-            slotsContainer.innerHTML = 'Loading...';
-            bsModal.show();
-            try {
-                const fd = new URLSearchParams();
-                fd.append('user_id', '<?php echo (int) $_SESSION['user_id']; ?>');
-                fd.append('appointment_id', opts.appointment_id);
-                fd.append('duration', opts.duration || 30);
-                const r = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
-                const j = await r.json();
-                if (!j.success) { slotsContainer.innerHTML = '<div class="text-danger">Could not load slots</div>'; return; }
-                const slots = j.slots || [];
-                if (!slots.length) { slotsContainer.innerHTML = '<div class="text-muted">No available slots.</div>'; return; }
-                const list = document.createElement('div'); list.className = 'list-group';
-                slots.forEach(s => {
-                    const item = document.createElement('div'); item.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    item.innerHTML = `<div>${s.start} — ${s.end}</div>`;
-                    const btn = document.createElement('button'); btn.className = 'btn btn-sm btn-primary'; btn.textContent = 'Book';
-                    btn.addEventListener('click', async () => {
-                        btn.disabled = true; btn.textContent = 'Booking...';
-                        const bfd = new URLSearchParams();
-                        bfd.append('user_id', '<?php echo (int) $_SESSION['user_id']; ?>');
-                        bfd.append('appointment_id', opts.appointment_id);
-                        bfd.append('book_start', s.start);
-                        bfd.append('book_end', s.end);
-                        const br = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: bfd });
-                        const bj = await br.json();
-                        if (bj.success) { alert('Scheduled'); document.getElementById('schedule_id_hidden').value = bj.schedule_id; bsModal.hide(); }
-                        else { alert('Book failed: ' + (bj.message || '')); btn.disabled = false; btn.textContent = 'Book'; }
-                    });
-                    item.appendChild(btn); list.appendChild(item);
-                });
-                slotsContainer.innerHTML = ''; slotsContainer.appendChild(list);
-            } catch (e) { slotsContainer.innerHTML = '<div class="text-danger">Error loading slots.</div>'; }
-        }
+        // Scheduling modal and automatic suggestions were removed per UX decision.
 
         // Prefill clinical record for an appointment
         async function prefillClinicalRecord(appointmentId) {

@@ -4,6 +4,82 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 $action = $_GET['action'] ?? '';
 $today = date('Y-m-d');
 
+// detect or create status column
+$hasStatus = false;
+$colRes = $conn->query("SHOW COLUMNS FROM billing LIKE 'status'");
+if ($colRes && $colRes->num_rows > 0) {
+    $hasStatus = true;
+} else {
+    try {
+        $conn->query("ALTER TABLE billing ADD COLUMN status ENUM('unpaid','partial','paid') DEFAULT 'unpaid'");
+        if ($conn->errno === 0)
+            $hasStatus = true;
+    } catch (Throwable $e) {
+        // ignore - leave $hasStatus false
+    }
+}
+
+// Handle secretary marking billing status
+if ($action === 'mark_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $billingId = (int) ($_POST['billing_id'] ?? 0);
+    $newStatus = ($_POST['status'] ?? '');
+    $allowed = ['unpaid', 'partial', 'paid'];
+    $currentRole = $_SESSION['role'] ?? '';
+    $currentUserId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+
+    // Only secretary may change billing status
+    if ($currentRole !== 'secretary') {
+        $_SESSION['message'] = 'Access denied: only secretary can change billing status.';
+        $_SESSION['message_type'] = 'danger';
+        if (!headers_sent()) {
+            header('Location: secretary.php?page=billing');
+            exit;
+        } else {
+            echo "<script>window.location.href='secretary.php?page=billing';</script>";
+            exit;
+        }
+    }
+
+    if ($billingId > 0 && in_array($newStatus, $allowed, true) && $hasStatus) {
+        if ($newStatus === 'paid') {
+            $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = ? WHERE billing_id = ?');
+            if ($stmt) {
+                $stmt->bind_param('sii', $newStatus, $currentUserId, $billingId);
+            }
+        } else {
+            // mark unpaid/partial -> clear processed_by
+            $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = NULL WHERE billing_id = ?');
+            if ($stmt) {
+                $stmt->bind_param('si', $newStatus, $billingId);
+            }
+        }
+
+        if (isset($stmt) && $stmt) {
+            if ($stmt->execute()) {
+                $_SESSION['message'] = 'Billing status updated.';
+                $_SESSION['message_type'] = 'success';
+            } else {
+                $_SESSION['message'] = 'Error updating status: ' . $stmt->error;
+                $_SESSION['message_type'] = 'danger';
+            }
+            $stmt->close();
+        } else {
+            $_SESSION['message'] = 'Error preparing update statement.';
+            $_SESSION['message_type'] = 'danger';
+        }
+    } else {
+        $_SESSION['message'] = 'Invalid request or status feature not available.';
+        $_SESSION['message_type'] = 'warning';
+    }
+    if (!headers_sent()) {
+        header('Location: secretary.php?page=billing');
+        exit;
+    } else {
+        echo "<script>window.location.href='secretary.php?page=billing';</script>";
+        exit;
+    }
+}
+
 // Fetch all billing records for completed appointments
 $billings = [];
 
@@ -16,6 +92,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         b.appointment_id,
         b.total_amount,
         b.created_at,
+        " . ($hasStatus ? 'b.status,' : "'unpaid' AS status,") . "
         a.appointment_date,
         p.first_name,
         p.last_name,
@@ -82,7 +159,8 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         <?php echo $_SESSION['message']; ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-    <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
+    <?php unset($_SESSION['message']);
+    unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
 <!-- Billing Summary Cards -->
@@ -91,10 +169,11 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         <div class="card">
             <div class="card-body text-center">
                 <h6 class="card-title text-muted">Total Billings</h6>
-                <h3 class="mb-0">₱<?php 
-                    $totalSum = 0;
-                    foreach ($billings as $b) $totalSum += (float)$b['total_amount'];
-                    echo number_format($totalSum, 2);
+                <h3 class="mb-0">₱<?php
+                $totalSum = 0;
+                foreach ($billings as $b)
+                    $totalSum += (float) $b['total_amount'];
+                echo number_format($totalSum, 2);
                 ?></h3>
                 <small class="text-muted"><?php echo count($billings); ?> invoices</small>
             </div>
@@ -103,7 +182,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 </div>
 
 <!-- Billing Records -->
-<div class="card">
+<div class="card border-0">
     <div class="card-header">
         <h2 class="card-title mb-0">
             <i class="bi bi-receipt"></i> Billing Records
@@ -121,10 +200,12 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 </select>
             </div>
             <div class="col-md-5">
-                <input id="billingSearch" type="text" class="form-control" placeholder="Search by patient name or invoice #">
+                <input id="billingSearch" type="text" class="form-control"
+                    placeholder="Search by patient name or invoice #">
             </div>
             <div class="col-md-4 text-end">
-                <small class="text-muted">Showing <span id="billingCount"><?php echo count($billings); ?></span> records</small>
+                <small class="text-muted">Showing <span id="billingCount"><?php echo count($billings); ?></span>
+                    records</small>
             </div>
         </div>
 
@@ -138,34 +219,55 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                         <th>Doctor</th>
                         <th>Service Date</th>
                         <th>Amount</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($billings)): ?>
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-4">
-                                        No billing records yet.
-                                    </td>
-                                </tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No billing records yet.
+                            </td>
+                        </tr>
                     <?php else: ?>
                         <?php foreach ($billings as $billing): ?>
-                                    <?php
-                                    // each row includes data attributes for client-side filtering
-                                    ?>
-                                    <tr data-patient="<?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?>" data-invoice="<?php echo htmlspecialchars(str_pad((string)$billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>">
+                            <?php
+                            // each row includes data attributes for client-side filtering
+                            ?>
+                            <tr data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>" data-patient="<?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?>"
+                                data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>">
                                 <td><?php echo htmlspecialchars($billing['que_number'] ?? '—'); ?></td>
-                                <td><strong>#<?php echo htmlspecialchars(str_pad((string)$billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?></strong></td>
+                                <td><strong>#<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?></strong>
+                                </td>
                                 <td><?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?></td>
-                                <td><?php echo htmlspecialchars(($billing['doctor_first_name'] ?? 'N/A') . ' ' . ($billing['doctor_last_name'] ?? '')); ?></td>
+                                <td><?php echo htmlspecialchars(($billing['doctor_first_name'] ?? 'N/A') . ' ' . ($billing['doctor_last_name'] ?? '')); ?>
+                                </td>
                                 <td><?php echo htmlspecialchars($billing['appointment_date']); ?></td>
-                                        <td>₱<?php echo number_format((float)$billing['total_amount'], 2); ?></td>
-                                        <td>
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#invoiceModal"
-                                                    onclick="viewInvoice(<?php echo htmlspecialchars(json_encode($billing)); ?>)">
-                                                <i class="bi bi-file-pdf"></i> Invoice
-                                            </button>
-                                        </td>
+                                <td>₱<?php echo number_format((float) $billing['total_amount'], 2); ?></td>
+                                <?php $st = strtolower($billing['status'] ?? 'unpaid');
+                                $badgeClass = $st === 'paid' ? 'success' : ($st === 'partial' ? 'warning' : 'danger'); ?>
+                                <td><span class="badge bg-<?php echo $badgeClass; ?>"><?php echo htmlspecialchars(ucfirst($st)); ?></span></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#invoiceModal"
+                                        onclick="viewInvoice(<?php echo htmlspecialchars(json_encode($billing)); ?>)">
+                                        <i class="bi bi-file-pdf"></i> Invoice
+                                    </button>
+
+                                    <?php if ($hasStatus && (($_SESSION['role'] ?? '') === 'secretary')): ?>
+                                        <?php if (($billing['status'] ?? '') !== 'paid'): ?>
+                                            <form method="POST" action="secretary.php?page=billing&action=mark_status"
+                                                style="display:inline-block; margin-left:6px;">
+                                                <input type="hidden" name="billing_id"
+                                                    value="<?php echo htmlspecialchars($billing['billing_id']); ?>">
+                                                <input type="hidden" name="status" value="paid">
+                                                <button type="submit" class="btn btn-sm btn-success"
+                                                    onclick="return confirm('Mark invoice as PAID?');">Mark Paid</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -204,9 +306,9 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 <script>
     function viewInvoice(billing) {
         // fetch clinical record for this appointment to include in invoice (secretary view)
-            const appRoot = window.location.pathname.split('/').slice(0,2).join('/') || '';
-            fetch(appRoot + '/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
-                .then(r=>r.json()).then(data=>{
+        const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
+        fetch(appRoot + '/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
+            .then(r => r.json()).then(data => {
                 const rec = (data && data.record) ? data.record : null;
                 // Prepare recommended services (may be array of objects from API)
                 let servicesArr = [];
@@ -214,7 +316,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     if (Array.isArray(rec.recommended_services)) servicesArr = rec.recommended_services;
                     else if (typeof rec.recommended_services === 'object') servicesArr = Object.values(rec.recommended_services);
                 }
-                const servicesHtml = servicesArr.length ? servicesArr.map(s => `${s.service_name || s.name || 'Service'} — ₱${(parseFloat(s.initial_price||s.price)||0).toFixed(2)}`).join('<br>') : 'N/A';
+                const servicesHtml = servicesArr.length ? servicesArr.map(s => `${s.service_name || s.name || 'Service'} — ₱${(parseFloat(s.initial_price || s.price) || 0).toFixed(2)}`).join('<br>') : 'N/A';
                 let servicesRows = '';
                 let servicesTotal = 0.0;
                 servicesArr.forEach(s => {
@@ -228,7 +330,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     if (Array.isArray(rec.materials_used)) matArr = rec.materials_used;
                     else if (typeof rec.materials_used === 'object') matArr = Object.values(rec.materials_used);
                 }
-                const materialsHtml = matArr.length ? matArr.map(m=>`${m.name} (x${m.qty}) ₱${(parseFloat(m.price)||0).toFixed(2)}`).join('<br>') : '';
+                const materialsHtml = matArr.length ? matArr.map(m => `${m.name} (x${m.qty}) ₱${(parseFloat(m.price) || 0).toFixed(2)}`).join('<br>') : '';
                 // Build itemized rows for invoice table
                 let materialsRows = '';
                 let materialsTotal = 0.0;
@@ -257,6 +359,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                         <p class="mb-1"><strong>Invoice #:</strong> ${String(billing.billing_id).padStart(6, '0')}</p>
                         <p class="mb-1"><strong>Date:</strong> ${billing.created_at.split(' ')[0]}</p>
                         <p class="mb-1"><strong>Service Date:</strong> ${billing.appointment_date}</p>
+                        <p class="mb-1"><strong>Status:</strong> ${ (billing.status || 'unpaid').toUpperCase() }</p>
                     </div>
                     <div class="col-6 text-end">
                         <h6>Patient Information:</h6>
@@ -290,23 +393,23 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 
                 <hr>
                 <h6>Clinical Summary (Doctor)</h6>
-                <p class="mb-1"><strong>Recommended Services:</strong> ${svcHtml}</p>
+                <p class="mb-1"><strong>Recommended Services:</strong> ${servicesHtml}</p>
                 <p class="mb-1"><strong>Treatment Plan:</strong> ${rec && rec.treatment_plan ? (typeof rec.treatment_plan === 'string' ? rec.treatment_plan : JSON.stringify(rec.treatment_plan)) : 'N/A'}</p>
                 <p class="mb-1"><strong>Materials Used:</strong><br>${materialsHtml || 'N/A'}</p>
                 <p class="mb-1"><strong>Follow-up Date:</strong> ${rec && rec.follow_up_date ? rec.follow_up_date : 'N/A'}</p>
-                <p class="mb-1"><strong>Doctor Notes:</strong><br>${notes ? notes.replace(/\n/g,'<br>') : 'N/A'}</p>
+                <p class="mb-1"><strong>Doctor Notes:</strong><br>${notes ? notes.replace(/\n/g, '<br>') : 'N/A'}</p>
                 <hr>
                 <p class="text-center text-muted small">Thank you for choosing Azucena's Dental Clinic!</p>
             </div>
         `;
                 document.getElementById('invoiceContent').innerHTML = invoiceHtml;
-            }).catch(err=>{
+            }).catch(err => {
                 console.error('Could not load clinical record', err);
             });
     }
-    
+
     // Payments are out-of-scope: payment JS removed
-    
+
     function printInvoice() {
         const invoiceContent = document.getElementById('invoiceContent').innerHTML;
         const printWindow = window.open('', '', 'height=600,width=900');
@@ -328,7 +431,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         `);
         printWindow.document.close();
     }
-    
+
     // Client-side filtering for billing table
     function filterBillingTable() {
         const status = document.getElementById('billingFilterStatus').value;
@@ -351,12 +454,12 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         document.getElementById('billingCount').textContent = visible;
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Attach filter handlers
         const statusEl = document.getElementById('billingFilterStatus');
         const searchEl = document.getElementById('billingSearch');
         if (statusEl) statusEl.addEventListener('change', filterBillingTable);
-        if (searchEl) searchEl.addEventListener('input', function(){
+        if (searchEl) searchEl.addEventListener('input', function () {
             // debounce simple
             clearTimeout(searchEl._timer);
             searchEl._timer = setTimeout(filterBillingTable, 200);

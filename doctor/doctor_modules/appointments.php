@@ -346,7 +346,7 @@ if ($stmt) {
 <!-- Recent Appointments (full width on appointments page) -->
 <div class="row">
     <div class="col-lg-12">
-        <div class="card">
+        <div class="card border-0">
             <div class="card-header">
                 <h2 class="card-title mb-0">
                     <i class="bi bi-calendar-check"></i> Recent Appointments
