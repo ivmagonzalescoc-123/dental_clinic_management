@@ -41,19 +41,7 @@ CREATE TABLE `appointments` (
   `is_emergency` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `appointments`
---
 
-INSERT INTO `appointments` (`appointment_id`, `appointment_date`, `reason`, `is_online_appointment`, `notes`, `status`, `created_at`, `user_id`, `rescheduled_from`, `patient_id`, `is_emergency`) VALUES
-(20, '2026-02-25', 'Tooth Ache', 1, 'no show', 'cancelled', '2026-02-25 20:11:28', 2, NULL, 1, 0),
-(22, '2026-02-25', 'Test appointment for reminders', 0, 'sig balikbalik', 'cancelled', '2026-02-25 20:59:34', 2, NULL, 1, 0),
-(23, '2026-02-25', 'Ouch', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:41:18', 2, NULL, 1, 0),
-(24, '2026-02-25', 'Sakit akong ngipon doc help', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:56:23', 2, NULL, 3, 0),
-(28, '2026-02-26', 'So sakit', 0, '', 'in_progress', '2026-02-26 07:55:15', 2, NULL, 3, 1),
-(29, '2026-02-26', 'asdasd', 0, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-26 08:01:10', 2, NULL, 2, 1);
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `backup`
@@ -84,16 +72,6 @@ CREATE TABLE `billing` (
   `processed_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `billing`
---
-
-INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`, `status`, `processed_by`) VALUES
-(7, 23, 1, 1000.00, '2026-02-25 21:45:12', 'paid', 3),
-(8, 24, 3, 1100.00, '2026-02-25 22:02:36', 'paid', 3),
-(9, 29, 2, 0.00, '2026-02-26 08:09:28', 'unpaid', NULL);
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `check_in_queue`
@@ -110,17 +88,6 @@ CREATE TABLE `check_in_queue` (
   `is_emergency` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `check_in_queue`
---
-
-INSERT INTO `check_in_queue` (`checkin_id`, `status`, `checkin_time`, `que_number`, `appointment_id`, `served_time`, `completed_time`, `is_emergency`) VALUES
-(12, 'served', '2026-02-25 21:41:40', 1, 23, '2026-02-25 21:45:12', '2026-02-25 21:45:12', 0),
-(13, 'served', '2026-02-25 21:57:36', 2, 24, '2026-02-25 22:02:36', '2026-02-25 22:02:36', 0),
-(16, '', '2026-02-26 07:58:40', 1, 28, '2026-02-26 08:07:53', NULL, 1),
-(17, 'served', '2026-02-26 08:01:14', 2, 29, '2026-02-26 08:09:28', '2026-02-26 08:09:28', 1);
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `clinical_records`
@@ -146,16 +113,6 @@ CREATE TABLE `clinical_records` (
   `tooth_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `clinical_records`
---
-
-INSERT INTO `clinical_records` (`record_id`, `appointment_id`, `schedule_id`, `doctor_id`, `patient_id`, `summary`, `recommended_services`, `treatment_plan`, `materials_used`, `odontogram`, `doctor_notes`, `follow_up_date`, `status`, `submitted_by`, `submitted_at`, `images`, `tooth_image`) VALUES
-(7, 23, 15, 2, 1, NULL, '[1]', NULL, '[{\"name\":\"gloves and surgical masks\",\"qty\":1,\"price\":500}]', NULL, 'No more issues', NULL, 'submitted', 2, '2026-02-25 21:45:12', '[\"assets\\/uploads\\/clinical_images\\/23\\/1772027112_731870fc66c6.jpeg\"]', 'assets/uploads/clinical_images/23/1772027112_731870fc66c6.jpeg'),
-(8, 24, 17, 2, 3, NULL, '[1]', NULL, '[{\"name\":\"Gloves\",\"qty\":2,\"price\":50},{\"name\":\"SteelBrush\",\"qty\":1,\"price\":500}]', NULL, 'None', '2026-02-27', 'submitted', 2, '2026-02-25 22:02:36', '[\"assets\\/uploads\\/clinical_images\\/24\\/1772028156_f3600203914d.jpeg\"]', 'assets/uploads/clinical_images/24/1772028156_f3600203914d.jpeg'),
-(9, 29, NULL, 2, 2, NULL, NULL, NULL, NULL, '{\"1\":[],\"2\":[],\"3\":[],\"4\":[],\"5\":[],\"6\":[],\"7\":[],\"8\":[],\"9\":[],\"10\":[],\"11\":[],\"12\":[],\"13\":[],\"14\":[],\"15\":[],\"16\":[],\"17\":[],\"18\":[],\"19\":[\"missing\"],\"20\":[],\"21\":[],\"22\":[],\"23\":[],\"24\":[],\"25\":[],\"26\":[],\"27\":[],\"28\":[],\"29\":[],\"30\":[],\"31\":[],\"32\":[]}', '', NULL, 'submitted', 2, '2026-02-26 08:09:28', NULL, NULL);
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `doctor_availability`
@@ -201,16 +158,6 @@ CREATE TABLE `notifications` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `notifications`
---
-
-INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `body`, `link`, `is_read`, `created_at`) VALUES
-(1, 1, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22'),
-(2, 2, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 1, '2026-02-25 21:01:22'),
-(3, 3, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `patients`
@@ -335,18 +282,7 @@ CREATE TABLE `schedules` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `schedules`
---
 
-INSERT INTO `schedules` (`schedule_id`, `appointment_id`, `user_id`, `scheduled_start`, `scheduled_end`, `status`, `priority`, `created_at`, `updated_at`) VALUES
-(14, 22, 2, '2026-02-25 21:59:34', '2026-02-25 22:29:34', 'scheduled', 1, '2026-02-25 12:59:34', NULL),
-(15, 23, 2, '2026-02-25 13:42:20', NULL, '', 1, '2026-02-25 13:42:20', NULL),
-(16, 24, 2, '2026-02-25 13:58:16', NULL, '', 1, '2026-02-25 13:58:16', NULL),
-(17, 24, 2, '2026-02-27 09:00:00', '2026-02-27 09:30:00', 'scheduled', 1, '2026-02-25 14:02:36', NULL),
-(18, 28, 2, '2026-02-26 08:07:53', NULL, '', 1, '2026-02-26 00:07:53', NULL);
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `schedule_reminders`
@@ -361,15 +297,6 @@ CREATE TABLE `schedule_reminders` (
   `payload` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `schedule_reminders`
---
-
-INSERT INTO `schedule_reminders` (`reminder_id`, `schedule_id`, `remind_at`, `channel`, `sent_at`, `payload`) VALUES
-(6, 14, '2026-02-25 20:59:34', 'email', '2026-02-25 21:01:22', '{\"test\": \"true\"}'),
-(7, 17, '2026-02-26 09:00:00', '', NULL, '{\"appointment_id\":24,\"schedule_id\":17}');
-
--- --------------------------------------------------------
 
 --
 -- Table structure for table `selected_services`
