@@ -26,8 +26,9 @@ if (!$conn->set_charset("utf8mb4")) {
     error_log("Error loading character set utf8mb4: " . $conn->error);
 }
 
-// Set timezone
-date_default_timezone_set('UTC');
+// Set timezone (adjust to your clinic's timezone)
+// Change 'Asia/Manila' to your local zone if different
+date_default_timezone_set('Asia/Manila');
 
 // Disable mysqli throwing exceptions by default here (we will use explicit checks)
 if (function_exists('mysqli_report')) {

@@ -23,8 +23,8 @@ if ($action === 'checkin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $conn->begin_transaction();
     try {
-        // Verify appointment exists and is for today
-        $stmt = $conn->prepare('SELECT appointment_date, status FROM appointments WHERE appointment_id = ?');
+        // Verify appointment exists and is for today (include emergency flag)
+        $stmt = $conn->prepare('SELECT appointment_date, status, COALESCE(is_emergency,0) AS is_emergency FROM appointments WHERE appointment_id = ?');
         if (!$stmt) {
             throw new Exception('Error preparing appointment lookup.');
         }
@@ -39,9 +39,19 @@ if ($action === 'checkin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $apptDateRaw = $appt['appointment_date'] ?? '';
-        $apptDateOnly = $apptDateRaw ? date('Y-m-d', strtotime($apptDateRaw)) : '';
+        // Normalize appointment date to server-local Y-m-d using DateTime for robustness
+        $apptDateOnly = '';
+        if ($apptDateRaw) {
+            try {
+                $adt = new DateTime($apptDateRaw);
+                $apptDateOnly = $adt->format('Y-m-d');
+            } catch (Exception $e) {
+                // fallback to strtotime if DateTime parsing fails
+                $apptDateOnly = date('Y-m-d', strtotime($apptDateRaw));
+            }
+        }
         if ($apptDateOnly !== $today) {
-            throw new Exception('You can only check-in appointments scheduled for today.');
+            throw new Exception('You can only check-in appointments scheduled for today. (Appointment date: ' . ($apptDateOnly ?: 'unknown') . ', server date: ' . $today . ')');
         }
 
         // Already checked-in?
@@ -78,11 +88,17 @@ if ($action === 'checkin' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $status = 'waiting';
-        $stmt = $conn->prepare('INSERT INTO check_in_queue (status, que_number, appointment_id) VALUES (?, ?, ?)');
+        // Ensure check_in_queue has is_emergency column
+        $colRes = $conn->query("SHOW COLUMNS FROM check_in_queue LIKE 'is_emergency'");
+        if (!$colRes || $colRes->num_rows === 0) {
+            $conn->query("ALTER TABLE check_in_queue ADD COLUMN is_emergency TINYINT(1) DEFAULT 0");
+        }
+        $stmt = $conn->prepare('INSERT INTO check_in_queue (status, que_number, appointment_id, is_emergency) VALUES (?, ?, ?, ?)');
         if (!$stmt) {
             throw new Exception('Error preparing check-in insert.');
         }
-        $stmt->bind_param('sii', $status, $nextQueueNo, $appointmentId);
+        $isEmergencyFlag = isset($appt['is_emergency']) ? (int)$appt['is_emergency'] : 0;
+        $stmt->bind_param('siii', $status, $nextQueueNo, $appointmentId, $isEmergencyFlag);
         if (!$stmt->execute()) {
             throw new Exception('Error creating check-in record: ' . $stmt->error);
         }
@@ -435,7 +451,12 @@ if ($view === 'today') {
                             ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($appointment['appointment_id']); ?></td>
-                                <td><?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?></td>
+                                <td>
+                                    <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
+                                    <?php if (!empty($appointment['is_emergency']) && $appointment['is_emergency']): ?>
+                                        <span class="badge bg-danger ms-1">EMERGENCY</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if (!empty($appointment['schedule_status'])): ?>
                                         <div><span class="badge bg-<?php echo ($appointment['schedule_status'] === 'scheduled' ? 'primary' : ($appointment['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($appointment['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($appointment['schedule_status'])); ?></span>
@@ -478,7 +499,7 @@ if ($view === 'today') {
                                                 <i class="bi bi-x-circle"></i> Decline
                                             </button>
                                         </div>
-                                    <?php elseif (in_array($status, ['confirmed','checked_in']) && $isTodayAppt && !$isDisabled): ?>
+                                    <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
                                         <?php if ($alreadyCheckedIn): ?>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <span class="badge bg-success me-2">Queue #<?php echo htmlspecialchars((string)$appointment['que_number']); ?></span>
@@ -863,6 +884,19 @@ if ($view === 'today') {
                 });
             }
 
+            // Add emergency checkbox to booking form for secretary (if not present)
+            try {
+                if (!document.getElementById('bookIsEmergency')) {
+                    const footer = bookForm.querySelector('.modal-footer');
+                    if (footer) {
+                        const wrap = document.createElement('div');
+                        wrap.style.marginRight = 'auto';
+                        wrap.innerHTML = '<div class="form-check"><input class="form-check-input" type="checkbox" value="1" id="bookIsEmergency"><label class="form-check-label ms-1" for="bookIsEmergency">Emergency (priority)</label></div>';
+                        footer.insertBefore(wrap, footer.firstChild);
+                    }
+                }
+            } catch(e){ console.warn('add emergency checkbox', e); }
+
             // Booking submit
             bookForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
@@ -883,6 +917,8 @@ if ($view === 'today') {
                     ad.append('appointment_date', appointmentDate);
                     ad.append('user_id', userId);
                     ad.append('reason', reason);
+                    const isEmergency = document.getElementById('bookIsEmergency') ? (document.getElementById('bookIsEmergency').checked ? 1 : 0) : 0;
+                    ad.append('is_emergency', isEmergency);
 
                     const aresp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: ad });
                     const ajson = await aresp.json();
@@ -927,8 +963,15 @@ if ($view === 'today') {
 </div>
 
 <script>
-const resModalSec = new bootstrap.Modal(document.getElementById('rescheduleModalSec'));
+let resModalSec = null;
 let fpStartSec = null, fpEndSec = null;
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        if (typeof bootstrap !== 'undefined') {
+            resModalSec = new bootstrap.Modal(document.getElementById('rescheduleModalSec'));
+        }
+    } catch (e) { console.warn('bootstrap modal init deferred', e); }
+});
 function initSecPickers() {
     try {
         if (typeof flatpickr !== 'undefined') {

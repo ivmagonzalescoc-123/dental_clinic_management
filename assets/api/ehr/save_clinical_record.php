@@ -43,11 +43,37 @@ try {
     if (!$appt) throw new Exception('Appointment not found');
     $patient_id = (int)$appt['patient_id'];
 
+    // Read profiling payload from POST (if any)
+    $profiling_json = isset($_POST['profiling']) ? $_POST['profiling'] : null;
+
+    // Ensure patients table has profiling_locked column
+    $colResP = $conn->query("SHOW COLUMNS FROM patients LIKE 'profiling_locked'");
+    if (!$colResP || $colResP->num_rows === 0) {
+        $conn->query("ALTER TABLE patients ADD COLUMN profiling_locked TINYINT(1) DEFAULT 0");
+    }
+
+    // Ensure clinical_records has a `profiling` column to snapshot profiling at time of record
+    $colResCR = $conn->query("SHOW COLUMNS FROM clinical_records LIKE 'profiling'");
+    if (!$colResCR || $colResCR->num_rows === 0) {
+        $conn->query("ALTER TABLE clinical_records ADD COLUMN profiling JSON DEFAULT NULL");
+    }
+
+    // Fetch current patient profiling & lock status
+    $pstmt = $conn->prepare('SELECT profiling, profiling_locked FROM patients WHERE patient_id = ? LIMIT 1');
+    $pstmt->bind_param('i', $patient_id);
+    $pstmt->execute();
+    $pres = $pstmt->get_result();
+    $prow = $pres ? $pres->fetch_assoc() : null;
+    $pstmt->close();
+    $patient_has_profiling = ($prow && !empty($prow['profiling']));
+    $patient_locked = ($prow && !empty($prow['profiling_locked']));
+
     // Upsert clinical_records (now supports schedule_id)
     $json_recommended = $recommended_services ? json_encode($recommended_services, JSON_UNESCAPED_UNICODE) : null;
     $json_treatment = $treatment_plan ? json_encode($treatment_plan, JSON_UNESCAPED_UNICODE) : null;
     $json_materials = $materials_used ? json_encode($materials_used, JSON_UNESCAPED_UNICODE) : null;
     $json_odontogram = $odontogram ? json_encode($odontogram, JSON_UNESCAPED_UNICODE) : null;
+    $json_profiling = $profiling_json ? $profiling_json : null;
     // Handle uploaded images (optional)
     $uploaded_images = [];
     if (!empty($_FILES['images'])) {
@@ -120,19 +146,29 @@ try {
     $stmt->close();
 
     if ($existing) {
-        $stmt = $conn->prepare('UPDATE clinical_records SET schedule_id = ?, doctor_id=?, patient_id=?, recommended_services=?, treatment_plan=?, materials_used=?, odontogram=?, images=?, doctor_notes=?, follow_up_date=?, status=?, submitted_by=?, submitted_at=IF(?=1,NOW(),submitted_at) WHERE appointment_id=?');
+        $stmt = $conn->prepare('UPDATE clinical_records SET schedule_id = ?, doctor_id = ?, patient_id = ?, recommended_services = ?, treatment_plan = ?, materials_used = ?, odontogram = ?, images = ?, doctor_notes = ?, follow_up_date = ?, status = ?, profiling = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at) WHERE appointment_id = ?');
         $status = $submit_and_finalize ? 'submitted' : 'in_progress';
         $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iiissssssssiii', $schedule_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $appointment_id);
+        $stmt->bind_param('iiisssssssssiii', $schedule_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag, $appointment_id);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = $conn->prepare('INSERT INTO clinical_records (schedule_id, appointment_id, doctor_id, patient_id, recommended_services, treatment_plan, materials_used, odontogram, images, doctor_notes, follow_up_date, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL))');
+        $stmt = $conn->prepare('INSERT INTO clinical_records (schedule_id, appointment_id, doctor_id, patient_id, recommended_services, treatment_plan, materials_used, odontogram, images, doctor_notes, follow_up_date, status, profiling, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL))');
         $status = $submit_and_finalize ? 'submitted' : 'in_progress';
         $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iiiissssssssii', $schedule_id, $appointment_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag);
+        $stmt->bind_param('iiiisssssssssii', $schedule_id, $appointment_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag);
         $stmt->execute();
         $stmt->close();
+    }
+
+    // If patient-level profiling provided and patient has no profiling yet, save it to patients (silent auto-lock)
+    if ($profiling_json !== null && !$patient_has_profiling) {
+        $up = $conn->prepare('UPDATE patients SET profiling = ?, profiling_locked = 1 WHERE patient_id = ?');
+        if ($up) {
+            $up->bind_param('si', $profiling_json, $patient_id);
+            $up->execute();
+            $up->close();
+        }
     }
 
     // If there are uploaded images, set the primary tooth_image to the first uploaded path

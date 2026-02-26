@@ -208,8 +208,39 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
             fetch(appRoot + '/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
                 .then(r=>r.json()).then(data=>{
                 const rec = (data && data.record) ? data.record : null;
-                const svcHtml = rec && rec.recommended_services ? (Array.isArray(rec.recommended_services) ? rec.recommended_services.join(', ') : JSON.stringify(rec.recommended_services)) : 'N/A';
-                const materialsHtml = rec && rec.materials_used ? (Array.isArray(rec.materials_used) ? rec.materials_used.map(m=>`${m.name} (x${m.qty}) ₱${m.price}`).join('<br>') : '') : '';
+                // Prepare recommended services (may be array of objects from API)
+                let servicesArr = [];
+                if (rec && rec.recommended_services) {
+                    if (Array.isArray(rec.recommended_services)) servicesArr = rec.recommended_services;
+                    else if (typeof rec.recommended_services === 'object') servicesArr = Object.values(rec.recommended_services);
+                }
+                const servicesHtml = servicesArr.length ? servicesArr.map(s => `${s.service_name || s.name || 'Service'} — ₱${(parseFloat(s.initial_price||s.price)||0).toFixed(2)}`).join('<br>') : 'N/A';
+                let servicesRows = '';
+                let servicesTotal = 0.0;
+                servicesArr.forEach(s => {
+                    const price = parseFloat(s.initial_price || s.price) || 0;
+                    servicesTotal += price;
+                    servicesRows += `<tr><td>${(s.service_name || s.name || 'Service')}</td><td class="text-end">₱${price.toFixed(2)}</td></tr>`;
+                });
+                // Normalize materials into an array (handle array or object-shaped JSON)
+                let matArr = [];
+                if (rec && rec.materials_used) {
+                    if (Array.isArray(rec.materials_used)) matArr = rec.materials_used;
+                    else if (typeof rec.materials_used === 'object') matArr = Object.values(rec.materials_used);
+                }
+                const materialsHtml = matArr.length ? matArr.map(m=>`${m.name} (x${m.qty}) ₱${(parseFloat(m.price)||0).toFixed(2)}`).join('<br>') : '';
+                // Build itemized rows for invoice table
+                let materialsRows = '';
+                let materialsTotal = 0.0;
+                matArr.forEach(m => {
+                    const qty = parseFloat(m.qty) || 0;
+                    const price = parseFloat(m.price) || 0;
+                    const line = qty * price;
+                    materialsTotal += line;
+                    materialsRows += `<tr><td>${(m.name || 'Material')} (x${qty})</td><td class="text-end">₱${line.toFixed(2)}</td></tr>`;
+                });
+                const billingTotal = parseFloat(billing.total_amount) || 0;
+                const consultationFee = Math.max(0, billingTotal - materialsTotal - servicesTotal);
                 const notes = rec && rec.doctor_notes ? rec.doctor_notes : '';
 
                 const invoiceHtml = `
@@ -237,7 +268,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 
                 <hr>
                 
-                <table class="table table-bordered">
+                    <table class="table table-bordered">
                     <thead class="table-light">
                         <tr>
                             <th>Description</th>
@@ -245,13 +276,12 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Consultation & Treatment Fee</td>
-                            <td class="text-end">₱${parseFloat(billing.total_amount).toFixed(2)}</td>
-                        </tr>
+                        ${consultationFee > 0 ? `<tr><td>Consultation & Treatment Fee</td><td class="text-end">₱${consultationFee.toFixed(2)}</td></tr>` : ''}
+                        ${servicesRows}
+                        ${materialsRows}
                         <tr class="table-light">
                             <td><strong>Total Amount Due:</strong></td>
-                            <td class="text-end"><strong>₱${parseFloat(billing.total_amount).toFixed(2)}</strong></td>
+                            <td class="text-end"><strong>₱${billingTotal.toFixed(2)}</strong></td>
                         </tr>
                     </tbody>
                 </table>

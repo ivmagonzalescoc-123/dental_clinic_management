@@ -19,6 +19,7 @@ try {
     $user_id = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
     $reason = isset($_POST['reason']) ? trim($_POST['reason']) : '';
     $is_online_appointment = isset($_POST['is_online_appointment']) ? (int)$_POST['is_online_appointment'] : 0;
+    $is_emergency = isset($_POST['is_emergency']) ? (int)$_POST['is_emergency'] : 0;
     $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
     $status = isset($_POST['status']) ? trim($_POST['status']) : 'scheduled';
 
@@ -113,9 +114,15 @@ try {
         $status = 'confirmed';
     }
 
+    // Ensure appointments table has `is_emergency` column
+    $colRes = $conn->query("SHOW COLUMNS FROM appointments LIKE 'is_emergency'");
+    if (!$colRes || $colRes->num_rows === 0) {
+        $conn->query("ALTER TABLE appointments ADD COLUMN is_emergency TINYINT(1) DEFAULT 0");
+    }
+
     // Insert appointment (timeslot and branch removed)
-    $sql = "INSERT INTO appointments (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO appointments (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     $stmt = $conn->prepare($sql);
     
@@ -123,7 +130,7 @@ try {
         throw new Exception('Prepare insert failed: ' . $conn->error);
     }
 
-    if (!$stmt->bind_param("ississi", $patient_id, $appointment_date, $reason, $is_online_appointment, $notes, $status, $user_id)) {
+    if (!$stmt->bind_param("ississii", $patient_id, $appointment_date, $reason, $is_online_appointment, $notes, $status, $user_id, $is_emergency)) {
         throw new Exception('Bind insert failed: ' . $stmt->error);
     }
 

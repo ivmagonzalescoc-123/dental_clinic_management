@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 25, 2026 at 03:23 PM
+-- Generation Time: Feb 26, 2026 at 01:26 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -37,18 +37,21 @@ CREATE TABLE `appointments` (
   `created_at` datetime DEFAULT current_timestamp(),
   `user_id` int(11) DEFAULT NULL,
   `rescheduled_from` int(11) DEFAULT NULL,
-  `patient_id` int(11) NOT NULL
+  `patient_id` int(11) NOT NULL,
+  `is_emergency` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `appointments`
 --
 
-INSERT INTO `appointments` (`appointment_id`, `appointment_date`, `reason`, `is_online_appointment`, `notes`, `status`, `created_at`, `user_id`, `rescheduled_from`, `patient_id`) VALUES
-(20, '2026-02-25', 'Tooth Ache', 1, '', 'scheduled', '2026-02-25 20:11:28', 2, NULL, 1),
-(22, '2026-02-25', 'Test appointment for reminders', 0, NULL, 'confirmed', '2026-02-25 20:59:34', 2, NULL, 1),
-(23, '2026-02-25', 'Ouch', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:41:18', 2, NULL, 1),
-(24, '2026-02-25', 'Sakit akong ngipon doc help', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:56:23', 2, NULL, 3);
+INSERT INTO `appointments` (`appointment_id`, `appointment_date`, `reason`, `is_online_appointment`, `notes`, `status`, `created_at`, `user_id`, `rescheduled_from`, `patient_id`, `is_emergency`) VALUES
+(20, '2026-02-25', 'Tooth Ache', 1, 'no show', 'cancelled', '2026-02-25 20:11:28', 2, NULL, 1, 0),
+(22, '2026-02-25', 'Test appointment for reminders', 0, 'sig balikbalik', 'cancelled', '2026-02-25 20:59:34', 2, NULL, 1, 0),
+(23, '2026-02-25', 'Ouch', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:41:18', 2, NULL, 1, 0),
+(24, '2026-02-25', 'Sakit akong ngipon doc help', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:56:23', 2, NULL, 3, 0),
+(28, '2026-02-26', 'So sakit', 0, '', 'in_progress', '2026-02-26 07:55:15', 2, NULL, 3, 1),
+(29, '2026-02-26', 'asdasd', 0, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-26 08:01:10', 2, NULL, 2, 1);
 
 -- --------------------------------------------------------
 
@@ -85,7 +88,8 @@ CREATE TABLE `billing` (
 
 INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`) VALUES
 (7, 23, 1, 1000.00, '2026-02-25 21:45:12'),
-(8, 24, 3, 1100.00, '2026-02-25 22:02:36');
+(8, 24, 3, 1100.00, '2026-02-25 22:02:36'),
+(9, 29, 2, 0.00, '2026-02-26 08:09:28');
 
 -- --------------------------------------------------------
 
@@ -100,16 +104,19 @@ CREATE TABLE `check_in_queue` (
   `que_number` int(11) DEFAULT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `served_time` datetime DEFAULT NULL,
-  `completed_time` datetime DEFAULT NULL
+  `completed_time` datetime DEFAULT NULL,
+  `is_emergency` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `check_in_queue`
 --
 
-INSERT INTO `check_in_queue` (`checkin_id`, `status`, `checkin_time`, `que_number`, `appointment_id`, `served_time`, `completed_time`) VALUES
-(12, 'served', '2026-02-25 21:41:40', 1, 23, '2026-02-25 21:45:12', '2026-02-25 21:45:12'),
-(13, 'served', '2026-02-25 21:57:36', 2, 24, '2026-02-25 22:02:36', '2026-02-25 22:02:36');
+INSERT INTO `check_in_queue` (`checkin_id`, `status`, `checkin_time`, `que_number`, `appointment_id`, `served_time`, `completed_time`, `is_emergency`) VALUES
+(12, 'served', '2026-02-25 21:41:40', 1, 23, '2026-02-25 21:45:12', '2026-02-25 21:45:12', 0),
+(13, 'served', '2026-02-25 21:57:36', 2, 24, '2026-02-25 22:02:36', '2026-02-25 22:02:36', 0),
+(16, '', '2026-02-26 07:58:40', 1, 28, '2026-02-26 08:07:53', NULL, 1),
+(17, 'served', '2026-02-26 08:01:14', 2, 29, '2026-02-26 08:09:28', '2026-02-26 08:09:28', 1);
 
 -- --------------------------------------------------------
 
@@ -143,7 +150,8 @@ CREATE TABLE `clinical_records` (
 
 INSERT INTO `clinical_records` (`record_id`, `appointment_id`, `schedule_id`, `doctor_id`, `patient_id`, `summary`, `recommended_services`, `treatment_plan`, `materials_used`, `odontogram`, `doctor_notes`, `follow_up_date`, `status`, `submitted_by`, `submitted_at`, `images`, `tooth_image`) VALUES
 (7, 23, 15, 2, 1, NULL, '[1]', NULL, '[{\"name\":\"gloves and surgical masks\",\"qty\":1,\"price\":500}]', NULL, 'No more issues', NULL, 'submitted', 2, '2026-02-25 21:45:12', '[\"assets\\/uploads\\/clinical_images\\/23\\/1772027112_731870fc66c6.jpeg\"]', 'assets/uploads/clinical_images/23/1772027112_731870fc66c6.jpeg'),
-(8, 24, 17, 2, 3, NULL, '[1]', NULL, '[{\"name\":\"Gloves\",\"qty\":2,\"price\":50},{\"name\":\"SteelBrush\",\"qty\":1,\"price\":500}]', NULL, 'None', '2026-02-27', 'submitted', 2, '2026-02-25 22:02:36', '[\"assets\\/uploads\\/clinical_images\\/24\\/1772028156_f3600203914d.jpeg\"]', 'assets/uploads/clinical_images/24/1772028156_f3600203914d.jpeg');
+(8, 24, 17, 2, 3, NULL, '[1]', NULL, '[{\"name\":\"Gloves\",\"qty\":2,\"price\":50},{\"name\":\"SteelBrush\",\"qty\":1,\"price\":500}]', NULL, 'None', '2026-02-27', 'submitted', 2, '2026-02-25 22:02:36', '[\"assets\\/uploads\\/clinical_images\\/24\\/1772028156_f3600203914d.jpeg\"]', 'assets/uploads/clinical_images/24/1772028156_f3600203914d.jpeg'),
+(9, 29, NULL, 2, 2, NULL, NULL, NULL, NULL, '{\"1\":[],\"2\":[],\"3\":[],\"4\":[],\"5\":[],\"6\":[],\"7\":[],\"8\":[],\"9\":[],\"10\":[],\"11\":[],\"12\":[],\"13\":[],\"14\":[],\"15\":[],\"16\":[],\"17\":[],\"18\":[],\"19\":[\"missing\"],\"20\":[],\"21\":[],\"22\":[],\"23\":[],\"24\":[],\"25\":[],\"26\":[],\"27\":[],\"28\":[],\"29\":[],\"30\":[],\"31\":[],\"32\":[]}', '', NULL, 'submitted', 2, '2026-02-26 08:09:28', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -333,7 +341,8 @@ INSERT INTO `schedules` (`schedule_id`, `appointment_id`, `user_id`, `scheduled_
 (14, 22, 2, '2026-02-25 21:59:34', '2026-02-25 22:29:34', 'scheduled', 1, '2026-02-25 12:59:34', NULL),
 (15, 23, 2, '2026-02-25 13:42:20', NULL, '', 1, '2026-02-25 13:42:20', NULL),
 (16, 24, 2, '2026-02-25 13:58:16', NULL, '', 1, '2026-02-25 13:58:16', NULL),
-(17, 24, 2, '2026-02-27 09:00:00', '2026-02-27 09:30:00', 'scheduled', 1, '2026-02-25 14:02:36', NULL);
+(17, 24, 2, '2026-02-27 09:00:00', '2026-02-27 09:30:00', 'scheduled', 1, '2026-02-25 14:02:36', NULL),
+(18, 28, 2, '2026-02-26 08:07:53', NULL, '', 1, '2026-02-26 00:07:53', NULL);
 
 -- --------------------------------------------------------
 
@@ -854,7 +863,7 @@ ALTER TABLE `user_logs`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `backup`
@@ -866,19 +875,19 @@ ALTER TABLE `backup`
 -- AUTO_INCREMENT for table `billing`
 --
 ALTER TABLE `billing`
-  MODIFY `billing_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `billing_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `check_in_queue`
 --
 ALTER TABLE `check_in_queue`
-  MODIFY `checkin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `checkin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `clinical_records`
 --
 ALTER TABLE `clinical_records`
-  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `doctor_availability`
@@ -926,7 +935,7 @@ ALTER TABLE `schedule`
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `schedule_reminders`

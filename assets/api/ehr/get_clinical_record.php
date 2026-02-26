@@ -106,6 +106,31 @@ foreach ($toDecode as $f) {
     }
 }
 
+// If recommended_services is an array of IDs, fetch service details and replace with objects
+if (isset($rec['recommended_services']) && is_array($rec['recommended_services']) && count($rec['recommended_services']) > 0) {
+    // sanitize and cast to ints
+    $ids = array_values(array_map('intval', $rec['recommended_services']));
+    // build IN list safely as ints
+    $inList = implode(',', $ids);
+    if ($inList !== '') {
+        $sSql = "SELECT service_id, service_name, initial_price FROM services WHERE service_id IN ($inList)";
+        $sRes = $conn->query($sSql);
+        $svcMap = [];
+        if ($sRes) {
+            while ($sr = $sRes->fetch_assoc()) {
+                $svcMap[(int)$sr['service_id']] = $sr;
+            }
+        }
+        // preserve original ordering
+        $full = [];
+        foreach ($ids as $id) {
+            if (isset($svcMap[$id])) $full[] = $svcMap[$id];
+            else $full[] = ['service_id' => $id, 'service_name' => 'Service #' . $id, 'initial_price' => 0];
+        }
+        $rec['recommended_services'] = $full;
+    }
+}
+
 // radiographs_notes and tooth_image may be stored as plain fields - ensure they exist
 if (!isset($rec['radiographs_notes'])) $rec['radiographs_notes'] = null;
 if (!isset($rec['tooth_image'])) $rec['tooth_image'] = null;

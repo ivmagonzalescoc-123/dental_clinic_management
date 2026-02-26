@@ -359,7 +359,6 @@ if ($stmt) {
                             <tr>
                                 <th>Patient</th>
                                 <th>Date</th>
-                                <th>Time</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -369,7 +368,6 @@ if ($stmt) {
                                 <tr>
                                     <td><?php echo htmlspecialchars($appt['first_name'] . ' ' . $appt['last_name']); ?></td>
                                     <td><?php echo htmlspecialchars($appt['appointment_date']); ?></td>
-                                    <td><?php echo htmlspecialchars($appt['appointment_time']); ?></td>
                                     <td>
                                         <span class="badge bg-<?php echo $appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning'); ?>">
                                             <?php echo htmlspecialchars(ucfirst($appt['status'])); ?>

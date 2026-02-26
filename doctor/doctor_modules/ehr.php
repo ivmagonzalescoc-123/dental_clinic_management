@@ -10,7 +10,20 @@ $appointment_id = isset($_GET['appointment_id']) ? (int) $_GET['appointment_id']
 // If no appointment_id provided, fetch today's queue items for this doctor
 $queueItems = [];
 if (!$appointment_id) {
-    $qstmt = $conn->prepare("SELECT q.appointment_id, q.que_number, a.patient_id, p.first_name, p.last_name, a.appointment_date FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id JOIN patients p ON a.patient_id = p.patient_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called') ORDER BY q.que_number ASC");
+    // Prefer ordering emergency flags first if check_in_queue has the column
+    $hasCol = false;
+    try {
+        $colRes = $conn->query("SHOW COLUMNS FROM check_in_queue LIKE 'is_emergency'");
+        $hasCol = ($colRes && $colRes->num_rows > 0);
+    } catch (Throwable $e) { $hasCol = false; }
+
+    if ($hasCol) {
+        $sql = "SELECT q.appointment_id, q.que_number, q.is_emergency, a.patient_id, p.first_name, p.last_name, a.appointment_date FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id JOIN patients p ON a.patient_id = p.patient_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called') ORDER BY q.is_emergency DESC, q.que_number ASC";
+    } else {
+        $sql = "SELECT q.appointment_id, q.que_number, a.patient_id, p.first_name, p.last_name, a.appointment_date FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id JOIN patients p ON a.patient_id = p.patient_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called') ORDER BY q.que_number ASC";
+    }
+
+    $qstmt = $conn->prepare($sql);
     if ($qstmt) {
         $today = date('Y-m-d');
         $qstmt->bind_param('is', $_SESSION['user_id'], $today);
@@ -60,20 +73,22 @@ if ($sstmt) {
                 <select id="queueSelector" class="form-select">
                     <option value="">-- Select queue / appointment --</option>
                     <?php foreach ($queueItems as $qi): ?>
-                        <?php $display = trim(($qi['que_number'] ? ('Queue #' . $qi['que_number'] . ' - ') : '') . ($qi['first_name'] . ' ' . $qi['last_name'])); ?>
-                        <option value="<?php echo (int) $qi['appointment_id']; ?>"
-                            data-que="<?php echo htmlspecialchars($qi['que_number']); ?>">
-                            <?php echo htmlspecialchars($display); ?>
-                        </option>
-                    <?php endforeach; ?>
+                            <?php
+                                $display = trim(($qi['que_number'] ? ('Queue #' . $qi['que_number'] . ' - ') : '') . ($qi['first_name'] . ' ' . $qi['last_name']));
+                                // Indicate emergency in dropdown text (plain text) so it's visible to doctors
+                                if (!empty($qi['is_emergency'])) {
+                                    $display .= ' (EMERGENCY)';
+                                }
+                            ?>
+                            <option value="<?php echo (int) $qi['appointment_id']; ?>" data-que="<?php echo htmlspecialchars($qi['que_number']); ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>">
+                                <?php echo htmlspecialchars($display); ?>
+                            </option>
+                        <?php endforeach; ?>
                 </select>
                 <div class="form-text">If you arrived from queue accept, the appointment will already be
                     selected.</div>
             </div>
-            <div class="mb-3">
-                <button id="btnEditHealthRecord" type="button" class="btn btn-sm btn-outline-secondary">Edit Health
-                    Record</button>
-            </div>
+            <!-- profiling edit button removed: profiling is auto-locked and shown read-only when present -->
             <div class="col-md-6">
                 <label class="form-label">Medical History (conditions)</label>
                 <textarea id="pf_medical_history_ehr" name="pf_medical_history" class="form-control" rows="2"
@@ -366,7 +381,45 @@ if ($sstmt) {
                 const rec = data.record;
                 if (rec.recommended_services && Array.isArray(rec.recommended_services)) rec.recommended_services.forEach(id => { const cb = document.getElementById('srv-' + id); if (cb) cb.checked = true; });
                 if (rec.treatment_plan) document.getElementById('treatment_plan').value = typeof rec.treatment_plan === 'object' ? JSON.stringify(rec.treatment_plan, null, 2) : rec.treatment_plan;
-                if (rec.materials_used && Array.isArray(rec.materials_used)) rec.materials_used.forEach(m => {/* not recreating rows to keep simple */ });
+                if (rec.materials_used && Array.isArray(rec.materials_used)) {
+                    const wrap = document.getElementById('materialsList');
+                    if (wrap) {
+                        wrap.innerHTML = '';
+                        rec.materials_used.forEach(m => {
+                            const div = document.createElement('div');
+                            div.className = 'd-flex gap-2 mb-2';
+
+                            const inputName = document.createElement('input');
+                            inputName.className = 'form-control form-control-sm';
+                            inputName.placeholder = 'Name';
+                            inputName.value = m.name || '';
+
+                            const inputQty = document.createElement('input');
+                            inputQty.className = 'form-control form-control-sm';
+                            inputQty.placeholder = 'Qty';
+                            inputQty.style.width = '80px';
+                            inputQty.value = (m.qty !== undefined && m.qty !== null) ? m.qty : '';
+
+                            const inputPrice = document.createElement('input');
+                            inputPrice.className = 'form-control form-control-sm';
+                            inputPrice.placeholder = 'Price';
+                            inputPrice.style.width = '120px';
+                            inputPrice.value = (m.price !== undefined && m.price !== null) ? m.price : '';
+
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-sm btn-danger';
+                            btn.textContent = 'Remove';
+                            btn.addEventListener('click', () => div.remove());
+
+                            div.appendChild(inputName);
+                            div.appendChild(inputQty);
+                            div.appendChild(inputPrice);
+                            div.appendChild(btn);
+                            wrap.appendChild(div);
+                        });
+                    }
+                }
                 if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
                 if (rec.follow_up_date) document.getElementById('follow_up_date').value = rec.follow_up_date;
                 // prefill profiling if present
@@ -493,6 +546,17 @@ if ($sstmt) {
             } catch (e) { console.warn('post odontogram', e); }
         }
 
+            // Receive odontogram state updates from iframe and store in hidden input
+            window.addEventListener('message', function (ev) {
+                try {
+                    if (!ev.data) return;
+                    if (ev.data.type === 'odontogram_update' && ev.data.toothState) {
+                        const el = document.getElementById('odontogram_data');
+                        if (el) el.value = JSON.stringify(ev.data.toothState);
+                    }
+                } catch (e) { console.warn('receive odontogram', e); }
+            });
+
         // show/hide controls
         function showOdontogram() {
             const container = document.getElementById('odontogramContainer');
@@ -543,17 +607,10 @@ if ($sstmt) {
             if (btn) btn.textContent = dis ? 'Edit Health Record' : 'Lock Health Record';
         }
 
-        // Wire the Edit Health Record button: toggles the disabled state
+        // Profiling fields are auto-locked: no edit button is shown. Initialize disabled state
         document.addEventListener('DOMContentLoaded', function () {
-            const btn = document.getElementById('btnEditHealthRecord');
-            if (!btn) return;
-            btn.addEventListener('click', function () {
-                const el = document.getElementById('pf_medical_history_ehr');
-                const currentlyDisabled = el ? el.disabled : false;
-                setProfilingDisabled(!currentlyDisabled);
-            });
-            // initialize label based on current field state
             const starter = document.getElementById('pf_medical_history_ehr');
+            // default to enabled; prefillClinicalRecord will set disabled=true when patient profiling exists
             setProfilingDisabled(starter ? starter.disabled : false);
         });
     })();
