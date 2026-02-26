@@ -488,6 +488,11 @@ if ($view === 'today') {
                                     <?php
                                         $status = $appointment['status'];
                                     ?>
+                                    <?php if (!$isDisabled): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick='openRescheduleForAppointmentSec(<?php echo json_encode($appointment); ?>)'>
+                                            <i class="bi bi-calendar3"></i> Reschedule
+                                        </button>
+                                    <?php endif; ?>
                                     <?php if ($status === 'scheduled' && !$isDisabled): ?>
                                         <div class="btn-group btn-group-sm" role="group">
                                             <div style="display:inline-block;">
@@ -949,8 +954,10 @@ if ($view === 'today') {
             </div>
             <div class="modal-body">
                 <input type="hidden" id="rescheduleScheduleIdSec" />
-                <div class="mb-2"><label class="form-label">Start</label><input id="rescheduleStartSec" class="form-control" type="datetime-local"/></div>
-                <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEndSec" class="form-control" type="datetime-local"/></div>
+                <input type="hidden" id="rescheduleAppointmentIdSec" />
+                <input type="hidden" id="rescheduleDoctorIdSec" />
+                <div class="mb-2"><label id="rescheduleStartLabelSec" class="form-label">Start</label><input id="rescheduleStartSec" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2" id="rescheduleEndWrapSec"><label class="form-label">End (optional)</label><input id="rescheduleEndSec" class="form-control" type="datetime-local"/></div>
                 <div class="mb-2"><button id="rescheduleSuggestSec" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
                 <div id="rescheduleSuggestionsSec" class="list-group"></div>
             </div>
@@ -982,9 +989,32 @@ function initSecPickers() {
 }
 initSecPickers();
 function toLocalInputSec(dtStr) { if (!dtStr) return ''; return dtStr.replace(' ', 'T').replace(/:00$/,''); }
-function toServerFormatSec(localVal) { if (!localVal) return ''; return localVal.replace('T',' '); }
+function toServerFormatSec(localVal) { 
+    if (!localVal) return ''; 
+    try {
+        if (localVal.indexOf('T') !== -1) return localVal.replace('T',' ');
+        // date-only (YYYY-MM-DD) -> append midnight time
+        if (/^\d{4}-\d{2}-\d{2}$/.test(localVal)) return localVal + ' 00:00:00';
+        return localVal;
+    } catch (e) { return localVal; }
+}
 function openRescheduleModalSec(schedule) {
     document.getElementById('rescheduleScheduleIdSec').value = schedule.schedule_id || '';
+    // restore labels and fields for schedule reschedule
+    try { document.getElementById('rescheduleStartLabelSec').textContent = 'Start'; } catch(e){}
+    try { document.getElementById('rescheduleStartSec').type = 'datetime-local'; } catch(e){}
+    try { document.getElementById('rescheduleEndWrapSec').style.display = ''; } catch(e){}
+    try { document.getElementById('rescheduleEndSec').type = 'datetime-local'; } catch(e){}
+    try { document.getElementById('rescheduleSuggestSec').style.display = ''; } catch(e){}
+    // if flatpickr is used, reconfigure to show time
+    try {
+        if (fpStartSec && typeof fpStartSec.set === 'function') fpStartSec.set({ enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+        if (fpEndSec && typeof fpEndSec.set === 'function') fpEndSec.set({ enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
+    } catch(e) { console.warn('flatpickr re-enable time failed', e); }
+    // ensure datetime inputs for schedule reschedule
+    try { document.getElementById('rescheduleStartSec').type = 'datetime-local'; } catch(e){}
+    try { document.getElementById('rescheduleEndSec').type = 'datetime-local'; document.getElementById('rescheduleEndSec').parentElement.style.display = ''; } catch(e){}
+    try { document.getElementById('rescheduleSuggestSec').style.display = ''; } catch(e){}
     const startLocal = toLocalInputSec(schedule.scheduled_start || '');
     const endLocal = toLocalInputSec(schedule.scheduled_end || '');
     if (fpStartSec && typeof fpStartSec.setDate === 'function') fpStartSec.setDate(startLocal);
@@ -994,19 +1024,46 @@ function openRescheduleModalSec(schedule) {
     document.getElementById('rescheduleSuggestionsSec').innerHTML = '';
     resModalSec.show();
 }
-document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
-    const btn = this; btn.disabled = true;
-    try { const fd = new FormData(); fd.append('user_id', CURRENT_USER); fd.append('days_ahead', 14); fd.append('duration', 30); const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd }); const j = await res.json(); const wrap = document.getElementById('rescheduleSuggestionsSec'); wrap.innerHTML = ''; if (!j.success) return alert(j.message || 'No suggestions'); (j.slots || []).slice(0,10).forEach(slot => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : ''); a.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('rescheduleStartSec').value = slot.start.replace(' ', 'T'); document.getElementById('rescheduleEndSec').value = slot.end ? slot.end.replace(' ', 'T') : ''; }); wrap.appendChild(a); }); } catch(e){ console.error(e); alert('Error fetching suggestions'); } btn.disabled = false; });
+// Open reschedule modal for an appointment (not a schedule)
+function openRescheduleForAppointmentSec(appointment) {
+    document.getElementById('rescheduleAppointmentIdSec').value = appointment.appointment_id || '';
+    document.getElementById('rescheduleScheduleIdSec').value = '';
+    document.getElementById('rescheduleDoctorIdSec').value = appointment.user_id || '';
+    // use date-only for appointment (no timeslot)
+    try { document.getElementById('rescheduleStartLabelSec').textContent = 'Date'; } catch(e){}
+    try { document.getElementById('rescheduleStartSec').type = 'date'; } catch(e){}
+    try { document.getElementById('rescheduleEndWrapSec').style.display = 'none'; } catch(e){}
+    try { document.getElementById('rescheduleSuggestSec').style.display = 'none'; } catch(e){}
+    // if flatpickr is used, reconfigure to date-only
+    try {
+        if (fpStartSec && typeof fpStartSec.set === 'function') fpStartSec.set({ enableTime: false, dateFormat: 'Y-m-d' });
+        if (fpEndSec && typeof fpEndSec.set === 'function') fpEndSec.set({ enableTime: false, dateFormat: 'Y-m-d' });
+    } catch(e) { console.warn('flatpickr set date-only failed', e); }
+    // set date-only value (strip time if present)
+    let apptDate = appointment.appointment_date || '';
+    if (apptDate.indexOf(' ') !== -1) apptDate = apptDate.split(' ')[0];
+    const startLocal = apptDate;
+    if (fpStartSec && typeof fpStartSec.setDate === 'function') fpStartSec.setDate(startLocal);
+    else document.getElementById('rescheduleStartSec').value = startLocal;
+    document.getElementById('rescheduleSuggestionsSec').innerHTML = '';
+    resModalSec.show();
+}
 document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
     const sid = document.getElementById('rescheduleScheduleIdSec').value;
-    if (!sid) return alert('No schedule selected');
+    const apptDoctor = document.getElementById('rescheduleDoctorIdSec').value || '';
     const btn = this; btn.disabled = true;
     try {
-        const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
-        const gs = await g.json();
-        if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
-        const user_id = gs.schedule.user_id || CURRENT_USER;
-        const duration = gs.schedule.duration || 30;
+        let user_id = CURRENT_USER;
+        let duration = 30;
+        if (sid) {
+            const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
+            const gs = await g.json();
+            if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+            user_id = gs.schedule.user_id || user_id;
+            duration = gs.schedule.duration || duration;
+        } else if (apptDoctor) {
+            user_id = apptDoctor;
+        }
         const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
@@ -1016,20 +1073,38 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
     } catch(e){ console.error(e); alert('Error fetching suggestions'); }
     btn.disabled = false;
 });
+
 document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async function(){
-    const sid = document.getElementById('rescheduleScheduleIdSec').value; const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value); const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
-    if (!sid || !start) { alert('Start datetime required'); return; }
+    const sid = document.getElementById('rescheduleScheduleIdSec').value;
+    const apptId = document.getElementById('rescheduleAppointmentIdSec').value;
+    const doctorId = document.getElementById('rescheduleDoctorIdSec').value || CURRENT_USER;
+    const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value);
+    const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
+    if (!start) { alert('Start date required'); return; }
     this.disabled = true;
     try {
-        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
-        const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
-        const j = await r.json();
-        if (!j.success) {
-            alert(j.message || 'Failed to reschedule');
+        if (apptId) {
+            const fd = new FormData(); fd.append('appointment_id', apptId); fd.append('user_id', doctorId); fd.append('appointment_date', start);
+            const r = await fetch('../assets/api/appointments/update_appointment.php', { method: 'POST', body: fd });
+            const j = await r.json();
+            if (!j.success) {
+                alert(j.message || 'Failed to update appointment');
+            } else {
+                alert('Appointment updated');
+                resModalSec.hide();
+                location.reload();
+            }
         } else {
-            alert('Rescheduled');
-            resModalSec.hide();
-            location.reload();
+            const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
+            const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
+            const j = await r.json();
+            if (!j.success) {
+                alert(j.message || 'Failed to reschedule');
+            } else {
+                alert('Rescheduled');
+                resModalSec.hide();
+                location.reload();
+            }
         }
     } catch (e) {
         console.error(e);
