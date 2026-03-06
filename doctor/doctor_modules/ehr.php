@@ -88,53 +88,6 @@ if ($sstmt) {
                 <div class="form-text">If you arrived from queue accept, the appointment will already be
                     selected.</div>
             </div>
-            <!-- profiling edit button removed: profiling is auto-locked and shown read-only when present -->
-            <div class="col-md-6">
-                <label class="form-label">Medical History (conditions)</label>
-                <textarea id="pf_medical_history_ehr" name="pf_medical_history" class="form-control" rows="2"
-                    placeholder="e.g., Diabetes, Hypertension"></textarea>
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Medications</label>
-                <input id="pf_medications_ehr" name="pf_medications" class="form-control"
-                    placeholder="List current medications">
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Allergies</label>
-                <input id="pf_allergies_ehr" name="pf_allergies" class="form-control"
-                    placeholder="Any allergies">
-            </div>
-            <div class="col-md-6">
-                <label class="form-label">Smoking</label>
-                <select id="pf_smoking_ehr" name="pf_smoking" class="form-select">
-                    <option value="never">Never</option>
-                    <option value="former">Former</option>
-                    <option value="current">Current</option>
-                </select>
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Alcohol</label>
-                <select id="pf_alcohol_ehr" name="pf_alcohol" class="form-select">
-                    <option value="none">None</option>
-                    <option value="social">Social</option>
-                    <option value="regular">Regular</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">ASA Class</label>
-                <select id="pf_asa_ehr" name="pf_asa" class="form-select">
-                    <option value="I">I</option>
-                    <option value="II">II</option>
-                    <option value="III">III</option>
-                    <option value="IV">IV</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Last Dental Visit</label>
-                <input type="date" id="pf_last_visit_ehr" name="pf_last_visit" class="form-control">
-            </div>
 
             <div class="col-12">
                 <label class="form-label">Periodontal / Oral Exam Notes</label>
@@ -259,19 +212,6 @@ if ($sstmt) {
             const doctor_notes = document.getElementById('doctor_notes')?.value || '';
             const follow_up_date = document.getElementById('follow_up_date')?.value || '';
 
-            // profiling payload
-            const profiling = {
-                medical_history: document.getElementById('pf_medical_history_ehr')?.value || '',
-                medications: document.getElementById('pf_medications_ehr')?.value || '',
-                allergies: document.getElementById('pf_allergies_ehr')?.value || '',
-                smoking: document.getElementById('pf_smoking_ehr')?.value || 'never',
-                alcohol: document.getElementById('pf_alcohol_ehr')?.value || 'none',
-                asa: document.getElementById('pf_asa_ehr')?.value || 'I',
-                periodontal: document.getElementById('pf_periodontal_ehr')?.value || '',
-                dental_chart: document.getElementById('pf_dental_chart_ehr')?.value || '',
-                last_visit: document.getElementById('pf_last_visit_ehr')?.value || ''
-            };
-
             const radiographs_notes = document.getElementById('radiographs_notes')?.value || '';
 
             const fd = new FormData();
@@ -371,29 +311,11 @@ if ($sstmt) {
                     const pf = rec.profiling || rec.patient_profiling || null;
                     if (pf) {
                         const p = (typeof pf === 'string') ? JSON.parse(pf) : pf;
-                        document.getElementById('pf_medical_history_ehr').value = p.medical_history || '';
-                        document.getElementById('pf_medications_ehr').value = p.medications || '';
-                        document.getElementById('pf_allergies_ehr').value = p.allergies || '';
-                        document.getElementById('pf_smoking_ehr').value = p.smoking || 'never';
-                        document.getElementById('pf_alcohol_ehr').value = p.alcohol || 'none';
-                        document.getElementById('pf_asa_ehr').value = p.asa || 'I';
                         document.getElementById('pf_periodontal_ehr').value = p.periodontal || '';
                         document.getElementById('pf_dental_chart_ehr').value = p.dental_chart || '';
-                        document.getElementById('pf_last_visit_ehr').value = p.last_visit || '';
                     }
                 } catch (e) { console.warn('prefill profiling', e); }
 
-                // If patient-level profiling exists, disable repetitive health fields to avoid redundant editing.
-                // Fields disabled: Medical History, Allergies, Smoking, ASA Class.
-                try {
-                    const patientPf = rec.patient_profiling || rec.profiling || null;
-                    const apptId = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
-                    const scheduleId = parseInt(document.getElementById('schedule_id_hidden').value || '0', 10) || 0;
-                    if (typeof setProfilingDisabled === 'function') {
-                        if (patientPf && !apptId && !scheduleId) setProfilingDisabled(true);
-                        else setProfilingDisabled(false);
-                    }
-                } catch (e) { console.warn('profiling disable logic', e); }
                 if (rec.odontogram) { document.getElementById('odontogram_data').value = JSON.stringify(rec.odontogram); }
                 if (rec.radiographs_notes) { document.getElementById('radiographs_notes').value = rec.radiographs_notes || ''; }
                 // show existing images / tooth image thumbnails
@@ -537,25 +459,5 @@ if ($sstmt) {
         });
 
         // cleanup: removed extra controls; toggle button handles show/hide and reload
-
-        // Helper to enable/disable repetitive profiling fields and update the edit button
-        function setProfilingDisabled(dis) {
-            const ids = ['pf_medical_history_ehr', 'pf_allergies_ehr', 'pf_smoking_ehr', 'pf_alcohol_ehr', 'pf_asa_ehr'];
-            ids.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.disabled = !!dis;
-                if (dis) el.classList.add('bg-light'); else el.classList.remove('bg-light');
-            });
-            const btn = document.getElementById('btnEditHealthRecord');
-            if (btn) btn.textContent = dis ? 'Edit Health Record' : 'Lock Health Record';
-        }
-
-        // Profiling fields are auto-locked: no edit button is shown. Initialize disabled state
-        document.addEventListener('DOMContentLoaded', function () {
-            const starter = document.getElementById('pf_medical_history_ehr');
-            // default to enabled; prefillClinicalRecord will set disabled=true when patient profiling exists
-            setProfilingDisabled(starter ? starter.disabled : false);
-        });
     })();
 </script>

@@ -360,7 +360,8 @@ if ($stmt) {
                                 <th>Patient</th>
                                 <th>Date</th>
                                 <th>Status</th>
-                                <th>Actions</th>
+                                <th>Schedule</th>
+                                <th>Record</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -375,20 +376,22 @@ if ($stmt) {
                                     </td>
                                     <td>
                                         <?php if (!empty($appt['schedule_status'])): ?>
-                                            <div><small class="text-muted">Schedule:</small>
-                                                <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
-                                                    <?php echo ($appt['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
-                                                </span>
-                                                <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
-                                            </div>
-                                        <?php endif; ?>
-                                        <div class="mt-1">
-                                        <?php if (!empty($appt['has_history'])): ?>
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">History</button>
+                                            <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
+                                                <?php echo ($appt['schedule_status'] === 'scheduled') ? 'Followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
+                                            </span>
+                                            <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
                                         <?php else: ?>
-                                            <span class="text-muted small">No history</span>
+                                            <span class="text-muted small">No schedule</span>
                                         <?php endif; ?>
-                                        </div>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($appt['has_history'])): ?>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
+                                                <i class="bi bi-file-earmark-text"></i> View
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-muted small">No record</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

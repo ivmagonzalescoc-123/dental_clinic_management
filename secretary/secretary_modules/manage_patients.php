@@ -31,11 +31,12 @@ if ($res) {
 						<th>Gender</th>
 						<th>Address</th>
 						<th>Created</th>
+						<th>Actions</th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php if (empty($patients)): ?>
-						<tr><td colspan="8" class="text-center text-muted">No patients found.</td></tr>
+						<tr><td colspan="9" class="text-center text-muted">No patients found.</td></tr>
 					<?php else: ?>
 						<?php foreach ($patients as $p): ?>
 							<tr>
@@ -47,6 +48,11 @@ if ($res) {
 								<td><?= htmlspecialchars($p['gender']); ?></td>
 								<td><?= htmlspecialchars($p['address']); ?></td>
 								<td><?= htmlspecialchars($p['created_at']); ?></td>
+								<td>
+									<button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#profilingModal" onclick="openProfilingModal(<?= htmlspecialchars(json_encode($p)); ?>)">
+										<i class="bi bi-pencil"></i> Profiling
+									</button>
+								</td>
 							</tr>
 						<?php endforeach; ?>
 					<?php endif; ?>
@@ -128,7 +134,154 @@ if ($res) {
 	</div>
 </div>
 
+<!-- Patient Profiling Modal -->
+<div class="modal fade" id="profilingModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header bg-info text-white">
+				<h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Profiling</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="profilingForm">
+				<div class="modal-body">
+					<input type="hidden" id="profiling_patient_id" name="patient_id">
+					<div class="mb-3" id="profilingPatientName" class="alert alert-light"></div>
+
+					<div class="row">
+						<div class="col-md-12 mb-3">
+							<label class="form-label">Medical History (conditions)</label>
+							<textarea id="pf_medical_history_sec" name="pf_medical_history" class="form-control" rows="2" placeholder="e.g., Diabetes, Hypertension"></textarea>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label class="form-label">Medications</label>
+							<input type="text" id="pf_medications_sec" name="pf_medications" class="form-control" placeholder="List current medications">
+						</div>
+						<div class="col-md-6 mb-3">
+							<label class="form-label">Allergies</label>
+							<input type="text" id="pf_allergies_sec" name="pf_allergies" class="form-control" placeholder="Any allergies">
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label class="form-label">Smoking</label>
+							<select id="pf_smoking_sec" name="pf_smoking" class="form-select">
+								<option value="">-- Select --</option>
+								<option value="never">Never</option>
+								<option value="former">Former</option>
+								<option value="current">Current</option>
+							</select>
+						</div>
+						<div class="col-md-6 mb-3">
+							<label class="form-label">Alcohol</label>
+							<select id="pf_alcohol_sec" name="pf_alcohol" class="form-select">
+								<option value="">-- Select --</option>
+								<option value="none">None</option>
+								<option value="social">Social</option>
+								<option value="regular">Regular</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label class="form-label">ASA Class</label>
+							<select id="pf_asa_sec" name="pf_asa" class="form-select">
+								<option value="">-- Select --</option>
+								<option value="I">I</option>
+								<option value="II">II</option>
+								<option value="III">III</option>
+								<option value="IV">IV</option>
+							</select>
+						</div>
+						<div class="col-md-6 mb-3">
+							<label class="form-label">Last Dental Visit</label>
+							<input type="date" id="pf_last_visit_sec" name="pf_last_visit" class="form-control">
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+					<button type="submit" class="btn btn-primary">Save Profiling</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
 <script>
+// Open profiling modal and load patient data
+function openProfilingModal(patient) {
+	document.getElementById('profiling_patient_id').value = patient.patient_id;
+	document.getElementById('profilingPatientName').innerHTML = 
+		`<strong>Patient:</strong> ${patient.first_name} ${patient.middle_name ? patient.middle_name + ' ' : ''}${patient.last_name}`;
+	
+	// Fetch existing profiling data
+	fetch(`../assets/api/patients/get_profiling.php?patient_id=${patient.patient_id}`)
+		.then(r => r.json())
+		.then(data => {
+			if (data.success && data.profiling) {
+				const pf = data.profiling;
+				document.getElementById('pf_medical_history_sec').value = pf.medical_history || '';
+				document.getElementById('pf_medications_sec').value = pf.medications || '';
+				document.getElementById('pf_allergies_sec').value = pf.allergies || '';
+				document.getElementById('pf_smoking_sec').value = pf.smoking || '';
+				document.getElementById('pf_alcohol_sec').value = pf.alcohol || '';
+				document.getElementById('pf_asa_sec').value = pf.asa || '';
+				document.getElementById('pf_last_visit_sec').value = pf.last_visit || '';
+			} else {
+				// Clear form if no existing profiling
+				document.getElementById('profilingForm').reset();
+				document.getElementById('profiling_patient_id').value = patient.patient_id;
+			}
+		})
+		.catch(err => console.warn('Error loading profiling:', err));
+}
+
+// Save profiling
+document.getElementById('profilingForm').addEventListener('submit', function(e) {
+	e.preventDefault();
+	const patient_id = document.getElementById('profiling_patient_id').value;
+	
+	const profiling = {
+		medical_history: document.getElementById('pf_medical_history_sec').value.trim(),
+		medications: document.getElementById('pf_medications_sec').value.trim(),
+		allergies: document.getElementById('pf_allergies_sec').value.trim(),
+		smoking: document.getElementById('pf_smoking_sec').value.trim(),
+		alcohol: document.getElementById('pf_alcohol_sec').value.trim(),
+		asa: document.getElementById('pf_asa_sec').value.trim(),
+		last_visit: document.getElementById('pf_last_visit_sec').value.trim()
+	};
+
+	fetch('../assets/api/patients/save_profiling.php', {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			patient_id: parseInt(patient_id),
+			profiling: profiling
+		})
+	})
+	.then(r => r.json())
+	.then(res => {
+		if (res.success) {
+			alert('Profiling saved successfully!');
+			bootstrap.Modal.getInstance(document.getElementById('profilingModal')).hide();
+		} else {
+			alert('Error: ' + (res.message || 'Unable to save profiling'));
+		}
+	})
+	.catch(err => {
+		console.error(err);
+		alert('Error saving profiling');
+	});
+});
+
+// Add Patient Form
 document.getElementById('addPatientForm').addEventListener('submit', function(e) {
 	e.preventDefault();
 	const form = e.target;

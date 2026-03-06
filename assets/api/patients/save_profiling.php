@@ -3,7 +3,7 @@ include '../../../config/database.php';
 include_once '../../../config/session_check.php';
 header('Content-Type: application/json');
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['doctor','admin'])) {
+if (!in_array($role, ['doctor','admin','secretary'])) {
     http_response_code(403);
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
     exit;

@@ -420,7 +420,6 @@ if ($view === 'today') {
             <table class="table table-hover datatable">
                 <thead>
                     <tr>
-                        <th>ID</th>
                         <th>Patient Name</th>
                         <th>Schedule</th>
                         <th>Doctor</th>
@@ -429,8 +428,8 @@ if ($view === 'today') {
                         <th>Date</th>
                         <th>Reason</th>
                         <th>Type</th>
+                        <th>Status</th>
                         <th>Actions</th>
-                        
                     </tr>
                 </thead>
                 <tbody>
@@ -450,7 +449,6 @@ if ($view === 'today') {
                                 $alreadyCheckedIn = !empty($appointment['checkin_id']);
                             ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($appointment['appointment_id']); ?></td>
                                 <td>
                                     <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
                                     <?php if (!empty($appointment['is_emergency']) && $appointment['is_emergency']): ?>
@@ -483,58 +481,71 @@ if ($view === 'today') {
                                     <?php 
                                         $isCompleted = ($appointment['status'] === 'completed');
                                         $isCancelled = ($appointment['status'] === 'cancelled');
-                                        $isDisabled = $isCompleted || $isCancelled;
-                                    ?>
-                                    <?php
                                         $status = $appointment['status'];
                                     ?>
-                                    <?php if (!$isDisabled): ?>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" onclick='openRescheduleForAppointmentSec(<?php echo json_encode($appointment); ?>)'>
-                                            <i class="bi bi-calendar3"></i> Reschedule
-                                        </button>
-                                    <?php endif; ?>
-                                    <?php if ($status === 'scheduled' && !$isDisabled): ?>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <div style="display:inline-block;">
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="confirmAppointment(<?php echo (int)$appointment['appointment_id']; ?>)">
-                                                    <i class="bi bi-check2-square"></i> Approve
-                                                </button>
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)">
-                                                <i class="bi bi-x-circle"></i> Decline
-                                            </button>
-                                        </div>
-                                    <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
-                                        <?php if ($alreadyCheckedIn): ?>
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <span class="badge bg-success me-2">Queue #<?php echo htmlspecialchars((string)$appointment['que_number']); ?></span>
-                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=cancel" style="display:inline-block;" onsubmit="return confirm('Remove this patient from queue?');">
-                                                    <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
-                                                    <button type="submit" class="btn btn-sm btn-warning">
-                                                        <i class="bi bi-x-circle"></i> Cancel
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        <?php else: ?>
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=checkin" style="display:inline-block;" onsubmit="return confirm('Mark patient as arrived and add to queue?');">
-                                                    <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
-                                                    <button type="submit" class="btn btn-sm btn-success">
-                                                        <i class="bi bi-person-check"></i> Arrived
-                                                    </button>
-                                                </form>
-                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)">
-                                                    <i class="bi bi-x-circle"></i> Decline
-                                                </button>
-                                            </div>
-                                        <?php endif; ?>
-                                    <?php elseif ($isCompleted || $isCancelled): ?>
-                                        <span class="badge bg-<?php echo $isCompleted ? 'success' : 'danger'; ?>"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
+                                    <?php if ($status === 'scheduled'): ?>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <?php elseif ($status === 'confirmed'): ?>
+                                        <span class="badge bg-info">Confirmed</span>
+                                    <?php elseif ($status === 'checked_in'): ?>
+                                        <span class="badge bg-success">Checked-In</span><?php if (!empty($appointment['que_number'])): ?> <span class="badge bg-light text-dark">Q#<?php echo htmlspecialchars((string)$appointment['que_number']); ?></span><?php endif; ?>
+                                    <?php elseif ($status === 'completed'): ?>
+                                        <span class="badge bg-success">Completed</span>
+                                    <?php elseif ($status === 'cancelled'): ?>
+                                        <span class="badge bg-danger">Cancelled</span>
                                     <?php else: ?>
-                                        <span class="text-muted small"><?php echo htmlspecialchars(ucfirst($appointment['status'])); ?></span>
+                                        <span class="badge bg-secondary"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
                                     <?php endif; ?>
                                 </td>
                                 
+                                <td>
+                                    <?php 
+                                        $isDisabled = $isCompleted || $isCancelled;
+                                    ?>
+                                    <div class="d-flex flex-wrap gap-1" style="justify-content: flex-start;">
+                                        
+                                        
+                                        <?php if ($status === 'scheduled' && !$isDisabled): ?>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="confirmAppointment(<?php echo (int)$appointment['appointment_id']; ?>)" title="Approve appointment">
+                                                <i class="bi bi-check2-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        <?php if (!$isDisabled): ?>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openRescheduleForAppointmentSec(<?php echo json_encode($appointment); ?>)' title="Reschedule appointment">
+                                                <i class="bi bi-calendar3"></i>
+                                            </button>
+                                        <?php endif; ?>
+                                        <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
+                                            <?php if (empty($appointment['checkin_id'])): ?>
+                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=checkin" style="display:inline;" onsubmit="return confirm('Mark patient as arrived and add to queue?');">
+                                                    <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Mark as arrived">
+                                                        <i class="bi bi-person-check"></i>
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <form method="POST" action="secretary.php?page=appointments&view=<?php echo htmlspecialchars($view); ?>&action=cancel" style="display:inline;" onsubmit="return confirm('Remove this patient from queue?');">
+                                                    <input type="hidden" name="appointment_id" value="<?php echo htmlspecialchars($appointment['appointment_id']); ?>">
+                                                    <button type="submit" class="btn btn-sm btn-warning" title="Remove from queue">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                            
+                                            <?php if (empty($appointment['checkin_id'])): ?>
+                                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View patient profiling">
+                                            <i class="bi bi-file-medical"></i>
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -634,6 +645,32 @@ if ($view === 'today') {
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Patient Profiling Modal -->
+<div class="modal fade" id="viewProfilingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Profiling</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="profilingPatientName" class="alert alert-light mb-3"></div>
+                <div id="profilingContent">
+                    <div class="text-center text-muted">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        Loading profiling data...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1113,6 +1150,101 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
         this.disabled = false;
     }
 });
+
+// View patient profiling
+async function openViewProfilingModal(patientId, firstName, lastName) {
+    const modal = document.getElementById('viewProfilingModal');
+    const nameDiv = document.getElementById('profilingPatientName');
+    const contentDiv = document.getElementById('profilingContent');
+    
+    nameDiv.innerHTML = `<strong>Patient:</strong> ${firstName} ${lastName}`;
+    contentDiv.innerHTML = '<div class="text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div> Loading profiling data...</div>';
+    
+    try {
+        const res = await fetch(`../assets/api/patients/get_profiling.php?patient_id=${encodeURIComponent(patientId)}`);
+        const j = await res.json();
+        
+        if (!j.success || !j.profiling) {
+            contentDiv.innerHTML = '<div class="alert alert-warning">No profiling data available for this patient.</div>';
+            return;
+        }
+        
+        const pf = j.profiling;
+        let html = '<div class="row">';
+        
+        if (pf.medical_history) {
+            html += `<div class="col-md-12 mb-3">
+                <strong>Medical History:</strong>
+                <div class="alert alert-light p-2">${escapeHtml(pf.medical_history)}</div>
+            </div>`;
+        }
+        
+        if (pf.medications) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>Medications:</strong>
+                <div class="alert alert-light p-2">${escapeHtml(pf.medications)}</div>
+            </div>`;
+        }
+        
+        if (pf.allergies) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>Allergies:</strong>
+                <div class="alert alert-light p-2">${escapeHtml(pf.allergies)}</div>
+            </div>`;
+        }
+        
+        if (pf.smoking) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>Smoking:</strong>
+                <div class="alert alert-light p-2"><span class="badge bg-secondary">${escapeHtml(pf.smoking)}</span></div>
+            </div>`;
+        }
+        
+        if (pf.alcohol) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>Alcohol:</strong>
+                <div class="alert alert-light p-2"><span class="badge bg-secondary">${escapeHtml(pf.alcohol)}</span></div>
+            </div>`;
+        }
+        
+        if (pf.asa) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>ASA Class:</strong>
+                <div class="alert alert-light p-2"><span class="badge bg-info">${escapeHtml(pf.asa)}</span></div>
+            </div>`;
+        }
+        
+        if (pf.last_visit) {
+            html += `<div class="col-md-6 mb-3">
+                <strong>Last Dental Visit:</strong>
+                <div class="alert alert-light p-2">${escapeHtml(pf.last_visit)}</div>
+            </div>`;
+        }
+        
+        html += '</div>';
+        
+        if (html === '<div class="row"></div>') {
+            contentDiv.innerHTML = '<div class="alert alert-warning">No profiling fields populated.</div>';
+        } else {
+            contentDiv.innerHTML = html;
+        }
+    } catch (err) {
+        console.error(err);
+        contentDiv.innerHTML = '<div class="alert alert-danger">Error loading profiling data.</div>';
+    }
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
 </script>
 
 <script>
