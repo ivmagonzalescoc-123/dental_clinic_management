@@ -209,12 +209,12 @@ if ($result) {
                             <td>
                                 <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editServiceModal"
                                         onclick='openEditServiceModal(<?php echo htmlspecialchars(json_encode($svc), ENT_QUOTES, "UTF-8"); ?>)'>
-                                    <i class="bi bi-pencil"></i> Edit
+                                    <i class="bi bi-pencil"></i>
                                 </button>
                                 <form method="POST" action="admin.php?page=services&action=archive" onsubmit="return confirm('Archive this service?');" style="display:inline-block;">
                                     <input type="hidden" name="service_id" value="<?php echo htmlspecialchars($svc['service_id']); ?>">
-                                    <button type="submit" class="btn btn-sm btn-warning">
-                                        <i class="bi bi-archive"></i> <?php echo $hasIsActive ? 'Archive' : 'Delete'; ?>
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="bi bi-trash"></i> <?php echo $hasIsActive ? '' : 'Delete'; ?>
                                     </button>
                                 </form>
                             </td>

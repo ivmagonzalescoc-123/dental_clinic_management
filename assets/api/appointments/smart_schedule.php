@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include __DIR__ . '/availability_guard.php';
     if (!$conn) throw new Exception('Database connection failed');
 
     $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
@@ -59,19 +60,31 @@ try {
             exit;
         }
 
+        [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $user_id, $ts['slot_date']);
+        if (!$bookable) {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => $bookableMsg]);
+            exit;
+        }
+
         // Mark timeslot as booked
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ?"
+            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ? AND status = 'available'"
         );
         $tbUpd->bind_param('ii', $appointment_id, $timeslot_id);
         $tbUpd->execute();
+        if ($tbUpd->affected_rows === 0) {
+            $tbUpd->close();
+            throw new Exception('Selected timeslot is no longer available.');
+        }
         $tbUpd->close();
 
         // Link timeslot_id onto appointment
         $aUpd = $conn->prepare(
             "UPDATE appointments SET timeslot_id = ?, appointment_date = ?, service_id = COALESCE(?, service_id) WHERE appointment_id = ?"
         );
-        $aUpd->bind_param('isii', $timeslot_id, $ts['slot_date'], $service_id ?: null, $appointment_id);
+        $serviceIdParam = $service_id > 0 ? $service_id : null;
+        $aUpd->bind_param('isii', $timeslot_id, $ts['slot_date'], $serviceIdParam, $appointment_id);
         $aUpd->execute();
         $aUpd->close();
 
@@ -126,6 +139,10 @@ try {
     $res   = $slotStmt->get_result();
     $slots = [];
     while ($row = $res->fetch_assoc()) {
+        [$bookable] = appt_assert_doctor_bookable($conn, $user_id, $row['slot_date']);
+        if (!$bookable) {
+            continue;
+        }
         $slots[] = [
             'timeslot_id' => (int)$row['timeslot_id'],
             'start'       => $row['slot_date'] . ' ' . $row['start_time'],

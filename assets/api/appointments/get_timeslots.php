@@ -8,6 +8,7 @@ session_start();
 header('Content-Type: application/json');
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include __DIR__ . '/availability_guard.php';
 
 $doctor_id  = isset($_GET['doctor_id'])  ? (int)$_GET['doctor_id']  : 0;
 $date       = isset($_GET['date'])       ? trim($_GET['date'])       : '';
@@ -17,6 +18,19 @@ if (!$doctor_id || !$date) {
     echo json_encode(['success' => false, 'message' => 'doctor_id and date are required']);
     exit;
 }
+
+if (!appt_validate_appointment_date($date)) {
+    echo json_encode(['success' => false, 'message' => 'Invalid date format']);
+    exit;
+}
+
+[$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doctor_id, $date);
+if (!$bookable) {
+    echo json_encode(['success' => true, 'slots' => [], 'message' => $bookableMsg]);
+    exit;
+}
+
+appt_ensure_standard_timeslots_for_doctor_date($conn, $doctor_id, $date);
 
 try {
     // If service given, get its duration to filter out slots too short
@@ -66,7 +80,10 @@ try {
     }
     $stmt->close();
 
-    echo json_encode(['success' => true, 'slots' => $slots]);
+    $message = empty($slots)
+        ? 'No available 20-minute slots for this doctor/date.'
+        : '';
+    echo json_encode(['success' => true, 'slots' => $slots, 'message' => $message]);
 
 } catch (Exception $e) {
     http_response_code(500);

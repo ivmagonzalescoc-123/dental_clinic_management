@@ -174,7 +174,7 @@ if ($stmt) {
 $recentUserLogs = [];
 $res = $conn->query("
 	SELECT ul.login_time, ul.logout_time, ul.ip_address,
-		   u.first_name, u.last_name, u.username
+		   u.first_name, u.last_name, u.email
 	FROM user_logs ul
 	LEFT JOIN users u ON u.user_id = ul.user_id
 	ORDER BY ul.login_time DESC
@@ -390,8 +390,8 @@ function fmt_time(?string $dt): string
 								<?php foreach ($recentUserLogs as $l): ?>
 									<?php
 										$uname = trim(($l['first_name'] ?? '') . ' ' . ($l['last_name'] ?? ''));
-										$username = (string)($l['username'] ?? '');
-										$userLabel = $uname !== '' ? $uname : ($username !== '' ? $username : 'System');
+											$email = (string)($l['email'] ?? '');
+											$userLabel = $uname !== '' ? $uname : ($email !== '' ? $email : 'System');
 									?>
 									<tr>
 										<td><?php echo htmlspecialchars((string)($l['login_time'] ?? '')); ?></td>

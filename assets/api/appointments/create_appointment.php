@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include __DIR__ . '/availability_guard.php';
     if (!$conn) throw new Exception('Database connection failed');
 
     $patient_id            = isset($_POST['patient_id'])            ? (int)$_POST['patient_id']            : 0;
@@ -21,12 +22,37 @@ try {
     $status                = isset($_POST['status'])                ? trim($_POST['status'])                : 'scheduled';
     $timeslot_id           = isset($_POST['timeslot_id'])           ? (int)$_POST['timeslot_id']           : 0;
     $service_id            = isset($_POST['service_id'])            ? (int)$_POST['service_id']            : 0;
+    $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
 
     $requester_role = $_SESSION['role'] ?? '';
 
     if (empty($patient_id) || empty($appointment_date) || empty($user_id)) {
         echo json_encode(['success' => false, 'message' => 'Patient, doctor and appointment date are required!']);
         exit;
+    }
+
+    if (!appt_validate_appointment_date($appointment_date)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid appointment date. Use YYYY-MM-DD format.']);
+        exit;
+    }
+
+    [$reasonOk, $reasonResult] = appt_validate_reason($reason);
+    if (!$reasonOk) {
+        echo json_encode(['success' => false, 'message' => $reasonResult]);
+        exit;
+    }
+    $reason = $reasonResult;
+
+    [$notesOk, $notesResult] = appt_validate_notes($notes);
+    if (!$notesOk) {
+        echo json_encode(['success' => false, 'message' => $notesResult]);
+        exit;
+    }
+    $notes = $notesResult;
+
+    $allowedStatus = ['scheduled', 'confirmed'];
+    if (!in_array($status, $allowedStatus, true)) {
+        $status = 'scheduled';
     }
 
     // Verify doctor exists and is active
@@ -37,6 +63,12 @@ try {
     $doc_stmt->close();
     if (!$doc || (int)($doc['is_active'] ?? 0) !== 1 || (int)($doc['role_id'] ?? 0) !== 2) {
         echo json_encode(['success' => false, 'message' => 'Selected doctor is not available. Please choose another doctor.']);
+        exit;
+    }
+
+    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $user_id, $appointment_date);
+    if (!$bookable) {
+        echo json_encode(['success' => false, 'message' => $bookableMsg]);
         exit;
     }
 
@@ -51,10 +83,18 @@ try {
         exit;
     }
 
-    // Verify timeslot is still available if provided
+    appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $appointment_date);
+
+    // Timeslot is required for all new bookings.
+    if ($timeslot_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Please select a 20-minute time slot.']);
+        exit;
+    }
+
+    // Verify selected timeslot is still available
     if ($timeslot_id > 0) {
         $ts_stmt = $conn->prepare(
-            "SELECT timeslot_id, status, doctor_id FROM timeslot WHERE timeslot_id = ? LIMIT 1"
+            "SELECT timeslot_id, status, doctor_id, slot_date FROM timeslot WHERE timeslot_id = ? LIMIT 1"
         );
         $ts_stmt->bind_param('i', $timeslot_id);
         $ts_stmt->execute();
@@ -73,6 +113,10 @@ try {
             echo json_encode(['success' => false, 'message' => 'Timeslot does not belong to the selected doctor.']);
             exit;
         }
+        if ($ts['slot_date'] !== $appointment_date) {
+            echo json_encode(['success' => false, 'message' => 'Timeslot date does not match selected appointment date.']);
+            exit;
+        }
     }
 
     // Check for duplicate patient booking on same date
@@ -84,14 +128,32 @@ try {
     $dup_row = $dup_stmt->get_result()->fetch_assoc();
     $dup_stmt->close();
     if ((int)($dup_row['cnt'] ?? 0) > 0) {
-        echo json_encode(['success' => false, 'message' => 'Patient already has an appointment on the selected date.']);
-        exit;
+        $isSecretary = (strtolower((string)$requester_role) === 'secretary');
+        if ($isSecretary && $allow_duplicate_day !== 1) {
+            echo json_encode([
+                'success' => false,
+                'warning' => true,
+                'code' => 'duplicate_day_warning',
+                'message' => 'Patient already has an appointment on this date. Submit again to confirm override.'
+            ]);
+            exit;
+        }
+
+        if (!$isSecretary) {
+            echo json_encode(['success' => false, 'message' => 'Patient already has an appointment on the selected date.']);
+            exit;
+        }
     }
 
     $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
 
     if ($isPatientRequester) {
         $is_online_appointment = 1;
+    }
+
+    // Appointment service is selected later by the doctor during in-clinic consultation.
+    if ($isPatientRequester || strtolower($requester_role) === 'secretary') {
+        $service_id = 0;
     }
 
     if (!$isPatientRequester && strtolower($requester_role) === 'secretary') {
@@ -121,15 +183,23 @@ try {
     // Mark the timeslot as booked
     if ($timeslot_id > 0) {
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ?"
+            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ? AND status = 'available'"
         );
         $tbUpd->bind_param('ii', $appointment_id, $timeslot_id);
         $tbUpd->execute();
+        if ($tbUpd->affected_rows === 0) {
+            $tbUpd->close();
+            throw new Exception('Selected timeslot is no longer available. Please choose another time.');
+        }
         $tbUpd->close();
 
         // If confirmed, create patient_arrivals pending record
         if ($status === 'confirmed') {
-            $tsData = $conn->query("SELECT start_time FROM timeslot WHERE timeslot_id = {$timeslot_id} LIMIT 1")->fetch_assoc();
+            $tsSel = $conn->prepare('SELECT start_time FROM timeslot WHERE timeslot_id = ? LIMIT 1');
+            $tsSel->bind_param('i', $timeslot_id);
+            $tsSel->execute();
+            $tsData = $tsSel->get_result()->fetch_assoc();
+            $tsSel->close();
             $expectedTime = $tsData['start_time'] ?? '00:00:00';
             $paIns = $conn->prepare(
                 "INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)

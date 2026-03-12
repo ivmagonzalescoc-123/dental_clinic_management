@@ -26,11 +26,11 @@ function stmt_bind_params(mysqli_stmt $stmt, string $types, array &$params): voi
 function format_user_label(array $r): string
 {
     $name = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
-    $username = (string)($r['username'] ?? '');
+    $email = (string)($r['email'] ?? '');
 
-    if ($name !== '' && $username !== '') return $name . ' (' . $username . ')';
+    if ($name !== '' && $email !== '') return $name . ' (' . $email . ')';
     if ($name !== '') return $name;
-    if ($username !== '') return $username;
+    if ($email !== '') return $email;
     return 'Unknown';
 }
 
@@ -55,7 +55,7 @@ $sql = "
         u.user_id,
         u.first_name,
         u.last_name,
-        u.username
+        u.email
     FROM user_logs ul
     LEFT JOIN users u ON u.user_id = ul.user_id
     WHERE 1=1
@@ -77,7 +77,7 @@ if ($dateTo !== '') {
 
 if ($search !== '') {
     $sql .= " AND (
-        u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ? OR
+        u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR
         ul.ip_address LIKE ?
     )";
     $types .= 'ssss';

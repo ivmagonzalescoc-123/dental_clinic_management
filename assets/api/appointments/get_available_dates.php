@@ -9,6 +9,7 @@ session_start();
 
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include __DIR__ . '/availability_guard.php';
 
     $days    = isset($_GET['days'])    ? (int)$_GET['days']    : 30;
     $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
@@ -16,6 +17,17 @@ try {
 
     $start = date('Y-m-d');
     $end   = date('Y-m-d', strtotime("+{$days} days"));
+
+    if ($user_id > 0) {
+        $genPeriod = new DatePeriod(
+            new DateTime($start),
+            new DateInterval('P1D'),
+            (new DateTime($end))->modify('+1 day')
+        );
+        foreach ($genPeriod as $dt) {
+            appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $dt->format('Y-m-d'));
+        }
+    }
 
     // Use timeslot table when a doctor is specified — count available vs booked per date
     if ($user_id) {
@@ -65,12 +77,30 @@ try {
     );
     foreach ($period as $dt) {
         $d    = $dt->format('Y-m-d');
+
         $data = $counts[$d] ?? ['booked' => 0, 'total' => 15];
+        $available = ($data['booked'] < $data['total']);
+        $reason = '';
+
+        if ($user_id > 0) {
+            // Even with open capacity, do not allow dates with no schedule or approved leave.
+            [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $user_id, $d);
+            $available = $available && $bookable;
+            if (!$bookable) {
+                $reason = (string)$bookableMsg;
+            }
+        }
+
+        if (!$available && $reason === '' && ((int)$data['total'] > 0) && ((int)$data['booked'] >= (int)$data['total'])) {
+            $reason = 'No remaining available slots on this date.';
+        }
+
         $dates[] = [
             'date'      => $d,
             'count'     => $data['booked'],
             'total'     => $data['total'],
-            'available' => ($data['booked'] < $data['total']),
+            'available' => $available,
+            'reason'    => $reason,
         ];
     }
 

@@ -1,6 +1,7 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include __DIR__ . '/availability_guard.php';
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
@@ -35,6 +36,13 @@ try {
     if ($role === 'doctor' && (int)$sch['user_id'] !== $user_id) {
         http_response_code(403);
         echo json_encode(['success'=>false,'message'=>'Forbidden']);
+        exit;
+    }
+
+    $reschedDate = date('Y-m-d', strtotime($start));
+    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, (int)$sch['user_id'], $reschedDate);
+    if (!$bookable) {
+        echo json_encode(['success'=>false,'message'=>$bookableMsg]);
         exit;
     }
 

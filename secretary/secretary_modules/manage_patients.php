@@ -1,5 +1,8 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include dirname(dirname(__DIR__)) . '/config/security.php';
+security_start_session();
+$csrf_token = security_generate_csrf_token();
 
 $patients = [];
 $res = $conn->query('SELECT patient_id, first_name, middle_name, last_name, phone_number, email, date_of_birth, gender, address, created_at FROM patients ORDER BY created_at DESC');
@@ -72,6 +75,7 @@ if ($res) {
 			</div>
 			<form id="addPatientForm">
 				<div class="modal-body">
+					<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
 					<div class="row">
 						<div class="col-md-4 mb-3">
 							<label class="form-label">First Name *</label>
@@ -88,12 +92,9 @@ if ($res) {
 					</div>
 					<div class="row">
 						<div class="col-md-3 mb-3">
-							<label class="form-label">Username</label>
-							<input type="text" name="username" class="form-control" placeholder="username">
-						</div>
-						<div class="col-md-3 mb-3">
 							<label class="form-label">Password</label>
-							<input type="password" name="password" class="form-control" placeholder="password">
+							<input type="text" class="form-control" value="Auto-generated if email is provided" readonly>
+							<small class="text-muted">System generates a secure default password when email is provided.</small>
 						</div>
 						<div class="col-md-2 mb-3">
 							<label class="form-label">Gender</label>
@@ -292,6 +293,9 @@ document.getElementById('addPatientForm').addEventListener('submit', function(e)
 		body: data
 	}).then(r => r.json()).then(res => {
 		if (res.success) {
+			if (res.generated_password) {
+				alert('Patient created. Default password: ' + res.generated_password + ' (must change on first login).');
+			}
 			// reload to show new patient (simple approach)
 			location.reload();
 		} else {

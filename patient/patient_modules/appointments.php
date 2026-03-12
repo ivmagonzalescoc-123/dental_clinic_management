@@ -1,9 +1,11 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/security.php';
+security_ensure_work_type_column($conn);
 
 // Fetch doctors for dropdown
 $doctors_list = [];
-$doctors_sql = "SELECT user_id, first_name, last_name FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY first_name ASC";
+$doctors_sql = "SELECT user_id, first_name, last_name, COALESCE(work_type, 'regular') AS work_type FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY first_name ASC";
 $doctors_result = $conn->query($doctors_sql);
 if ($doctors_result) {
     while ($row = $doctors_result->fetch_assoc()) {
@@ -12,14 +14,6 @@ if ($doctors_result) {
 }
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
-
-// Fetch services to display in patient view
-$services = [];
-$svcSql = "SELECT service_id, service_name, initial_price, description FROM services WHERE is_active = 1 ORDER BY service_name ASC";
-$svcRes = $conn->query($svcSql);
-if ($svcRes) {
-    while ($r = $svcRes->fetch_assoc()) $services[] = $r;
-}
 
 // Fetch recent billing history for this patient
 $billings = [];
@@ -56,9 +50,18 @@ if ($patient_id) {
                 <select class="form-select" id="user_id" name="user_id" required>
                     <option value="">-- Select Doctor --</option>
                     <?php foreach ($doctors_list as $d): ?>
-                        <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                        <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
+                        <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name'] . ' (' . $doctorType . ')'); ?></option>
                     <?php endforeach; ?>
                 </select>
+            </div>
+
+            <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
+                <label class="form-label">Choose Time Slot</label>
+                <select class="form-select" id="timeslot_id" name="timeslot_id" required>
+                    <option value="">-- Select a 20-minute slot --</option>
+                </select>
+                <div class="form-text">20-minute slots only: 8:00-12:00 and 1:00-5:00.</div>
             </div>
 
             <div class="mb-3">
@@ -78,18 +81,27 @@ if ($patient_id) {
 document.addEventListener('DOMContentLoaded', function() {
     const dateSelect = document.getElementById('appointment_date');
     const alertBox = document.getElementById('apptAlert');
+    const doctorSelect = document.getElementById('user_id');
+    const timeslotWrap = document.getElementById('patientTimeslotWrap');
+    const timeslotSelect = document.getElementById('timeslot_id');
 
     function showAlert(message, type='info'){
         alertBox.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>`;
     }
 
     // Fetch available dates for next 30 days and render a simple calendar grid
-    (async function loadDates(){
+    async function loadDates(){
         const cal = document.getElementById('appointmentCalendar');
         dateSelect.value = '';
+        if (timeslotWrap && timeslotSelect) {
+            timeslotWrap.style.display = 'none';
+            timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+        }
         cal.innerHTML = '';
         try {
-            const r = await fetch('../assets/api/appointments/get_available_dates.php?days=30');
+            const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
+            const qs = doctorId ? ('?days=30&user_id=' + encodeURIComponent(doctorId)) : '?days=30';
+            const r = await fetch('../assets/api/appointments/get_available_dates.php' + qs);
             if (!r.ok) throw new Error('Network response was not ok');
             const data = await r.json();
             if (!data.success || !Array.isArray(data.dates)) {
@@ -217,12 +229,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // clear active
                                     document.querySelectorAll('#appointmentCalendar .selected').forEach(el => el.classList.remove('selected'));
                                     dayDiv.classList.add('selected');
+                                    loadTimeslots();
                                 });
                                 dayDiv.title = item.count ? (item.count + ' booked') : '';
                             } else {
                                 // explicitly unavailable (doctor not present)
+                                const badge = document.createElement('div');
+                                const reason = String(item.reason || '').toLowerCase();
+                                const badgeText = reason.includes('leave') ? 'ON LEAVE' : (reason.includes('schedule') ? 'NO SCHEDULE' : 'FULL');
+                                badge.innerHTML = '<small class="text-danger">' + badgeText + '</small>';
+                                dayDiv.appendChild(badge);
                                 dayDiv.className = 'full-day text-muted';
-                                dayDiv.title = (item.count ? (item.count + ' booked') : '') + ' — FULL';
+                                const bookedPart = item.count ? (item.count + ' booked') : '';
+                                const reasonPart = item.reason ? String(item.reason) : 'No availability for this date.';
+                                dayDiv.title = (bookedPart ? (bookedPart + ' — ') : '') + reasonPart;
                             }
                         } else {
                             // no availability info -> allow selection by default
@@ -232,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 dateSelect.value = dateStr;
                                 document.querySelectorAll('#appointmentCalendar .selected').forEach(el => el.classList.remove('selected'));
                                 dayDiv.classList.add('selected');
+                                loadTimeslots();
                             });
                             dayDiv.title = '';
                         }
@@ -290,12 +311,62 @@ document.addEventListener('DOMContentLoaded', function() {
             if (cal) cal.innerHTML = '<div class="text-danger">Error loading dates</div>';
             showAlert('Error loading available dates.', 'danger');
         }
-    })();
+    }
+
+    async function loadTimeslots() {
+        const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
+        const apptDate = dateSelect ? String(dateSelect.value || '').trim() : '';
+        if (!timeslotWrap || !timeslotSelect) return;
+
+        timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+        if (!doctorId || !apptDate) {
+            timeslotWrap.style.display = 'none';
+            return;
+        }
+
+        timeslotWrap.style.display = '';
+        timeslotSelect.innerHTML = '<option value="">Loading time slots...</option>';
+
+        try {
+            const r = await fetch('../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(apptDate));
+            const data = await r.json();
+            timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+
+            if (!data.success || !Array.isArray(data.slots) || data.slots.length === 0) {
+                timeslotSelect.innerHTML = '<option value="">No available timeslots for this date</option>';
+                return;
+            }
+
+            data.slots.forEach(slot => {
+                const opt = document.createElement('option');
+                opt.value = String(slot.timeslot_id);
+                opt.textContent = String(slot.label || 'Slot');
+                timeslotSelect.appendChild(opt);
+            });
+        } catch (err) {
+            console.error(err);
+            timeslotSelect.innerHTML = '<option value="">Unable to load timeslots</option>';
+        }
+    }
+
+    loadDates();
+
+    if (doctorSelect) {
+        doctorSelect.addEventListener('change', function() {
+            loadDates();
+            loadTimeslots();
+        });
+    }
 
     // Form submit
     const form = document.getElementById('createApptForm');
     form.addEventListener('submit', function(e) {
         e.preventDefault();
+        const tsId = timeslotSelect ? String(timeslotSelect.value || '').trim() : '';
+        if (!tsId) {
+            showAlert('Please select a 20-minute timeslot before submitting.', 'warning');
+            return;
+        }
         const formData = new FormData(form);
 
         fetch('../assets/api/appointments/create_appointment.php', {

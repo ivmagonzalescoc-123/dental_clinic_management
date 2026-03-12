@@ -1,12 +1,24 @@
 <?php
 include_once '../config/database.php';
+include_once '../config/security.php';
+security_start_session();
+security_ensure_work_type_column($conn);
+$csrf_token = security_generate_csrf_token();
 
-$action = $_GET['action'] ?? '';
+$action = $_GET['action'] ?? ($_POST['action'] ?? '');
 $user_type = $_GET['type'] ?? 'users'; // 'users' or 'patients'
 $search = $_GET['search'] ?? ''; // search query
 
 // Handle ARCHIVE action (change status to inactive)
 if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: ../admin.php?page=manage_users&type=' . ($_POST['type'] ?? 'users'));
+        exit;
+    }
+
     $id = $_POST['id'] ?? 0;
     $type = $_POST['type'] ?? 'users';
     
@@ -38,14 +50,14 @@ $users_sql = "SELECT u.*, r.role_name FROM users u LEFT JOIN role r ON u.role_id
 
 if (!empty($search)) {
     $search_param = '%' . $search . '%';
-    $users_sql .= " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?)";
+    $users_sql .= " AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?)";
 }
 
 $users_sql .= " ORDER BY u.user_id DESC";
 
 if (!empty($search)) {
     $stmt = $conn->prepare($users_sql);
-    $stmt->bind_param("sssss", $search_param, $search_param, $search_param, $search_param, $search_param);
+    $stmt->bind_param("ssss", $search_param, $search_param, $search_param, $search_param);
     $stmt->execute();
     $users_result = $stmt->get_result();
     $stmt->close();
@@ -65,14 +77,14 @@ $patients_sql = "SELECT * FROM patients WHERE 1=1";
 
 if (!empty($search)) {
     $search_param = '%' . $search . '%';
-    $patients_sql .= " AND (first_name LIKE ? OR last_name LIKE ? OR username LIKE ? OR email LIKE ? OR phone_number LIKE ?)";
+    $patients_sql .= " AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone_number LIKE ?)";
 }
 
 $patients_sql .= " ORDER BY patient_id DESC";
 
 if (!empty($search)) {
     $stmt = $conn->prepare($patients_sql);
-    $stmt->bind_param("sssss", $search_param, $search_param, $search_param, $search_param, $search_param);
+    $stmt->bind_param("ssss", $search_param, $search_param, $search_param, $search_param);
     $stmt->execute();
     $patients_result = $stmt->get_result();
     $stmt->close();
@@ -145,9 +157,9 @@ if ($roles_result) {
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
-                                <th>Username</th>
                                 <th>Email</th>
                                 <th>Role</th>
+                                <th>Work Type</th>
                                 <th>Phone</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -158,12 +170,22 @@ if ($roles_result) {
                                 <tr>
                                     <td><?php echo htmlspecialchars($user['user_id']); ?></td>
                                     <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($user['username']); ?></td>
                                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                                     <td>
                                         <span class="badge">
                                             <?php echo htmlspecialchars($user['role_name'] ?? 'N/A'); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php
+                                            $isDoctor = ((int)($user['role_id'] ?? 0) === 2);
+                                            $workType = ((string)($user['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular';
+                                        ?>
+                                        <?php if ($isDoctor): ?>
+                                            <span class="badge bg-<?php echo $workType === 'Part-time' ? 'warning text-dark' : 'success'; ?>"><?php echo htmlspecialchars($workType); ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted small">N/A</span>
+                                        <?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($user['phone_number']); ?></td>
                                     <td>
@@ -176,15 +198,16 @@ if ($roles_result) {
                                     <td>
                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" 
                                                 data-bs-target="#editUserModal" onclick="editUser(<?php echo htmlspecialchars(json_encode($user)); ?>)">
-                                            <i class="bi bi-pencil"></i> Edit
+                                            <i class="bi bi-pencil"></i>
                                         </button>
                                         <form method="POST" style="display:inline;" 
                                               onsubmit="return confirm('Are you sure you want to archive this user?');">
+                                                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="archive">
                                             <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
                                             <input type="hidden" name="type" value="users">
-                                            <button type="submit" class="btn btn-sm btn-warning">
-                                                <i class="bi bi-archive"></i> Archive
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
                                     </td>
@@ -206,7 +229,7 @@ if ($roles_result) {
                     <form method="GET" class="d-flex gap-2">
                         <input type="hidden" name="page" value="manage_users">
                         <input type="hidden" name="type" value="patients">
-                        <input type="text" class="form-control form-control-sm" name="search" placeholder="Search by name, username, email, or phone..." value="<?php echo htmlspecialchars($search); ?>">
+                        <input type="text" class="form-control form-control-sm" name="search" placeholder="Search by name, email, or phone..." value="<?php echo htmlspecialchars($search); ?>">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i class="bi bi-search"></i> Search
                         </button>
@@ -228,7 +251,6 @@ if ($roles_result) {
                             <tr>
                                 <th>ID</th>
                                 <th>Full Name</th>
-                                <th>Username</th>
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>DOB</th>
@@ -241,7 +263,6 @@ if ($roles_result) {
                                 <tr>
                                     <td><?php echo htmlspecialchars($patient['patient_id']); ?></td>
                                     <td><?php echo htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($patient['username']); ?></td>
                                     <td><?php echo htmlspecialchars($patient['email']); ?></td>
                                     <td><?php echo htmlspecialchars($patient['phone_number']); ?></td>
                                     <td><?php echo htmlspecialchars($patient['date_of_birth']); ?></td>
@@ -253,6 +274,7 @@ if ($roles_result) {
                                         </button>
                                         <form method="POST" style="display:inline;" 
                                               onsubmit="return confirm('Are you sure you want to archive this patient?');">
+                                                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="archive">
                                             <input type="hidden" name="id" value="<?php echo $patient['patient_id']; ?>">
                                             <input type="hidden" name="type" value="patients">
@@ -279,7 +301,8 @@ if ($roles_result) {
                 <h5 class="modal-title">Add New System User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="../../assets/api/users/add_user.php">
+            <form method="POST" action="../assets/api/users/add_user.php">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -293,10 +316,6 @@ if ($roles_result) {
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" id="add_username" name="username" required>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" id="add_email" name="email" required>
                         </div>
@@ -304,7 +323,8 @@ if ($roles_result) {
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Password</label>
-                            <input type="password" class="form-control" id="add_password" name="password" required>
+                            <input type="text" class="form-control" id="add_password" value="Auto-generated secure default password" readonly>
+                            <small class="text-muted">A strong default password is generated automatically and the user must change it on first login.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Role</label>
@@ -316,6 +336,16 @@ if ($roles_result) {
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3" id="add_work_type_wrap" style="display:none;">
+                        <div class="col-md-6">
+                            <label class="form-label">Doctor Work Type</label>
+                            <select class="form-control" id="add_work_type" name="work_type">
+                                <option value="regular" selected>Regular</option>
+                                <option value="part_time">Part-time</option>
+                            </select>
+                            <small class="text-muted">Regular doctors are available Monday-Saturday. Part-time doctors require deployment days from admin.</small>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -361,7 +391,8 @@ if ($roles_result) {
                 <h5 class="modal-title">Edit System User</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="../../assets/api/users/update_user.php">
+            <form method="POST" action="../assets/api/users/update_user.php">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="user_id" id="edit_user_id">
                 <div class="modal-body">
                     <div class="row mb-3">
@@ -375,10 +406,6 @@ if ($roles_result) {
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" name="username" id="edit_username" required>
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" name="email" id="edit_email" required>
@@ -416,6 +443,16 @@ if ($roles_result) {
                             </select>
                         </div>
                     </div>
+                    <div class="row mb-3" id="edit_work_type_wrap" style="display:none;">
+                        <div class="col-md-6">
+                            <label class="form-label">Doctor Work Type</label>
+                            <select class="form-control" name="work_type" id="edit_work_type">
+                                <option value="regular">Regular</option>
+                                <option value="part_time">Part-time</option>
+                            </select>
+                            <small class="text-muted">Part-time doctors can be deployed on specific weekdays in Admin Doctor Deployment.</small>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Address</label>
                         <input type="text" class="form-control" name="address" id="edit_address">
@@ -445,7 +482,8 @@ if ($roles_result) {
                 <h5 class="modal-title">Add New Patient</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="../../assets/api/patients/add_patient.php">
+            <form method="POST" action="../assets/api/patients/add_patient.php">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
@@ -463,10 +501,6 @@ if ($roles_result) {
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" id="add_patient_username" name="username" required>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" id="add_patient_email" name="email" required>
                         </div>
@@ -474,7 +508,8 @@ if ($roles_result) {
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Password</label>
-                            <input type="password" class="form-control" id="add_patient_password" name="password" required>
+                            <input type="text" class="form-control" id="add_patient_password" value="Auto-generated secure default password" readonly>
+                            <small class="text-muted">Patient receives a generated default password and must change it after login.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Date of Birth</label>
@@ -518,7 +553,8 @@ if ($roles_result) {
                 <h5 class="modal-title">Edit Patient</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="../../assets/api/patients/update_patient.php">
+            <form method="POST" action="../assets/api/patients/update_patient.php">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="patient_id" id="edit_patient_id">
                 <div class="modal-body">
                     <div class="row mb-3">
@@ -536,10 +572,6 @@ if ($roles_result) {
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" name="username" id="edit_patient_username" required>
-                        </div>
                         <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" name="email" id="edit_patient_email" required>
@@ -586,7 +618,6 @@ function editUser(user) {
     document.getElementById('edit_user_id').value = user.user_id;
     document.getElementById('edit_first_name').value = user.first_name;
     document.getElementById('edit_last_name').value = user.last_name;
-    document.getElementById('edit_username').value = user.username;
     document.getElementById('edit_email').value = user.email;
     document.getElementById('edit_phone_number').value = user.phone_number;
     document.getElementById('edit_date_of_birth').value = user.date_of_birth;
@@ -594,7 +625,31 @@ function editUser(user) {
     document.getElementById('edit_address').value = user.address;
     document.getElementById('edit_is_active').value = user.is_active;
     document.getElementById('edit_role_id').value = user.role_id;
+    document.getElementById('edit_work_type').value = (user.work_type === 'part_time') ? 'part_time' : 'regular';
+    toggleDoctorWorkTypeFields();
 }
+
+function toggleDoctorWorkTypeFields() {
+    const addRole = document.getElementById('add_role_id');
+    const editRole = document.getElementById('edit_role_id');
+    const addWrap = document.getElementById('add_work_type_wrap');
+    const editWrap = document.getElementById('edit_work_type_wrap');
+
+    if (addRole && addWrap) {
+        addWrap.style.display = (String(addRole.value) === '2') ? '' : 'none';
+    }
+    if (editRole && editWrap) {
+        editWrap.style.display = (String(editRole.value) === '2') ? '' : 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const addRole = document.getElementById('add_role_id');
+    const editRole = document.getElementById('edit_role_id');
+    if (addRole) addRole.addEventListener('change', toggleDoctorWorkTypeFields);
+    if (editRole) editRole.addEventListener('change', toggleDoctorWorkTypeFields);
+    toggleDoctorWorkTypeFields();
+});
 
 // Edit Patient Function
 function editPatient(patient) {
@@ -602,7 +657,6 @@ function editPatient(patient) {
     document.getElementById('edit_patient_first_name').value = patient.first_name;
     document.getElementById('edit_patient_middle_name').value = patient.middle_name;
     document.getElementById('edit_patient_last_name').value = patient.last_name;
-    document.getElementById('edit_patient_username').value = patient.username;
     document.getElementById('edit_patient_email').value = patient.email;
     document.getElementById('edit_patient_date_of_birth').value = patient.date_of_birth;
     document.getElementById('edit_patient_gender').value = patient.gender;

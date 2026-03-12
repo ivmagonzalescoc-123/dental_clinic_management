@@ -1,6 +1,7 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['secretary']);
+$csrf_token = security_generate_csrf_token();
 // include database to show queue counts in sidebar (use include_once to avoid re-definitions)
 include_once '../config/database.php';
 
@@ -72,6 +73,7 @@ try {
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css" rel="stylesheet">
 </head>
 
 <body>
@@ -166,7 +168,13 @@ try {
             <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=scheduling">
                     <i class="bi bi-calendar-range"></i>
-                    <span>Scheduling</span>
+                    <span>Follow-up Scheduling</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="secretary.php?page=doctor_schedule">
+                    <i class="bi bi-calendar2-check"></i>
+                    <span>Doctor Schedule</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -213,11 +221,23 @@ try {
                                     case "appointments":
                                         include "secretary_modules/appointments.php";
                                         break;
+                                    case "scheduling":
+                                        include "secretary_modules/scheduling.php";
+                                        break;
+                                    case "doctor_schedule":
+                                        include "secretary_modules/doctor_schedule.php";
+                                        break;
                                     case "billing":
                                         include "secretary_modules/billing.php";
                                         break;
                                     case "arrivals":
                                         include "secretary_modules/arrivals.php";
+                                        break;
+                                    case "profile":
+                                        include "secretary_modules/profile.php";
+                                        break;
+                                    case "settings":
+                                        include "secretary_modules/settings.php";
                                         break;
                                     default:
                                         include "secretary_modules/dashboard.php";

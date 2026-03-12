@@ -8,6 +8,7 @@ session_start();
 header('Content-Type: application/json');
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include __DIR__ . '/availability_guard.php';
 
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['admin', 'secretary', 'doctor'])) {
@@ -57,6 +58,10 @@ try {
         $weekday  = (int)$day->format('w');
         if (empty($availability[$weekday])) continue;
         $slotDate = $day->format('Y-m-d');
+
+        if (appt_has_doctor_leave($conn, $doctor_id, $slotDate)) {
+            continue;
+        }
 
         foreach ($availability[$weekday] as $block) {
             $cursor = new DateTime($slotDate . ' ' . $block['start']);

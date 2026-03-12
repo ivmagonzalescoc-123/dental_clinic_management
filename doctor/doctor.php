@@ -1,6 +1,7 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['doctor']);
+$csrf_token = security_generate_csrf_token();
 
 // Get today's arrived (pending) patient count for this doctor (for sidebar badge)
 include_once '../config/database.php';
@@ -65,6 +66,7 @@ if ($page === 'appointments') {
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css" rel="stylesheet">
 </head>
 
 <body>
@@ -161,6 +163,12 @@ if ($page === 'appointments') {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="doctor.php?page=leave_requests">
+                    <i class="bi bi-calendar-x"></i>
+                    <span>Leave Requests</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=patients">
                     <i class="bi bi-person-lines-fill"></i>
                     <span>Patients</span>
@@ -178,10 +186,10 @@ if ($page === 'appointments') {
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=ehr">
                     <i class="bi bi-journal-medical"></i>
-                    <span>Profiling</span>
+                    <span>Session</span>
                 </a>
             </li>
-            <!-- Profiling link removed from sidebar (access via direct URL remains) -->
+            <!-- Session link removed from sidebar (access via direct URL remains) -->
 
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=records">
@@ -240,6 +248,15 @@ if ($page === 'appointments') {
                                     break;
                                 case "patient_schedule":
                                     include "doctor_modules/patient_schedule.php";
+                                    break;
+                                case "leave_requests":
+                                    include "doctor_modules/leave_requests.php";
+                                    break;
+                                case "profile":
+                                    include "doctor_modules/profile.php";
+                                    break;
+                                case "settings":
+                                    include "doctor_modules/settings.php";
                                     break;
 
                                 default:

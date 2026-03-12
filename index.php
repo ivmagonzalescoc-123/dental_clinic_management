@@ -1,6 +1,8 @@
 <?php
-session_start();
+require_once 'config/security.php';
+security_start_session();
 require_once 'config/database.php';
+$csrf_token = security_generate_csrf_token();
 
 // Redirect logged-in users to their respective dashboard
 if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
@@ -247,13 +249,12 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                     <h2 class="modal-title">Login</h2>
                 </div>
                 <div class="modal-body login-body">
-                    <div id="loginAlert"></div>
                     <form id="loginForm">
                         <div class="mb-3">
                             <div class="form-floating">
-                                <input type="text" class="form-control" id="loginUsernameEmail"
-                                    placeholder="Username or Email" required>
-                                <label for="loginUsernameEmail">Username or Email</label>
+                                <input type="email" class="form-control" id="loginEmail"
+                                    placeholder="Email Address" required>
+                                <label for="loginEmail">Email Address</label>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -285,7 +286,6 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                     <h2 class="modal-title">Create Account</h2>
                 </div>
                 <div class="modal-body" style="background: #f9fafb;">
-                    <div id="registerAlert"></div>
                     <form id="registerForm" style="background: white; padding: 1.5rem; border-radius: 12px;">
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -308,13 +308,6 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                                 <input type="email" class="form-control" id="registerEmail" placeholder="Email Address"
                                     required>
                                 <label for="registerEmail">Email Address</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="registerUsername" placeholder="Username"
-                                    required>
-                                <label for="registerUsername">Username</label>
                             </div>
                         </div>
                         <div class="row g-3">
@@ -355,14 +348,15 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input type="password" class="form-control" id="registerPassword"
-                                        placeholder="Password" required minlength="6">
+                                        placeholder="Password" required minlength="8">
                                     <label for="registerPassword">Password</label>
                                 </div>
+                                <small class="text-muted">Use at least 8 chars with uppercase, lowercase, number, and special character.</small>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
                                     <input type="password" class="form-control" id="registerPasswordConfirm"
-                                        placeholder="Confirm Password" required minlength="6">
+                                        placeholder="Confirm Password" required minlength="8">
                                     <label for="registerPasswordConfirm">Confirm Password</label>
                                 </div>
                             </div>
@@ -379,48 +373,89 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
         </div>
     </div>
 
+    <div class="toast-container position-fixed top-50 start-50 translate-middle p-3" style="z-index: 2000;">
+        <div id="authCenterToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="authCenterToastBody"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>
+        const csrfToken = <?php echo json_encode($csrf_token); ?>;
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text || '').replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function showCenterToast(message, type = 'danger', delay = 2600) {
+            const toastEl = document.getElementById('authCenterToast');
+            const bodyEl = document.getElementById('authCenterToastBody');
+            if (!toastEl || !bodyEl || !window.bootstrap) {
+                alert(message);
+                return;
+            }
+
+            toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-dark');
+
+            if (type === 'success') {
+                toastEl.classList.add('bg-success');
+            } else if (type === 'warning') {
+                toastEl.classList.add('bg-warning', 'text-dark');
+            } else if (type === 'info') {
+                toastEl.classList.add('bg-info', 'text-dark');
+            } else {
+                toastEl.classList.add('bg-danger');
+            }
+
+            bodyEl.textContent = message;
+            const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: delay });
+            toast.show();
+        }
+
         // Login Form Handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const usernameEmail = document.getElementById('loginUsernameEmail').value;
+            const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            const alertDiv = document.getElementById('loginAlert');
 
             try {
                 const response = await fetch('assets/api/auth/login_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username_or_email: usernameEmail, password })
+                    body: JSON.stringify({ email, password, csrf_token: csrfToken })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    alertDiv.innerHTML = '<div class="alert alert-success">Login successful! Redirecting...</div>';
+                    showCenterToast('Login successful! Redirecting...', 'success', 1400);
 
                     let redirectUrl = 'index.php';
                     const role = data.user.role;
+                    const force = !!data.must_change_password;
 
                     if (role === 'admin') {
-                        redirectUrl = 'admin/admin.php';
+                        redirectUrl = force ? 'admin/admin.php?page=settings&force_password_change=1' : 'admin/admin.php';
                     } else if (role === 'doctor') {
-                        redirectUrl = 'doctor/doctor.php';
+                        redirectUrl = force ? 'doctor/doctor.php?page=settings&force_password_change=1' : 'doctor/doctor.php';
                     } else if (role === 'secretary') {
-                        redirectUrl = 'secretary/secretary.php';
+                        redirectUrl = force ? 'secretary/secretary.php?page=settings&force_password_change=1' : 'secretary/secretary.php';
                     } else if (role === 'patient') {
-                        redirectUrl = 'patient/patient.php';
+                        redirectUrl = force ? 'patient/patient.php?page=settings&force_password_change=1' : 'patient/patient.php';
                     }
 
                     setTimeout(() => {
                         window.location.href = redirectUrl;
                     }, 1000);
                 } else {
-                    alertDiv.innerHTML = `<div class="alert alert-danger">${data.message || 'Login failed'}</div>`;
+                    showCenterToast(data.message || 'Login failed', 'danger');
                 }
             } catch (error) {
-                alertDiv.innerHTML = '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+                showCenterToast('An error occurred. Please try again.', 'danger');
                 console.error('Error:', error);
             }
         });
@@ -430,7 +465,6 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
             e.preventDefault();
             const firstName = document.getElementById('registerFirstName').value;
             const lastName = document.getElementById('registerLastName').value;
-            const username = document.getElementById('registerUsername').value;
             const email = document.getElementById('registerEmail').value;
             const dob = document.getElementById('registerDOB').value;
             const gender = document.getElementById('registerGender').value;
@@ -438,10 +472,15 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
             const address = document.getElementById('registerAddress').value;
             const password = document.getElementById('registerPassword').value;
             const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
-            const alertDiv = document.getElementById('registerAlert');
 
             if (password !== passwordConfirm) {
-                alertDiv.innerHTML = '<div class="alert alert-danger">Passwords do not match</div>';
+                showCenterToast('Passwords do not match', 'warning');
+                return;
+            }
+
+            const strongPass = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+            if (!strongPass.test(password)) {
+                showCenterToast('Password must be at least 8 characters with uppercase, lowercase, number, and special character.', 'warning');
                 return;
             }
 
@@ -452,29 +491,29 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                     body: JSON.stringify({
                         first_name: firstName,
                         last_name: lastName,
-                        username: username,
                         email,
                         date_of_birth: dob,
                         gender: gender,
                         phone_number: phone,
                         address: address,
                         password,
-                        role: 'patient'
+                        role: 'patient',
+                        csrf_token: csrfToken
                     })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    alertDiv.innerHTML = '<div class="alert alert-success">Account created successfully! Redirecting...</div>';
+                    showCenterToast('Account created successfully! Redirecting...', 'success', 1700);
                     setTimeout(() => {
                         window.location.href = 'patient/patient.php';
                     }, 1500);
                 } else {
-                    alertDiv.innerHTML = `<div class="alert alert-danger">${data.message || 'Registration failed'}</div>`;
+                    showCenterToast(data.message || 'Registration failed', 'danger');
                 }
             } catch (error) {
-                alertDiv.innerHTML = '<div class="alert alert-danger">An error occurred. Please try again.</div>';
+                showCenterToast('An error occurred. Please try again.', 'danger');
                 console.error('Error:', error);
             }
         });

@@ -1,36 +1,53 @@
 <?php
 include '../../../config/database.php';
-session_start();
+include '../../../config/security.php';
+include '../../../config/session_check.php';
+security_start_session();
+check_session(['admin']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $patient_id = $_POST['patient_id'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $middle_name = $_POST['middle_name'] ?? '';
-    $last_name = $_POST['last_name'] ?? '';
-    $username = $_POST['username'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $date_of_birth = $_POST['date_of_birth'] ?? '';
-    $gender = $_POST['gender'] ?? '';
-    $phone_number = $_POST['phone_number'] ?? '';
-    $address = $_POST['address'] ?? '';
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: ../../admin.php?page=manage_users&type=patients');
+        exit;
+    }
+
+    $patient_id = (int)($_POST['patient_id'] ?? 0);
+    $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
+    $middle_name = security_clean_string($_POST['middle_name'] ?? '', 100);
+    $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
+    $email = security_clean_string($_POST['email'] ?? '', 150);
+    $date_of_birth = security_clean_string($_POST['date_of_birth'] ?? '', 20);
+    $gender = security_clean_string($_POST['gender'] ?? '', 20);
+    $phone_number = security_clean_string($_POST['phone_number'] ?? '', 30);
+    $address = security_clean_string($_POST['address'] ?? '', 500);
 
     // Validate required fields
-    if (empty($patient_id) || empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($date_of_birth)) {
+    if (empty($patient_id) || empty($first_name) || empty($last_name) || empty($email) || empty($date_of_birth)) {
         $_SESSION['message'] = 'All required fields must be filled!';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../admin.php?page=manage_users&type=patients');
         exit;
     }
 
-    // Check if username already exists (excluding current patient)
-    $check_sql = "SELECT patient_id FROM patients WHERE (username = ? OR email = ?) AND patient_id != ?";
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['message'] = 'Invalid email address!';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: ../../admin.php?page=manage_users&type=patients');
+        exit;
+    }
+
+    // Check if email already exists (excluding current patient)
+    $check_sql = "SELECT patient_id FROM patients WHERE email = ? AND patient_id != ?";
     $check_stmt = $conn->prepare($check_sql);
-    $check_stmt->bind_param("ssi", $username, $email, $patient_id);
+    $check_stmt->bind_param("si", $email, $patient_id);
     $check_stmt->execute();
     $check_result = $check_stmt->get_result();
 
     if ($check_result->num_rows > 0) {
-        $_SESSION['message'] = 'Username or email already exists!';
+        $_SESSION['message'] = 'Email already exists!';
         $_SESSION['message_type'] = 'danger';
         $check_stmt->close();
         header('Location: ../../admin.php?page=manage_users&type=patients');
@@ -39,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_stmt->close();
 
     // Update patient
-    $sql = "UPDATE patients SET first_name=?, middle_name=?, last_name=?, username=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=? WHERE patient_id=?";
+    $sql = "UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=? WHERE patient_id=?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -49,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $stmt->bind_param("ssssssssi", $first_name, $middle_name, $last_name, $username, $email, $date_of_birth, $gender, $phone_number, $address, $patient_id);
+    $stmt->bind_param("ssssssssi", $first_name, $middle_name, $last_name, $email, $date_of_birth, $gender, $phone_number, $address, $patient_id);
 
     if ($stmt->execute()) {
         $_SESSION['message'] = 'Patient updated successfully!';

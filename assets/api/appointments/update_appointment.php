@@ -9,6 +9,7 @@ header('Content-Type: application/json');
 
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include __DIR__ . '/availability_guard.php';
     
     if (!$conn) {
         throw new Exception('Database connection failed');
@@ -24,6 +25,31 @@ try {
 
     if (empty($appointment_id) || empty($user_id)) {
         echo json_encode(['success' => false, 'message' => 'Appointment ID and doctor are required!']);
+        exit;
+    }
+
+    if (!appt_validate_appointment_date($appointment_date)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid appointment date. Use YYYY-MM-DD format.']);
+        exit;
+    }
+
+    [$reasonOk, $reasonResult] = appt_validate_reason($reason);
+    if (!$reasonOk) {
+        echo json_encode(['success' => false, 'message' => $reasonResult]);
+        exit;
+    }
+    $reason = $reasonResult;
+
+    [$notesOk, $notesResult] = appt_validate_notes($notes);
+    if (!$notesOk) {
+        echo json_encode(['success' => false, 'message' => $notesResult]);
+        exit;
+    }
+    $notes = $notesResult;
+
+    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $user_id, $appointment_date);
+    if (!$bookable) {
+        echo json_encode(['success' => false, 'message' => $bookableMsg]);
         exit;
     }
 

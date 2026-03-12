@@ -7,6 +7,7 @@ ini_set('error_log', dirname(__FILE__) . '/error.log');
 ob_start();
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include __DIR__ . '/availability_guard.php';
 header('Content-Type: application/json');
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
@@ -85,6 +86,11 @@ if ($timeslot_id > 0) {
     }
     if ($ts['status'] !== 'available') {
         send_json(['success' => false, 'message' => 'Timeslot is no longer available'], 409);
+    }
+
+    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doc_id, $ts['slot_date']);
+    if (!$bookable) {
+        send_json(['success' => false, 'message' => $bookableMsg], 409);
     }
 
     $conn->begin_transaction();
@@ -173,7 +179,7 @@ if (!empty($book_start)) {
 }
 
 // ── AUTO SLOT ────────────────────────────────────────────────────────────────
-$avail_stmt = $conn->prepare('SELECT weekday, start_time, end_time FROM doctor_availability WHERE user_id = ?');
+    $avail_stmt = $conn->prepare('SELECT weekday, start_time, end_time FROM doctor_availability WHERE user_id = ?');
 $avail_stmt->bind_param('i', $doc_id);
 $avail_stmt->execute();
 $availability = [];
@@ -196,6 +202,12 @@ if (!empty($availability)) {
             while ($cursor->getTimestamp() + $duration * 60 <= $endDt->getTimestamp()) {
                 $cs = $cursor->format('Y-m-d H:i:s');
                 $ce = $cursor->modify("+{$duration} minutes")->format('Y-m-d H:i:s');
+                [$bookable] = appt_assert_doctor_bookable($conn, $doc_id, $cursor->format('Y-m-d'));
+                if (!$bookable) {
+                    $cursor = $cursor->modify('+10 minutes');
+                    continue;
+                }
+
                 $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?)");
                 $ov->bind_param('iss', $doc_id, $cs, $ce);
                 $ov->execute();

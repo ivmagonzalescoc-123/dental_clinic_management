@@ -122,15 +122,32 @@ try {
     }
     if ($doctor_fee > 0) $billingAmount += $doctor_fee;
 
-    $billingStatus = 'pending';
-    $stmt = $conn->prepare('
-        INSERT INTO billing (appointment_id, patient_id, amount, status, created_at)
-        VALUES (?, ?, ?, ?, NOW())
-    ');
-    if ($stmt) {
-        $stmt->bind_param('iids', $appointmentId, $patientId, $billingAmount, $billingStatus);
-        $stmt->execute();
-        $stmt->close();
+    $billingStatus = 'unpaid';
+    $chk = $conn->prepare('SELECT billing_id FROM billing WHERE appointment_id = ? LIMIT 1');
+    $existingBillingId = 0;
+    if ($chk) {
+        $chk->bind_param('i', $appointmentId);
+        $chk->execute();
+        $cres = $chk->get_result();
+        $crow = $cres ? $cres->fetch_assoc() : null;
+        $existingBillingId = (int)($crow['billing_id'] ?? 0);
+        $chk->close();
+    }
+
+    if ($existingBillingId > 0) {
+        $stmt = $conn->prepare('UPDATE billing SET user_id = ?, total_amount = ?, status = ?, created_at = NOW() WHERE billing_id = ?');
+        if ($stmt) {
+            $stmt->bind_param('idsi', $patientId, $billingAmount, $billingStatus, $existingBillingId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    } else {
+        $stmt = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, status, created_at) VALUES (?, ?, ?, ?, NOW())');
+        if ($stmt) {
+            $stmt->bind_param('iids', $appointmentId, $patientId, $billingAmount, $billingStatus);
+            $stmt->execute();
+            $stmt->close();
+        }
     }
     
     $conn->commit();

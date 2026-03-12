@@ -1,7 +1,8 @@
 <?php
 header('Content-Type: application/json');
 
-session_start();
+include '../../../config/security.php';
+security_start_session();
 
 // Clear all session variables
 $_SESSION = array();

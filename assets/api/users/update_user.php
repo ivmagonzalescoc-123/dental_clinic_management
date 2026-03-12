@@ -1,37 +1,65 @@
 <?php
 include '../../../config/database.php';
-session_start();
+include '../../../config/security.php';
+include '../../../config/session_check.php';
+security_start_session();
+security_ensure_work_type_column($conn);
+check_session(['admin']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $user_id = $_POST['user_id'] ?? '';
-    $first_name = $_POST['first_name'] ?? '';
-    $last_name = $_POST['last_name'] ?? '';
-    $username = $_POST['username'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $role_id = $_POST['role_id'] ?? '';
-    $phone_number = $_POST['phone_number'] ?? '';
-    $date_of_birth = $_POST['date_of_birth'] ?? '';
-    $gender = $_POST['gender'] ?? '';
-    $address = $_POST['address'] ?? '';
-    $is_active = $_POST['is_active'] ?? 1;
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: ../../admin.php?page=manage_users&type=users');
+        exit;
+    }
+
+    $user_id = (int)($_POST['user_id'] ?? 0);
+    $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
+    $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
+    $email = security_clean_string($_POST['email'] ?? '', 150);
+    $role_id = (int)($_POST['role_id'] ?? 0);
+    $phone_number_raw = security_clean_string($_POST['phone_number'] ?? '', 30);
+    $date_of_birth_raw = security_clean_string($_POST['date_of_birth'] ?? '', 20);
+    $gender_raw = security_clean_string($_POST['gender'] ?? '', 20);
+    $address_raw = security_clean_string($_POST['address'] ?? '', 500);
+    $work_type_raw = security_clean_string($_POST['work_type'] ?? 'regular', 20);
+
+    $phone_number = $phone_number_raw !== '' ? $phone_number_raw : null;
+    $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
+    $gender = $gender_raw !== '' ? $gender_raw : null;
+    $address = $address_raw !== '' ? $address_raw : null;
+    $work_type = 'regular';
+    if ($role_id === 2) {
+        $work_type = ($work_type_raw === 'part_time') ? 'part_time' : 'regular';
+    }
+    $is_active = (int)($_POST['is_active'] ?? 1);
 
     // Validate required fields
-    if (empty($user_id) || empty($first_name) || empty($last_name) || empty($username) || empty($email) || empty($role_id)) {
+    if (empty($user_id) || empty($first_name) || empty($last_name) || empty($email) || empty($role_id)) {
         $_SESSION['message'] = 'All required fields must be filled!';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../admin.php?page=manage_users&type=users');
         exit;
     }
 
-    // Check if username already exists (excluding current user)
-    $check_sql = "SELECT user_id FROM users WHERE (username = ? OR email = ?) AND user_id != ?";
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['message'] = 'Invalid email address!';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: ../../admin.php?page=manage_users&type=users');
+        exit;
+    }
+
+    // Check if email already exists (excluding current user)
+    $check_sql = "SELECT user_id FROM users WHERE email = ? AND user_id != ?";
     $check_stmt = $conn->prepare($check_sql);
-    $check_stmt->bind_param("ssi", $username, $email, $user_id);
+    $check_stmt->bind_param("si", $email, $user_id);
     $check_stmt->execute();
     $check_result = $check_stmt->get_result();
 
     if ($check_result->num_rows > 0) {
-        $_SESSION['message'] = 'Username or email already exists!';
+        $_SESSION['message'] = 'Email already exists!';
         $_SESSION['message_type'] = 'danger';
         $check_stmt->close();
         header('Location: ../../admin.php?page=manage_users&type=users');
@@ -40,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_stmt->close();
 
     // Update user
-    $sql = "UPDATE users SET first_name=?, last_name=?, username=?, email=?, role_id=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?";
+    $sql = "UPDATE users SET first_name=?, last_name=?, email=?, role_id=?, work_type=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -50,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $stmt->bind_param("sssssisssii", $first_name, $last_name, $username, $email, $role_id, $phone_number, $date_of_birth, $gender, $address, $is_active, $user_id);
+    $stmt->bind_param("sssisssssii", $first_name, $last_name, $email, $role_id, $work_type, $phone_number, $date_of_birth, $gender, $address, $is_active, $user_id);
 
     if ($stmt->execute()) {
         $_SESSION['message'] = 'User updated successfully!';

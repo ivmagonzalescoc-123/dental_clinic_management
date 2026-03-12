@@ -8,9 +8,8 @@
  * check_session(['admin']);
  */
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/security.php';
+security_start_session();
 
 if (!function_exists('check_session')) {
     function check_session($allowed_roles = []) {
@@ -28,6 +27,23 @@ if (!function_exists('check_session')) {
         session_destroy();
         header('Location: ../index.php');
         exit;
+    }
+
+    // Force password change for first-login/default passwords across all roles.
+    if (!empty($_SESSION['must_change_password'])) {
+        $requested = $_GET['page'] ?? '';
+        if ($requested !== 'settings') {
+            if ($user_role === 'admin') {
+                header('Location: admin.php?page=settings&force_password_change=1');
+            } elseif ($user_role === 'doctor') {
+                header('Location: doctor.php?page=settings&force_password_change=1');
+            } elseif ($user_role === 'secretary') {
+                header('Location: secretary.php?page=settings&force_password_change=1');
+            } else {
+                header('Location: patient.php?page=settings&force_password_change=1');
+            }
+            exit;
+        }
     }
 
     // Optional: Check session timeout (30 minutes)
@@ -55,10 +71,9 @@ if (!function_exists('get_user_info')) {
     function get_user_info() {
         return [
             'user_id' => $_SESSION['user_id'] ?? $_SESSION['patient_id'] ?? null,
-            'username' => $_SESSION['username'] ?? '',
+            'email' => $_SESSION['email'] ?? '',
             'first_name' => $_SESSION['first_name'] ?? '',
             'last_name' => $_SESSION['last_name'] ?? '',
-            'email' => $_SESSION['email'] ?? '',
             'role' => $_SESSION['role'] ?? '',
             'user_type' => $_SESSION['user_type'] ?? ''
         ];

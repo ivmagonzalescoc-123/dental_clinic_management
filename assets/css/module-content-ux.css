@@ -1,0 +1,198 @@
+/* Simple module-only UX layer (content area only) */
+#main {
+  --ux-bg: #f6f8fb;
+  --ux-surface: #ffffff;
+  --ux-border: #dce3ed;
+  --ux-text: #1f2a37;
+  --ux-muted: #5b6675;
+  --ux-accent: #1e6bb8;
+}
+
+#main .section {
+  background: var(--ux-bg);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+#main .card {
+  border: 1px solid var(--ux-border);
+  border-radius: 10px;
+  box-shadow: none;
+  background: var(--ux-surface);
+}
+
+#main .card .card-header {
+  background: #fff;
+  border-bottom: 1px solid var(--ux-border);
+  padding: 0.75rem 0.95rem;
+}
+
+#main .card .card-body {
+  padding: 1rem;
+}
+
+#main .card .card-body > :first-child {
+  margin-top: 0;
+}
+
+#main .card .card-body > :last-child {
+  margin-bottom: 0;
+}
+
+#main h1,
+#main h2,
+#main h3,
+#main h4,
+#main h5,
+#main h6,
+#main .card-title {
+  color: var(--ux-text);
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+#main p,
+#main .text-muted,
+#main small {
+  color: var(--ux-muted) !important;
+}
+
+#main .table {
+  border: 1px solid var(--ux-border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+#main .table thead th {
+  background: #f1f4f8;
+  color: #314055;
+  border-bottom: 1px solid var(--ux-border);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+#main .table tbody td {
+  color: var(--ux-text);
+  border-top: 1px solid #edf1f6;
+  vertical-align: middle;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+#main .table-hover tbody tr:hover {
+  background: #f7fbff;
+}
+
+#main .form-label {
+  color: #2a3646;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+#main .form-text,
+#main .invalid-feedback,
+#main .valid-feedback {
+  font-size: 0.82rem;
+}
+
+#main .form-control,
+#main .form-select,
+#main textarea.form-control {
+  border-color: var(--ux-border);
+  border-radius: 8px;
+  color: var(--ux-text);
+  box-shadow: none;
+}
+
+#main .form-control:focus,
+#main .form-select:focus,
+#main textarea.form-control:focus {
+  border-color: var(--ux-accent);
+  box-shadow: 0 0 0 0.14rem rgba(30, 107, 184, 0.12);
+}
+
+#main .btn {
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+#main .btn + .btn,
+#main .btn-group .btn + .btn {
+  margin-left: 0.35rem;
+}
+
+#main .row {
+  --bs-gutter-y: 0.8rem;
+}
+
+#main .alert {
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+#main .pagination .page-link {
+  border-radius: 6px;
+}
+
+#main .modal-body {
+  padding: 0.9rem 1rem;
+}
+
+#main .nav-tabs {
+  border-bottom: 1px solid var(--ux-border);
+}
+
+#main .nav-tabs .nav-link {
+  color: #3f4e63;
+  border: 1px solid transparent;
+  border-radius: 8px 8px 0 0;
+}
+
+#main .nav-tabs .nav-link.active {
+  color: #173f73;
+  border-color: var(--ux-border) var(--ux-border) #fff;
+  background: #fff;
+}
+
+#main .modal-content {
+  border: 1px solid var(--ux-border);
+  border-radius: 10px;
+}
+
+#main .modal-header,
+#main .modal-footer {
+  border-color: var(--ux-border);
+}
+
+#main .badge {
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  #main .section {
+    padding: 8px;
+  }
+
+  #main .card .card-body,
+  #main .card .card-header {
+    padding: 0.75rem;
+  }
+
+  #main .table {
+    font-size: 0.92rem;
+  }
+
+  #main .btn {
+    width: 100%;
+  }
+
+  #main .btn + .btn,
+  #main .btn-group .btn + .btn {
+    margin-left: 0;
+    margin-top: 0.4rem;
+  }
+}

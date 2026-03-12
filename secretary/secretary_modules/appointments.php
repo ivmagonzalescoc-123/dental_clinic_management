@@ -1,5 +1,7 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/security.php';
+security_ensure_work_type_column($conn);
 
 $action = $_GET['action'] ?? '';
 $view = $_GET['view'] ?? 'all'; // 'all' | 'today'
@@ -144,6 +146,7 @@ $appointments_sql = "
         u.first_name as doctor_first_name,
         u.last_name as doctor_last_name,
         -- latest schedule info
+        (SELECT s.schedule_id FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_id,
         (SELECT s.status FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
         (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
         (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end,
@@ -158,7 +161,7 @@ if ($view === 'today') {
 }
 // Fetch doctors for the booking dropdown (role_id = 2)
 $doctors = [];
-$doc_stmt = $conn->prepare('SELECT user_id, first_name, last_name FROM users WHERE role_id = 2 AND is_active = 1');
+$doc_stmt = $conn->prepare('SELECT user_id, first_name, last_name, COALESCE(work_type, "regular") AS work_type FROM users WHERE role_id = 2 AND is_active = 1');
 if ($doc_stmt) {
     $doc_stmt->execute();
     $doc_res = $doc_stmt->get_result();
@@ -347,6 +350,24 @@ if ($view === 'today') {
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
                                         <?php endif; ?>
+
+                                        <?php
+                                            $canRescheduleFollowup = !empty($appointment['schedule_id']) && in_array((string)($appointment['schedule_status'] ?? ''), ['scheduled', 'rescheduled'], true);
+                                        ?>
+                                        <?php if ($canRescheduleFollowup): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-warning"
+                                                onclick='openRescheduleModalSec(<?php echo json_encode([
+                                                    "schedule_id" => (int)$appointment["schedule_id"],
+                                                    "scheduled_start" => (string)($appointment["schedule_start"] ?? ""),
+                                                    "scheduled_end" => (string)($appointment["schedule_end"] ?? ""),
+                                                ]); ?>)'
+                                                title="Reschedule follow-up schedule"
+                                            >
+                                                <i class="bi bi-calendar-event"></i>
+                                            </button>
+                                        <?php endif; ?>
                                         
                                         <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View patient profiling">
                                             <i class="bi bi-file-medical"></i>
@@ -398,8 +419,17 @@ if ($view === 'today') {
                             <select id="bookDoctorSelect" name="user_id" class="form-select" required>
                                 <option value="">-- Select Doctor --</option>
                                 <?php foreach ($doctors as $d): ?>
-                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                    <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name'] . ' (' . $doctorType . ')'); ?></option>
                                 <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="bookAppointmentType" class="form-label"><strong>Appointment Type</strong></label>
+                            <select id="bookAppointmentType" name="is_online_appointment" class="form-select" required>
+                                <option value="0" selected>Walk-In</option>
+                                <option value="1">Online</option>
                             </select>
                         </div>
 
@@ -409,27 +439,12 @@ if ($view === 'today') {
                             <div id="bookCalendar" class="d-flex flex-wrap gap-2">Loading available dates...</div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="bookServiceSelect" class="form-label"><strong>Service</strong></label>
-                            <select id="bookServiceSelect" name="service_id" class="form-select" onchange="loadTimeslots()">
-                                <option value="">-- Select Service (optional) --</option>
-                                <?php
-                                $svc_res = $conn->query("SELECT service_id, service_name, default_duration_minutes FROM services WHERE is_active=1 ORDER BY service_name ASC");
-                                while ($svc = $svc_res ? $svc_res->fetch_assoc() : null): if (!$svc) break; ?>
-                                <option value="<?= htmlspecialchars($svc['service_id']) ?>"
-                                        data-duration="<?= (int)$svc['default_duration_minutes'] ?>">
-                                    <?= htmlspecialchars($svc['service_name']) ?> (<?= (int)$svc['default_duration_minutes'] ?> min)
-                                </option>
-                                <?php endwhile; ?>
-                            </select>
-                        </div>
-
                         <div class="mb-3" id="bookTimeslotWrapper" style="display:none;">
                             <label for="bookTimeslotSelect" class="form-label"><strong>Time Slot</strong></label>
-                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select">
+                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select" required>
                                 <option value="">-- Select a Time Slot --</option>
                             </select>
-                            <small class="text-muted">Timeslots are based on the selected doctor and date.</small>
+                            <small class="text-muted">20-minute slots (8:00-12:00, 1:00-5:00). A slot is required.</small>
                         </div>
 
                         <div class="mb-3">
@@ -564,10 +579,15 @@ if ($view === 'today') {
             async function loadAvailableDates(days = 30) {
                 const cal = document.getElementById('bookCalendar');
                 const hid = document.getElementById('bookAppointmentDateInput');
+                const selectedDoctorId = document.getElementById('bookDoctorSelect')?.value || '';
                 if (!cal || !hid) return;
                 cal.innerHTML = '';
                 try {
-                    const res = await fetch('../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(days));
+                    let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(days);
+                    if (selectedDoctorId) {
+                        url += '&user_id=' + encodeURIComponent(selectedDoctorId);
+                    }
+                    const res = await fetch(url);
                     const j = await res.json();
                     if (!j.success || !Array.isArray(j.dates)) {
                         cal.innerHTML = '<div class="text-muted">Unable to load dates</div>';
@@ -677,10 +697,14 @@ if ($view === 'today') {
                                         dayDiv.title = 'Clinic closed (Sunday)';
                                     } else if (item && !item.available) {
                                         const badge = document.createElement('div');
-                                        badge.innerHTML = '<small class="text-danger">FULL</small>';
+                                        const reason = String(item.reason || '').toLowerCase();
+                                        const badgeText = reason.includes('leave') ? 'ON LEAVE' : (reason.includes('schedule') ? 'NO SCHEDULE' : 'FULL');
+                                        badge.innerHTML = '<small class="text-danger">' + badgeText + '</small>';
                                         dayDiv.appendChild(badge);
                                         dayDiv.className = 'full-day text-muted';
-                                        dayDiv.title = (item.count ? (item.count + ' booked') : '') + ' — FULL';
+                                        const bookedPart = item.count ? (item.count + ' booked') : '';
+                                        const reasonPart = item.reason ? String(item.reason) : 'No availability for this date.';
+                                        dayDiv.title = (bookedPart ? (bookedPart + ' — ') : '') + reasonPart;
                                     } else {
                                         // selectable
                                         dayDiv.className = item && item.count ? 'has-bookings' : 'selectable-date';
@@ -773,7 +797,10 @@ if ($view === 'today') {
             // Reload timeslots when doctor changes
             const bookDoctorSelect = document.getElementById('bookDoctorSelect');
             if (bookDoctorSelect) {
-                bookDoctorSelect.addEventListener('change', loadTimeslots);
+                bookDoctorSelect.addEventListener('change', function() {
+                    loadAvailableDates(30);
+                    loadTimeslots();
+                });
             }
 
             // Load available timeslots based on selected doctor + date + service
@@ -782,7 +809,6 @@ if ($view === 'today') {
                 const date     = document.getElementById('bookAppointmentDateInput')?.value;
                 const wrapper  = document.getElementById('bookTimeslotWrapper');
                 const select   = document.getElementById('bookTimeslotSelect');
-                const serviceId = document.getElementById('bookServiceSelect')?.value || '';
 
                 if (!doctorId || !date) { if (wrapper) wrapper.style.display = 'none'; return; }
                 if (wrapper) wrapper.style.display = '';
@@ -790,7 +816,6 @@ if ($view === 'today') {
 
                 try {
                     let url = `../assets/api/appointments/get_timeslots.php?doctor_id=${encodeURIComponent(doctorId)}&date=${encodeURIComponent(date)}`;
-                    if (serviceId) url += `&service_id=${encodeURIComponent(serviceId)}`;
                     const res  = await fetch(url);
                     const data = await res.json();
                     select.innerHTML = '<option value="">-- Pick a Time Slot --</option>';
@@ -823,21 +848,39 @@ if ($view === 'today') {
                     return;
                 }
 
+                const timeslotId = document.getElementById('bookTimeslotSelect')?.value || '';
+                if (!timeslotId) {
+                    alert('Please select a 20-minute timeslot before booking.');
+                    return;
+                }
+
                 try {
+                    let allowDuplicateDay = false;
                     const ad = new FormData();
                     ad.append('patient_id', patientId);
                     ad.append('appointment_date', appointmentDate);
                     ad.append('user_id', userId);
                     ad.append('reason', reason);
+                    const apptType = document.getElementById('bookAppointmentType') ? document.getElementById('bookAppointmentType').value : '0';
+                    ad.append('is_online_appointment', apptType);
                     const isEmergency = document.getElementById('bookIsEmergency') ? (document.getElementById('bookIsEmergency').checked ? 1 : 0) : 0;
                     ad.append('is_emergency', isEmergency);
-                    const serviceId  = document.getElementById('bookServiceSelect')?.value  || '';
-                    const timeslotId = document.getElementById('bookTimeslotSelect')?.value || '';
-                    if (serviceId)  ad.append('service_id',  serviceId);
-                    if (timeslotId) ad.append('timeslot_id', timeslotId);
+                    ad.append('timeslot_id', timeslotId);
 
-                    const aresp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: ad });
-                    const ajson = await aresp.json();
+                    let aresp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: ad });
+                    let ajson = await aresp.json();
+
+                    if (!ajson.success && ajson.code === 'duplicate_day_warning') {
+                        const proceed = confirm((ajson.message || 'Patient already has an appointment for this day.') + '\n\nClick OK to override and continue, or Cancel to keep one appointment per day.');
+                        if (!proceed) {
+                            return;
+                        }
+                        allowDuplicateDay = true;
+                        ad.append('allow_duplicate_day', allowDuplicateDay ? '1' : '0');
+                        aresp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: ad });
+                        ajson = await aresp.json();
+                    }
+
                     if (ajson.success) {
                         alert('Appointment created successfully');
                         location.reload();

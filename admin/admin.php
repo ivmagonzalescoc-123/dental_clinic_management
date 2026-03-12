@@ -1,6 +1,7 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['admin']);
+$csrf_token = security_generate_csrf_token();
 ?>
 
 <!DOCTYPE html>
@@ -34,6 +35,7 @@ check_session(['admin']);
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css" rel="stylesheet">
 </head>
 
 <body>
@@ -133,6 +135,18 @@ check_session(['admin']);
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=doctor_leaves">
+                    <i class="bi bi-calendar2-x"></i>
+                    <span>Doctor Leaves</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=doctor_deployment">
+                    <i class="bi bi-calendar-week"></i>
+                    <span>Doctor Deployment</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=reports">
                     <i class="bi bi-bar-chart-line"></i>
                     <span>Reports</span>
@@ -178,11 +192,23 @@ check_session(['admin']);
                                 case "services":
                                     include "admin_modules/services.php";
                                     break;
+                                case "doctor_leaves":
+                                    include "admin_modules/doctor_leaves.php";
+                                    break;
+                                case "doctor_deployment":
+                                    include "admin_modules/doctor_deployment.php";
+                                    break;
                                 case "reports":
                                     include "admin_modules/reports.php";
                                     break;
                                 case "system_logs":
                                     include "admin_modules/system_logs.php";
+                                    break;
+                                case "profile":
+                                    include "admin_modules/profile.php";
+                                    break;
+                                case "settings":
+                                    include "admin_modules/settings.php";
                                     break;
                                 default:
                                     include "admin_modules/dashboard.php";

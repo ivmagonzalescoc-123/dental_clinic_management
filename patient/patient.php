@@ -1,6 +1,7 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['patient']);
+$csrf_token = security_generate_csrf_token();
 ?>
 
 <!DOCTYPE html>
@@ -34,6 +35,7 @@ check_session(['patient']);
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css" rel="stylesheet">
 </head>
 
 <body>
@@ -166,6 +168,12 @@ check_session(['patient']);
                                 case "transactions":
                                     include "patient_modules/transactions.php";
                                     break;
+                                case "settings":
+                                    include "patient_modules/settings.php";
+                                    break;
+                                case "profile":
+                                    include "patient_modules/profile.php";
+                                    break;
                                 default:
                                     include "patient_modules/dashboard.php";
                                     break;
@@ -204,6 +212,9 @@ check_session(['patient']);
 
     <!-- Active Navigation Highlight -->
     <script>
+        const patientCsrfToken = <?php echo json_encode($csrf_token); ?>;
+        const mustChangePassword = <?php echo !empty($_SESSION['must_change_password']) ? 'true' : 'false'; ?>;
+
         document.addEventListener('DOMContentLoaded', function() {
             // Get current page from URL
             const params = new URLSearchParams(window.location.search);
@@ -222,6 +233,10 @@ check_session(['patient']);
                     link.classList.remove('collapsed');
                 }
             });
+
+            if (mustChangePassword && !window.location.search.includes('page=settings')) {
+                window.location.href = 'patient.php?page=settings&force_password_change=1';
+            }
         });
 
         // Logout function
