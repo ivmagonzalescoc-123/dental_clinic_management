@@ -10,52 +10,73 @@ session_start();
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 
-    $days = isset($_GET['days']) ? (int)$_GET['days'] : 30;
+    $days    = isset($_GET['days'])    ? (int)$_GET['days']    : 30;
+    $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
     if ($days <= 0 || $days > 365) $days = 30;
 
     $start = date('Y-m-d');
-    $end = date('Y-m-d', strtotime("+{$days} days"));
+    $end   = date('Y-m-d', strtotime("+{$days} days"));
 
-    // Get counts grouped by date in range — count appointments that are already confirmed, checked-in, in-progress
-    // or have an entry in the check_in_queue for that date (to include on-queue patients).
-    $sql = "SELECT a.appointment_date, COUNT(DISTINCT a.appointment_id) AS cnt
-            FROM appointments a
-            LEFT JOIN check_in_queue q ON q.appointment_id = a.appointment_id AND DATE(q.checkin_time) = a.appointment_date
-            WHERE a.appointment_date BETWEEN ? AND ?
-              AND (
-                    a.status IN ('confirmed','checked_in','in_progress')
-                    OR q.checkin_id IS NOT NULL
-                  )
-            GROUP BY a.appointment_date";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        throw new Exception('Prepare failed: ' . $conn->error);
+    // Use timeslot table when a doctor is specified — count available vs booked per date
+    if ($user_id) {
+        $sql = "
+            SELECT slot_date,
+                   SUM(status = 'booked')    AS booked_slots,
+                   COUNT(*)                  AS total_slots
+            FROM timeslot
+            WHERE doctor_id = ?
+              AND slot_date BETWEEN ? AND ?
+            GROUP BY slot_date
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('iss', $user_id, $start, $end);
+    } else {
+        // No doctor — aggregate confirmed appointments per date across all doctors
+        $sql = "
+            SELECT appointment_date AS slot_date,
+                   COUNT(DISTINCT appointment_id) AS booked_slots,
+                   15                             AS total_slots
+            FROM appointments
+            WHERE appointment_date BETWEEN ? AND ?
+              AND status IN ('confirmed', 'checked_in', 'in_progress', 'completed')
+            GROUP BY appointment_date
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param('ss', $start, $end);
     }
-    $stmt->bind_param('ss', $start, $end);
+
+    if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
     $stmt->execute();
-    $res = $stmt->get_result();
+    $res    = $stmt->get_result();
     $counts = [];
     while ($row = $res->fetch_assoc()) {
-        $counts[$row['appointment_date']] = (int)$row['cnt'];
+        $counts[$row['slot_date']] = [
+            'booked' => (int)$row['booked_slots'],
+            'total'  => (int)($row['total_slots'] ?? 15),
+        ];
     }
     $stmt->close();
 
-    $dates = [];
-    $period = new DatePeriod(new DateTime($start), new DateInterval('P1D'), (new DateTime($end))->modify('+1 day'));
+    $dates  = [];
+    $period = new DatePeriod(
+        new DateTime($start),
+        new DateInterval('P1D'),
+        (new DateTime($end))->modify('+1 day')
+    );
     foreach ($period as $dt) {
-        $d = $dt->format('Y-m-d');
-        $cnt = $counts[$d] ?? 0;
+        $d    = $dt->format('Y-m-d');
+        $data = $counts[$d] ?? ['booked' => 0, 'total' => 15];
         $dates[] = [
-            'date' => $d,
-            'count' => $cnt,
-            'available' => ($cnt < 15)
+            'date'      => $d,
+            'count'     => $data['booked'],
+            'total'     => $data['total'],
+            'available' => ($data['booked'] < $data['total']),
         ];
     }
 
     echo json_encode(['success' => true, 'dates' => $dates]);
+
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-
-?>

@@ -16,7 +16,7 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
 $stmt = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE user_id = ? AND DATE(appointment_date) < ?");
 if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = $stmt->get_result(); $past = $res ? (int)$res->fetch_row()[0] : 0; $stmt->close(); }
 
-$stmt = $conn->prepare("SELECT COUNT(*) FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id WHERE a.user_id = ? AND DATE(a.appointment_date) = ? AND q.status IN ('waiting','called')");
+$stmt = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.user_id = ? AND a.appointment_date = ? AND pa.status IN ('pending','arrived','late')");
 if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = $stmt->get_result(); $queueToday = $res ? (int)$res->fetch_row()[0] : 0; $stmt->close(); }
 
 $appointmentsTotal = 0;
@@ -64,9 +64,9 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
     </div>
     <div class="col-md-4">
         <div class="card p-3">
-            <h6 class="mb-1">Queue Today</h6>
+            <h6 class="mb-1">Patients Today</h6>
             <div class="display-6 fw-bold"><?php echo (int)$queueToday; ?></div>
-            <div class="text-muted small">Waiting / called</div>
+            <div class="text-muted small">Pending / arrived</div>
         </div>
     </div>
 

@@ -77,10 +77,15 @@ $appointmentsPendingToday = scalar_int(
 	[$today]
 );
 
-$checkedInToday = scalar_int($conn, 'SELECT COUNT(*) FROM check_in_queue WHERE DATE(checkin_time) = ?', 's', [$today]);
+$checkedInToday = scalar_int(
+	$conn,
+	"SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status IN ('arrived','late')",
+	's',
+	[$today]
+);
 $queueWaitingToday = scalar_int(
 	$conn,
-	"SELECT COUNT(*) FROM check_in_queue WHERE DATE(checkin_time) = ? AND status IN ('waiting','called')",
+	"SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status = 'pending'",
 	's',
 	[$today]
 );
@@ -249,15 +254,15 @@ function fmt_time(?string $dt): string
 	<div class="col-12 col-md-6 col-xl-3">
 		<div class="card info-card">
 			<div class="card-body">
-				<h5 class="card-title">Queue <span>| Today</span></h5>
+				<h5 class="card-title">Arrivals <span>| Today</span></h5>
 				<div class="d-flex align-items-center">
 					<div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-						<i class="bi bi-list-ol"></i>
+						<i class="bi bi-person-check"></i>
 					</div>
 					<div class="ps-3">
-						<h6 class="mb-0"><?php echo (int)$checkedInToday; ?></h6>
-						<span class="text-muted small"><?php echo (int)$queueWaitingToday; ?> waiting/called</span>
-						<div><a class="small" href="admin.php?page=queue">View queue</a></div>
+						<h6 class="mb-0"><?php echo (int)$checkedInToday; ?> arrived</h6>
+						<span class="text-muted small"><?php echo (int)$queueWaitingToday; ?> pending</span>
+						<div><a class="small" href="admin.php?page=schedule_board">View schedule board</a></div>
 					</div>
 				</div>
 			</div>

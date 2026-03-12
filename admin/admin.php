@@ -121,9 +121,9 @@ check_session(['admin']);
             </li>
             
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=queue">
-                    <i class="bi bi-list-ol"></i>
-                    <span>On Queue</span>
+                <a class="nav-link collapsed" href="admin.php?page=schedule_board">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Schedule Board</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -172,8 +172,8 @@ check_session(['admin']);
                                 case "manage_users":
                                     include "admin_modules/manage_users.php";
                                     break;
-                                case "queue":
-                                    include "admin_modules/queue.php";
+                                case "schedule_board":
+                                    include "admin_modules/schedule_board.php";
                                     break;
                                 case "services":
                                     include "admin_modules/services.php";

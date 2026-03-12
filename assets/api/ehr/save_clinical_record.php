@@ -267,7 +267,7 @@ try {
         $ust->execute();
         $ust->close();
 
-        $qst = $conn->prepare('UPDATE check_in_queue SET status = ?, served_time = NOW(), completed_time = NOW() WHERE appointment_id = ?');
+        $qst = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
         $qstatus = 'served';
         $qst->bind_param('si', $qstatus, $appointment_id);
         $qst->execute();

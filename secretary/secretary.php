@@ -19,28 +19,29 @@ if ($page === 'appointments' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-// Compute today's waiting queue count for sidebar badge (guard table existence)
+// Compute today's pending arrival count for sidebar badge
 $today = date('Y-m-d');
-$waitingCount = 0;
+$pendingCount = 0;
 try {
-    if (function_exists('table_exists') && table_exists($conn, 'check_in_queue')) {
-        $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM check_in_queue WHERE DATE(checkin_time) = ? AND status = 'waiting'");
+    if (function_exists('table_exists') && table_exists($conn, 'patient_arrivals')) {
+        $stmt = $conn->prepare(
+            "SELECT COUNT(*) AS c FROM patient_arrivals pa
+             INNER JOIN appointments a ON a.appointment_id = pa.appointment_id
+             WHERE a.appointment_date = ? AND pa.status = 'pending'"
+        );
         if ($stmt) {
             $stmt->bind_param('s', $today);
             $stmt->execute();
             $res = $stmt->get_result();
             if ($res && ($r = $res->fetch_assoc())) {
-                $waitingCount = (int)($r['c'] ?? 0);
+                $pendingCount = (int)($r['c'] ?? 0);
             }
             $stmt->close();
         }
-    } else {
-        error_log('check_in_queue table missing; sidebar waitingCount set to 0');
-        $waitingCount = 0;
     }
 } catch (Throwable $e) {
-    error_log('Error computing waitingCount: ' . $e->getMessage());
-    $waitingCount = 0;
+    error_log('Error computing pendingCount: ' . $e->getMessage());
+    $pendingCount = 0;
 }
 ?>
 
@@ -104,18 +105,6 @@ try {
                 </li>
 
                 
-
-                <li class="nav-item dropdown pe-2">
-                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-bell" style="font-size:1.1rem;"></i>
-                        <span class="badge bg-danger" id="navNotificationBadge" style="font-size:0.65rem;position:relative;top:-10px;left:-8px;">0</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" id="navNotificationList" style="min-width:280px;">
-                        <li class="dropdown-header">Notifications</li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li class="text-center small text-muted">Loading...</li>
-                    </ul>
-                </li>
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
@@ -181,10 +170,10 @@ try {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=queue">
-                    <i class="bi bi-list-ol"></i>
-                    <span class="ms-2">Queue</span>
-                    <span class="badge bg-primary ms-auto" id="secretaryQueueBadge"><?php echo (int)$waitingCount; ?></span>
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=arrivals">
+                    <i class="bi bi-person-check"></i>
+                    <span class="ms-2">Arrivals</span>
+                    <span class="badge bg-warning ms-auto" id="secretaryArrivalsBadge"><?php echo (int)$pendingCount; ?></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -227,8 +216,8 @@ try {
                                     case "billing":
                                         include "secretary_modules/billing.php";
                                         break;
-                                    case "queue":
-                                        include "secretary_modules/queue.php";
+                                    case "arrivals":
+                                        include "secretary_modules/arrivals.php";
                                         break;
                                     default:
                                         include "secretary_modules/dashboard.php";

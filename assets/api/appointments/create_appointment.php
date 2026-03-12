@@ -9,21 +9,19 @@ header('Content-Type: application/json');
 
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
-    
-    if (!$conn) {
-        throw new Exception('Database connection failed');
-    }
+    if (!$conn) throw new Exception('Database connection failed');
 
-    $patient_id = isset($_POST['patient_id']) ? (int)$_POST['patient_id'] : 0;
-    $appointment_date = isset($_POST['appointment_date']) ? trim($_POST['appointment_date']) : '';
-    $user_id = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
-    $reason = isset($_POST['reason']) ? trim($_POST['reason']) : '';
+    $patient_id            = isset($_POST['patient_id'])            ? (int)$_POST['patient_id']            : 0;
+    $appointment_date      = isset($_POST['appointment_date'])      ? trim($_POST['appointment_date'])      : '';
+    $user_id               = isset($_POST['user_id'])               ? (int)$_POST['user_id']               : 0;
+    $reason                = isset($_POST['reason'])                ? trim($_POST['reason'])                : '';
     $is_online_appointment = isset($_POST['is_online_appointment']) ? (int)$_POST['is_online_appointment'] : 0;
-    $is_emergency = isset($_POST['is_emergency']) ? (int)$_POST['is_emergency'] : 0;
-    $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
-    $status = isset($_POST['status']) ? trim($_POST['status']) : 'scheduled';
+    $is_emergency          = isset($_POST['is_emergency'])          ? (int)$_POST['is_emergency']          : 0;
+    $notes                 = isset($_POST['notes'])                 ? trim($_POST['notes'])                 : '';
+    $status                = isset($_POST['status'])                ? trim($_POST['status'])                : 'scheduled';
+    $timeslot_id           = isset($_POST['timeslot_id'])           ? (int)$_POST['timeslot_id']           : 0;
+    $service_id            = isset($_POST['service_id'])            ? (int)$_POST['service_id']            : 0;
 
-    // Determine requester role (session) so staff/secretary bookings can be auto-confirmed
     $requester_role = $_SESSION['role'] ?? '';
 
     if (empty($patient_id) || empty($appointment_date) || empty($user_id)) {
@@ -31,127 +29,135 @@ try {
         exit;
     }
 
-        // Verify the selected doctor exists and is active
-        $doc_check_sql = 'SELECT user_id, is_active, role_id FROM users WHERE user_id = ? LIMIT 1';
-        $doc_stmt = $conn->prepare($doc_check_sql);
-        if ($doc_stmt) {
-            $doc_stmt->bind_param('i', $user_id);
-            $doc_stmt->execute();
-            $doc_res = $doc_stmt->get_result();
-            $doc = $doc_res ? $doc_res->fetch_assoc() : null;
-            $doc_stmt->close();
+    // Verify doctor exists and is active
+    $doc_stmt = $conn->prepare('SELECT user_id, is_active, role_id FROM users WHERE user_id = ? LIMIT 1');
+    $doc_stmt->bind_param('i', $user_id);
+    $doc_stmt->execute();
+    $doc = $doc_stmt->get_result()->fetch_assoc();
+    $doc_stmt->close();
+    if (!$doc || (int)($doc['is_active'] ?? 0) !== 1 || (int)($doc['role_id'] ?? 0) !== 2) {
+        echo json_encode(['success' => false, 'message' => 'Selected doctor is not available. Please choose another doctor.']);
+        exit;
+    }
 
-            if (!$doc || (int)($doc['is_active'] ?? 0) !== 1 || (int)($doc['role_id'] ?? 0) !== 2) {
-                echo json_encode(['success' => false, 'message' => 'Selected doctor is not available. Please choose another doctor.']);
-                exit;
-            }
+    // Verify patient exists
+    $pat_stmt = $conn->prepare('SELECT patient_id FROM patients WHERE patient_id = ? LIMIT 1');
+    $pat_stmt->bind_param('i', $patient_id);
+    $pat_stmt->execute();
+    $patient = $pat_stmt->get_result()->fetch_assoc();
+    $pat_stmt->close();
+    if (!$patient) {
+        echo json_encode(['success' => false, 'message' => 'Selected patient not found.']);
+        exit;
+    }
+
+    // Verify timeslot is still available if provided
+    if ($timeslot_id > 0) {
+        $ts_stmt = $conn->prepare(
+            "SELECT timeslot_id, status, doctor_id FROM timeslot WHERE timeslot_id = ? LIMIT 1"
+        );
+        $ts_stmt->bind_param('i', $timeslot_id);
+        $ts_stmt->execute();
+        $ts = $ts_stmt->get_result()->fetch_assoc();
+        $ts_stmt->close();
+
+        if (!$ts) {
+            echo json_encode(['success' => false, 'message' => 'Selected timeslot not found.']);
+            exit;
         }
-
-    // Verify the patient exists
-    $pat_check_sql = 'SELECT patient_id FROM patients WHERE patient_id = ? LIMIT 1';
-    $pat_stmt = $conn->prepare($pat_check_sql);
-    if ($pat_stmt) {
-        $pat_stmt->bind_param('i', $patient_id);
-        $pat_stmt->execute();
-        $pat_res = $pat_stmt->get_result();
-        $patient = $pat_res ? $pat_res->fetch_assoc() : null;
-        $pat_stmt->close();
-
-        if (!$patient) {
-            echo json_encode(['success' => false, 'message' => 'Selected patient not found. Please select or create a patient account first.']);
+        if ($ts['status'] !== 'available') {
+            echo json_encode(['success' => false, 'message' => 'Selected timeslot is no longer available. Please choose another time.']);
+            exit;
+        }
+        if ((int)$ts['doctor_id'] !== $user_id) {
+            echo json_encode(['success' => false, 'message' => 'Timeslot does not belong to the selected doctor.']);
             exit;
         }
     }
 
-    // Enforce daily approval/confirmed limit only for patient-side bookings (keep room for walk-ins)
-    // If the requester is a patient (session), we enforce max 15 approved/confirmed appointments per day
+    // Check for duplicate patient booking on same date
+    $dup_stmt = $conn->prepare(
+        'SELECT COUNT(*) AS cnt FROM appointments WHERE patient_id = ? AND appointment_date = ? AND status != "cancelled"'
+    );
+    $dup_stmt->bind_param('is', $patient_id, $appointment_date);
+    $dup_stmt->execute();
+    $dup_row = $dup_stmt->get_result()->fetch_assoc();
+    $dup_stmt->close();
+    if ((int)($dup_row['cnt'] ?? 0) > 0) {
+        echo json_encode(['success' => false, 'message' => 'Patient already has an appointment on the selected date.']);
+        exit;
+    }
+
     $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
-    if ($isPatientRequester) {
-        // Count both appointments and schedules for the selected doctor on that date to enforce daily cap
-        $cap_sql = "SELECT (
-            (SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND user_id = ? AND status IN ('confirmed','checked_in','in_progress','completed'))
-            + (SELECT COUNT(*) FROM schedules WHERE DATE(scheduled_start) = ? AND user_id = ? AND status IN ('scheduled','rescheduled'))
-        ) AS cnt";
-        $cap_stmt = $conn->prepare($cap_sql);
-        if ($cap_stmt) {
-            $cap_stmt->bind_param('siss', $appointment_date, $user_id, $appointment_date, $user_id);
-            $cap_stmt->execute();
-            $cap_res = $cap_stmt->get_result();
-            $cap_row = $cap_res ? $cap_res->fetch_assoc() : null;
-            $cap_count = (int)($cap_row['cnt'] ?? 0);
-            $cap_stmt->close();
 
-            if ($cap_count >= 15) {
-                echo json_encode(['success' => false, 'message' => 'The selected date has reached the maximum number of bookings (appointments + schedules) (15). Please choose another date.']);
-                exit;
-            }
-        }
-    }
-
-    // Prevent a patient from being booked more than once on the same date by any requester
-    $dup_sql = 'SELECT COUNT(*) AS cnt FROM appointments WHERE patient_id = ? AND appointment_date = ? AND status != "cancelled"';
-    $dup_stmt = $conn->prepare($dup_sql);
-    if ($dup_stmt) {
-        $dup_stmt->bind_param('is', $patient_id, $appointment_date);
-        $dup_stmt->execute();
-        $dup_res = $dup_stmt->get_result();
-        $dup_row = $dup_res ? $dup_res->fetch_assoc() : null;
-        $dup_stmt->close();
-        $existingForDay = (int)($dup_row['cnt'] ?? 0);
-        if ($existingForDay > 0) {
-            echo json_encode(['success' => false, 'message' => 'Patient already has an appointment on the selected date. Cannot book more than one appointment per day.']);
-            exit;
-        }
-    }
-
-    // Patients may only create online appointments. Secretary/staff can create walk-ins.
     if ($isPatientRequester) {
         $is_online_appointment = 1;
     }
 
-    // If the requester is a secretary (staff), auto-confirm the appointment instead of leaving it pending
     if (!$isPatientRequester && strtolower($requester_role) === 'secretary') {
         $status = 'confirmed';
     }
 
-    // Ensure appointments table has `is_emergency` column
-    $colRes = $conn->query("SHOW COLUMNS FROM appointments LIKE 'is_emergency'");
-    if (!$colRes || $colRes->num_rows === 0) {
-        $conn->query("ALTER TABLE appointments ADD COLUMN is_emergency TINYINT(1) DEFAULT 0");
-    }
+    $conn->begin_transaction();
 
-    // Insert appointment (timeslot and branch removed)
-    $sql = "INSERT INTO appointments (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    // Insert appointment with timeslot_id and service_id
+    $ts_id_val  = $timeslot_id > 0 ? $timeslot_id : null;
+    $svc_id_val = $service_id  > 0 ? $service_id  : null;
 
+    $sql  = "INSERT INTO appointments
+             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, service_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    
-    if (!$stmt) {
-        throw new Exception('Prepare insert failed: ' . $conn->error);
-    }
-
-    if (!$stmt->bind_param("ississii", $patient_id, $appointment_date, $reason, $is_online_appointment, $notes, $status, $user_id, $is_emergency)) {
-        throw new Exception('Bind insert failed: ' . $stmt->error);
-    }
-
-    if (!$stmt->execute()) {
-        throw new Exception('Insert failed: ' . $stmt->error);
-    }
-
-    $appointment_id = $conn->insert_id;
+    if (!$stmt) throw new Exception('Prepare insert failed: ' . $conn->error);
+    $stmt->bind_param(
+        'ississiiii',
+        $patient_id, $appointment_date, $reason, $is_online_appointment,
+        $notes, $status, $user_id, $is_emergency, $ts_id_val, $svc_id_val
+    );
+    if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);
+    $appointment_id = (int)$conn->insert_id;
     $stmt->close();
 
-    // Return success for appointment creation. For secretary-created bookings we auto-confirm.
-    $responseMsg = 'Appointment created successfully!';
-    if ($status === 'confirmed') {
-        $responseMsg = 'Appointment created and confirmed.';
-    } else {
-        $responseMsg = 'Appointment created successfully! Awaiting secretary approval.';
+    // Mark the timeslot as booked
+    if ($timeslot_id > 0) {
+        $tbUpd = $conn->prepare(
+            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ?"
+        );
+        $tbUpd->bind_param('ii', $appointment_id, $timeslot_id);
+        $tbUpd->execute();
+        $tbUpd->close();
+
+        // If confirmed, create patient_arrivals pending record
+        if ($status === 'confirmed') {
+            $tsData = $conn->query("SELECT start_time FROM timeslot WHERE timeslot_id = {$timeslot_id} LIMIT 1")->fetch_assoc();
+            $expectedTime = $tsData['start_time'] ?? '00:00:00';
+            $paIns = $conn->prepare(
+                "INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)
+                 VALUES (?, ?, ?, 'pending')"
+            );
+            $paIns->bind_param('iis', $appointment_id, $timeslot_id, $expectedTime);
+            $paIns->execute();
+            $paIns->close();
+        }
     }
-    $response = ['success' => true, 'message' => $responseMsg, 'appointment_id' => $appointment_id, 'status' => $status];
-    echo json_encode($response);
+
+    $conn->commit();
+
+    $responseMsg = ($status === 'confirmed')
+        ? 'Appointment created and confirmed.'
+        : 'Appointment created successfully! Awaiting secretary approval.';
+
+    echo json_encode([
+        'success'        => true,
+        'message'        => $responseMsg,
+        'appointment_id' => $appointment_id,
+        'status'         => $status,
+    ]);
 
 } catch (Exception $e) {
+    if ($conn && $conn->connect_errno === 0) {
+        try { $conn->rollback(); } catch (Exception $re) {}
+    }
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }

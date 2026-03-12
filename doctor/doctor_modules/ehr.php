@@ -7,21 +7,16 @@ check_session(['doctor']);
 // Allow either appointment_id via GET OR selection by queue number
 $appointment_id = isset($_GET['appointment_id']) ? (int) $_GET['appointment_id'] : 0;
 
-// If no appointment_id provided, fetch today's queue items for this doctor
+// If no appointment_id provided, fetch today's arrived patients for this doctor
 $queueItems = [];
 if (!$appointment_id) {
-    // Prefer ordering emergency flags first if check_in_queue has the column
-    $hasCol = false;
-    try {
-        $colRes = $conn->query("SHOW COLUMNS FROM check_in_queue LIKE 'is_emergency'");
-        $hasCol = ($colRes && $colRes->num_rows > 0);
-    } catch (Throwable $e) { $hasCol = false; }
-
-    if ($hasCol) {
-        $sql = "SELECT q.appointment_id, q.que_number, q.is_emergency, a.patient_id, p.first_name, p.last_name, a.appointment_date FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id JOIN patients p ON a.patient_id = p.patient_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called') ORDER BY q.is_emergency DESC, q.que_number ASC";
-    } else {
-        $sql = "SELECT q.appointment_id, q.que_number, a.patient_id, p.first_name, p.last_name, a.appointment_date FROM check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id JOIN patients p ON a.patient_id = p.patient_id WHERE a.user_id = ? AND a.appointment_date = ? AND q.status IN ('waiting','called') ORDER BY q.que_number ASC";
-    }
+    $sql = "SELECT pa.appointment_id, pa.is_emergency, a.patient_id, p.first_name, p.last_name, a.appointment_date
+            FROM patient_arrivals pa
+            INNER JOIN appointments a ON a.appointment_id = pa.appointment_id
+            JOIN patients p ON a.patient_id = p.patient_id
+            WHERE a.user_id = ? AND a.appointment_date = ?
+              AND pa.status IN ('arrived','late','in_progress')
+            ORDER BY pa.is_emergency DESC, pa.expected_time ASC";
 
     $qstmt = $conn->prepare($sql);
     if ($qstmt) {
@@ -44,7 +39,7 @@ if (!$appointment_id) {
 
     if ($appt) {
         // populate a single queue-like item so UI can reuse the same dropdown/prefill logic
-        $queueItems[] = ['appointment_id' => $appt['appointment_id'], 'que_number' => '', 'patient_id' => $appt['patient_id'], 'first_name' => $appt['first_name'], 'last_name' => $appt['last_name'], 'appointment_date' => $appt['appointment_date']];
+        $queueItems[] = ['appointment_id' => $appt['appointment_id'], 'patient_id' => $appt['patient_id'], 'first_name' => $appt['first_name'], 'last_name' => $appt['last_name'], 'appointment_date' => $appt['appointment_date']];
     }
 }
 
@@ -71,16 +66,16 @@ if ($sstmt) {
             <div class="mb-3" id="queueSelectorWrap">
                 <label class="form-label">Select Queue Number / Patient</label>
                 <select id="queueSelector" class="form-select">
-                    <option value="">-- Select queue / appointment --</option>
+                    <option value="">-- Select patient --</option>
                     <?php foreach ($queueItems as $qi): ?>
                             <?php
-                                $display = trim(($qi['que_number'] ? ('Queue #' . $qi['que_number'] . ' - ') : '') . ($qi['first_name'] . ' ' . $qi['last_name']));
+                                $display = trim($qi['first_name'] . ' ' . $qi['last_name']);
                                 // Indicate emergency in dropdown text (plain text) so it's visible to doctors
                                 if (!empty($qi['is_emergency'])) {
                                     $display .= ' (EMERGENCY)';
                                 }
                             ?>
-                            <option value="<?php echo (int) $qi['appointment_id']; ?>" data-que="<?php echo htmlspecialchars($qi['que_number']); ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>">
+                            <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>">
                                 <?php echo htmlspecialchars($display); ?>
                             </option>
                         <?php endforeach; ?>

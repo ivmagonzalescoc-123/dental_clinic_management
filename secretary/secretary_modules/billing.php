@@ -99,14 +99,11 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         p.email,
         p.phone_number,
         u.first_name as doctor_first_name,
-        u.last_name as doctor_last_name,
-            MAX(q.que_number) AS que_number
+        u.last_name as doctor_last_name
     FROM billing b
     INNER JOIN appointments a ON b.appointment_id = a.appointment_id
     INNER JOIN patients p ON a.patient_id = p.patient_id
     LEFT JOIN users u ON a.user_id = u.user_id
-        -- payments removed: no JOIN to payment
-    LEFT JOIN check_in_queue q ON a.appointment_id = q.appointment_id
     GROUP BY b.billing_id
     ORDER BY b.created_at DESC
     ";
@@ -128,13 +125,11 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
             p.email,
             p.phone_number,
             u.first_name as doctor_first_name,
-            u.last_name as doctor_last_name,
-            MAX(q.que_number) AS que_number
+            u.last_name as doctor_last_name
         FROM billing b
         INNER JOIN appointments a ON b.appointment_id = a.appointment_id
         INNER JOIN patients p ON a.patient_id = p.patient_id
         LEFT JOIN users u ON a.user_id = u.user_id
-        LEFT JOIN check_in_queue q ON a.appointment_id = q.appointment_id
         GROUP BY b.billing_id
         ORDER BY b.created_at DESC
     ";
@@ -213,7 +208,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
             <table class="table table-hover datatable" id="billingTable">
                 <thead>
                     <tr>
-                        <th>Queue</th>
                         <th>Invoice #</th>
                         <th>Patient</th>
                         <th>Doctor</th>
@@ -237,7 +231,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                             ?>
                             <tr data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>" data-patient="<?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?>"
                                 data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>">
-                                <td><?php echo htmlspecialchars($billing['que_number'] ?? '—'); ?></td>
                                 <td><strong>#<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?></strong>
                                 </td>
                                 <td><?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?></td>

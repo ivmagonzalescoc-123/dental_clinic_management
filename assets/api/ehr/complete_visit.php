@@ -78,9 +78,9 @@ try {
         }
     }
     
-    // Update queue status to served
+    // Update arrival status to served
     $queueStatus = 'served';
-    $stmt = $conn->prepare('UPDATE check_in_queue SET status = ?, served_time = NOW(), completed_time = NOW() WHERE appointment_id = ?');
+    $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
     if ($stmt) {
         $stmt->bind_param('si', $queueStatus, $appointmentId);
         $stmt->execute();

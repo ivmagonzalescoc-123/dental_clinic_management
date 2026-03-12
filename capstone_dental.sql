@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 26, 2026 at 01:28 PM
+-- Generation Time: Mar 12, 2026 at 05:01 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -30,6 +30,8 @@ SET time_zone = "+00:00";
 CREATE TABLE `appointments` (
   `appointment_id` int(11) NOT NULL,
   `appointment_date` date NOT NULL,
+  `timeslot_id` int(11) DEFAULT NULL,
+  `service_id` int(11) DEFAULT NULL,
   `reason` varchar(255) DEFAULT NULL,
   `is_online_appointment` tinyint(1) DEFAULT 0,
   `notes` text DEFAULT NULL,
@@ -41,7 +43,22 @@ CREATE TABLE `appointments` (
   `is_emergency` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `appointments`
+--
 
+INSERT INTO `appointments` (`appointment_id`, `appointment_date`, `timeslot_id`, `service_id`, `reason`, `is_online_appointment`, `notes`, `status`, `created_at`, `user_id`, `rescheduled_from`, `patient_id`, `is_emergency`) VALUES
+(20, '2026-02-25', NULL, NULL, 'Tooth Ache', 1, 'no show', 'cancelled', '2026-02-25 20:11:28', 2, NULL, 1, 0),
+(22, '2026-02-25', NULL, NULL, 'Test appointment for reminders', 0, 'sig balikbalik', 'cancelled', '2026-02-25 20:59:34', 2, NULL, 1, 0),
+(23, '2026-02-25', NULL, NULL, 'Ouch', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:41:18', 2, NULL, 1, 0),
+(24, '2026-02-25', NULL, NULL, 'Sakit akong ngipon doc help', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:56:23', 2, NULL, 3, 0),
+(28, '2026-02-27', NULL, NULL, '', 0, '0', 'scheduled', '2026-02-26 07:55:15', 2, NULL, 3, 1),
+(29, '2026-02-26', NULL, NULL, 'asdasd', 0, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-26 08:01:10', 2, NULL, 2, 1),
+(30, '2026-03-06', NULL, NULL, 'general yearly consultation', 0, '', 'in_progress', '2026-03-06 09:01:29', 2, NULL, 1, 0),
+(31, '2026-03-06', NULL, NULL, 'test', 0, '', 'in_progress', '2026-03-06 09:14:26', 2, NULL, 3, 0),
+(32, '2026-03-06', NULL, NULL, 'asdasd', 0, '', 'in_progress', '2026-03-06 09:18:01', 2, NULL, 2, 0);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `backup`
@@ -72,6 +89,16 @@ CREATE TABLE `billing` (
   `processed_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `billing`
+--
+
+INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`, `status`, `processed_by`) VALUES
+(7, 23, 1, 1000.00, '2026-02-25 21:45:12', 'paid', 3),
+(8, 24, 3, 1100.00, '2026-02-25 22:02:36', 'paid', 3),
+(9, 29, 2, 0.00, '2026-02-26 08:09:28', 'unpaid', NULL);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `check_in_queue`
@@ -79,15 +106,31 @@ CREATE TABLE `billing` (
 
 CREATE TABLE `check_in_queue` (
   `checkin_id` int(11) NOT NULL,
-  `status` enum('waiting','called','served','cancelled','no_show') DEFAULT 'waiting',
+  `status` enum('waiting','called','in_progress','served','cancelled','no_show','late') DEFAULT 'waiting',
   `checkin_time` datetime DEFAULT current_timestamp(),
   `que_number` int(11) DEFAULT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `served_time` datetime DEFAULT NULL,
   `completed_time` datetime DEFAULT NULL,
-  `is_emergency` tinyint(1) DEFAULT 0
+  `is_emergency` tinyint(1) DEFAULT 0,
+  `timeslot_id` int(11) DEFAULT NULL,
+  `expected_time` time DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `check_in_queue`
+--
+
+INSERT INTO `check_in_queue` (`checkin_id`, `status`, `checkin_time`, `que_number`, `appointment_id`, `served_time`, `completed_time`, `is_emergency`, `timeslot_id`, `expected_time`) VALUES
+(12, 'served', '2026-02-25 21:41:40', 1, 23, '2026-02-25 21:45:12', '2026-02-25 21:45:12', 0, NULL, NULL),
+(13, 'served', '2026-02-25 21:57:36', 2, 24, '2026-02-25 22:02:36', '2026-02-25 22:02:36', 0, NULL, NULL),
+(16, '', '2026-02-26 07:58:40', 1, 28, '2026-02-26 08:07:53', NULL, 1, NULL, NULL),
+(17, 'served', '2026-02-26 08:01:14', 2, 29, '2026-02-26 08:09:28', '2026-02-26 08:09:28', 1, NULL, NULL),
+(18, '', '2026-03-06 09:01:36', 1, 30, '2026-03-06 09:02:43', NULL, 0, NULL, NULL),
+(19, '', '2026-03-06 09:14:31', 2, 31, '2026-03-06 09:14:39', NULL, 0, NULL, NULL),
+(20, '', '2026-03-06 09:18:05', 3, 32, '2026-03-06 09:18:15', NULL, 0, NULL, NULL);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `clinical_records`
@@ -113,6 +156,16 @@ CREATE TABLE `clinical_records` (
   `tooth_image` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `clinical_records`
+--
+
+INSERT INTO `clinical_records` (`record_id`, `appointment_id`, `schedule_id`, `doctor_id`, `patient_id`, `summary`, `recommended_services`, `treatment_plan`, `materials_used`, `odontogram`, `doctor_notes`, `follow_up_date`, `status`, `submitted_by`, `submitted_at`, `images`, `tooth_image`) VALUES
+(7, 23, 15, 2, 1, NULL, '[1]', NULL, '[{\"name\":\"gloves and surgical masks\",\"qty\":1,\"price\":500}]', NULL, 'No more issues', NULL, 'submitted', 2, '2026-02-25 21:45:12', '[\"assets\\/uploads\\/clinical_images\\/23\\/1772027112_731870fc66c6.jpeg\"]', 'assets/uploads/clinical_images/23/1772027112_731870fc66c6.jpeg'),
+(8, 24, 17, 2, 3, NULL, '[1]', NULL, '[{\"name\":\"Gloves\",\"qty\":2,\"price\":50},{\"name\":\"SteelBrush\",\"qty\":1,\"price\":500}]', NULL, 'None', '2026-02-27', 'submitted', 2, '2026-02-25 22:02:36', '[\"assets\\/uploads\\/clinical_images\\/24\\/1772028156_f3600203914d.jpeg\"]', 'assets/uploads/clinical_images/24/1772028156_f3600203914d.jpeg'),
+(9, 29, NULL, 2, 2, NULL, NULL, NULL, NULL, '{\"1\":[],\"2\":[],\"3\":[],\"4\":[],\"5\":[],\"6\":[],\"7\":[],\"8\":[],\"9\":[],\"10\":[],\"11\":[],\"12\":[],\"13\":[],\"14\":[],\"15\":[],\"16\":[],\"17\":[],\"18\":[],\"19\":[\"missing\"],\"20\":[],\"21\":[],\"22\":[],\"23\":[],\"24\":[],\"25\":[],\"26\":[],\"27\":[],\"28\":[],\"29\":[],\"30\":[],\"31\":[],\"32\":[]}', '', NULL, 'submitted', 2, '2026-02-26 08:09:28', NULL, NULL);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `doctor_availability`
@@ -158,6 +211,16 @@ CREATE TABLE `notifications` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `body`, `link`, `is_read`, `created_at`) VALUES
+(1, 1, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22'),
+(2, 2, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 1, '2026-02-25 21:01:22'),
+(3, 3, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22');
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `patients`
@@ -185,9 +248,47 @@ CREATE TABLE `patients` (
 --
 
 INSERT INTO `patients` (`patient_id`, `first_name`, `last_name`, `middle_name`, `username`, `password_hash`, `date_of_birth`, `gender`, `phone_number`, `email`, `address`, `created_at`, `added_by`, `profiling`) VALUES
-(1, 'Paul', 'Gonzales', 'Gomez', 'patient1', 'patient123', '1990-01-01', 'Unspecified', '0927562616', 'patient1@example.com', 'Brgy 7 CDO', '2026-01-23 15:50:00', NULL, NULL),
+(1, 'Paul', 'Gonzales', 'Gomez', 'patient1', 'patient123', '1990-01-01', 'Unspecified', '0927562616', 'patient1@example.com', 'Brgy 7 CDO', '2026-01-23 15:50:00', NULL, '{\"medical_history\":\"Highblood\",\"medications\":\"Penicilin\",\"allergies\":\"No\",\"smoking\":\"current\",\"alcohol\":\"social\",\"asa\":\"II\",\"last_visit\":\"\"}'),
 (2, 'Harry', 'Tan', 'Richard', 'patient2', 'patient123', '1985-02-02', 'Unspecified', '0920912616', 'patient2@example.com', 'Gusa CDO', '2026-01-23 15:50:00', NULL, NULL),
 (3, 'Ivan Louiz', 'Gonzales', '', 'ivan123', 'ivan123', '1559-11-09', 'Male', '09123456789', 'ivan@gmail.com', 'Unahan Agusan CDO', '2026-02-25 21:55:55', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patient_arrivals`
+--
+
+CREATE TABLE `patient_arrivals` (
+  `arrival_id` int(11) NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `timeslot_id` int(11) NOT NULL,
+  `expected_time` time NOT NULL,
+  `arrived_at` datetime DEFAULT NULL,
+  `status` enum('pending','arrived','late','no_show') DEFAULT 'pending',
+  `marked_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patient_profiling_audit`
+--
+
+CREATE TABLE `patient_profiling_audit` (
+  `audit_id` int(11) NOT NULL,
+  `patient_id` int(11) NOT NULL,
+  `profiling` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`profiling`)),
+  `changed_by` int(11) DEFAULT NULL,
+  `changed_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `patient_profiling_audit`
+--
+
+INSERT INTO `patient_profiling_audit` (`audit_id`, `patient_id`, `profiling`, `changed_by`, `changed_at`) VALUES
+(1, 1, '{\"medical_history\":\"Highblood\",\"medications\":\"Penicilin\",\"allergies\":\"No\",\"smoking\":\"current\",\"alcohol\":\"social\",\"asa\":\"II\",\"last_visit\":\"\"}', 3, '2026-03-06 09:02:22');
 
 -- --------------------------------------------------------
 
@@ -282,7 +383,21 @@ CREATE TABLE `schedules` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `schedules`
+--
 
+INSERT INTO `schedules` (`schedule_id`, `appointment_id`, `user_id`, `scheduled_start`, `scheduled_end`, `status`, `priority`, `created_at`, `updated_at`) VALUES
+(14, 22, 2, '2026-02-25 21:59:34', '2026-02-25 22:29:34', 'scheduled', 1, '2026-02-25 12:59:34', NULL),
+(15, 23, 2, '2026-02-25 13:42:20', NULL, '', 1, '2026-02-25 13:42:20', NULL),
+(16, 24, 2, '2026-02-25 13:58:16', NULL, '', 1, '2026-02-25 13:58:16', NULL),
+(17, 24, 2, '2026-02-27 09:00:00', '2026-02-27 09:30:00', 'scheduled', 1, '2026-02-25 14:02:36', NULL),
+(18, 28, 2, '2026-02-26 08:07:53', NULL, '', 1, '2026-02-26 00:07:53', NULL),
+(19, 30, 2, '2026-03-06 09:02:43', NULL, '', 1, '2026-03-06 01:02:43', NULL),
+(20, 31, 2, '2026-03-06 09:14:39', NULL, '', 1, '2026-03-06 01:14:39', NULL),
+(21, 32, 2, '2026-03-06 09:18:15', NULL, '', 1, '2026-03-06 01:18:15', NULL);
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `schedule_reminders`
@@ -297,6 +412,15 @@ CREATE TABLE `schedule_reminders` (
   `payload` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `schedule_reminders`
+--
+
+INSERT INTO `schedule_reminders` (`reminder_id`, `schedule_id`, `remind_at`, `channel`, `sent_at`, `payload`) VALUES
+(6, 14, '2026-02-25 20:59:34', 'email', '2026-02-25 21:01:22', '{\"test\": \"true\"}'),
+(7, 17, '2026-02-26 09:00:00', '', NULL, '{\"appointment_id\":24,\"schedule_id\":17}');
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `selected_services`
@@ -384,6 +508,48 @@ INSERT INTO `specialization` (`specialization_id`, `specialization_name`, `descr
 (6, 'Prosthodontics', 'Dentures and bridges'),
 (7, 'Oral Surgery', 'Extraction and surgical procedures'),
 (8, 'Cosmetic Dentistry', 'Whitening and aesthetic procedures');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `timeslot`
+--
+
+CREATE TABLE `timeslot` (
+  `timeslot_id` int(11) NOT NULL,
+  `doctor_id` int(11) NOT NULL,
+  `slot_date` date NOT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `status` enum('available','booked','blocked','break') DEFAULT 'available',
+  `appointment_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `timeslot_service`
+--
+
+CREATE TABLE `timeslot_service` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `duration_minutes` int(11) NOT NULL,
+  `buffer_minutes` int(11) DEFAULT 5,
+  `slots_per_day_limit` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `timeslot_service`
+--
+
+INSERT INTO `timeslot_service` (`id`, `service_id`, `duration_minutes`, `buffer_minutes`, `slots_per_day_limit`, `created_at`) VALUES
+(1, 1, 30, 5, NULL, '2026-03-10 02:22:02'),
+(2, 2, 120, 10, NULL, '2026-03-10 02:22:02'),
+(3, 3, 90, 10, NULL, '2026-03-10 02:22:02'),
+(4, 4, 45, 5, NULL, '2026-03-10 02:22:02');
 
 -- --------------------------------------------------------
 
@@ -596,7 +762,9 @@ ALTER TABLE `appointments`
   ADD PRIMARY KEY (`appointment_id`),
   ADD KEY `fk_appointments_user` (`user_id`),
   ADD KEY `fk_appointments_rescheduled_from` (`rescheduled_from`),
-  ADD KEY `fk_appointments_patient` (`patient_id`);
+  ADD KEY `fk_appointments_patient` (`patient_id`),
+  ADD KEY `timeslot_id` (`timeslot_id`),
+  ADD KEY `service_id` (`service_id`);
 
 --
 -- Indexes for table `backup`
@@ -619,7 +787,8 @@ ALTER TABLE `billing`
 --
 ALTER TABLE `check_in_queue`
   ADD PRIMARY KEY (`checkin_id`),
-  ADD UNIQUE KEY `appointment_id` (`appointment_id`);
+  ADD UNIQUE KEY `appointment_id` (`appointment_id`),
+  ADD KEY `timeslot_id` (`timeslot_id`);
 
 --
 -- Indexes for table `clinical_records`
@@ -659,6 +828,22 @@ ALTER TABLE `patients`
   ADD PRIMARY KEY (`patient_id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD KEY `fk_patients_added_by` (`added_by`);
+
+--
+-- Indexes for table `patient_arrivals`
+--
+ALTER TABLE `patient_arrivals`
+  ADD PRIMARY KEY (`arrival_id`),
+  ADD UNIQUE KEY `uq_appointment` (`appointment_id`),
+  ADD KEY `timeslot_id` (`timeslot_id`),
+  ADD KEY `marked_by` (`marked_by`);
+
+--
+-- Indexes for table `patient_profiling_audit`
+--
+ALTER TABLE `patient_profiling_audit`
+  ADD PRIMARY KEY (`audit_id`),
+  ADD KEY `patient_id` (`patient_id`);
 
 --
 -- Indexes for table `prescriptions`
@@ -724,6 +909,21 @@ ALTER TABLE `services`
 --
 ALTER TABLE `specialization`
   ADD PRIMARY KEY (`specialization_id`);
+
+--
+-- Indexes for table `timeslot`
+--
+ALTER TABLE `timeslot`
+  ADD PRIMARY KEY (`timeslot_id`),
+  ADD UNIQUE KEY `uq_doctor_slot` (`doctor_id`,`slot_date`,`start_time`),
+  ADD KEY `appointment_id` (`appointment_id`);
+
+--
+-- Indexes for table `timeslot_service`
+--
+ALTER TABLE `timeslot_service`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_service` (`service_id`);
 
 --
 -- Indexes for table `tooth`
@@ -793,7 +993,7 @@ ALTER TABLE `user_logs`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `backup`
@@ -811,7 +1011,7 @@ ALTER TABLE `billing`
 -- AUTO_INCREMENT for table `check_in_queue`
 --
 ALTER TABLE `check_in_queue`
-  MODIFY `checkin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `checkin_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `clinical_records`
@@ -844,6 +1044,18 @@ ALTER TABLE `patients`
   MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT for table `patient_arrivals`
+--
+ALTER TABLE `patient_arrivals`
+  MODIFY `arrival_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `patient_profiling_audit`
+--
+ALTER TABLE `patient_profiling_audit`
+  MODIFY `audit_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `prescriptions`
 --
 ALTER TABLE `prescriptions`
@@ -865,7 +1077,7 @@ ALTER TABLE `schedule`
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `schedule_reminders`
@@ -896,6 +1108,18 @@ ALTER TABLE `services`
 --
 ALTER TABLE `specialization`
   MODIFY `specialization_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
+-- AUTO_INCREMENT for table `timeslot`
+--
+ALTER TABLE `timeslot`
+  MODIFY `timeslot_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `timeslot_service`
+--
+ALTER TABLE `timeslot_service`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `tooth`
@@ -953,6 +1177,8 @@ ALTER TABLE `user_logs`
 -- Constraints for table `appointments`
 --
 ALTER TABLE `appointments`
+  ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`timeslot_id`) REFERENCES `timeslot` (`timeslot_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `appointments_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_appointments_rescheduled_from` FOREIGN KEY (`rescheduled_from`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
@@ -975,6 +1201,7 @@ ALTER TABLE `billing`
 -- Constraints for table `check_in_queue`
 --
 ALTER TABLE `check_in_queue`
+  ADD CONSTRAINT `check_in_queue_ibfk_1` FOREIGN KEY (`timeslot_id`) REFERENCES `timeslot` (`timeslot_id`),
   ADD CONSTRAINT `fk_checkin_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE;
 
 --
@@ -1006,6 +1233,14 @@ ALTER TABLE `notifications`
 --
 ALTER TABLE `patients`
   ADD CONSTRAINT `fk_patients_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `patient_arrivals`
+--
+ALTER TABLE `patient_arrivals`
+  ADD CONSTRAINT `patient_arrivals_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `patient_arrivals_ibfk_2` FOREIGN KEY (`timeslot_id`) REFERENCES `timeslot` (`timeslot_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `patient_arrivals_ibfk_3` FOREIGN KEY (`marked_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `prescriptions`
@@ -1052,6 +1287,19 @@ ALTER TABLE `selected_treatments`
 --
 ALTER TABLE `services`
   ADD CONSTRAINT `fk_services_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `timeslot`
+--
+ALTER TABLE `timeslot`
+  ADD CONSTRAINT `timeslot_ibfk_1` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`user_id`),
+  ADD CONSTRAINT `timeslot_ibfk_2` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `timeslot_service`
+--
+ALTER TABLE `timeslot_service`
+  ADD CONSTRAINT `timeslot_service_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
 
 --
 -- Constraints for table `tooth_images`

@@ -84,11 +84,11 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
                 }
             }
             
-            // Update queue status to served/completed
-            $queueStatus = 'served';
-            $stmt = $conn->prepare('UPDATE check_in_queue SET status = ?, served_time = NOW(), completed_time = NOW() WHERE appointment_id = ?');
+            // Update arrival status to served
+            $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
             if ($stmt) {
-                $stmt->bind_param('si', $queueStatus, $appointmentId);
+                $arrStatus = 'served';
+                $stmt->bind_param('si', $arrStatus, $appointmentId);
                 $stmt->execute();
                 $stmt->close();
             }
@@ -160,37 +160,7 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
         exit;
     }
     
-    // Handle CALL patient (mark queue as called)
-    if ($action === 'call' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $appointmentId = (int)($_POST['appointment_id'] ?? 0);
-        if ($appointmentId <= 0) {
-            $_SESSION['message'] = 'Invalid appointment.';
-            $_SESSION['message_type'] = 'warning';
-            header('Location: doctor.php?page=appointments');
-            exit;
-        }
-
-        try {
-            $stmt = $conn->prepare('UPDATE check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id SET q.status = ?, q.called_time = NOW() WHERE q.appointment_id = ? AND a.user_id = ?');
-            if ($stmt) {
-                $status = 'called';
-                $stmt->bind_param('sii', $status, $appointmentId, $doctor_id);
-                $stmt->execute();
-                $stmt->close();
-            }
-
-            $_SESSION['message'] = 'Patient called.';
-            $_SESSION['message_type'] = 'success';
-        } catch (Throwable $e) {
-            $_SESSION['message'] = 'Error calling patient: ' . $e->getMessage();
-            $_SESSION['message_type'] = 'danger';
-        }
-
-        header('Location: doctor.php?page=appointments');
-        exit;
-    }
-
-    // Handle ACCEPT patient (start visit) - set queue status in_progress and appointment status
+    // Handle ACCEPT patient (start visit) - set arrival status in_progress and appointment status
     if ($action === 'accept' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $appointmentId = (int)($_POST['appointment_id'] ?? 0);
         if ($appointmentId <= 0) {
@@ -202,10 +172,10 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
 
         $conn->begin_transaction();
         try {
-            $queueStatus = 'in_progress';
-            $stmt = $conn->prepare('UPDATE check_in_queue q INNER JOIN appointments a ON q.appointment_id = a.appointment_id SET q.status = ?, q.served_time = NOW() WHERE q.appointment_id = ? AND a.user_id = ?');
+            $arrStatus = 'in_progress';
+            $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
             if ($stmt) {
-                $stmt->bind_param('sii', $queueStatus, $appointmentId, $doctor_id);
+                $stmt->bind_param('si', $arrStatus, $appointmentId);
                 $stmt->execute();
                 $stmt->close();
             }
@@ -231,44 +201,6 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
         exit;
     }
 } // End of header processing conditional
-
-// Fetch queue - only checked-in patients for today
-$queue = [];
-$queue_sql = "
-    SELECT
-        a.appointment_id,
-        a.patient_id,
-        a.reason,
-        a.status AS appointment_status,
-        p.first_name,
-        p.last_name,
-        p.email,
-        p.phone_number,
-        NULL as appointment_time,
-        q.checkin_id,
-        q.que_number,
-        q.checkin_time,
-        q.status AS queue_status
-    FROM check_in_queue q
-    INNER JOIN appointments a ON q.appointment_id = a.appointment_id
-    INNER JOIN patients p ON a.patient_id = p.patient_id
-    -- timeslot removed; appointment_time not available
-    WHERE a.user_id = ?
-    AND a.appointment_date = ?
-    AND q.status IN ('waiting', 'called')
-    ORDER BY q.que_number ASC
-";
-
-$stmt = $conn->prepare($queue_sql);
-if ($stmt) {
-    $stmt->bind_param('is', $doctor_id, $today);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $queue[] = $row;
-    }
-    $stmt->close();
-}
 
 // Fetch all appointments for this doctor (for reference)
 $allAppointments = [];

@@ -7,10 +7,10 @@ $checkedIn = 0;
 $queueWaiting = 0;
 $appointmentsToday = 0;
 
-$res = $conn->prepare("SELECT COUNT(*) FROM check_in_queue WHERE DATE(checkin_time) = ? AND status IN ('checked_in')");
+$res = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status IN ('arrived','late')");
 if ($res) { $res->bind_param('s', $today); $res->execute(); $r = $res->get_result(); $checkedIn = $r ? (int)$r->fetch_row()[0] : 0; $res->close(); }
 
-$res = $conn->prepare("SELECT COUNT(*) FROM check_in_queue WHERE DATE(checkin_time) = ? AND status IN ('waiting','called')");
+$res = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status = 'pending'");
 if ($res) { $res->bind_param('s', $today); $res->execute(); $r = $res->get_result(); $queueWaiting = $r ? (int)$r->fetch_row()[0] : 0; $res->close(); }
 
 $res = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE DATE(appointment_date) = ?");
@@ -26,8 +26,8 @@ if ($stmt){ $stmt->bind_param('ss', $last7Start, $today); $stmt->execute(); $r =
 ?>
 
 <div class="row g-3">
-	<div class="col-md-4"><div class="card p-3"><h6>Checked In Today</h6><div class="display-6 fw-bold"><?php echo (int)$checkedIn; ?></div></div></div>
-	<div class="col-md-4"><div class="card p-3"><h6>Waiting / Called</h6><div class="display-6 fw-bold"><?php echo (int)$queueWaiting; ?></div></div></div>
+	<div class="col-md-4"><div class="card p-3"><h6>Arrived Today</h6><div class="display-6 fw-bold"><?php echo (int)$checkedIn; ?></div></div></div>
+	<div class="col-md-4"><div class="card p-3"><h6>Pending Today</h6><div class="display-6 fw-bold"><?php echo (int)$queueWaiting; ?></div></div></div>
 	<div class="col-md-4"><div class="card p-3"><h6>Appointments Today</h6><div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div></div></div>
 
 	<div class="col-12"><div class="card"><div class="card-body"><h5 class="card-title">Appointments | Last 7 days</h5><div id="secAppt7Chart" style="min-height:220px;margin-top:1rem;"></div></div></div></div>
