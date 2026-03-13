@@ -2,6 +2,14 @@
 include_once '../config/session_check.php';
 check_session(['admin']);
 $csrf_token = security_generate_csrf_token();
+
+// Handle modules that may redirect via headers before any HTML output.
+$page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
+$action = $_GET['action'] ?? ($_POST['action'] ?? '');
+if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['archive', 'reset_password'], true)) {
+    include 'admin_modules/manage_users.php';
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
@@ -123,27 +131,15 @@ $csrf_token = security_generate_csrf_token();
             </li>
             
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=schedule_board">
-                    <i class="bi bi-calendar-check"></i>
-                    <span>Schedule Board</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=services">
                     <i class="bi bi-bag-heart"></i>
                     <span>Services</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=doctor_leaves">
-                    <i class="bi bi-calendar2-x"></i>
-                    <span>Doctor Leaves</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=doctor_deployment">
-                    <i class="bi bi-calendar-week"></i>
-                    <span>Doctor Deployment</span>
+                <a class="nav-link collapsed" href="admin.php?page=doctor_management&tab=schedule">
+                    <i class="bi bi-calendar2-check"></i>
+                    <span>Doctor Management</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -191,6 +187,9 @@ $csrf_token = security_generate_csrf_token();
                                     break;
                                 case "services":
                                     include "admin_modules/services.php";
+                                    break;
+                                case "doctor_management":
+                                    include "admin_modules/doctor_management.php";
                                     break;
                                 case "doctor_leaves":
                                     include "admin_modules/doctor_leaves.php";

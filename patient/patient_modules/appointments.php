@@ -269,8 +269,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return card;
         }
         // navigation header
+        const existingHeader = cal.parentNode.querySelector('.calendar-nav-header[data-target="appointmentCalendar"]');
+        if (existingHeader) existingHeader.remove();
         const header = document.createElement('div');
-        header.className = 'd-flex justify-content-between align-items-center mb-2';
+        header.className = 'calendar-nav-header d-flex justify-content-between align-items-center mb-2';
+        header.setAttribute('data-target', 'appointmentCalendar');
         const prevBtn = document.createElement('button'); prevBtn.type='button'; prevBtn.className='btn btn-light btn-sm'; prevBtn.textContent='◀';
         const nextBtn = document.createElement('button'); nextBtn.type='button'; nextBtn.className='btn btn-light btn-sm'; nextBtn.textContent='▶';
         const title = document.createElement('div'); title.className='fw-bold';

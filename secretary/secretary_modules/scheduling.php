@@ -103,7 +103,10 @@ $statusCounts = [
     'cancelled' => 0,
 ];
 foreach ($schedules as $row) {
-    $st = (string)($row['status'] ?? '');
+    $st = strtolower(trim((string)($row['status'] ?? '')));
+    if ($st === '') {
+        $st = 'scheduled';
+    }
     if (isset($statusCounts[$st])) {
         $statusCounts[$st]++;
     }
@@ -184,9 +187,12 @@ foreach ($schedules as $row) {
             <?php else: ?>
                 <?php foreach ($schedules as $row): ?>
                     <?php
-                        $st = (string)($row['status'] ?? '');
+                        $st = strtolower(trim((string)($row['status'] ?? '')));
+                        if ($st === '') {
+                            $st = 'scheduled';
+                        }
                         $badge = ($st === 'scheduled') ? 'primary' : (($st === 'rescheduled') ? 'warning text-dark' : (($st === 'completed') ? 'success' : 'secondary'));
-                        $canEdit = in_array($st, ['scheduled', 'rescheduled'], true);
+                        $canEdit = !in_array($st, ['completed', 'cancelled'], true);
                     ?>
                     <tr>
                         <td>#<?php echo (int)$row['schedule_id']; ?></td>
@@ -218,7 +224,7 @@ foreach ($schedules as $row) {
                                             'scheduled_start' => (string)($row['scheduled_start'] ?? ''),
                                             'scheduled_end' => (string)($row['scheduled_end'] ?? ''),
                                         ]); ?>)'>
-                                        <i class="bi bi-calendar-event"></i>
+                                        <i class="bi bi-pencil-square"></i>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelSchedule(<?php echo (int)$row['schedule_id']; ?>)">
                                         <i class="bi bi-x-circle"></i>
@@ -240,13 +246,27 @@ foreach ($schedules as $row) {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Reschedule Follow-up</h5>
+                <h5 class="modal-title">Update Follow-up Schedule</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="scScheduleId">
                 <input type="hidden" id="scAppointmentId">
-                <input type="hidden" id="scDoctorId">
+                <div class="mb-2">
+                    <label class="form-label">Doctor</label>
+                    <select class="form-select" id="scDoctorId">
+                        <option value="">Select doctor</option>
+                        <?php foreach ($doctors as $doc): ?>
+                            <?php $did = (int)$doc['user_id']; ?>
+                            <option value="<?php echo $did; ?>">
+                                <?php
+                                    $doctorType = ((string)($doc['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular';
+                                    echo htmlspecialchars(trim(($doc['first_name'] ?? '') . ' ' . ($doc['last_name'] ?? '')) . ' (' . $doctorType . ')');
+                                ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="mb-2">
                     <label class="form-label">Start</label>
                     <input type="datetime-local" class="form-control" id="scStart">
@@ -262,7 +282,7 @@ foreach ($schedules as $row) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="scSaveBtn">Save</button>
+                <button type="button" class="btn btn-primary" id="scSaveBtn">Update Schedule</button>
             </div>
         </div>
     </div>
@@ -271,6 +291,38 @@ foreach ($schedules as $row) {
 <script>
 (function() {
     let modal = null;
+
+    function ensureToastContainer() {
+        let container = document.getElementById('secToastContainer');
+        if (container) return container;
+        container = document.createElement('div');
+        container.id = 'secToastContainer';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '1080';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    function showToast(message, type) {
+        const t = type || 'info';
+        const cls = t === 'success' ? 'text-bg-success' : (t === 'danger' ? 'text-bg-danger' : (t === 'warning' ? 'text-bg-warning' : 'text-bg-primary'));
+        const container = ensureToastContainer();
+        const toastEl = document.createElement('div');
+        toastEl.className = 'toast align-items-center ' + cls + ' border-0';
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + String(message || '') + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+        container.appendChild(toastEl);
+        if (window.bootstrap && window.bootstrap.Toast) {
+            const instance = new bootstrap.Toast(toastEl, { delay: 2800 });
+            toastEl.addEventListener('hidden.bs.toast', function () { toastEl.remove(); });
+            instance.show();
+        } else {
+            setTimeout(function () { toastEl.remove(); }, 2800);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const el = document.getElementById('scheduleRescheduleModal');
         if (el && window.bootstrap) {
@@ -290,7 +342,8 @@ foreach ($schedules as $row) {
 
     function toLocal(dt) {
         if (!dt) return '';
-        return dt.replace(' ', 'T').replace(/:00$/, '');
+        const normalized = String(dt).replace(' ', 'T');
+        return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
     }
 
     function toServer(val) {
@@ -316,7 +369,7 @@ foreach ($schedules as $row) {
         const wrap = document.getElementById('scSuggestions');
         wrap.innerHTML = '';
         if (!doctorId) {
-            alert('Missing doctor reference.');
+            showToast('Missing doctor reference.', 'warning');
             return;
         }
 
@@ -331,6 +384,7 @@ foreach ($schedules as $row) {
             const j = await res.json();
             if (!j.success || !Array.isArray(j.slots) || j.slots.length === 0) {
                 wrap.innerHTML = '<div class="text-muted small">No suggested slots found.</div>';
+                showToast('No suggested slots found for the selected doctor.', 'warning');
                 return;
             }
             j.slots.slice(0, 10).forEach(function(slot) {
@@ -346,6 +400,7 @@ foreach ($schedules as $row) {
             });
         } catch (err) {
             wrap.innerHTML = '<div class="text-danger small">Error loading suggestions.</div>';
+            showToast('Error loading suggested slots.', 'danger');
         }
     }
 
@@ -355,7 +410,7 @@ foreach ($schedules as $row) {
         const end = toServer(document.getElementById('scEnd').value);
 
         if (!scheduleId || !start || !end) {
-            alert('Start and end date/time are required.');
+            showToast('Start and end date/time are required.', 'warning');
             return;
         }
 
@@ -363,18 +418,19 @@ foreach ($schedules as $row) {
         fd.append('schedule_id', scheduleId);
         fd.append('scheduled_start', start);
         fd.append('scheduled_end', end);
+        fd.append('user_id', document.getElementById('scDoctorId').value || '');
 
         try {
             const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                alert(j.message || 'Reschedule failed.');
+                showToast(j.message || 'Schedule update failed.', 'danger');
                 return;
             }
-            alert('Schedule updated successfully.');
+            showToast('Schedule updated successfully.', 'success');
             window.location.reload();
         } catch (err) {
-            alert('Server error while rescheduling.');
+            showToast('Server error while updating schedule.', 'danger');
         }
     }
 
@@ -389,13 +445,13 @@ foreach ($schedules as $row) {
             const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                alert(j.message || 'Cancel failed.');
+                showToast(j.message || 'Cancel failed.', 'danger');
                 return;
             }
-            alert('Schedule cancelled.');
+            showToast('Schedule cancelled.', 'success');
             window.location.reload();
         } catch (err) {
-            alert('Server error while cancelling schedule.');
+            showToast('Server error while cancelling schedule.', 'danger');
         }
     };
 })();

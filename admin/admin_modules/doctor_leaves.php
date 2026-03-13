@@ -7,6 +7,9 @@ $csrf_token = security_generate_csrf_token();
 
 $message = '';
 $messageType = 'info';
+$inDoctorManagement = !empty($doctorManagementMode);
+$leavesBasePage = $inDoctorManagement ? 'doctor_management' : 'doctor_leaves';
+$leavesExtraParams = $inDoctorManagement ? '&tab=leaves' : '';
 
 $currentRole = $_SESSION['role'] ?? '';
 if ($currentRole !== 'admin') {
@@ -176,10 +179,10 @@ if ($filter === 'all') {
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Doctor Leaves</h5>
         <div class="btn-group" role="group" aria-label="Filter leaves">
-            <a href="admin.php?page=doctor_leaves&filter=pending" class="btn btn-sm <?php echo $filter === 'pending' ? 'btn-primary' : 'btn-outline-primary'; ?>">Pending</a>
-            <a href="admin.php?page=doctor_leaves&filter=approved" class="btn btn-sm <?php echo $filter === 'approved' ? 'btn-success' : 'btn-outline-success'; ?>">Approved</a>
-            <a href="admin.php?page=doctor_leaves&filter=rejected" class="btn btn-sm <?php echo $filter === 'rejected' ? 'btn-secondary' : 'btn-outline-secondary'; ?>">Rejected</a>
-            <a href="admin.php?page=doctor_leaves&filter=all" class="btn btn-sm <?php echo $filter === 'all' ? 'btn-dark' : 'btn-outline-dark'; ?>">All</a>
+            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=pending" class="btn btn-sm <?php echo $filter === 'pending' ? 'btn-primary' : 'btn-outline-primary'; ?>">Pending</a>
+            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=approved" class="btn btn-sm <?php echo $filter === 'approved' ? 'btn-success' : 'btn-outline-success'; ?>">Approved</a>
+            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=rejected" class="btn btn-sm <?php echo $filter === 'rejected' ? 'btn-secondary' : 'btn-outline-secondary'; ?>">Rejected</a>
+            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=all" class="btn btn-sm <?php echo $filter === 'all' ? 'btn-dark' : 'btn-outline-dark'; ?>">All</a>
         </div>
     </div>
     <div class="card-body">
@@ -190,7 +193,10 @@ if ($filter === 'all') {
         <div class="card border-0 bg-light mb-3">
             <div class="card-body">
                 <form method="GET" action="admin.php" class="row g-2 align-items-end mb-2">
-                    <input type="hidden" name="page" value="doctor_leaves">
+                    <input type="hidden" name="page" value="<?php echo htmlspecialchars($leavesBasePage); ?>">
+                    <?php if ($inDoctorManagement): ?>
+                        <input type="hidden" name="tab" value="leaves">
+                    <?php endif; ?>
                     <input type="hidden" name="filter" value="<?php echo htmlspecialchars($filter); ?>">
                     <div class="col-md-3">
                         <label class="form-label mb-1">Monthly Leave Summary</label>

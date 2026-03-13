@@ -15,6 +15,7 @@ if (!in_array($role, ['admin','secretary','doctor'])) {
 $schedule_id = (int)($_POST['schedule_id'] ?? 0);
 $start = $_POST['scheduled_start'] ?? '';
 $end = $_POST['scheduled_end'] ?? '';
+$requestedDoctorId = (int)($_POST['user_id'] ?? 0);
 
 if ($schedule_id <= 0 || !$start) {
     http_response_code(400);
@@ -32,15 +33,35 @@ try {
     $stmt->close();
     if (!$sch) throw new Exception('Schedule not found');
 
-    // Role checks: doctors may only reschedule their own schedules
+    // Role checks: doctors may only reschedule their own schedules and cannot reassign doctor.
     if ($role === 'doctor' && (int)$sch['user_id'] !== $user_id) {
         http_response_code(403);
         echo json_encode(['success'=>false,'message'=>'Forbidden']);
         exit;
     }
 
+    $targetDoctorId = (int)$sch['user_id'];
+    if ($requestedDoctorId > 0) {
+        if ($role === 'doctor' && $requestedDoctorId !== $targetDoctorId) {
+            http_response_code(403);
+            echo json_encode(['success'=>false,'message'=>'Doctors cannot reassign schedules to another doctor']);
+            exit;
+        }
+        $targetDoctorId = $requestedDoctorId;
+    }
+
+    $docStmt = $conn->prepare('SELECT user_id FROM users WHERE user_id = ? AND role_id = 2 LIMIT 1');
+    $docStmt->bind_param('i', $targetDoctorId);
+    $docStmt->execute();
+    $docRow = $docStmt->get_result()->fetch_assoc();
+    $docStmt->close();
+    if (!$docRow) {
+        echo json_encode(['success'=>false,'message'=>'Selected doctor does not exist']);
+        exit;
+    }
+
     $reschedDate = date('Y-m-d', strtotime($start));
-    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, (int)$sch['user_id'], $reschedDate);
+    [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $targetDoctorId, $reschedDate);
     if (!$bookable) {
         echo json_encode(['success'=>false,'message'=>$bookableMsg]);
         exit;
@@ -48,7 +69,7 @@ try {
 
     // Basic overlap check: reuse smart_schedule overlap query
     $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?) AND schedule_id != ?");
-    $ov->bind_param('issi', $sch['user_id'], $start, $end, $schedule_id);
+    $ov->bind_param('issi', $targetDoctorId, $start, $end, $schedule_id);
     $ov->execute();
     $ores = $ov->get_result();
     $oc = $ores ? $ores->fetch_assoc() : null;
@@ -59,9 +80,9 @@ try {
     }
 
     // Update schedule
-    $ust = $conn->prepare('UPDATE schedules SET scheduled_start = ?, scheduled_end = ?, status = ?, updated_at = NOW() WHERE schedule_id = ?');
+    $ust = $conn->prepare('UPDATE schedules SET user_id = ?, scheduled_start = ?, scheduled_end = ?, status = ?, updated_at = NOW() WHERE schedule_id = ?');
     $status = 'rescheduled';
-    $ust->bind_param('sssi', $start, $end, $status, $schedule_id);
+    $ust->bind_param('isssi', $targetDoctorId, $start, $end, $status, $schedule_id);
     $ust->execute();
     $affected = $ust->affected_rows;
     $ust->close();
@@ -73,7 +94,13 @@ try {
     $rins->execute();
     if ($rins) $rins->close();
 
-    echo json_encode(['success'=>true,'message'=>'Schedule rescheduled','schedule_id'=>$schedule_id,'affected'=>$affected]);
+    echo json_encode([
+        'success'=>true,
+        'message'=>'Schedule updated',
+        'schedule_id'=>$schedule_id,
+        'doctor_id'=>$targetDoctorId,
+        'affected'=>$affected
+    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success'=>false,'message'=>$e->getMessage()]);

@@ -2,6 +2,7 @@
 include_once '../config/database.php';
 include_once '../config/security.php';
 security_start_session();
+security_ensure_auth_columns($conn);
 security_ensure_work_type_column($conn);
 $csrf_token = security_generate_csrf_token();
 
@@ -9,14 +10,28 @@ $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 $user_type = $_GET['type'] ?? 'users'; // 'users' or 'patients'
 $search = $_GET['search'] ?? ''; // search query
 
+if (!function_exists('manage_users_redirect')) {
+    function manage_users_redirect($type = 'users')
+    {
+        $safeType = ($type === 'patients') ? 'patients' : 'users';
+        $url = 'admin.php?page=manage_users&type=' . rawurlencode($safeType);
+        if (!headers_sent()) {
+            header('Location: ' . $url);
+        } else {
+            echo '<script>window.location.href=' . json_encode($url) . ';</script>';
+            echo '<noscript><meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '"></noscript>';
+        }
+        exit;
+    }
+}
+
 // Handle ARCHIVE action (change status to inactive)
 if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
         $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
         $_SESSION['message_type'] = 'danger';
-        header('Location: ../admin.php?page=manage_users&type=' . ($_POST['type'] ?? 'users'));
-        exit;
+        manage_users_redirect($_POST['type'] ?? 'users');
     }
 
     $id = $_POST['id'] ?? 0;
@@ -40,8 +55,82 @@ if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt->close();
     }
-    header('Location: ../admin.php?page=manage_users&type=' . $type);
-    exit;
+    manage_users_redirect($type);
+}
+
+// Handle RESET PASSWORD action (admin only for system users)
+if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+
+    $id = (int)($_POST['id'] ?? 0);
+    if ($id <= 0) {
+        $_SESSION['message'] = 'Invalid user selected for password reset.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+
+    $findSql = "SELECT u.user_id, u.first_name, u.last_name, u.email, r.role_name
+                FROM users u
+                LEFT JOIN role r ON r.role_id = u.role_id
+                WHERE u.user_id = ?
+                LIMIT 1";
+    $findStmt = $conn->prepare($findSql);
+    if (!$findStmt) {
+        $_SESSION['message'] = 'Database error while preparing reset.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+    $findStmt->bind_param('i', $id);
+    $findStmt->execute();
+    $found = $findStmt->get_result();
+    $targetUser = $found ? $found->fetch_assoc() : null;
+    $findStmt->close();
+
+    if (!$targetUser) {
+        $_SESSION['message'] = 'User account not found.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+
+    $temporaryPassword = security_generate_default_password();
+    $temporaryHash = security_hash_password($temporaryPassword);
+
+    $updSql = "UPDATE users
+               SET password_hash = ?,
+                   must_change_password = 1,
+                   password_updated_at = NOW(),
+                   failed_login_attempts = 0,
+                   locked_until = NULL
+               WHERE user_id = ?";
+    $updStmt = $conn->prepare($updSql);
+    if (!$updStmt) {
+        $_SESSION['message'] = 'Database error while saving new password.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+    $updStmt->bind_param('si', $temporaryHash, $id);
+    $ok = $updStmt->execute();
+    $updStmt->close();
+
+    if ($ok) {
+        if ((int)($_SESSION['user_id'] ?? 0) === $id) {
+            $_SESSION['must_change_password'] = true;
+        }
+        $displayName = trim((string)($targetUser['first_name'] ?? '') . ' ' . (string)($targetUser['last_name'] ?? ''));
+        $roleName = (string)($targetUser['role_name'] ?? 'user');
+        $_SESSION['message'] = 'Temporary password generated for ' . $displayName . ' (' . $roleName . '): ' . $temporaryPassword . '. Share this securely. User must change password on next login.';
+        $_SESSION['message_type'] = 'success';
+    } else {
+        $_SESSION['message'] = 'Failed to reset password.';
+        $_SESSION['message_type'] = 'danger';
+    }
+
+    manage_users_redirect('users');
 }
 
 // Fetch users from users table
@@ -107,6 +196,13 @@ if ($roles_result) {
         $roles[] = $row;
     }
 }
+$doctorRoleId = 2;
+foreach ($roles as $roleRow) {
+    if (strtolower((string)($roleRow['role_name'] ?? '')) === 'doctor') {
+        $doctorRoleId = (int)($roleRow['role_id'] ?? 2);
+        break;
+    }
+}
 ?>
 
  
@@ -114,7 +210,7 @@ if ($roles_result) {
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
-        <?php echo $_SESSION['message']; ?>
+        <?php echo htmlspecialchars((string)$_SESSION['message']); ?>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
@@ -172,7 +268,7 @@ if ($roles_result) {
                                     <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
                                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                                     <td>
-                                        <span class="badge">
+                                        <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($user['role_name'] ?? 'N/A'); ?>
                                         </span>
                                     </td>
@@ -200,6 +296,14 @@ if ($roles_result) {
                                                 data-bs-target="#editUserModal" onclick="editUser(<?php echo htmlspecialchars(json_encode($user)); ?>)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Generate a new temporary password for this account?');">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="action" value="reset_password">
+                                            <input type="hidden" name="id" value="<?php echo (int)$user['user_id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-warning" title="Generate Temporary Password">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                        </form>
                                         <form method="POST" style="display:inline;" 
                                               onsubmit="return confirm('Are you sure you want to archive this user?');">
                                                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
@@ -270,7 +374,7 @@ if ($roles_result) {
                                     <td>
                                         <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" 
                                                 data-bs-target="#editPatientModal" onclick="editPatient(<?php echo htmlspecialchars(json_encode($patient)); ?>)">
-                                            <i class="bi bi-pencil"></i> Edit
+                                            <i class="bi bi-pencil"></i>
                                         </button>
                                         <form method="POST" style="display:inline;" 
                                               onsubmit="return confirm('Are you sure you want to archive this patient?');">
@@ -278,8 +382,8 @@ if ($roles_result) {
                                             <input type="hidden" name="action" value="archive">
                                             <input type="hidden" name="id" value="<?php echo $patient['patient_id']; ?>">
                                             <input type="hidden" name="type" value="patients">
-                                            <button type="submit" class="btn btn-sm btn-warning">
-                                                <i class="bi bi-archive"></i> Archive
+                                            <button type="submit" class="btn btn-sm btn-danger">
+                                                <i class="bi bi-archive"></i>
                                             </button>
                                         </form>
                                     </td>
@@ -630,16 +734,23 @@ function editUser(user) {
 }
 
 function toggleDoctorWorkTypeFields() {
+    const doctorRoleId = <?php echo (int)$doctorRoleId; ?>;
     const addRole = document.getElementById('add_role_id');
     const editRole = document.getElementById('edit_role_id');
     const addWrap = document.getElementById('add_work_type_wrap');
     const editWrap = document.getElementById('edit_work_type_wrap');
+    const addWorkType = document.getElementById('add_work_type');
+    const editWorkType = document.getElementById('edit_work_type');
 
     if (addRole && addWrap) {
-        addWrap.style.display = (String(addRole.value) === '2') ? '' : 'none';
+        const isDoctor = (String(addRole.value) === String(doctorRoleId));
+        addWrap.style.display = isDoctor ? '' : 'none';
+        if (!isDoctor && addWorkType) addWorkType.value = 'regular';
     }
     if (editRole && editWrap) {
-        editWrap.style.display = (String(editRole.value) === '2') ? '' : 'none';
+        const isDoctor = (String(editRole.value) === String(doctorRoleId));
+        editWrap.style.display = isDoctor ? '' : 'none';
+        if (!isDoctor && editWorkType) editWorkType.value = 'regular';
     }
 }
 

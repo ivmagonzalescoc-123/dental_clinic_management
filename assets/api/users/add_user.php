@@ -30,8 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
     $gender = $gender_raw !== '' ? $gender_raw : null;
     $address = $address_raw !== '' ? $address_raw : null;
+    $doctor_role_id = 0;
+    $roleStmt = $conn->prepare("SELECT role_id FROM role WHERE LOWER(role_name) = 'doctor' LIMIT 1");
+    if ($roleStmt) {
+        $roleStmt->execute();
+        $roleRes = $roleStmt->get_result();
+        if ($roleRes && ($roleRow = $roleRes->fetch_assoc())) {
+            $doctor_role_id = (int)($roleRow['role_id'] ?? 0);
+        }
+        $roleStmt->close();
+    }
+
     $work_type = 'regular';
-    if ($role_id === 2) {
+    if ($doctor_role_id > 0 && $role_id === $doctor_role_id) {
         $work_type = ($work_type_raw === 'part_time') ? 'part_time' : 'regular';
     }
 
