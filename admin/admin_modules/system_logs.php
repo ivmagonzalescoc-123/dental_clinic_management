@@ -43,10 +43,11 @@ function format_user_label(array $r): string
     return 'Unknown';
 }
 
-function format_session_status(?string $logoutTime, ?string $lastActivity, int $sessionTimeoutSeconds): string
+function format_activity_status(?string $logoutTime, ?string $lastActivity, int $sessionTimeoutSeconds): string
 {
-    if (!empty($logoutTime)) return 'Closed';
-    if (!empty($lastActivity) && (time() - strtotime($lastActivity)) > $sessionTimeoutSeconds) return 'Closed';
+    if (empty($lastActivity)) return 'Inactive';
+    if (!empty($logoutTime)) return 'Inactive';
+    if ((time() - strtotime($lastActivity)) > $sessionTimeoutSeconds) return 'Inactive';
     return 'Active';
 }
 
@@ -80,8 +81,6 @@ if ($view === 'user_logs') {
         SELECT
             ul.user_log_id,
             ul.login_time,
-            ul.last_activity,
-            ul.logout_time,
             ul.ip_address,
             u.user_id,
             u.first_name,
@@ -135,24 +134,29 @@ if ($view === 'user_logs') {
 } elseif ($view === 'active_users') {
     $sql = "
         SELECT
-            ul.user_log_id,
-            ul.login_time,
-            ul.last_activity,
-            ul.ip_address,
             u.user_id,
             u.first_name,
             u.last_name,
             u.email,
-            r.role_name
-        FROM user_logs ul
-        INNER JOIN users u ON u.user_id = ul.user_id
+            r.role_name,
+            ul.login_time,
+            ul.last_activity,
+            ul.logout_time,
+            ul.ip_address
+        FROM users u
         LEFT JOIN role r ON r.role_id = u.role_id
-        WHERE ul.logout_time IS NULL
-          AND TIMESTAMPDIFF(SECOND, COALESCE(ul.last_activity, ul.login_time), NOW()) <= ?
+        LEFT JOIN user_logs ul ON ul.user_log_id = (
+            SELECT x.user_log_id
+            FROM user_logs x
+            WHERE x.user_id = u.user_id
+            ORDER BY x.login_time DESC
+            LIMIT 1
+        )
+        WHERE 1=1
     ";
 
-        $params = [$userSessionTimeoutSeconds];
-    $types = 'i';
+    $params = [];
+    $types = '';
 
     if ($search !== '') {
         $sql .= ' AND (u.first_name LIKE ? OR u.last_name LIKE ? OR u.email LIKE ? OR ul.ip_address LIKE ?)';
@@ -161,11 +165,13 @@ if ($view === 'user_logs') {
         array_push($params, $like, $like, $like, $like);
     }
 
-    $sql .= ' ORDER BY COALESCE(ul.last_activity, ul.login_time) DESC LIMIT 500';
+    $sql .= ' ORDER BY u.last_name ASC, u.first_name ASC LIMIT 1000';
 
     $stmt = $conn->prepare($sql);
     if ($stmt) {
-        stmt_bind_params($stmt, $types, $params);
+        if ($types !== '') {
+            stmt_bind_params($stmt, $types, $params);
+        }
         $stmt->execute();
         $res = $stmt->get_result();
         if ($res) {
@@ -230,7 +236,7 @@ if ($view === 'user_logs') {
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center gap-2" style="flex-wrap: nowrap;">
         <div class="d-flex align-items-center gap-2" style="min-width:0;">
-            <h2 class="card-title mb-0">Session Logs</h2>
+            <h2 class="card-title mb-0">Login History & Live Session Monitor</h2>
         </div>
 
         <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
@@ -238,7 +244,7 @@ if ($view === 'user_logs') {
                 <input type="hidden" name="page" value="system_logs">
                 <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
 
-                <input type="text" class="form-control form-control-sm" name="search" placeholder="Search user or IP..." value="<?php echo htmlspecialchars($search); ?>" style="width: 260px;">
+                <input type="text" class="form-control form-control-sm" name="search" placeholder="Search name, email, or IP..." value="<?php echo htmlspecialchars($search); ?>" style="width: 260px;">
 
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -296,11 +302,8 @@ if ($view === 'user_logs') {
                     <thead>
                         <?php if ($view === 'user_logs'): ?>
                             <tr>
-                                <th style="width: 190px;">Login</th>
-                                <th style="width: 190px;">Last Activity</th>
-                                <th style="width: 190px;">Logout</th>
-                                <th style="width: 90px;">Status</th>
                                 <th style="width: 240px;">User</th>
+                                <th style="width: 190px;">Login</th>
                                 <th style="width: 160px;">IP</th>
                             </tr>
                         <?php elseif ($view === 'active_users'): ?>
@@ -309,62 +312,57 @@ if ($view === 'user_logs') {
                                 <th style="width: 140px;">Role</th>
                                 <th style="width: 190px;">Login</th>
                                 <th style="width: 190px;">Last Activity</th>
-                                <th style="width: 90px;">Status</th>
                                 <th style="width: 160px;">IP</th>
+                                <th style="width: 110px;">Status</th>
                             </tr>
                         <?php else: ?>
                             <tr>
                                 <th style="width: 240px;">Patient</th>
                                 <th style="width: 190px;">Last Login</th>
                                 <th style="width: 190px;">Last Activity</th>
-                                <th style="width: 190px;">Logout</th>
-                                <th style="width: 90px;">Status</th>
                                 <th style="width: 160px;">IP</th>
+                                <th style="width: 110px;">Status</th>
                             </tr>
                         <?php endif; ?>
                     </thead>
                     <tbody>
                         <?php if ($view === 'user_logs'): ?>
                             <?php foreach ($rows as $r): ?>
-                                <?php $status = format_session_status($r['logout_time'] ?? null, $r['last_activity'] ?? null, $userSessionTimeoutSeconds); ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars((string)($r['login_time'] ?? '')); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($r['last_activity'] ?? '')); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($r['logout_time'] ?? '')); ?></td>
-                                    <td>
-                                        <span class="badge bg-<?php echo htmlspecialchars(session_badge_class($status)); ?>">
-                                            <?php echo htmlspecialchars($status); ?>
-                                        </span>
-                                    </td>
                                     <td><?php echo htmlspecialchars(format_user_label($r)); ?></td>
+                                    <td><?php echo htmlspecialchars((string)($r['login_time'] ?? '')); ?></td>
                                     <td><?php echo htmlspecialchars((string)($r['ip_address'] ?? '')); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php elseif ($view === 'active_users'): ?>
                             <?php foreach ($rows as $r): ?>
+                                <?php $status = format_activity_status($r['logout_time'] ?? null, $r['last_activity'] ?? null, $userSessionTimeoutSeconds); ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars(format_user_label($r)); ?></td>
                                     <td><?php echo htmlspecialchars((string)($r['role_name'] ?? '')); ?></td>
                                     <td><?php echo htmlspecialchars((string)($r['login_time'] ?? '')); ?></td>
                                     <td><?php echo htmlspecialchars((string)($r['last_activity'] ?? '')); ?></td>
-                                    <td><span class="badge bg-success">Active</span></td>
                                     <td><?php echo htmlspecialchars((string)($r['ip_address'] ?? '')); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <?php foreach ($rows as $r): ?>
-                                <?php $status = format_session_status($r['logout_time'] ?? null, $r['last_activity'] ?? null, $patientSessionTimeoutSeconds); ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars(trim((string)($r['first_name'] ?? '') . ' ' . (string)($r['last_name'] ?? '')) ?: (string)($r['email'] ?? 'Unknown')); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($r['login_time'] ?? '')); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($r['last_activity'] ?? '')); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($r['logout_time'] ?? '')); ?></td>
                                     <td>
                                         <span class="badge bg-<?php echo htmlspecialchars(session_badge_class($status)); ?>">
                                             <?php echo htmlspecialchars($status); ?>
                                         </span>
                                     </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($rows as $r): ?>
+                                <?php $status = format_activity_status($r['logout_time'] ?? null, $r['last_activity'] ?? null, $patientSessionTimeoutSeconds); ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars(trim((string)($r['first_name'] ?? '') . ' ' . (string)($r['last_name'] ?? '')) ?: (string)($r['email'] ?? 'Unknown')); ?></td>
+                                    <td><?php echo htmlspecialchars((string)($r['login_time'] ?? '')); ?></td>
+                                    <td><?php echo htmlspecialchars((string)($r['last_activity'] ?? '')); ?></td>
                                     <td><?php echo htmlspecialchars((string)($r['ip_address'] ?? '')); ?></td>
+                                    <td>
+                                        <span class="badge bg-<?php echo htmlspecialchars(session_badge_class($status)); ?>">
+                                            <?php echo htmlspecialchars($status); ?>
+                                        </span>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
