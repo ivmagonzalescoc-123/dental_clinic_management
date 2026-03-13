@@ -2078,6 +2078,22 @@ CREATE TABLE `user_logs` (
   `user_log_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `login_time` datetime DEFAULT NULL,
+  `last_activity` datetime DEFAULT NULL,
+  `logout_time` datetime DEFAULT NULL,
+  `ip_address` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `patient_logs`
+--
+
+CREATE TABLE `patient_logs` (
+  `patient_log_id` int(11) NOT NULL,
+  `patient_id` int(11) NOT NULL,
+  `login_time` datetime DEFAULT NULL,
+  `last_activity` datetime DEFAULT NULL,
   `logout_time` datetime DEFAULT NULL,
   `ip_address` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -2342,6 +2358,15 @@ ALTER TABLE `user_logs`
   ADD KEY `fk_user_logs_user` (`user_id`);
 
 --
+-- Indexes for table `patient_logs`
+--
+ALTER TABLE `patient_logs`
+  ADD PRIMARY KEY (`patient_log_id`),
+  ADD KEY `fk_patient_logs_patient` (`patient_id`),
+  ADD KEY `idx_patient_logs_login` (`login_time`),
+  ADD KEY `idx_patient_logs_last_activity` (`last_activity`);
+
+--
 -- Indexes for table `system_logs`
 --
 ALTER TABLE `system_logs`
@@ -2540,6 +2565,12 @@ ALTER TABLE `user_logs`
   MODIFY `user_log_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `patient_logs`
+--
+ALTER TABLE `patient_logs`
+  MODIFY `patient_log_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `system_logs`
 --
 ALTER TABLE `system_logs`
@@ -2722,6 +2753,12 @@ ALTER TABLE `user_access_modules`
 --
 ALTER TABLE `user_logs`
   ADD CONSTRAINT `fk_user_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `patient_logs`
+--
+ALTER TABLE `patient_logs`
+  ADD CONSTRAINT `fk_patient_logs_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `system_logs`

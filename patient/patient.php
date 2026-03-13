@@ -209,6 +209,7 @@ $csrf_token = security_generate_csrf_token();
 
     <!-- Template Main JS File -->
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
     <script>
@@ -249,6 +250,16 @@ $csrf_token = security_generate_csrf_token();
             }).catch(error => {
                 console.error('Logout error:', error);
                 window.location.href = '../index.php';
+            });
+        }
+
+        if (typeof initSessionIdleMonitor === 'function') {
+            initSessionIdleMonitor({
+                idleLimitSeconds: 900,
+                countdownSeconds: 60,
+                roleLabel: 'Patient',
+                pingUrl: '../assets/api/auth/session_ping.php',
+                logoutFn: logout
             });
         }
     </script>

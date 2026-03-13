@@ -278,6 +278,7 @@ try {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
     <script>
@@ -311,6 +312,16 @@ try {
             }).catch(error => {
                 console.error('Logout error:', error);
                 window.location.href = '../index.php';
+            });
+        }
+
+        if (typeof initSessionIdleMonitor === 'function') {
+            initSessionIdleMonitor({
+                idleLimitSeconds: 3600,
+                countdownSeconds: 60,
+                roleLabel: 'User',
+                pingUrl: '../assets/api/auth/session_ping.php',
+                logoutFn: logout
             });
         }
     </script>

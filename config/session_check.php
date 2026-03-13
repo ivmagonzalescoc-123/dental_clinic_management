@@ -9,7 +9,85 @@
  */
 
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/database.php';
 security_start_session();
+
+if (!defined('SESSION_TIMEOUT_SECONDS')) {
+    define('SESSION_TIMEOUT_SECONDS', 30 * 60);
+}
+if (!defined('SESSION_USER_IDLE_SECONDS')) {
+    define('SESSION_USER_IDLE_SECONDS', 60 * 60);
+}
+if (!defined('SESSION_PATIENT_IDLE_SECONDS')) {
+    define('SESSION_PATIENT_IDLE_SECONDS', 15 * 60);
+}
+if (!defined('SESSION_IDLE_WARNING_GRACE_SECONDS')) {
+    define('SESSION_IDLE_WARNING_GRACE_SECONDS', 60);
+}
+
+if (!function_exists('get_session_timeout_seconds_for_role')) {
+    function get_session_timeout_seconds_for_role(string $role): int
+    {
+        $idleLimit = ($role === 'patient') ? SESSION_PATIENT_IDLE_SECONDS : SESSION_USER_IDLE_SECONDS;
+        return $idleLimit + SESSION_IDLE_WARNING_GRACE_SECONDS;
+    }
+}
+
+if (!function_exists('close_session_log_rows')) {
+    function close_session_log_rows(mysqli $conn): void
+    {
+        $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+        $userLogId = isset($_SESSION['user_log_id']) ? (int)$_SESSION['user_log_id'] : 0;
+        $patientId = isset($_SESSION['patient_id']) ? (int)$_SESSION['patient_id'] : 0;
+        $patientLogId = isset($_SESSION['patient_log_id']) ? (int)$_SESSION['patient_log_id'] : 0;
+
+        if ($userId > 0 && $userLogId > 0 && function_exists('table_exists') && table_exists($conn, 'user_logs')) {
+            $stmt = $conn->prepare('UPDATE user_logs SET logout_time = NOW() WHERE user_log_id = ? AND user_id = ? AND logout_time IS NULL LIMIT 1');
+            if ($stmt) {
+                $stmt->bind_param('ii', $userLogId, $userId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        if ($patientId > 0 && $patientLogId > 0 && function_exists('table_exists') && table_exists($conn, 'patient_logs')) {
+            $stmt = $conn->prepare('UPDATE patient_logs SET logout_time = NOW() WHERE patient_log_id = ? AND patient_id = ? AND logout_time IS NULL LIMIT 1');
+            if ($stmt) {
+                $stmt->bind_param('ii', $patientLogId, $patientId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
+}
+
+if (!function_exists('touch_session_log_rows')) {
+    function touch_session_log_rows(mysqli $conn): void
+    {
+        $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
+        $userLogId = isset($_SESSION['user_log_id']) ? (int)$_SESSION['user_log_id'] : 0;
+        $patientId = isset($_SESSION['patient_id']) ? (int)$_SESSION['patient_id'] : 0;
+        $patientLogId = isset($_SESSION['patient_log_id']) ? (int)$_SESSION['patient_log_id'] : 0;
+
+        if ($userId > 0 && $userLogId > 0 && function_exists('table_exists') && table_exists($conn, 'user_logs')) {
+            $stmt = $conn->prepare('UPDATE user_logs SET last_activity = NOW() WHERE user_log_id = ? AND user_id = ? AND logout_time IS NULL LIMIT 1');
+            if ($stmt) {
+                $stmt->bind_param('ii', $userLogId, $userId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+
+        if ($patientId > 0 && $patientLogId > 0 && function_exists('table_exists') && table_exists($conn, 'patient_logs')) {
+            $stmt = $conn->prepare('UPDATE patient_logs SET last_activity = NOW() WHERE patient_log_id = ? AND patient_id = ? AND logout_time IS NULL LIMIT 1');
+            if ($stmt) {
+                $stmt->bind_param('ii', $patientLogId, $patientId);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
+}
 
 if (!function_exists('check_session')) {
     function check_session($allowed_roles = []) {
@@ -24,6 +102,9 @@ if (!function_exists('check_session')) {
 
     // Check if user role is allowed
     if (!in_array($user_role, $allowed_roles)) {
+        if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+            close_session_log_rows($GLOBALS['conn']);
+        }
         session_destroy();
         header('Location: ../index.php');
         exit;
@@ -47,8 +128,11 @@ if (!function_exists('check_session')) {
     }
 
     // Optional: Check session timeout (30 minutes)
-    $timeout = 30 * 60; // 30 minutes in seconds
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+    $timeoutSeconds = get_session_timeout_seconds_for_role((string)$user_role);
+    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeoutSeconds)) {
+        if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+            close_session_log_rows($GLOBALS['conn']);
+        }
         session_destroy();
         header('Location: ../index.php?timeout=1');
         exit;
@@ -56,11 +140,17 @@ if (!function_exists('check_session')) {
 
     // Update last activity time
     $_SESSION['last_activity'] = time();
+    if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+        touch_session_log_rows($GLOBALS['conn']);
+    }
 }
 }
 
 if (!function_exists('logout')) {
     function logout() {
+        if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+            close_session_log_rows($GLOBALS['conn']);
+        }
         session_destroy();
         header('Location: ../index.php');
         exit;

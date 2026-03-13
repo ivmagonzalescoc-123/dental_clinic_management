@@ -294,6 +294,7 @@ if ($page === 'appointments') {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
     <script>
@@ -329,6 +330,16 @@ if ($page === 'appointments') {
                     window.location.href = '../index.php';
                 });
         }
+
+        if (typeof initSessionIdleMonitor === 'function') {
+            initSessionIdleMonitor({
+                idleLimitSeconds: 3600,
+                countdownSeconds: 60,
+                roleLabel: 'User',
+                pingUrl: '../assets/api/auth/session_ping.php',
+                logoutFn: logout
+            });
+        }
     </script>
 
     <script>
@@ -347,13 +358,11 @@ if ($page === 'appointments') {
                 document.body.appendChild(container);
             }
             const el = document.createElement('div');
-            el.className = 'alert alert-' + (type || 'info') + ' alert-dismissible';
+            el.className = 'alert alert-' + (type || 'info');
             el.role = 'alert';
             el.style.minWidth = '200px';
-            el.innerHTML = message + '<button type="button" class="btn-close" aria-label="Close" style="float:right;"></button>';
+            el.innerHTML = message;
             container.appendChild(el);
-            const closeBtn = el.querySelector('.btn-close');
-            closeBtn.addEventListener('click', () => el.remove());
             setTimeout(() => { try { el.remove(); } catch (e) { } }, 4000);
         }
     </script>

@@ -92,12 +92,32 @@ function auth_record_user_login(mysqli $conn, int $userId): ?int
     }
 
     $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    $stmt = $conn->prepare('INSERT INTO user_logs (user_id, login_time, ip_address) VALUES (?, NOW(), ?)');
+    $stmt = $conn->prepare('INSERT INTO user_logs (user_id, login_time, last_activity, ip_address) VALUES (?, NOW(), NOW(), ?)');
     if (!$stmt) {
         return null;
     }
 
     $stmt->bind_param('is', $userId, $ipAddress);
+    $ok = $stmt->execute();
+    $insertId = $ok ? (int)$conn->insert_id : 0;
+    $stmt->close();
+
+    return $insertId > 0 ? $insertId : null;
+}
+
+function auth_record_patient_login(mysqli $conn, int $patientId): ?int
+{
+    if (!auth_table_exists($conn, 'patient_logs')) {
+        return null;
+    }
+
+    $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $stmt = $conn->prepare('INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address) VALUES (?, NOW(), NOW(), ?)');
+    if (!$stmt) {
+        return null;
+    }
+
+    $stmt->bind_param('is', $patientId, $ipAddress);
     $ok = $stmt->execute();
     $insertId = $ok ? (int)$conn->insert_id : 0;
     $stmt->close();
@@ -271,6 +291,11 @@ $_SESSION['role'] = 'patient';
 $_SESSION['user_type'] = 'patient';
 $_SESSION['must_change_password'] = (int)($patient['must_change_password'] ?? 0) === 1;
 $_SESSION['last_activity'] = time();
+
+$patientLogId = auth_record_patient_login($conn, (int)$patient['patient_id']);
+if ($patientLogId !== null) {
+    $_SESSION['patient_log_id'] = $patientLogId;
+}
 
 log_system_event($conn, 'auth.login', 'patients', (int)$patient['patient_id'], 'Patient login successful', null);
 

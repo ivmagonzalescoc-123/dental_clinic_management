@@ -312,7 +312,7 @@ foreach ($schedules as $row) {
         toastEl.setAttribute('role', 'alert');
         toastEl.setAttribute('aria-live', 'assertive');
         toastEl.setAttribute('aria-atomic', 'true');
-        toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + String(message || '') + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>';
+        toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + String(message || '') + '</div></div>';
         container.appendChild(toastEl);
         if (window.bootstrap && window.bootstrap.Toast) {
             const instance = new bootstrap.Toast(toastEl, { delay: 2800 });

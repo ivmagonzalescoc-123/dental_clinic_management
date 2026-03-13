@@ -9,11 +9,21 @@ security_start_session();
 $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $currentPatientId = isset($_SESSION['patient_id']) ? (int)$_SESSION['patient_id'] : null;
 $currentUserLogId = isset($_SESSION['user_log_id']) ? (int)$_SESSION['user_log_id'] : null;
+$currentPatientLogId = isset($_SESSION['patient_log_id']) ? (int)$_SESSION['patient_log_id'] : null;
 
 if ($currentUserId !== null && $currentUserLogId !== null && function_exists('table_exists') && table_exists($conn, 'user_logs')) {
     $stmt = $conn->prepare('UPDATE user_logs SET logout_time = NOW() WHERE user_log_id = ? AND user_id = ? AND logout_time IS NULL LIMIT 1');
     if ($stmt) {
         $stmt->bind_param('ii', $currentUserLogId, $currentUserId);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+if ($currentPatientId !== null && $currentPatientLogId !== null && function_exists('table_exists') && table_exists($conn, 'patient_logs')) {
+    $stmt = $conn->prepare('UPDATE patient_logs SET logout_time = NOW() WHERE patient_log_id = ? AND patient_id = ? AND logout_time IS NULL LIMIT 1');
+    if ($stmt) {
+        $stmt->bind_param('ii', $currentPatientLogId, $currentPatientId);
         $stmt->execute();
         $stmt->close();
     }
