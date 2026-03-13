@@ -280,7 +280,7 @@ foreach ($roles as $roleRow) {
                                         <?php if ($isDoctor): ?>
                                             <span class="badge bg-<?php echo $workType === 'Part-time' ? 'warning text-dark' : 'success'; ?>"><?php echo htmlspecialchars($workType); ?></span>
                                         <?php else: ?>
-                                            <span class="text-muted small">N/A</span>
+                                            <span class="badge bg-success">Regular</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($user['phone_number']); ?></td>
