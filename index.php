@@ -97,10 +97,6 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                     </div>
 
                     <div class="mt-4">
-                        <button class="btn btn-primary-minimal me-2" data-bs-toggle="modal"
-                            data-bs-target="#loginModal">
-                            <i class="bi bi-calendar2-check"></i> Book Appointment
-                        </button>
                         <button class="btn btn-secondary-minimal" data-bs-toggle="modal"
                             data-bs-target="#registerModal">
                             <i class="bi bi-person-plus"></i>Create Account

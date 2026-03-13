@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 include '../../../config/database.php';
 include '../../../config/security.php';
+include '../../../config/system_logs.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -68,6 +69,40 @@ function auth_record_success(mysqli $conn, $table, $pkCol, $pkVal, $newHash = nu
         $stmt->execute();
         $stmt->close();
     }
+}
+
+function auth_table_exists(mysqli $conn, string $tableName): bool
+{
+    $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?");
+    if (!$stmt) {
+        return false;
+    }
+    $stmt->bind_param('s', $tableName);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $row = $res ? $res->fetch_assoc() : null;
+    $stmt->close();
+    return (int)($row['c'] ?? 0) > 0;
+}
+
+function auth_record_user_login(mysqli $conn, int $userId): ?int
+{
+    if (!auth_table_exists($conn, 'user_logs')) {
+        return null;
+    }
+
+    $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $stmt = $conn->prepare('INSERT INTO user_logs (user_id, login_time, ip_address) VALUES (?, NOW(), ?)');
+    if (!$stmt) {
+        return null;
+    }
+
+    $stmt->bind_param('is', $userId, $ipAddress);
+    $ok = $stmt->execute();
+    $insertId = $ok ? (int)$conn->insert_id : 0;
+    $stmt->close();
+
+    return $insertId > 0 ? $insertId : null;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -158,6 +193,12 @@ if ($stmt) {
         $_SESSION['must_change_password'] = (int)($user['must_change_password'] ?? 0) === 1;
         $_SESSION['last_activity'] = time();
 
+        $userLogId = auth_record_user_login($conn, (int)$user['user_id']);
+        if ($userLogId !== null) {
+            $_SESSION['user_log_id'] = $userLogId;
+        }
+        log_system_event($conn, 'auth.login', 'users', (int)$user['user_id'], 'User login successful', (int)$user['user_id']);
+
         echo json_encode([
             'success' => true,
             'message' => 'Login successful',
@@ -230,6 +271,8 @@ $_SESSION['role'] = 'patient';
 $_SESSION['user_type'] = 'patient';
 $_SESSION['must_change_password'] = (int)($patient['must_change_password'] ?? 0) === 1;
 $_SESSION['last_activity'] = time();
+
+log_system_event($conn, 'auth.login', 'patients', (int)$patient['patient_id'], 'Patient login successful', null);
 
 echo json_encode([
     'success' => true,

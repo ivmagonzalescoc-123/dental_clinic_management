@@ -2082,6 +2082,24 @@ CREATE TABLE `user_logs` (
   `ip_address` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `system_logs`
+--
+
+CREATE TABLE `system_logs` (
+  `system_log_id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `action` varchar(120) NOT NULL,
+  `entity_type` varchar(100) DEFAULT NULL,
+  `entity_id` int(11) DEFAULT NULL,
+  `details` text DEFAULT NULL,
+  `ip_address` varchar(100) DEFAULT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -2324,6 +2342,14 @@ ALTER TABLE `user_logs`
   ADD KEY `fk_user_logs_user` (`user_id`);
 
 --
+-- Indexes for table `system_logs`
+--
+ALTER TABLE `system_logs`
+  ADD PRIMARY KEY (`system_log_id`),
+  ADD KEY `fk_system_logs_user` (`user_id`),
+  ADD KEY `idx_system_logs_action_created` (`action`,`created_at`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -2514,6 +2540,12 @@ ALTER TABLE `user_logs`
   MODIFY `user_log_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `system_logs`
+--
+ALTER TABLE `system_logs`
+  MODIFY `system_log_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- Constraints for dumped tables
 --
 
@@ -2690,6 +2722,12 @@ ALTER TABLE `user_access_modules`
 --
 ALTER TABLE `user_logs`
   ADD CONSTRAINT `fk_user_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `system_logs`
+--
+ALTER TABLE `system_logs`
+  ADD CONSTRAINT `fk_system_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
