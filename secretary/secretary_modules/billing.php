@@ -309,7 +309,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     if (Array.isArray(rec.recommended_services)) servicesArr = rec.recommended_services;
                     else if (typeof rec.recommended_services === 'object') servicesArr = Object.values(rec.recommended_services);
                 }
-                const servicesHtml = servicesArr.length ? servicesArr.map(s => `${s.service_name || s.name || 'Service'} — ₱${(parseFloat(s.initial_price || s.price) || 0).toFixed(2)}`).join('<br>') : 'N/A';
                 let servicesRows = '';
                 let servicesTotal = 0.0;
                 servicesArr.forEach(s => {
@@ -323,7 +322,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     if (Array.isArray(rec.materials_used)) matArr = rec.materials_used;
                     else if (typeof rec.materials_used === 'object') matArr = Object.values(rec.materials_used);
                 }
-                const materialsHtml = matArr.length ? matArr.map(m => `${m.name} (x${m.qty}) ₱${(parseFloat(m.price) || 0).toFixed(2)}`).join('<br>') : '';
                 // Build itemized rows for invoice table
                 let materialsRows = '';
                 let materialsTotal = 0.0;
@@ -336,8 +334,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 });
                 const billingTotal = parseFloat(billing.total_amount) || 0;
                 const consultationFee = Math.max(0, billingTotal - materialsTotal - servicesTotal);
-                const notes = rec && rec.doctor_notes ? rec.doctor_notes : '';
-
                 const invoiceHtml = `
             <div class="container mt-4">
                 <div class="text-center mb-4">
@@ -383,14 +379,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 </table>
                 
                 <!-- Payments removed: invoices only -->
-                
-                <hr>
-                <h6>Clinical Summary (Doctor)</h6>
-                <p class="mb-1"><strong>Recommended Services:</strong> ${servicesHtml}</p>
-                <p class="mb-1"><strong>Treatment Plan:</strong> ${rec && rec.treatment_plan ? (typeof rec.treatment_plan === 'string' ? rec.treatment_plan : JSON.stringify(rec.treatment_plan)) : 'N/A'}</p>
-                <p class="mb-1"><strong>Materials Used:</strong><br>${materialsHtml || 'N/A'}</p>
-                <p class="mb-1"><strong>Follow-up Date:</strong> ${rec && rec.follow_up_date ? rec.follow_up_date : 'N/A'}</p>
-                <p class="mb-1"><strong>Doctor Notes:</strong><br>${notes ? notes.replace(/\n/g, '<br>') : 'N/A'}</p>
                 <hr>
                 <p class="text-center text-muted small">Thank you for choosing Azucena's Dental Clinic!</p>
             </div>

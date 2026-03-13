@@ -16,7 +16,13 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
 $stmt = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE user_id = ? AND DATE(appointment_date) < ?");
 if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = $stmt->get_result(); $past = $res ? (int)$res->fetch_row()[0] : 0; $stmt->close(); }
 
-$stmt = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.user_id = ? AND a.appointment_date = ? AND pa.status IN ('pending','arrived','late')");
+$stmt = $conn->prepare("SELECT COUNT(*)
+                                                FROM appointments a
+                                                LEFT JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
+                                                LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+                                                WHERE COALESCE(a.user_id, t.doctor_id) = ?
+                                                    AND COALESCE(t.slot_date, a.appointment_date) = ?
+                                                    AND (pa.status IN ('pending','arrived','late') OR a.status = 'checked_in')");
 if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = $stmt->get_result(); $queueToday = $res ? (int)$res->fetch_row()[0] : 0; $stmt->close(); }
 
 $appointmentsTotal = 0;

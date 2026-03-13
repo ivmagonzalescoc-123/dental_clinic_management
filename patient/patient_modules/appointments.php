@@ -58,7 +58,7 @@ if ($patient_id) {
 
             <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
                 <label class="form-label">Choose Time Slot</label>
-                <select class="form-select" id="timeslot_id" name="timeslot_id" required>
+                <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
                     <option value="">-- Select a 20-minute slot --</option>
                 </select>
                 <div class="form-text">20-minute slots only: 8:00-12:00 and 1:00-5:00.</div>
@@ -95,6 +95,8 @@ document.addEventListener('DOMContentLoaded', function() {
         dateSelect.value = '';
         if (timeslotWrap && timeslotSelect) {
             timeslotWrap.style.display = 'none';
+            timeslotSelect.disabled = true;
+            timeslotSelect.required = false;
             timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
         }
         cal.innerHTML = '';
@@ -324,10 +326,15 @@ document.addEventListener('DOMContentLoaded', function() {
         timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
         if (!doctorId || !apptDate) {
             timeslotWrap.style.display = 'none';
+            timeslotSelect.value = '';
+            timeslotSelect.disabled = true;
+            timeslotSelect.required = false;
             return;
         }
 
         timeslotWrap.style.display = '';
+        timeslotSelect.disabled = false;
+        timeslotSelect.required = true;
         timeslotSelect.innerHTML = '<option value="">Loading time slots...</option>';
 
         try {

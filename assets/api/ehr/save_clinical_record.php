@@ -1,6 +1,7 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once __DIR__ . '/../appointments/availability_guard.php';
 header('Content-Type: application/json');
 
 // Only doctors may save clinical records
@@ -185,6 +186,7 @@ try {
     // --- Smart-scheduling hook: detect services/treatment items that require scheduling
     $will_need_scheduling = false;
     $created_schedule_id = null;
+    $created_followup_appointment_id = null;
     $service_ids = [];
     if ($recommended_services && is_array($recommended_services)) {
         foreach ($recommended_services as $sid) $service_ids[] = (int)$sid;
@@ -199,7 +201,13 @@ try {
     $total_needed_minutes = 0;
     if (!empty($service_ids)) {
         foreach ($service_ids as $sid) {
-            $sstmt = $conn->prepare('SELECT requires_schedule, default_duration_minutes FROM services WHERE service_id = ?');
+            $sstmt = $conn->prepare(
+                'SELECT s.requires_schedule, COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS duration_minutes
+                 FROM services s
+                 LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+                 WHERE s.service_id = ?
+                 LIMIT 1'
+            );
             $sstmt->bind_param('i', $sid);
             $sstmt->execute();
             $sres = $sstmt->get_result();
@@ -208,7 +216,7 @@ try {
             if ($srow) {
                 if ((int)$srow['requires_schedule'] === 1) {
                     $will_need_scheduling = true;
-                    $total_needed_minutes += (int)$srow['default_duration_minutes'];
+                    $total_needed_minutes += max(20, (int)$srow['duration_minutes']);
                 }
             }
         }
@@ -223,35 +231,210 @@ try {
         }
     }
 
-    if ($will_need_scheduling && $has_valid_followup) {
-        // Normalize follow_up_date to full datetime if only date supplied
-        $book_start = $follow_up_date;
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $book_start)) {
-            $book_start = $book_start . ' 09:00:00';
+    if ($submit_and_finalize && $will_need_scheduling && $has_valid_followup) {
+        $neededMinutes = max(20, (int)$total_needed_minutes);
+
+        // Normalize follow-up preference: date-only starts at 08:00; datetime rounds up to next 20-minute boundary.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $follow_up_date)) {
+            $followDate = $follow_up_date;
+            $preferredStart = '08:00:00';
+        } else {
+            $tmpDt = new DateTime($follow_up_date);
+            $followDate = $tmpDt->format('Y-m-d');
+
+            $hour = (int)$tmpDt->format('H');
+            $min = (int)$tmpDt->format('i');
+            $nextMin = ((int)ceil($min / 20)) * 20;
+            if ($nextMin >= 60) {
+                $hour += 1;
+                $nextMin = 0;
+            }
+            if ($hour > 23) {
+                $hour = 23;
+                $nextMin = 40;
+            }
+            $preferredStart = sprintf('%02d:%02d:00', $hour, $nextMin);
         }
-        $dt_start = new DateTime($book_start);
-        $dt_end = (clone $dt_start)->modify('+' . max(30, $total_needed_minutes) . ' minutes');
-        $book_end = $dt_end->format('Y-m-d H:i:s');
-        $book_start = $dt_start->format('Y-m-d H:i:s');
+
+        [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doctor_id, $followDate);
+        if (!$bookable) {
+            throw new Exception('Follow-up cannot be scheduled: ' . $bookableMsg);
+        }
+
+        appt_ensure_standard_timeslots_for_doctor_date($conn, $doctor_id, $followDate);
+
+        $slotSel = $conn->prepare(
+            "SELECT timeslot_id, start_time, end_time
+             FROM timeslot
+             WHERE doctor_id = ? AND slot_date = ? AND status = 'available'
+               AND TIMESTAMPDIFF(MINUTE, start_time, end_time) = 20
+             ORDER BY start_time ASC"
+        );
+        if (!$slotSel) throw new Exception('Prepare failed (timeslot select): ' . $conn->error);
+        $slotSel->bind_param('is', $doctor_id, $followDate);
+        $slotSel->execute();
+        $slotRes = $slotSel->get_result();
+        $slots = [];
+        while ($sr = $slotRes->fetch_assoc()) {
+            $startSec = strtotime($followDate . ' ' . $sr['start_time']);
+            $endSec = strtotime($followDate . ' ' . $sr['end_time']);
+            $dur = ($startSec && $endSec && $endSec > $startSec) ? (int)(($endSec - $startSec) / 60) : 0;
+            if ($dur <= 0) continue;
+            $slots[] = [
+                'timeslot_id' => (int)$sr['timeslot_id'],
+                'start_time' => $sr['start_time'],
+                'end_time' => $sr['end_time'],
+                'duration' => $dur,
+            ];
+        }
+        $slotSel->close();
+
+        $reservedIds = [];
+        $bookStartTime = null;
+        $bookEndTime = null;
+
+        $count = count($slots);
+        for ($i = 0; $i < $count; $i++) {
+            if (strcmp($slots[$i]['start_time'], $preferredStart) < 0) {
+                continue;
+            }
+
+            $candidateIds = [(int)$slots[$i]['timeslot_id']];
+            $accumulated = (int)$slots[$i]['duration'];
+            $candidateStart = $slots[$i]['start_time'];
+            $candidateEnd = $slots[$i]['end_time'];
+
+            for ($j = $i + 1; $j < $count && $accumulated < $neededMinutes; $j++) {
+                if ($slots[$j]['start_time'] !== $candidateEnd) {
+                    break;
+                }
+                $candidateIds[] = (int)$slots[$j]['timeslot_id'];
+                $accumulated += (int)$slots[$j]['duration'];
+                $candidateEnd = $slots[$j]['end_time'];
+            }
+
+            if ($accumulated < $neededMinutes) {
+                continue;
+            }
+
+            $candidateStartDT = $followDate . ' ' . $candidateStart;
+            $candidateEndDT = $followDate . ' ' . $candidateEnd;
+
+            // Guard against overlap with existing scheduled/in-progress appointments for this doctor.
+            $ov = $conn->prepare(
+                "SELECT schedule_id
+                 FROM schedules
+                 WHERE user_id = ?
+                   AND status IN ('scheduled','in_progress')
+                   AND scheduled_start < ?
+                   AND scheduled_end > ?
+                 LIMIT 1"
+            );
+            if (!$ov) throw new Exception('Prepare failed (overlap check): ' . $conn->error);
+            $ov->bind_param('iss', $doctor_id, $candidateEndDT, $candidateStartDT);
+            $ov->execute();
+            $ovRow = $ov->get_result()->fetch_assoc();
+            $ov->close();
+
+            if ($ovRow) {
+                continue;
+            }
+
+            $reservedIds = $candidateIds;
+            $bookStartTime = $candidateStart;
+            $bookEndTime = $candidateEnd;
+            break;
+        }
+
+        if (empty($reservedIds) || !$bookStartTime || !$bookEndTime) {
+            throw new Exception('No contiguous available follow-up slots found for the selected date and required duration (' . $neededMinutes . ' mins).');
+        }
+
+        // Create a real follow-up appointment so it enters secretary/doctor workflow normally.
+        $followupServiceId = !empty($service_ids) ? (int)$service_ids[0] : 0;
+        $followupReason = 'Follow-up from appointment #' . $appointment_id;
+        $followupStatus = 'confirmed';
+        $insAppt = $conn->prepare(
+            'INSERT INTO appointments
+             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, service_id, rescheduled_from)
+               VALUES (?, ?, ?, 0, ?, ?, ?, 0, NULL, NULLIF(?,0), ?)'
+        );
+        if (!$insAppt) throw new Exception('Prepare failed (follow-up appointment): ' . $conn->error);
+        $followupDateOnly = $followDate;
+        $followupNotes = 'Auto follow-up scheduled from clinical record of appointment #' . $appointment_id;
+        $rescheduledFrom = $appointment_id;
+        $insAppt->bind_param(
+            'issssiii',
+            $patient_id,
+            $followupDateOnly,
+            $followupReason,
+            $followupNotes,
+            $followupStatus,
+            $doctor_id,
+            $followupServiceId,
+            $rescheduledFrom
+        );
+        if (!$insAppt->execute()) throw new Exception('Failed to create follow-up appointment: ' . $insAppt->error);
+        $created_followup_appointment_id = (int)$conn->insert_id;
+        $insAppt->close();
+
+        // Reserve selected timeslots so secretary/patient cannot book them.
+        $ph = implode(',', array_fill(0, count($reservedIds), '?'));
+        $types = str_repeat('i', count($reservedIds) + 1);
+        $params = array_merge([$created_followup_appointment_id], $reservedIds);
+        $updSql = "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id IN ($ph) AND status = 'available'";
+        $upd = $conn->prepare($updSql);
+        if (!$upd) throw new Exception('Prepare failed (timeslot reserve): ' . $conn->error);
+        $upd->bind_param($types, ...$params);
+        $upd->execute();
+        $affected = (int)$upd->affected_rows;
+        $upd->close();
+
+        if ($affected !== count($reservedIds)) {
+            throw new Exception('Some follow-up slots were just taken. Please retry scheduling.');
+        }
+
+        // Link primary timeslot to follow-up appointment.
+        $firstTimeslotId = (int)$reservedIds[0];
+        $upFollow = $conn->prepare('UPDATE appointments SET timeslot_id = ?, appointment_date = ? WHERE appointment_id = ?');
+        if ($upFollow) {
+            $upFollow->bind_param('isi', $firstTimeslotId, $followDate, $created_followup_appointment_id);
+            $upFollow->execute();
+            $upFollow->close();
+        }
+
+        $book_start = $followDate . ' ' . $bookStartTime;
+        $book_end = $followDate . ' ' . $bookEndTime;
 
         $ins_sql = 'INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, "scheduled")';
         $ins = $conn->prepare($ins_sql);
         if (!$ins) throw new Exception('Prepare failed (schedule insert): ' . $conn->error);
-        $ins->bind_param('iiss', $appointment_id, $doctor_id, $book_start, $book_end);
+        $ins->bind_param('iiss', $created_followup_appointment_id, $doctor_id, $book_start, $book_end);
         if (!$ins->execute()) throw new Exception('Failed to create schedule: ' . $ins->error);
-        $created_schedule_id = $conn->insert_id;
+        $created_schedule_id = (int)$conn->insert_id;
         $ins->close();
 
-        // create a default reminder 24 hours before (same behavior as smart_schedule.php)
+        // Add follow-up into arrivals queue as pending so secretary can mark arrived.
+        $insPa = $conn->prepare(
+            "INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)
+             VALUES (?, ?, ?, 'pending')"
+        );
+        if ($insPa) {
+            $insPa->bind_param('iis', $created_followup_appointment_id, $firstTimeslotId, $bookStartTime);
+            $insPa->execute();
+            $insPa->close();
+        }
+
         $remind_dt = (new DateTime($book_start))->modify('-24 hours')->format('Y-m-d H:i:s');
         $r_sql = 'INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, ?, "in_app", ?)';
         $payload = json_encode(['appointment_id'=>$appointment_id, 'schedule_id'=>$created_schedule_id]);
         $r_stmt = $conn->prepare($r_sql);
-        $r_stmt->bind_param('iss', $created_schedule_id, $remind_dt, $payload);
-        $r_stmt->execute();
-        $r_stmt->close();
+        if ($r_stmt) {
+            $r_stmt->bind_param('iss', $created_schedule_id, $remind_dt, $payload);
+            $r_stmt->execute();
+            $r_stmt->close();
+        }
 
-        // attach schedule_id to clinical record
         $ust2 = $conn->prepare('UPDATE clinical_records SET schedule_id = ? WHERE appointment_id = ?');
         $ust2->bind_param('ii', $created_schedule_id, $appointment_id);
         $ust2->execute();
@@ -354,6 +537,7 @@ try {
         'finalized' => $submit_and_finalize,
         'billing_amount' => isset($total) ? $total : null,
         'schedule_id' => $created_schedule_id,
+        'followup_appointment_id' => $created_followup_appointment_id,
         // Do not prompt suggested scheduling after profiling submission
         'needs_scheduling' => false
     ]);

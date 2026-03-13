@@ -612,11 +612,10 @@ if (!function_exists('secretary_leave_popover_html')) {
 
                     <div class="mb-2">
                         <label class="form-label">Reason</label>
-                        <textarea class="form-control" name="reason" rows="3" maxlength="220" placeholder="State why this leave is being filed."></textarea>
+                        <textarea class="form-control" name="reason" rows="3" maxlength="220" placeholder="(optional)"></textarea>
                     </div>
 
                     <button class="btn btn-primary w-100" type="submit">Submit Leave Request</button>
-                    <small class="text-muted d-block mt-2">Admin approval is required before leave becomes active.</small>
                 </form>
             </div>
         </div>

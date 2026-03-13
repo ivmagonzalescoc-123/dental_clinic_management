@@ -88,7 +88,7 @@ try {
 
     echo json_encode([
         'success'        => true,
-        'message'        => $isLate ? 'Patient marked as arrived (late)' : 'Patient marked as arrived on time',
+        'message'        => $isLate ? 'Marked late.' : 'Marked arrived.',
         'arrival_status' => $newStatus,
         'is_late'        => $isLate,
     ]);

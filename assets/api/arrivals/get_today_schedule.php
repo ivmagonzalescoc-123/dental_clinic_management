@@ -30,7 +30,7 @@ try {
     $extra  = '';
 
     if ($doctor_id) {
-        $extra    = ' AND a.user_id = ?';
+        $extra    = ' AND COALESCE(a.user_id, t.doctor_id) = ?';
         $params[] = $doctor_id;
         $types   .= 'i';
     }
@@ -39,7 +39,7 @@ try {
         SELECT
             a.appointment_id,
             a.patient_id,
-            a.user_id       AS doctor_id,
+            COALESCE(a.user_id, t.doctor_id) AS doctor_id,
             a.service_id,
             a.timeslot_id,
             a.reason,
@@ -90,6 +90,10 @@ try {
             $paStatus = 'in_progress';
         } elseif ($apptStatus === 'completed') {
             $paStatus = 'served';
+        } elseif ($apptStatus === 'checked_in') {
+            $paStatus = 'arrived';
+        } elseif ($paStatus === 'checked_in') {
+            $paStatus = 'arrived';
         } elseif ($paStatus === null) {
             // No arrival record yet — check if overdue
             if ($isToday && $row['start_time']) {

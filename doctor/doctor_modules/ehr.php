@@ -10,13 +10,28 @@ $appointment_id = isset($_GET['appointment_id']) ? (int) $_GET['appointment_id']
 // If no appointment_id provided, fetch today's arrived patients for this doctor
 $queueItems = [];
 if (!$appointment_id) {
-    $sql = "SELECT pa.appointment_id, pa.is_emergency, a.patient_id, p.first_name, p.last_name, a.appointment_date
-            FROM patient_arrivals pa
-            INNER JOIN appointments a ON a.appointment_id = pa.appointment_id
-            JOIN patients p ON a.patient_id = p.patient_id
-            WHERE a.user_id = ? AND a.appointment_date = ?
-              AND pa.status IN ('arrived','late','in_progress')
-            ORDER BY pa.is_emergency DESC, pa.expected_time ASC";
+        $sql = "SELECT
+                                a.appointment_id,
+                                a.is_emergency,
+                                a.patient_id,
+                                p.first_name,
+                                p.last_name,
+                                COALESCE(t.slot_date, a.appointment_date) AS appointment_date,
+                                pa.status AS arrival_status,
+                                pa.expected_time,
+                                a.status AS appointment_status,
+                                t.start_time
+                        FROM appointments a
+                        LEFT JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
+                        LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+                        JOIN patients p ON a.patient_id = p.patient_id
+                        WHERE COALESCE(a.user_id, t.doctor_id) = ?
+                            AND COALESCE(t.slot_date, a.appointment_date) = ?
+                            AND (
+                                        pa.status IN ('arrived','late')
+                                        OR a.status IN ('checked_in','in_progress')
+                                    )
+                        ORDER BY a.is_emergency DESC, COALESCE(pa.expected_time, t.start_time, '00:00:00') ASC";
 
     $qstmt = $conn->prepare($sql);
     if ($qstmt) {
@@ -85,15 +100,15 @@ if ($sstmt) {
             </div>
 
             <div class="col-12">
-                <label class="form-label">Periodontal / Oral Exam Notes</label>
+                <label class="form-label">Oral Exam</label>
                 <textarea id="pf_periodontal_ehr" name="pf_periodontal" class="form-control" rows="2"
-                    placeholder="BPE, pocket depths, recession notes"></textarea>
+                    placeholder="Input oral exam"></textarea>
             </div>
 
             <div class="col-12">
-                <label class="form-label">Dental Chart / Findings</label>
+                <label class="form-label">Findings</label>
                 <textarea id="pf_dental_chart_ehr" name="pf_dental_chart" class="form-control" rows="2"
-                    placeholder="e.g., caries: #16, restored: #11"></textarea>
+                    placeholder="Input findings"></textarea>
             </div>
         </div>
     </div>
@@ -208,6 +223,10 @@ if ($sstmt) {
             const follow_up_date = document.getElementById('follow_up_date')?.value || '';
 
             const radiographs_notes = document.getElementById('radiographs_notes')?.value || '';
+            const profiling = {
+                periodontal: document.getElementById('pf_periodontal_ehr')?.value || '',
+                dental_chart: document.getElementById('pf_dental_chart_ehr')?.value || ''
+            };
 
             const fd = new FormData();
             fd.append('appointment_id', appointment_id);
@@ -234,7 +253,7 @@ if ($sstmt) {
                 const resp = await fetch('../assets/api/ehr/save_clinical_record.php', { method: 'POST', body: fd });
                 const j = await resp.json();
                 if (j.success) {
-                    alert('Saved' + (finalize ? ' and finalized. Billing created: ₱' + (j.billing_amount || 0) : ''));
+                    alert(finalize ? ('Finalized. Billing: ₱' + (j.billing_amount || 0)) : 'Saved.');
                     if (j.schedule_id) document.getElementById('schedule_id_hidden').value = j.schedule_id;
                     if (finalize) {
                         window.location.href = 'doctor.php?page=appointments';

@@ -27,10 +27,13 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 try {
     $conn->begin_transaction();
 
-    // Verify patient has arrived before starting session
+    // Verify patient has arrived/check-in before starting session
     $paStmt = $conn->prepare(
-        "SELECT pa.status AS arrival_status FROM patient_arrivals pa
-         WHERE pa.appointment_id = ? LIMIT 1"
+        "SELECT a.status AS appointment_status, pa.arrival_id, pa.status AS arrival_status
+         FROM appointments a
+         LEFT JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
+         WHERE a.appointment_id = ?
+         LIMIT 1"
     );
     if (!$paStmt) throw new Exception('Prepare failed: ' . $conn->error);
     $paStmt->bind_param('i', $appointment_id);
@@ -38,8 +41,37 @@ try {
     $paRow = $paStmt->get_result()->fetch_assoc();
     $paStmt->close();
 
-    if (!$paRow || !in_array($paRow['arrival_status'], ['arrived', 'late'])) {
+    if (!$paRow) {
+        throw new Exception('Appointment not found.');
+    }
+
+    $arrivalStatus = $paRow['arrival_status'] ?? null;
+    $appointmentStatus = $paRow['appointment_status'] ?? '';
+    $allowed = in_array($arrivalStatus, ['arrived', 'late'], true) || $appointmentStatus === 'checked_in';
+
+    if (!$allowed) {
         throw new Exception('Patient has not been marked as arrived yet.');
+    }
+
+    // Normalize arrival row/status for checked-in appointments to keep queue/session consistent.
+    if (!$arrivalStatus && $appointmentStatus === 'checked_in') {
+        $mkArr = $conn->prepare("INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, arrived_at, status, marked_by)
+                                 SELECT a.appointment_id, a.timeslot_id, t.start_time, NOW(), 'arrived', ?
+                                 FROM appointments a
+                                 INNER JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+                                 WHERE a.appointment_id = ?");
+        if ($mkArr) {
+            $mkArr->bind_param('ii', $doctor_id, $appointment_id);
+            $mkArr->execute();
+            $mkArr->close();
+        }
+    } elseif ($arrivalStatus === 'checked_in') {
+        $fixArr = $conn->prepare("UPDATE patient_arrivals SET status = 'arrived' WHERE appointment_id = ?");
+        if ($fixArr) {
+            $fixArr->bind_param('i', $appointment_id);
+            $fixArr->execute();
+            $fixArr->close();
+        }
     }
 
     // Assign doctor and mark appointment in_progress

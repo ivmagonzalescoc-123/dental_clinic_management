@@ -441,7 +441,7 @@ if ($view === 'today') {
 
                         <div class="mb-3" id="bookTimeslotWrapper" style="display:none;">
                             <label for="bookTimeslotSelect" class="form-label"><strong>Time Slot</strong></label>
-                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select" required>
+                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select" required disabled>
                                 <option value="">-- Select a Time Slot --</option>
                             </select>
                             <small class="text-muted">20-minute slots (8:00-12:00, 1:00-5:00). A slot is required.</small>
@@ -813,8 +813,18 @@ if ($view === 'today') {
                 const wrapper  = document.getElementById('bookTimeslotWrapper');
                 const select   = document.getElementById('bookTimeslotSelect');
 
-                if (!doctorId || !date) { if (wrapper) wrapper.style.display = 'none'; return; }
+                if (!doctorId || !date) {
+                    if (wrapper) wrapper.style.display = 'none';
+                    if (select) {
+                        select.value = '';
+                        select.disabled = true;
+                        select.required = false;
+                    }
+                    return;
+                }
                 if (wrapper) wrapper.style.display = '';
+                select.disabled = false;
+                select.required = true;
                 select.innerHTML = '<option value="">Loading...</option>';
 
                 try {
