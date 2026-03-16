@@ -192,7 +192,7 @@ $weekdayNames = [
                         <th>Doctor</th>
                         <th>Work Type</th>
                         <th>Deployed Days</th>
-                        <th>Booking Behavior</th>
+                        <th>Doctor Schedule</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -229,8 +229,8 @@ $weekdayNames = [
                                 </td>
                                 <td>
                                     <?php echo $type === 'regular'
-                                        ? 'Bookable Monday-Saturday unless on leave.'
-                                        : 'Bookable only on assigned deployment days and not on leave.'; ?>
+                                        ? 'Scheduled from Monday-Saturday unless on leave.'
+                                        : 'Assigned deployment days.'; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

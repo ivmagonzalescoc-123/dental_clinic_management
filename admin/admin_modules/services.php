@@ -389,7 +389,7 @@ if ($tsRes) {
 <?php else: ?>
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">Service Time Profiles</h2>
+        <h2 class="card-title mb-0">Service Averate Time</h2>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#serviceTimeModal" onclick="openServiceTimeModal(null)">
             <i class="bi bi-plus-circle"></i> Add Service Time
         </button>
