@@ -29,27 +29,31 @@ try {
                 a.appointment_date,
                 a.reason,
                 a.status        AS appointment_status,
-                a.service_id,
+                svc.service_id,
                 a.is_emergency,
                 CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
                 p.phone_number,
                 CONCAT(u.first_name, ' ', u.last_name) AS doctor_name,
                 u.user_id       AS doctor_id,
-                s.service_name,
+                svc.service_name,
                 t.timeslot_id,
                 t.start_time,
                 t.end_time,
                 t.status        AS timeslot_status,
-                pa.arrival_id,
-                pa.arrived_at,
-                pa.status       AS arrival_status,
-                pa.notes        AS arrival_notes
+                                t.start_time    AS expected_time
             FROM appointments a
-            INNER JOIN timeslot t  ON t.appointment_id = a.appointment_id
+            INNER JOIN timeslot t  ON t.timeslot_id = a.timeslot_id
             LEFT  JOIN patients p  ON p.patient_id  = a.patient_id
             LEFT  JOIN users    u  ON u.user_id     = a.user_id
-            LEFT  JOIN services s  ON s.service_id  = a.service_id
-            LEFT  JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
+            LEFT  JOIN (
+                SELECT
+                    ss.appointment_id,
+                    MIN(ss.service_id) AS service_id,
+                    GROUP_CONCAT(DISTINCT s.service_name ORDER BY s.service_name SEPARATOR ', ') AS service_name
+                FROM selected_services ss
+                LEFT JOIN services s ON s.service_id = ss.service_id
+                GROUP BY ss.appointment_id
+            ) svc ON svc.appointment_id = a.appointment_id
             WHERE t.slot_date = ?
               AND a.status NOT IN ('cancelled','rescheduled')";
 
@@ -77,19 +81,29 @@ try {
     $isToday = ($date === date('Y-m-d'));
 
     while ($row = $res->fetch_assoc()) {
-        // Auto-flag late: pending + today + 15 min past start_time
-        if (($row['arrival_status'] === 'pending' || $row['arrival_status'] === null)
-            && $isToday
-            && $row['appointment_status'] !== 'completed'
-        ) {
+        $row['arrived_at'] = null;
+        $row['arrival_id'] = null;
+        $row['arrival_notes'] = null;
+        $row['expected_time'] = $row['expected_time'] ?? $row['start_time'];
+
+        $apptStatus = (string)($row['appointment_status'] ?? '');
+        if ($apptStatus === 'in_progress') {
+            $row['arrival_status'] = 'in_progress';
+        } elseif ($apptStatus === 'completed') {
+            $row['arrival_status'] = 'served';
+        } elseif ($apptStatus === 'checked_in') {
+            $row['arrival_status'] = 'arrived';
+        } elseif ($apptStatus === 'no_show') {
+            $row['arrival_status'] = 'no_show';
+        } elseif ($isToday && $row['appointment_status'] !== 'completed') {
             $expected = DateTime::createFromFormat('H:i:s', $row['start_time']);
             if ($expected) {
                 $diff = $now->getTimestamp() - $expected->getTimestamp();
-                $row['arrival_status'] = ($diff > 900) ? 'late' : 'pending';
+                $row['arrival_status'] = ($diff > 900) ? 'overdue' : 'pending';
             } else {
                 $row['arrival_status'] = 'pending';
             }
-        } elseif ($row['arrival_status'] === null) {
+        } else {
             $row['arrival_status'] = 'pending';
         }
         $rows[] = $row;

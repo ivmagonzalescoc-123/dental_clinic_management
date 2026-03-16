@@ -15,6 +15,7 @@ try {
     $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
     $user_id        = isset($_POST['user_id'])        ? (int)$_POST['user_id']        : 0; // doctor
     $days_ahead     = isset($_POST['days_ahead'])     ? (int)$_POST['days_ahead']     : 14;
+    // Backward-compatible: older clients may still pass service_id for duration/selection.
     $service_id     = isset($_POST['service_id'])     ? (int)$_POST['service_id']     : 0;
     $duration       = isset($_POST['duration'])       ? (int)$_POST['duration']       : 30;
 
@@ -69,9 +70,9 @@ try {
 
         // Mark timeslot as booked
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ? AND status = 'available'"
+            "UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'"
         );
-        $tbUpd->bind_param('ii', $appointment_id, $timeslot_id);
+        $tbUpd->bind_param('i', $timeslot_id);
         $tbUpd->execute();
         if ($tbUpd->affected_rows === 0) {
             $tbUpd->close();
@@ -81,18 +82,42 @@ try {
 
         // Link timeslot_id onto appointment
         $aUpd = $conn->prepare(
-            "UPDATE appointments SET timeslot_id = ?, appointment_date = ?, service_id = COALESCE(?, service_id) WHERE appointment_id = ?"
+            "UPDATE appointments SET timeslot_id = ?, appointment_date = ? WHERE appointment_id = ?"
         );
-        $serviceIdParam = $service_id > 0 ? $service_id : null;
-        $aUpd->bind_param('isii', $timeslot_id, $ts['slot_date'], $serviceIdParam, $appointment_id);
+        $aUpd->bind_param('isi', $timeslot_id, $ts['slot_date'], $appointment_id);
         $aUpd->execute();
         $aUpd->close();
 
-        // Create schedules row for EHR linkage
+        // Preserve legacy service payload by recording it on selected_services.
+        if ($service_id > 0) {
+            $chkSel = $conn->prepare(
+                'SELECT selected_service_id FROM selected_services WHERE appointment_id = ? AND service_id = ? LIMIT 1'
+            );
+            $exists = false;
+            if ($chkSel) {
+                $chkSel->bind_param('ii', $appointment_id, $service_id);
+                $chkSel->execute();
+                $exists = (bool)$chkSel->get_result()->fetch_assoc();
+                $chkSel->close();
+            }
+            if (!$exists) {
+                $legacyNote = 'Preselected during scheduling';
+                $insSel = $conn->prepare(
+                    'INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)'
+                );
+                if ($insSel) {
+                    $insSel->bind_param('iis', $appointment_id, $service_id, $legacyNote);
+                    $insSel->execute();
+                    $insSel->close();
+                }
+            }
+        }
+
+        // Create patient_schedules row for EHR linkage
         $schStart = $ts['slot_date'] . ' ' . $ts['start_time'];
         $schEnd   = $ts['slot_date'] . ' ' . $ts['end_time'];
         $insS = $conn->prepare(
-            "INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status)
+            "INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status)
              VALUES (?, ?, ?, ?, 'scheduled')"
         );
         $insS->bind_param('iiss', $appointment_id, $user_id, $schStart, $schEnd);

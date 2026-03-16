@@ -18,7 +18,7 @@ if ($schedule_id <= 0) {
 }
 
 try {
-    $stmt = $conn->prepare('SELECT schedule_id, appointment_id, user_id, scheduled_start, scheduled_end, status FROM schedules WHERE schedule_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT schedule_id, appointment_id, user_id, scheduled_start, scheduled_end, status FROM patient_schedules WHERE schedule_id = ? LIMIT 1');
     $stmt->bind_param('i', $schedule_id);
     $stmt->execute();
     $res = $stmt->get_result();

@@ -74,7 +74,7 @@ SELECT
     u.first_name AS doctor_first_name,
     u.last_name AS doctor_last_name,
     COALESCE(u.work_type, 'regular') AS work_type
-FROM schedules s
+FROM patient_schedules s
 INNER JOIN appointments a ON a.appointment_id = s.appointment_id
 LEFT JOIN patients p ON p.patient_id = a.patient_id
 LEFT JOIN users u ON u.user_id = s.user_id

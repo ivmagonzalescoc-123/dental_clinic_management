@@ -10,6 +10,9 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
         <?php if ($forceChange): ?>
             <div class="alert alert-warning">
                 For security, you must change your default password before using other pages.
+                <div class="small mt-2 mb-0">
+                    Default password hint: <strong>Lastname_Last4digitphonenumber</strong> (example: <strong>DelaCruz_1234</strong>).
+                </div>
             </div>
         <?php endif; ?>
         <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>

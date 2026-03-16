@@ -78,15 +78,6 @@ try {
         }
     }
     
-    // Update arrival status to served
-    $queueStatus = 'served';
-    $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
-    if ($stmt) {
-        $stmt->bind_param('si', $queueStatus, $appointmentId);
-        $stmt->execute();
-        $stmt->close();
-    }
-    
     // Get service price
     $stmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
     $servicePrice = 0;

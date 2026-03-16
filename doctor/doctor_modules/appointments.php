@@ -84,15 +84,6 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
                 }
             }
             
-            // Update arrival status to served
-            $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
-            if ($stmt) {
-                $arrStatus = 'served';
-                $stmt->bind_param('si', $arrStatus, $appointmentId);
-                $stmt->execute();
-                $stmt->close();
-            }
-            
             // Get service price
             $stmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
             $servicePrice = 0;
@@ -189,14 +180,6 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
 
         $conn->begin_transaction();
         try {
-            $arrStatus = 'in_progress';
-            $stmt = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
-            if ($stmt) {
-                $stmt->bind_param('si', $arrStatus, $appointmentId);
-                $stmt->execute();
-                $stmt->close();
-            }
-
             $apptStatus = 'in_progress';
             $ust = $conn->prepare('UPDATE appointments SET status = ? WHERE appointment_id = ? AND user_id = ?');
             if ($ust) {
@@ -233,9 +216,9 @@ $all_sql = "
         NULL as appointment_time,
         (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history,
         -- latest schedule summary for this appointment (if any)
-        (SELECT s.status FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
-        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
-        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end
+        (SELECT s.status FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
+        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
+        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end
     FROM appointments a
     INNER JOIN patients p ON a.patient_id = p.patient_id
     -- timeslot removed; appointment_time not available

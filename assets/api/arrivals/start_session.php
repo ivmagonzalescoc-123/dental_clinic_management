@@ -27,11 +27,10 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 try {
     $conn->begin_transaction();
 
-    // Verify patient has arrived/check-in before starting session
+    // Verify patient is checked-in before starting a session.
     $paStmt = $conn->prepare(
-        "SELECT a.status AS appointment_status, pa.arrival_id, pa.status AS arrival_status
+        "SELECT a.status AS appointment_status
          FROM appointments a
-         LEFT JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
          WHERE a.appointment_id = ?
          LIMIT 1"
     );
@@ -45,33 +44,9 @@ try {
         throw new Exception('Appointment not found.');
     }
 
-    $arrivalStatus = $paRow['arrival_status'] ?? null;
     $appointmentStatus = $paRow['appointment_status'] ?? '';
-    $allowed = in_array($arrivalStatus, ['arrived', 'late'], true) || $appointmentStatus === 'checked_in';
-
-    if (!$allowed) {
-        throw new Exception('Patient has not been marked as arrived yet.');
-    }
-
-    // Normalize arrival row/status for checked-in appointments to keep queue/session consistent.
-    if (!$arrivalStatus && $appointmentStatus === 'checked_in') {
-        $mkArr = $conn->prepare("INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, arrived_at, status, marked_by)
-                                 SELECT a.appointment_id, a.timeslot_id, t.start_time, NOW(), 'arrived', ?
-                                 FROM appointments a
-                                 INNER JOIN timeslot t ON t.timeslot_id = a.timeslot_id
-                                 WHERE a.appointment_id = ?");
-        if ($mkArr) {
-            $mkArr->bind_param('ii', $doctor_id, $appointment_id);
-            $mkArr->execute();
-            $mkArr->close();
-        }
-    } elseif ($arrivalStatus === 'checked_in') {
-        $fixArr = $conn->prepare("UPDATE patient_arrivals SET status = 'arrived' WHERE appointment_id = ?");
-        if ($fixArr) {
-            $fixArr->bind_param('i', $appointment_id);
-            $fixArr->execute();
-            $fixArr->close();
-        }
+    if (!in_array($appointmentStatus, ['checked_in', 'in_progress'], true)) {
+        throw new Exception('Patient has not been checked in yet.');
     }
 
     // Assign doctor and mark appointment in_progress
@@ -80,8 +55,8 @@ try {
     $updA->execute();
     $updA->close();
 
-    // Find or create a schedules row (for EHR linkage)
-    $sStmt = $conn->prepare("SELECT schedule_id FROM schedules WHERE appointment_id = ? LIMIT 1");
+    // Find or create a patient_schedules row (for EHR linkage)
+    $sStmt = $conn->prepare("SELECT schedule_id FROM patient_schedules WHERE appointment_id = ? LIMIT 1");
     $sStmt->bind_param('i', $appointment_id);
     $sStmt->execute();
     $sRow = $sStmt->get_result()->fetch_assoc();
@@ -90,7 +65,7 @@ try {
     if ($sRow) {
         $schedule_id = (int)$sRow['schedule_id'];
         $updS = $conn->prepare(
-            "UPDATE schedules SET status = 'scheduled', user_id = ? WHERE schedule_id = ?"
+            "UPDATE patient_schedules SET status = 'scheduled', user_id = ? WHERE schedule_id = ?"
         );
         $updS->bind_param('ii', $doctor_id, $schedule_id);
         $updS->execute();
@@ -113,7 +88,7 @@ try {
         $schEnd   = $tsRow ? ($tsRow['slot_date'] . ' ' . $tsRow['end_time'])   : date('Y-m-d H:i:s', strtotime('+30 minutes'));
 
         $insS = $conn->prepare(
-            "INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status)
+            "INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status)
              VALUES (?, ?, ?, ?, 'scheduled')"
         );
         $insS->bind_param('iiss', $appointment_id, $doctor_id, $schStart, $schEnd);

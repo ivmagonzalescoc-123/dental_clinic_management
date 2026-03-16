@@ -25,7 +25,7 @@ if ($schedule_id <= 0 || !$start) {
 
 try {
     // Fetch schedule
-    $stmt = $conn->prepare('SELECT schedule_id, user_id, appointment_id FROM schedules WHERE schedule_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT schedule_id, user_id, appointment_id FROM patient_schedules WHERE schedule_id = ? LIMIT 1');
     $stmt->bind_param('i', $schedule_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -68,7 +68,7 @@ try {
     }
 
     // Basic overlap check: reuse smart_schedule overlap query
-    $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?) AND schedule_id != ?");
+    $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM patient_schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?) AND schedule_id != ?");
     $ov->bind_param('issi', $targetDoctorId, $start, $end, $schedule_id);
     $ov->execute();
     $ores = $ov->get_result();
@@ -80,7 +80,7 @@ try {
     }
 
     // Update schedule
-    $ust = $conn->prepare('UPDATE schedules SET user_id = ?, scheduled_start = ?, scheduled_end = ?, status = ?, updated_at = NOW() WHERE schedule_id = ?');
+    $ust = $conn->prepare('UPDATE patient_schedules SET user_id = ?, scheduled_start = ?, scheduled_end = ?, status = ?, updated_at = NOW() WHERE schedule_id = ?');
     $status = 'rescheduled';
     $ust->bind_param('isssi', $targetDoctorId, $start, $end, $status, $schedule_id);
     $ust->execute();
@@ -88,8 +88,8 @@ try {
     $ust->close();
 
     // Optionally create a reminder row
-    $rins = $conn->prepare('INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, DATE_SUB(?, INTERVAL 1 DAY), "in_app", ?)');
-    $payload = json_encode(['schedule_id'=>$schedule_id,'appointment_id'=>$sch['appointment_id']]);
+    $rins = $conn->prepare('INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, DATE_SUB(?, INTERVAL 1 DAY), "in_app", ?)');
+    $payload = json_encode(['schedule_id'=>$schedule_id,'patient_schedule_id'=>$schedule_id,'appointment_id'=>$sch['appointment_id']]);
     $rins->bind_param('iss', $schedule_id, $start, $payload);
     $rins->execute();
     if ($rins) $rins->close();

@@ -8,9 +8,9 @@ $doctor_id = $_SESSION['user_id'] ?? 0;
 $records = [];
     $sql = "
     SELECT cr.record_id, cr.appointment_id, cr.status, cr.submitted_at, a.appointment_date, p.first_name, p.last_name,
-    -- schedule summary (from clinical_records.schedule_id or latest schedule for appointment)
-    (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM schedules s WHERE s.schedule_id = cr.schedule_id LIMIT 1) AS schedule_start,
-    (SELECT s.status FROM schedules s WHERE s.schedule_id = cr.schedule_id LIMIT 1) AS schedule_status
+    -- latest follow-up schedule summary for the appointment
+    (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = cr.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
+    (SELECT s.status FROM patient_schedules s WHERE s.appointment_id = cr.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status
     FROM clinical_records cr
     INNER JOIN appointments a ON cr.appointment_id = a.appointment_id
     INNER JOIN patients p ON cr.patient_id = p.patient_id

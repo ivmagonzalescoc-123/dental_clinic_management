@@ -7,10 +7,10 @@ $checkedIn = 0;
 $queueWaiting = 0;
 $appointmentsToday = 0;
 
-$res = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status IN ('arrived','late')");
+$res = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status IN ('checked_in','in_progress')");
 if ($res) { $res->bind_param('s', $today); $res->execute(); $r = $res->get_result(); $checkedIn = $r ? (int)$r->fetch_row()[0] : 0; $res->close(); }
 
-$res = $conn->prepare("SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status = 'pending'");
+$res = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status = 'confirmed'");
 if ($res) { $res->bind_param('s', $today); $res->execute(); $r = $res->get_result(); $queueWaiting = $r ? (int)$r->fetch_row()[0] : 0; $res->close(); }
 
 $res = $conn->prepare("SELECT COUNT(*) FROM appointments WHERE DATE(appointment_date) = ?");

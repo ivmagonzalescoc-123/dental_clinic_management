@@ -96,8 +96,8 @@ if ($timeslot_id > 0) {
     $conn->begin_transaction();
     try {
         // Book the timeslot
-        $bts = $conn->prepare("UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ? AND status = 'available'");
-        $bts->bind_param('ii', $appointment_id, $timeslot_id);
+        $bts = $conn->prepare("UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'");
+        $bts->bind_param('i', $timeslot_id);
         $bts->execute();
         if ($bts->affected_rows === 0) throw new Exception('Timeslot was just taken. Please pick another slot.');
         $bts->close();
@@ -107,22 +107,10 @@ if ($timeslot_id > 0) {
         $uat->bind_param('isi', $timeslot_id, $ts['slot_date'], $appointment_id);
         $uat->execute();
         $uat->close();
-
-        // Create patient_arrivals row (pending)
-        $expected = $ts['start_time'];
-        $ins_pa = $conn->prepare("
-            INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)
-            VALUES (?, ?, ?, 'pending')
-            ON DUPLICATE KEY UPDATE timeslot_id = VALUES(timeslot_id), expected_time = VALUES(expected_time), status = 'pending'
-        ");
-        $ins_pa->bind_param('iis', $appointment_id, $timeslot_id, $expected);
-        $ins_pa->execute();
-        $ins_pa->close();
-
         // Create schedules row from timeslot times
         $schStart = $ts['slot_date'] . ' ' . $ts['start_time'];
         $schEnd   = $ts['slot_date'] . ' ' . $ts['end_time'];
-        $ins_s = $conn->prepare("INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
+        $ins_s = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
         $ins_s->bind_param('iiss', $appointment_id, $doc_id, $schStart, $schEnd);
         $ins_s->execute();
         $schedule_id = $conn->insert_id;
@@ -130,8 +118,8 @@ if ($timeslot_id > 0) {
 
         // Reminder 24 hours before
         $remind_at = (new DateTime($schStart))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id]);
-        $ins_r = $conn->prepare("INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
+        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
+        $ins_r = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
         $ins_r->bind_param('iss', $schedule_id, $remind_at, $payload);
         $ins_r->execute();
         $ins_r->close();
@@ -159,8 +147,7 @@ if (!empty($book_start)) {
     if (empty($book_end)) {
         $book_end = (new DateTime($book_start))->modify("+{$duration} minutes")->format('Y-m-d H:i:s');
     }
-
-    $ins = $conn->prepare("INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
+    $ins = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
     $ins->bind_param('iiss', $appointment_id, $doc_id, $book_start, $book_end);
     if (!$ins->execute()) {
         send_json(['success' => false, 'message' => 'Failed to create schedule: ' . $ins->error], 500);
@@ -169,8 +156,8 @@ if (!empty($book_start)) {
     $ins->close();
 
     $remind_at = (new DateTime($book_start))->modify('-24 hours')->format('Y-m-d H:i:s');
-    $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id]);
-    $r = $conn->prepare("INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
+    $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
+    $r = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
     $r->bind_param('iss', $schedule_id, $remind_at, $payload);
     $r->execute();
     $r->close();
@@ -207,8 +194,7 @@ if (!empty($availability)) {
                     $cursor = $cursor->modify('+10 minutes');
                     continue;
                 }
-
-                $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?)");
+                $ov = $conn->prepare("SELECT COUNT(*) AS cnt FROM patient_schedules WHERE user_id = ? AND status IN ('scheduled','rescheduled') AND NOT (scheduled_end <= ? OR scheduled_start >= ?)");
                 $ov->bind_param('iss', $doc_id, $cs, $ce);
                 $ov->execute();
                 $cnt = (int)($ov->get_result()->fetch_assoc()['cnt'] ?? 0);
@@ -220,15 +206,15 @@ if (!empty($availability)) {
     }
 
     if ($found) {
-        $ins2 = $conn->prepare("INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
+        $ins2 = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
         $ins2->bind_param('iiss', $appointment_id, $doc_id, $found['start'], $found['end']);
         $ins2->execute();
         $schedule_id = $conn->insert_id;
         $ins2->close();
 
         $remind_at = (new DateTime($found['start']))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id]);
-        $r2 = $conn->prepare("INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
+        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
+        $r2 = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
         $r2->bind_param('iss', $schedule_id, $remind_at, $payload);
         $r2->execute();
         $r2->close();
@@ -238,3 +224,4 @@ if (!empty($availability)) {
 }
 
 send_json(['success' => true, 'message' => 'Appointment confirmed. Please assign a timeslot to complete scheduling.']);
+

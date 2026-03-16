@@ -4,6 +4,26 @@ security_start_session();
 require_once 'config/database.php';
 $csrf_token = security_generate_csrf_token();
 
+function build_login_captcha_question(): string
+{
+    $left = random_int(2, 12);
+    $right = random_int(1, 9);
+    $useSubtraction = (bool)random_int(0, 1);
+    if ($useSubtraction && $right > $left) {
+        $tmp = $left;
+        $left = $right;
+        $right = $tmp;
+    }
+
+    $operator = $useSubtraction ? '-' : '+';
+    $answer = $useSubtraction ? ($left - $right) : ($left + $right);
+
+    $_SESSION['login_captcha_answer'] = (string)$answer;
+    $_SESSION['login_captcha_expires_at'] = time() + 300;
+
+    return $left . ' ' . $operator . ' ' . $right;
+}
+
 // Redirect logged-in users to their respective dashboard
 if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     $role = $_SESSION['role'] ?? '';
@@ -22,6 +42,8 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
         exit;
     }
 }
+
+$login_captcha_question = build_login_captcha_question();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -260,6 +282,16 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                                 <label for="loginPassword">Password</label>
                             </div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Captcha</label>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span id="loginCaptchaQuestion" class="badge bg-light text-dark border px-3 py-2"><?php echo htmlspecialchars($login_captcha_question); ?></span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshLoginCaptchaBtn" title="Refresh captcha">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                            <input type="text" class="form-control" id="loginCaptchaAnswer" placeholder="Enter your answer" inputmode="numeric" pattern="-?[0-9]+" required>
+                        </div>
                         <div class="d-flex justify-content-center">
                             <button type="submit" class="btn btn-primary-minimal btn-compact">Login</button>
                         </div>
@@ -340,22 +372,16 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                                 <label for="registerAddress">Address</label>
                             </div>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="registerPassword"
-                                        placeholder="Password" required minlength="8">
-                                    <label for="registerPassword">Password</label>
-                                </div>
-                                <small class="text-muted">Use at least 8 chars with uppercase, lowercase, number, and special character.</small>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="registerPasswordConfirm"
-                                        placeholder="Confirm Password" required minlength="8">
-                                    <label for="registerPasswordConfirm">Confirm Password</label>
-                                </div>
-                            </div>
+                        <div class="alert alert-info small" role="alert">
+                            Your default password will be generated automatically using this format: <br> <strong>Lastname_Last4digitphonenumber (Example: Smith_1234)</strong>. <br>
+                            You will be required to change it on first login.
+                        </div>
+                        <div class="form-check mt-3">
+                            <input class="form-check-input border-black" type="checkbox" id="registerTerms" required>
+                            <label class="form-check-label" for="registerTerms">
+                                I agree to the
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
+                            </label>
                         </div>
                         <div class="d-flex justify-content-center mt-3">
                             <button type="submit" class="btn btn-primary-minimal btn-compact">Create Account</button>
@@ -364,6 +390,27 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                     <hr>
                     <p class="text-center small">Already have an account? <a href="#" data-bs-dismiss="modal"
                             data-bs-toggle="modal" data-bs-target="#loginModal">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Terms and Conditions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>By creating an account, you agree to provide truthful and updated personal and medical information for dental care services.</p>
+                    <p>You acknowledge that your appointment requests are subject to clinic approval, schedule availability, and standard clinic policies.</p>
+                    <p>You consent to the secure processing of your account and health-related data for treatment, scheduling, reminders, and billing purposes.</p>
+                    <p>You are responsible for safeguarding your account credentials and for notifying the clinic immediately of unauthorized account access.</p>
+                    <p>The clinic may update these terms to comply with legal, operational, or patient safety requirements, with updates reflected in this system.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
                 </div>
             </div>
         </div>
@@ -380,6 +427,34 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script>
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
+
+        function setLoginCaptchaQuestion(question) {
+            const questionEl = document.getElementById('loginCaptchaQuestion');
+            if (questionEl) {
+                questionEl.textContent = question || 'Unavailable';
+            }
+        }
+
+        async function refreshLoginCaptcha() {
+            const answerInput = document.getElementById('loginCaptchaAnswer');
+            try {
+                const response = await fetch('assets/api/auth/get_login_captcha.php', {
+                    method: 'GET',
+                    cache: 'no-store'
+                });
+                const data = await response.json();
+                if (data.success) {
+                    setLoginCaptchaQuestion(data.question || '');
+                    if (answerInput) answerInput.value = '';
+                    return;
+                }
+            } catch (error) {
+                console.error('Captcha refresh failed:', error);
+            }
+
+            setLoginCaptchaQuestion('Refresh page to generate captcha');
+            if (answerInput) answerInput.value = '';
+        }
 
         function escapeHtml(text) {
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -411,23 +486,47 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
             toast.show();
         }
 
+        const registerModalEl = document.getElementById('registerModal');
+        const termsModalEl = document.getElementById('termsModal');
+        let reopenRegisterModalAfterTerms = false;
+
+        if (registerModalEl && termsModalEl && window.bootstrap) {
+            termsModalEl.addEventListener('show.bs.modal', () => {
+                reopenRegisterModalAfterTerms = registerModalEl.classList.contains('show');
+            });
+
+            termsModalEl.addEventListener('hidden.bs.modal', () => {
+                if (reopenRegisterModalAfterTerms) {
+                    bootstrap.Modal.getOrCreateInstance(registerModalEl).show();
+                }
+                reopenRegisterModalAfterTerms = false;
+            });
+        }
+
         // Login Form Handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const loginToastDelay = 2000;
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
+            const captchaAnswer = document.getElementById('loginCaptchaAnswer').value.trim();
+
+            if (!captchaAnswer) {
+                showCenterToast('Please solve the captcha before logging in.', 'warning', loginToastDelay);
+                return;
+            }
 
             try {
                 const response = await fetch('assets/api/auth/login_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, csrf_token: csrfToken })
+                    body: JSON.stringify({ email, password, captcha_answer: captchaAnswer, csrf_token: csrfToken })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showCenterToast('Login successful! Redirecting...', 'success', 1400);
+                    showCenterToast('Login successful! Redirecting...', 'success', loginToastDelay);
 
                     let redirectUrl = 'index.php';
                     const role = data.user.role;
@@ -445,15 +544,30 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 
                     setTimeout(() => {
                         window.location.href = redirectUrl;
-                    }, 1000);
+                    }, loginToastDelay + 100);
                 } else {
-                    showCenterToast(data.message || 'Login failed', 'danger');
+                    if (data.captcha && data.captcha.question) {
+                        setLoginCaptchaQuestion(data.captcha.question);
+                        const ans = document.getElementById('loginCaptchaAnswer');
+                        if (ans) ans.value = '';
+                    } else {
+                        await refreshLoginCaptcha();
+                    }
+                    showCenterToast(data.message || 'Login failed', 'danger', loginToastDelay);
                 }
             } catch (error) {
-                showCenterToast('An error occurred. Please try again.', 'danger');
+                await refreshLoginCaptcha();
+                showCenterToast('An error occurred. Please try again.', 'danger', loginToastDelay);
                 console.error('Error:', error);
             }
         });
+
+        const refreshLoginCaptchaBtn = document.getElementById('refreshLoginCaptchaBtn');
+        if (refreshLoginCaptchaBtn) {
+            refreshLoginCaptchaBtn.addEventListener('click', () => {
+                refreshLoginCaptcha();
+            });
+        }
 
         // Register Form Handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
@@ -465,17 +579,16 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
             const gender = document.getElementById('registerGender').value;
             const phone = document.getElementById('registerPhone').value;
             const address = document.getElementById('registerAddress').value;
-            const password = document.getElementById('registerPassword').value;
-            const passwordConfirm = document.getElementById('registerPasswordConfirm').value;
+            const termsAccepted = document.getElementById('registerTerms').checked;
+            const phoneDigits = phone.replace(/\D/g, '');
 
-            if (password !== passwordConfirm) {
-                showCenterToast('Passwords do not match', 'warning');
+            if (phoneDigits.length < 4) {
+                showCenterToast('Phone number must contain at least 4 digits.', 'warning');
                 return;
             }
 
-            const strongPass = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-            if (!strongPass.test(password)) {
-                showCenterToast('Password must be at least 8 characters with uppercase, lowercase, number, and special character.', 'warning');
+            if (!termsAccepted) {
+                showCenterToast('Please accept the Terms and Conditions to create an account.', 'warning');
                 return;
             }
 
@@ -491,8 +604,8 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                         gender: gender,
                         phone_number: phone,
                         address: address,
-                        password,
                         role: 'patient',
+                        terms_accepted: termsAccepted ? 1 : 0,
                         csrf_token: csrfToken
                     })
                 });
@@ -500,10 +613,10 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
                 const data = await response.json();
 
                 if (data.success) {
-                    showCenterToast('Account created successfully! Redirecting...', 'success', 1700);
+                    showCenterToast('Account created. Please change your default password to continue.', 'success', 2000);
                     setTimeout(() => {
-                        window.location.href = 'patient/patient.php';
-                    }, 1500);
+                        window.location.href = 'patient/patient.php?page=settings&force_password_change=1';
+                    }, 1800);
                 } else {
                     showCenterToast(data.message || 'Registration failed', 'danger');
                 }

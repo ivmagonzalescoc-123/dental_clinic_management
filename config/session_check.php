@@ -28,6 +28,11 @@ if (!defined('SESSION_IDLE_WARNING_GRACE_SECONDS')) {
 if (!function_exists('get_session_timeout_seconds_for_role')) {
     function get_session_timeout_seconds_for_role(string $role): int
     {
+        // Doctors should not be auto-logged out due to idle timeout.
+        if ($role === 'doctor') {
+            return 0;
+        }
+
         $idleLimit = ($role === 'patient') ? SESSION_PATIENT_IDLE_SECONDS : SESSION_USER_IDLE_SECONDS;
         return $idleLimit + SESSION_IDLE_WARNING_GRACE_SECONDS;
     }
@@ -127,9 +132,9 @@ if (!function_exists('check_session')) {
         }
     }
 
-    // Optional: Check session timeout (30 minutes)
+    // Check idle timeout only for roles that enforce timeout.
     $timeoutSeconds = get_session_timeout_seconds_for_role((string)$user_role);
-    if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeoutSeconds)) {
+    if ($timeoutSeconds > 0 && isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeoutSeconds)) {
         if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
             close_session_log_rows($GLOBALS['conn']);
         }

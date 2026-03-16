@@ -8,13 +8,13 @@ ini_set('error_log', dirname(__FILE__) . '/send_reminders.log');
 include __DIR__ . '/../config/database.php';
 
 // Fetch pending reminders
-$sql = "SELECT r.reminder_id, r.schedule_id, r.remind_at, r.channel, r.payload, s.scheduled_start, s.appointment_id
+$sql = "SELECT r.reminder_id, r.patient_schedule_id, r.remind_at, r.channel, r.payload, s.scheduled_start, s.appointment_id
         FROM schedule_reminders r
-        JOIN schedules s ON s.schedule_id = r.schedule_id
+    JOIN patient_schedules s ON s.schedule_id = r.patient_schedule_id
         WHERE r.sent_at IS NULL AND r.remind_at <= NOW()";
 
-// Guard: ensure schedule_reminders and schedules tables exist
-if (!function_exists('table_exists') || !table_exists($conn, 'schedule_reminders') || !table_exists($conn, 'schedules')) {
+// Guard: ensure schedule_reminders and patient_schedules tables exist
+if (!function_exists('table_exists') || !table_exists($conn, 'schedule_reminders') || !table_exists($conn, 'patient_schedules')) {
     error_log('send_reminders: required scheduling tables missing; aborting reminders run');
     exit(0);
 }

@@ -40,7 +40,7 @@ $record = $res ? $res->fetch_assoc() : null;
 $stmt->close();
 
 // Fetch schedules for this appointment
-$s = $conn->prepare('SELECT * FROM schedules WHERE appointment_id = ? ORDER BY scheduled_start DESC');
+$s = $conn->prepare('SELECT * FROM patient_schedules WHERE appointment_id = ? ORDER BY scheduled_start DESC');
 $s->bind_param('i', $appointment_id);
 $s->execute();
 $sres = $s->get_result();

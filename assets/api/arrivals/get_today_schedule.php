@@ -40,7 +40,7 @@ try {
             a.appointment_id,
             a.patient_id,
             COALESCE(a.user_id, t.doctor_id) AS doctor_id,
-            a.service_id,
+            svc.service_id,
             a.timeslot_id,
             a.reason,
             a.status        AS appointment_status,
@@ -51,19 +51,32 @@ try {
             CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
             p.phone_number  AS patient_phone,
             CONCAT(d.first_name, ' ', d.last_name) AS doctor_name,
-            s.service_name,
-            COALESCE(ts2.duration_minutes, s.default_duration_minutes, 30) AS duration_minutes,
-            pa.arrival_id,
-            pa.status       AS arrival_status,
-            pa.arrived_at,
-            pa.expected_time
+            svc.service_name,
+            COALESCE(svc.duration_minutes, 30) AS duration_minutes,
+                        t.start_time    AS expected_time
         FROM appointments a
         INNER JOIN timeslot t        ON t.timeslot_id  = a.timeslot_id
         LEFT  JOIN patients p        ON p.patient_id   = a.patient_id
         LEFT  JOIN users d           ON d.user_id      = a.user_id
-        LEFT  JOIN services s        ON s.service_id   = a.service_id
-        LEFT  JOIN timeslot_service ts2 ON ts2.service_id = a.service_id
-        LEFT  JOIN patient_arrivals pa  ON pa.appointment_id = a.appointment_id
+        LEFT  JOIN (
+            SELECT
+                ss.appointment_id,
+                MIN(ss.service_id) AS service_id,
+                GROUP_CONCAT(DISTINCT s.service_name ORDER BY s.service_name SEPARATOR ', ') AS service_name,
+                MAX(COALESCE(ts.duration_minutes, s.default_duration_minutes, 30)) AS duration_minutes
+            FROM selected_services ss
+            LEFT JOIN services s ON s.service_id = ss.service_id
+            LEFT JOIN (
+                SELECT t1.service_id, t1.duration_minutes
+                FROM timeslot_service t1
+                INNER JOIN (
+                    SELECT service_id, MAX(id) AS max_id
+                    FROM timeslot_service
+                    GROUP BY service_id
+                ) t2 ON t2.max_id = t1.id
+            ) ts ON ts.service_id = ss.service_id
+            GROUP BY ss.appointment_id
+        ) svc ON svc.appointment_id = a.appointment_id
         WHERE t.slot_date = ?
           AND a.status NOT IN ('cancelled', 'rescheduled')
         {$extra}
@@ -82,7 +95,7 @@ try {
 
     while ($row = $res->fetch_assoc()) {
         // Derive clean arrival_status
-        $paStatus = $row['arrival_status'];
+        $paStatus = null;
 
         // Appointment-level status always wins for in_progress / completed
         $apptStatus = $row['appointment_status'] ?? '';
@@ -92,8 +105,8 @@ try {
             $paStatus = 'served';
         } elseif ($apptStatus === 'checked_in') {
             $paStatus = 'arrived';
-        } elseif ($paStatus === 'checked_in') {
-            $paStatus = 'arrived';
+        } elseif ($apptStatus === 'no_show') {
+            $paStatus = 'no_show';
         } elseif ($paStatus === null) {
             // No arrival record yet — check if overdue
             if ($isToday && $row['start_time']) {
@@ -120,9 +133,9 @@ try {
             'appointment_status' => $row['appointment_status'],
             'is_emergency'       => (bool)$row['is_emergency'],
             'arrival_status'     => $paStatus,
-            'arrived_at'         => $row['arrived_at'],
+            'arrived_at'         => null,
             'expected_time'      => $row['expected_time'] ?? $row['start_time'],
-            'arrival_id'         => $row['arrival_id'] ? (int)$row['arrival_id'] : null,
+            'arrival_id'         => null,
         ];
     }
     $stmt->close();

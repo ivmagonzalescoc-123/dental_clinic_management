@@ -8,10 +8,37 @@ include '../../../config/system_logs.php';
 security_start_session();
 security_ensure_auth_columns($conn);
 
+function auth_generate_login_captcha_payload(): array
+{
+    $left = random_int(2, 12);
+    $right = random_int(1, 9);
+    $useSubtraction = (bool)random_int(0, 1);
+    if ($useSubtraction && $right > $left) {
+        $tmp = $left;
+        $left = $right;
+        $right = $tmp;
+    }
+
+    $operator = $useSubtraction ? '-' : '+';
+    $answer = $useSubtraction ? ($left - $right) : ($left + $right);
+
+    $_SESSION['login_captcha_answer'] = (string)$answer;
+    $_SESSION['login_captcha_expires_at'] = time() + 300;
+
+    return [
+        'question' => $left . ' ' . $operator . ' ' . $right,
+        'expires_in' => 300,
+    ];
+}
+
 function auth_fail($message = 'Invalid email or password', $code = 401)
 {
     http_response_code($code);
-    echo json_encode(['success' => false, 'message' => $message]);
+    echo json_encode([
+        'success' => false,
+        'message' => $message,
+        'captcha' => auth_generate_login_captcha_payload(),
+    ]);
     exit;
 }
 
@@ -134,6 +161,16 @@ $csrfToken = $input['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     auth_fail('Security token is invalid. Please refresh and try again.', 403);
 }
+
+$captchaAnswer = trim((string)($input['captcha_answer'] ?? ''));
+$captchaExpected = (string)($_SESSION['login_captcha_answer'] ?? '');
+$captchaExpiresAt = (int)($_SESSION['login_captcha_expires_at'] ?? 0);
+
+if ($captchaAnswer === '' || $captchaExpected === '' || ($captchaExpiresAt > 0 && time() > $captchaExpiresAt) || !hash_equals($captchaExpected, $captchaAnswer)) {
+    auth_fail('Captcha verification failed. Please try again.', 400);
+}
+
+unset($_SESSION['login_captcha_answer'], $_SESSION['login_captcha_expires_at']);
 
 $email = security_clean_string($input['email'] ?? '', 150);
 $password = (string)($input['password'] ?? '');

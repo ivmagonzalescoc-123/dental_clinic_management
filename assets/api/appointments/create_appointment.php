@@ -21,6 +21,7 @@ try {
     $notes                 = isset($_POST['notes'])                 ? trim($_POST['notes'])                 : '';
     $status                = isset($_POST['status'])                ? trim($_POST['status'])                : 'scheduled';
     $timeslot_id           = isset($_POST['timeslot_id'])           ? (int)$_POST['timeslot_id']           : 0;
+    // Backward-compatible: some older clients may still post service_id.
     $service_id            = isset($_POST['service_id'])            ? (int)$_POST['service_id']            : 0;
     $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
 
@@ -151,41 +152,49 @@ try {
         $is_online_appointment = 1;
     }
 
-    // Appointment service is selected later by the doctor during in-clinic consultation.
-    if ($isPatientRequester || strtolower($requester_role) === 'secretary') {
-        $service_id = 0;
-    }
-
     if (!$isPatientRequester && strtolower($requester_role) === 'secretary') {
         $status = 'confirmed';
     }
 
     $conn->begin_transaction();
 
-    // Insert appointment with timeslot_id and service_id
-    $ts_id_val  = $timeslot_id > 0 ? $timeslot_id : null;
-    $svc_id_val = $service_id  > 0 ? $service_id  : null;
-
+    // Insert appointment (service is linked via selected_services, not appointments.service_id)
     $sql  = "INSERT INTO appointments
-             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, service_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) throw new Exception('Prepare insert failed: ' . $conn->error);
     $stmt->bind_param(
-        'ississiiii',
+        'ississiii',
         $patient_id, $appointment_date, $reason, $is_online_appointment,
-        $notes, $status, $user_id, $is_emergency, $ts_id_val, $svc_id_val
+        $notes, $status, $user_id, $is_emergency, $timeslot_id
     );
     if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);
     $appointment_id = (int)$conn->insert_id;
     $stmt->close();
 
+    // Preserve legacy payload support by storing any preselected service in selected_services.
+    if ($service_id > 0) {
+        $legacyNote = 'Preselected during booking';
+        $ssStmt = $conn->prepare(
+            'INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)'
+        );
+        if ($ssStmt) {
+            $ssStmt->bind_param('iis', $appointment_id, $service_id, $legacyNote);
+            if (!$ssStmt->execute()) {
+                $ssStmt->close();
+                throw new Exception('Failed to save selected service: ' . $conn->error);
+            }
+            $ssStmt->close();
+        }
+    }
+
     // Mark the timeslot as booked
     if ($timeslot_id > 0) {
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id = ? AND status = 'available'"
+            "UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'"
         );
-        $tbUpd->bind_param('ii', $appointment_id, $timeslot_id);
+        $tbUpd->bind_param('i', $timeslot_id);
         $tbUpd->execute();
         if ($tbUpd->affected_rows === 0) {
             $tbUpd->close();
@@ -193,22 +202,7 @@ try {
         }
         $tbUpd->close();
 
-        // If confirmed, create patient_arrivals pending record
-        if ($status === 'confirmed') {
-            $tsSel = $conn->prepare('SELECT start_time FROM timeslot WHERE timeslot_id = ? LIMIT 1');
-            $tsSel->bind_param('i', $timeslot_id);
-            $tsSel->execute();
-            $tsData = $tsSel->get_result()->fetch_assoc();
-            $tsSel->close();
-            $expectedTime = $tsData['start_time'] ?? '00:00:00';
-            $paIns = $conn->prepare(
-                "INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)
-                 VALUES (?, ?, ?, 'pending')"
-            );
-            $paIns->bind_param('iis', $appointment_id, $timeslot_id, $expectedTime);
-            $paIns->execute();
-            $paIns->close();
-        }
+        // Arrival/check-in flow is now represented by appointments.status.
     }
 
     $conn->commit();

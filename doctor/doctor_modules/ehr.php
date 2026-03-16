@@ -17,21 +17,22 @@ if (!$appointment_id) {
                                 p.first_name,
                                 p.last_name,
                                 COALESCE(t.slot_date, a.appointment_date) AS appointment_date,
-                                pa.status AS arrival_status,
-                                pa.expected_time,
+                                CASE
+                                    WHEN a.status = 'in_progress' THEN 'in_progress'
+                                    WHEN a.status = 'checked_in' THEN 'arrived'
+                                    WHEN a.status = 'no_show' THEN 'no_show'
+                                    ELSE 'pending'
+                                END AS arrival_status,
+                                t.start_time AS expected_time,
                                 a.status AS appointment_status,
                                 t.start_time
                         FROM appointments a
-                        LEFT JOIN patient_arrivals pa ON pa.appointment_id = a.appointment_id
                         LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
                         JOIN patients p ON a.patient_id = p.patient_id
                         WHERE COALESCE(a.user_id, t.doctor_id) = ?
                             AND COALESCE(t.slot_date, a.appointment_date) = ?
-                            AND (
-                                        pa.status IN ('arrived','late')
-                                        OR a.status IN ('checked_in','in_progress')
-                                    )
-                        ORDER BY a.is_emergency DESC, COALESCE(pa.expected_time, t.start_time, '00:00:00') ASC";
+                            AND a.status IN ('checked_in','in_progress','confirmed')
+                        ORDER BY a.is_emergency DESC, COALESCE(t.start_time, '00:00:00') ASC";
 
     $qstmt = $conn->prepare($sql);
     if ($qstmt) {
@@ -67,6 +68,18 @@ if ($sstmt) {
     while ($r = $sres->fetch_assoc())
         $services[] = $r;
     $sstmt->close();
+}
+
+// Fetch treatment catalog for lookup selection
+$treatments = [];
+$tstmt = $conn->prepare('SELECT treatment_id, treatment_name, treatment_type FROM treatments ORDER BY treatment_name ASC');
+if ($tstmt) {
+    $tstmt->execute();
+    $tres = $tstmt->get_result();
+    while ($tr = $tres->fetch_assoc()) {
+        $treatments[] = $tr;
+    }
+    $tstmt->close();
 }
 ?>
 
@@ -131,7 +144,34 @@ if ($sstmt) {
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Treatment Plan (structured JSON allowed)</label>
+        <label class="form-label">Treatment Lookup</label>
+        <input type="text" class="form-control mb-2" id="treatmentLookupInput" placeholder="Search treatment name or type...">
+        <div id="treatmentLookupList" class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
+            <?php if (!empty($treatments)): ?>
+                <?php foreach ($treatments as $t): ?>
+                    <?php
+                        $lookupText = strtolower(trim((string)($t['treatment_name'] ?? '') . ' ' . (string)($t['treatment_type'] ?? '')));
+                    ?>
+                    <div class="form-check treatment-lookup-item" data-lookup="<?php echo htmlspecialchars($lookupText); ?>">
+                        <input class="form-check-input treatment-lookup-checkbox" type="checkbox" value="<?php echo (int)$t['treatment_id']; ?>"
+                            id="trt-<?php echo (int)$t['treatment_id']; ?>">
+                        <label class="form-check-label" for="trt-<?php echo (int)$t['treatment_id']; ?>">
+                            <?php echo htmlspecialchars($t['treatment_name']); ?>
+                            <?php if (!empty($t['treatment_type'])): ?>
+                                <span class="text-muted">(<?php echo htmlspecialchars($t['treatment_type']); ?>)</span>
+                            <?php endif; ?>
+                        </label>
+                    </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="text-muted small">No treatments found. Add treatments from Admin Services.</div>
+            <?php endif; ?>
+        </div>
+        <small class="text-muted">Select specific treatments performed or recommended for this session.</small>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Treatment Plan Notes (optional JSON/plain text)</label>
         <textarea class="form-control" name="treatment_plan" id="treatment_plan" rows="3"></textarea>
     </div>
 
@@ -213,6 +253,9 @@ if ($sstmt) {
             const appointment_id = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
             const schedule_id = parseInt(document.getElementById('schedule_id_hidden').value || '0', 10) || null;
             const recommended = [...document.querySelectorAll('input[type=checkbox][id^="srv-"]:checked')].map(cb => parseInt(cb.value, 10));
+            const selectedTreatments = [...document.querySelectorAll('.treatment-lookup-checkbox:checked')]
+                .map(cb => parseInt(cb.value, 10))
+                .filter(v => Number.isInteger(v) && v > 0);
             const treatment_plan = document.getElementById('treatment_plan').value || '';
             const materials = [...document.getElementById('materialsList').querySelectorAll('div')].map(d => {
                 const inputs = d.querySelectorAll('input');
@@ -232,6 +275,7 @@ if ($sstmt) {
             fd.append('appointment_id', appointment_id);
             if (schedule_id) fd.append('schedule_id', schedule_id);
             fd.append('recommended_services', JSON.stringify(recommended));
+            fd.append('selected_treatments', JSON.stringify(selectedTreatments));
             fd.append('treatment_plan', treatment_plan);
             fd.append('materials_used', JSON.stringify(materials));
             fd.append('odontogram', odontogram);
@@ -267,6 +311,17 @@ if ($sstmt) {
         document.getElementById('saveDraftBtn')?.addEventListener('click', () => saveClinical(false));
         document.getElementById('finalizeBtn')?.addEventListener('click', () => { if (confirm('Finalize and create billing?')) saveClinical(true); });
 
+        function applyTreatmentLookupFilter() {
+            const q = (document.getElementById('treatmentLookupInput')?.value || '').trim().toLowerCase();
+            document.querySelectorAll('.treatment-lookup-item').forEach(item => {
+                const hay = (item.getAttribute('data-lookup') || '').toLowerCase();
+                item.style.display = (q === '' || hay.includes(q)) ? '' : 'none';
+            });
+        }
+
+        document.getElementById('treatmentLookupInput')?.addEventListener('input', applyTreatmentLookupFilter);
+        applyTreatmentLookupFilter();
+
         // Scheduling modal and automatic suggestions were removed per UX decision.
 
         // Prefill clinical record for an appointment
@@ -277,8 +332,64 @@ if ($sstmt) {
                 const data = await r.json();
                 if (!data || !data.record) return;
                 const rec = data.record;
-                if (rec.recommended_services && Array.isArray(rec.recommended_services)) rec.recommended_services.forEach(id => { const cb = document.getElementById('srv-' + id); if (cb) cb.checked = true; });
-                if (rec.treatment_plan) document.getElementById('treatment_plan').value = typeof rec.treatment_plan === 'object' ? JSON.stringify(rec.treatment_plan, null, 2) : rec.treatment_plan;
+
+                document.querySelectorAll('input[type=checkbox][id^="srv-"]').forEach(cb => { cb.checked = false; });
+                document.querySelectorAll('.treatment-lookup-checkbox').forEach(cb => { cb.checked = false; });
+
+                if (rec.recommended_services && Array.isArray(rec.recommended_services)) {
+                    rec.recommended_services.forEach(item => {
+                        const sid = (item && typeof item === 'object') ? parseInt(item.service_id, 10) : parseInt(item, 10);
+                        if (!Number.isInteger(sid) || sid <= 0) return;
+                        const cb = document.getElementById('srv-' + sid);
+                        if (cb) cb.checked = true;
+                    });
+                }
+
+                if (rec.treatment_plan !== undefined && rec.treatment_plan !== null) {
+                    const tp = rec.treatment_plan;
+                    let notesValue = '';
+                    let selectedTreatmentIds = [];
+
+                    if (typeof tp === 'string') {
+                        notesValue = tp;
+                    } else if (Array.isArray(tp)) {
+                        notesValue = JSON.stringify(tp, null, 2);
+                        if (Array.isArray(tp._selected_treatment_ids)) {
+                            selectedTreatmentIds = tp._selected_treatment_ids;
+                        }
+                    } else if (tp && typeof tp === 'object') {
+                        if (Array.isArray(tp._selected_treatment_ids)) {
+                            selectedTreatmentIds = tp._selected_treatment_ids;
+                        } else if (Array.isArray(tp.selected_treatment_ids)) {
+                            selectedTreatmentIds = tp.selected_treatment_ids;
+                        }
+
+                        if (typeof tp.notes === 'string') {
+                            notesValue = tp.notes;
+                        } else if (Array.isArray(tp.items)) {
+                            notesValue = JSON.stringify(tp.items, null, 2);
+                        } else {
+                            const clone = Object.assign({}, tp);
+                            delete clone._selected_treatment_ids;
+                            delete clone.selected_treatment_ids;
+                            if (Object.keys(clone).length > 0) {
+                                notesValue = JSON.stringify(clone, null, 2);
+                            }
+                        }
+                    }
+
+                    document.getElementById('treatment_plan').value = notesValue;
+                    selectedTreatmentIds
+                        .map(v => parseInt(v, 10))
+                        .filter(v => Number.isInteger(v) && v > 0)
+                        .forEach(tid => {
+                            const tcb = document.getElementById('trt-' + tid);
+                            if (tcb) tcb.checked = true;
+                        });
+                } else {
+                    document.getElementById('treatment_plan').value = '';
+                }
+
                 if (rec.materials_used && Array.isArray(rec.materials_used)) {
                     const wrap = document.getElementById('materialsList');
                     if (wrap) {

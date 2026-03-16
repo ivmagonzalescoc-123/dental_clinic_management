@@ -17,7 +17,6 @@ if (!in_array($role, ['secretary', 'admin'])) {
 }
 
 $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
-$marked_by      = (int)($_SESSION['user_id'] ?? 0);
 
 if (!$appointment_id) {
     echo json_encode(['success' => false, 'message' => 'Missing appointment_id']);
@@ -27,50 +26,9 @@ if (!$appointment_id) {
 try {
     $conn->begin_transaction();
 
-    // Load timeslot info
-    $tsStmt = $conn->prepare(
-        "SELECT t.timeslot_id, t.start_time FROM timeslot t
-         INNER JOIN appointments a ON a.timeslot_id = t.timeslot_id
-         WHERE a.appointment_id = ? LIMIT 1"
-    );
-    if (!$tsStmt) throw new Exception('Prepare failed: ' . $conn->error);
-    $tsStmt->bind_param('i', $appointment_id);
-    $tsStmt->execute();
-    $tsRow = $tsStmt->get_result()->fetch_assoc();
-    $tsStmt->close();
-
-    $noShow = 'no_show';
-
-    // Upsert patient_arrivals as no_show
-    $cqStmt = $conn->prepare("SELECT arrival_id FROM patient_arrivals WHERE appointment_id = ? LIMIT 1");
-    $cqStmt->bind_param('i', $appointment_id);
-    $cqStmt->execute();
-    $existing = $cqStmt->get_result()->fetch_assoc();
-    $cqStmt->close();
-
-    if ($existing) {
-        $upd = $conn->prepare(
-            "UPDATE patient_arrivals SET status = ?, arrived_at = NULL, marked_by = ? WHERE appointment_id = ?"
-        );
-        $upd->bind_param('sii', $noShow, $marked_by, $appointment_id);
-        $upd->execute();
-        $upd->close();
-    } else {
-        $timeslotId   = $tsRow ? (int)$tsRow['timeslot_id'] : 0;
-        $expectedTime = $tsRow ? $tsRow['start_time'] : '00:00:00';
-        $ins = $conn->prepare("
-            INSERT INTO patient_arrivals
-                (appointment_id, timeslot_id, expected_time, arrived_at, status, marked_by)
-            VALUES (?, ?, ?, NULL, ?, ?)
-        ");
-        $ins->bind_param('iissi', $appointment_id, $timeslotId, $expectedTime, $noShow, $marked_by);
-        $ins->execute();
-        $ins->close();
-    }
-
     // Free timeslot back to available
     $freeSlot = $conn->prepare(
-        "UPDATE timeslot SET status = 'available', appointment_id = NULL
+        "UPDATE timeslot SET status = 'available'
          WHERE timeslot_id IN (SELECT timeslot_id FROM appointments WHERE appointment_id = ?)"
     );
     $freeSlot->bind_param('i', $appointment_id);

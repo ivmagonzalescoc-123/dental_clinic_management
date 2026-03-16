@@ -237,22 +237,6 @@ function appt_doctor_has_schedule_on_date(mysqli $conn, $doctorId, $date)
         }
     }
 
-    // Legacy fallback table: schedule(day_of_week/status)
-    if (appt_table_exists($conn, 'schedule')) {
-        $weekdayName = date('l', strtotime($date));
-        $stmt = $conn->prepare("SELECT 1 FROM schedule WHERE user_id = ? AND day_of_week = ? AND status = 'active' LIMIT 1");
-        if ($stmt) {
-            $stmt->bind_param('is', $doctorId, $weekdayName);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            $stmt->close();
-            if (!empty($row)) {
-                return true;
-            }
-        }
-    }
-
     return false;
 }
 

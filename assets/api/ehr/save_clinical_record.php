@@ -14,11 +14,72 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+if (!function_exists('normalize_positive_int_list')) {
+    function normalize_positive_int_list($values)
+    {
+        if (!is_array($values)) {
+            return [];
+        }
+        $out = [];
+        foreach ($values as $value) {
+            $id = (int)$value;
+            if ($id > 0) {
+                $out[$id] = $id;
+            }
+        }
+        return array_values($out);
+    }
+}
+
+if (!function_exists('extract_service_ids_from_node')) {
+    function extract_service_ids_from_node($node, &$bucket)
+    {
+        if (is_array($node)) {
+            if (array_key_exists('service_id', $node)) {
+                $sid = (int)$node['service_id'];
+                if ($sid > 0) {
+                    $bucket[$sid] = $sid;
+                }
+            }
+            foreach ($node as $child) {
+                if (is_array($child)) {
+                    extract_service_ids_from_node($child, $bucket);
+                }
+            }
+        }
+    }
+}
+
 $appointment_id = (int)($_POST['appointment_id'] ?? 0);
 $schedule_id = isset($_POST['schedule_id']) ? (int)$_POST['schedule_id'] : null;
-$recommended_services = isset($_POST['recommended_services']) ? json_decode($_POST['recommended_services'], true) : null;
-$treatment_plan = isset($_POST['treatment_plan']) ? json_decode($_POST['treatment_plan'], true) : null;
+$recommended_services_raw = isset($_POST['recommended_services']) ? $_POST['recommended_services'] : '[]';
+$recommended_services_decoded = json_decode($recommended_services_raw, true);
+$recommended_services = normalize_positive_int_list(
+    is_array($recommended_services_decoded) ? $recommended_services_decoded : []
+);
+
+$treatment_plan_raw = isset($_POST['treatment_plan']) ? trim((string)$_POST['treatment_plan']) : '';
+$treatment_plan = null;
+if ($treatment_plan_raw !== '') {
+    $decodedTreatment = json_decode($treatment_plan_raw, true);
+    if (json_last_error() === JSON_ERROR_NONE) {
+        $treatment_plan = $decodedTreatment;
+    } else {
+        // Accept plain text treatment notes in addition to structured JSON payloads.
+        $treatment_plan = $treatment_plan_raw;
+    }
+}
+
+$selected_treatments_raw = isset($_POST['selected_treatments']) ? $_POST['selected_treatments'] : '[]';
+$selected_treatments_decoded = json_decode($selected_treatments_raw, true);
+$selected_treatment_ids = normalize_positive_int_list(
+    is_array($selected_treatments_decoded) ? $selected_treatments_decoded : []
+);
+
 $materials_used = isset($_POST['materials_used']) ? json_decode($_POST['materials_used'], true) : null;
+if (!is_array($materials_used)) {
+    $materials_used = null;
+}
 $odontogram = isset($_POST['odontogram']) ? json_decode($_POST['odontogram'], true) : null;
 $doctor_notes = $_POST['doctor_notes'] ?? '';
 $follow_up_date = isset($_POST['follow_up_date']) ? trim($_POST['follow_up_date']) : null;
@@ -69,9 +130,30 @@ try {
     $patient_has_profiling = ($prow && !empty($prow['profiling']));
     $patient_locked = ($prow && !empty($prow['profiling_locked']));
 
-    // Upsert clinical_records (now supports schedule_id)
-    $json_recommended = $recommended_services ? json_encode($recommended_services, JSON_UNESCAPED_UNICODE) : null;
-    $json_treatment = $treatment_plan ? json_encode($treatment_plan, JSON_UNESCAPED_UNICODE) : null;
+    // Upsert clinical_records
+    $treatment_service_map = [];
+    if (is_array($treatment_plan)) {
+        extract_service_ids_from_node($treatment_plan, $treatment_service_map);
+    }
+
+    $service_ids = array_values(array_unique(array_merge($recommended_services, array_values($treatment_service_map))));
+
+    $treatment_payload = $treatment_plan;
+    if (!empty($selected_treatment_ids)) {
+        if (is_array($treatment_payload)) {
+            $treatment_payload['_selected_treatment_ids'] = $selected_treatment_ids;
+        } elseif (is_string($treatment_payload) && trim($treatment_payload) !== '') {
+            $treatment_payload = [
+                'notes' => $treatment_payload,
+                '_selected_treatment_ids' => $selected_treatment_ids,
+            ];
+        } else {
+            $treatment_payload = ['_selected_treatment_ids' => $selected_treatment_ids];
+        }
+    }
+
+    $json_recommended = !empty($recommended_services) ? json_encode($recommended_services, JSON_UNESCAPED_UNICODE) : null;
+    $json_treatment = ($treatment_payload !== null) ? json_encode($treatment_payload, JSON_UNESCAPED_UNICODE) : null;
     $json_materials = $materials_used ? json_encode($materials_used, JSON_UNESCAPED_UNICODE) : null;
     $json_odontogram = $odontogram ? json_encode($odontogram, JSON_UNESCAPED_UNICODE) : null;
     $json_profiling = $profiling_json ? $profiling_json : null;
@@ -147,17 +229,17 @@ try {
     $stmt->close();
 
     if ($existing) {
-        $stmt = $conn->prepare('UPDATE clinical_records SET schedule_id = ?, doctor_id = ?, patient_id = ?, recommended_services = ?, treatment_plan = ?, materials_used = ?, odontogram = ?, images = ?, doctor_notes = ?, follow_up_date = ?, status = ?, profiling = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at) WHERE appointment_id = ?');
+        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, recommended_services = ?, treatment_plan = ?, materials_used = ?, odontogram = ?, images = ?, doctor_notes = ?, follow_up_date = ?, status = ?, profiling = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at) WHERE appointment_id = ?');
         $status = $submit_and_finalize ? 'submitted' : 'in_progress';
         $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iiisssssssssiii', $schedule_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag, $appointment_id);
+        $stmt->bind_param('iisssssssssiii', $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag, $appointment_id);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = $conn->prepare('INSERT INTO clinical_records (schedule_id, appointment_id, doctor_id, patient_id, recommended_services, treatment_plan, materials_used, odontogram, images, doctor_notes, follow_up_date, status, profiling, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL))');
+        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, recommended_services, treatment_plan, materials_used, odontogram, images, doctor_notes, follow_up_date, status, profiling, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL))');
         $status = $submit_and_finalize ? 'submitted' : 'in_progress';
         $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iiiisssssssssii', $schedule_id, $appointment_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag);
+        $stmt->bind_param('iiisssssssssii', $appointment_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag);
         $stmt->execute();
         $stmt->close();
     }
@@ -183,20 +265,77 @@ try {
         }
     }
 
+    // Keep appointment-level service links in selected_services (appointments.service_id is removed).
+    $existingServiceLinkIds = [];
+    $findLinks = $conn->prepare('SELECT selected_service_id FROM selected_services WHERE appointment_id = ?');
+    if ($findLinks) {
+        $findLinks->bind_param('i', $appointment_id);
+        $findLinks->execute();
+        $linkRes = $findLinks->get_result();
+        while ($linkRes && ($linkRow = $linkRes->fetch_assoc())) {
+            $existingServiceLinkIds[] = (int)$linkRow['selected_service_id'];
+        }
+        $findLinks->close();
+    }
+
+    if (!empty($existingServiceLinkIds)) {
+        $ph = implode(',', array_fill(0, count($existingServiceLinkIds), '?'));
+        $types = str_repeat('i', count($existingServiceLinkIds));
+        $delTreat = $conn->prepare("DELETE FROM selected_treatments WHERE selected_service_id IN ($ph)");
+        if ($delTreat) {
+            $delTreat->bind_param($types, ...$existingServiceLinkIds);
+            $delTreat->execute();
+            $delTreat->close();
+        }
+    }
+
+    $delServices = $conn->prepare('DELETE FROM selected_services WHERE appointment_id = ?');
+    if ($delServices) {
+        $delServices->bind_param('i', $appointment_id);
+        $delServices->execute();
+        $delServices->close();
+    }
+
+    $selectedServiceLinkIds = [];
+    if (!empty($service_ids)) {
+        $serviceNote = 'From clinical record';
+        $insService = $conn->prepare('INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)');
+        if ($insService) {
+            foreach ($service_ids as $sid) {
+                $insService->bind_param('iis', $appointment_id, $sid, $serviceNote);
+                if (!$insService->execute()) {
+                    $insService->close();
+                    throw new Exception('Failed to save selected services: ' . $conn->error);
+                }
+                $selectedServiceLinkIds[] = (int)$conn->insert_id;
+            }
+            $insService->close();
+        }
+    }
+
+    // selected_treatments requires selected_service_id linkage; save when at least one service exists.
+    if (!empty($selected_treatment_ids) && !empty($selectedServiceLinkIds)) {
+        $defaultSelectedServiceId = (int)$selectedServiceLinkIds[0];
+        $insTreatment = $conn->prepare(
+            "INSERT INTO selected_treatments (treatment_id, selected_service_id, status, notes)
+             VALUES (?, ?, 'pending', NULL)"
+        );
+        if ($insTreatment) {
+            foreach ($selected_treatment_ids as $tid) {
+                $insTreatment->bind_param('ii', $tid, $defaultSelectedServiceId);
+                if (!$insTreatment->execute()) {
+                    $insTreatment->close();
+                    throw new Exception('Failed to save selected treatments: ' . $conn->error);
+                }
+            }
+            $insTreatment->close();
+        }
+    }
+
     // --- Smart-scheduling hook: detect services/treatment items that require scheduling
     $will_need_scheduling = false;
     $created_schedule_id = null;
     $created_followup_appointment_id = null;
-    $service_ids = [];
-    if ($recommended_services && is_array($recommended_services)) {
-        foreach ($recommended_services as $sid) $service_ids[] = (int)$sid;
-    }
-    if ($treatment_plan && is_array($treatment_plan)) {
-        foreach ($treatment_plan as $tp) {
-            if (is_array($tp) && isset($tp['service_id'])) $service_ids[] = (int)$tp['service_id'];
-        }
-    }
-    $service_ids = array_values(array_unique($service_ids));
 
     $total_needed_minutes = 0;
     if (!empty($service_ids)) {
@@ -321,15 +460,15 @@ try {
             $candidateEndDT = $followDate . ' ' . $candidateEnd;
 
             // Guard against overlap with existing scheduled/in-progress appointments for this doctor.
-            $ov = $conn->prepare(
-                "SELECT schedule_id
-                 FROM schedules
-                 WHERE user_id = ?
-                   AND status IN ('scheduled','in_progress')
-                   AND scheduled_start < ?
-                   AND scheduled_end > ?
-                 LIMIT 1"
-            );
+                        $ov = $conn->prepare(
+                                "SELECT schedule_id
+                                 FROM patient_schedules
+                                 WHERE user_id = ?
+                                     AND status IN ('scheduled','in_progress')
+                                     AND scheduled_start < ?
+                                     AND scheduled_end > ?
+                                 LIMIT 1"
+                        );
             if (!$ov) throw new Exception('Prepare failed (overlap check): ' . $conn->error);
             $ov->bind_param('iss', $doctor_id, $candidateEndDT, $candidateStartDT);
             $ov->execute();
@@ -351,38 +490,53 @@ try {
         }
 
         // Create a real follow-up appointment so it enters secretary/doctor workflow normally.
-        $followupServiceId = !empty($service_ids) ? (int)$service_ids[0] : 0;
         $followupReason = 'Follow-up from appointment #' . $appointment_id;
         $followupStatus = 'confirmed';
         $insAppt = $conn->prepare(
             'INSERT INTO appointments
-             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, service_id, rescheduled_from)
-               VALUES (?, ?, ?, 0, ?, ?, ?, 0, NULL, NULLIF(?,0), ?)'
+             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, rescheduled_from)
+               VALUES (?, ?, ?, 0, ?, ?, ?, 0, NULL, ?)'
         );
         if (!$insAppt) throw new Exception('Prepare failed (follow-up appointment): ' . $conn->error);
         $followupDateOnly = $followDate;
         $followupNotes = 'Auto follow-up scheduled from clinical record of appointment #' . $appointment_id;
         $rescheduledFrom = $appointment_id;
         $insAppt->bind_param(
-            'issssiii',
+            'issssii',
             $patient_id,
             $followupDateOnly,
             $followupReason,
             $followupNotes,
             $followupStatus,
             $doctor_id,
-            $followupServiceId,
             $rescheduledFrom
         );
         if (!$insAppt->execute()) throw new Exception('Failed to create follow-up appointment: ' . $insAppt->error);
         $created_followup_appointment_id = (int)$conn->insert_id;
         $insAppt->close();
 
+        if (!empty($service_ids)) {
+            $followServiceNote = 'Auto follow-up services copied from appointment #' . $appointment_id;
+            $insFollowSvc = $conn->prepare(
+                'INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)'
+            );
+            if ($insFollowSvc) {
+                foreach ($service_ids as $sid) {
+                    $insFollowSvc->bind_param('iis', $created_followup_appointment_id, $sid, $followServiceNote);
+                    if (!$insFollowSvc->execute()) {
+                        $insFollowSvc->close();
+                        throw new Exception('Failed to save follow-up services: ' . $conn->error);
+                    }
+                }
+                $insFollowSvc->close();
+            }
+        }
+
         // Reserve selected timeslots so secretary/patient cannot book them.
         $ph = implode(',', array_fill(0, count($reservedIds), '?'));
-        $types = str_repeat('i', count($reservedIds) + 1);
-        $params = array_merge([$created_followup_appointment_id], $reservedIds);
-        $updSql = "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id IN ($ph) AND status = 'available'";
+        $types = str_repeat('i', count($reservedIds));
+        $params = $reservedIds;
+        $updSql = "UPDATE timeslot SET status = 'booked' WHERE timeslot_id IN ($ph) AND status = 'available'";
         $upd = $conn->prepare($updSql);
         if (!$upd) throw new Exception('Prepare failed (timeslot reserve): ' . $conn->error);
         $upd->bind_param($types, ...$params);
@@ -406,7 +560,7 @@ try {
         $book_start = $followDate . ' ' . $bookStartTime;
         $book_end = $followDate . ' ' . $bookEndTime;
 
-        $ins_sql = 'INSERT INTO schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, "scheduled")';
+        $ins_sql = 'INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, "scheduled")';
         $ins = $conn->prepare($ins_sql);
         if (!$ins) throw new Exception('Prepare failed (schedule insert): ' . $conn->error);
         $ins->bind_param('iiss', $created_followup_appointment_id, $doctor_id, $book_start, $book_end);
@@ -414,31 +568,19 @@ try {
         $created_schedule_id = (int)$conn->insert_id;
         $ins->close();
 
-        // Add follow-up into arrivals queue as pending so secretary can mark arrived.
-        $insPa = $conn->prepare(
-            "INSERT INTO patient_arrivals (appointment_id, timeslot_id, expected_time, status)
-             VALUES (?, ?, ?, 'pending')"
-        );
-        if ($insPa) {
-            $insPa->bind_param('iis', $created_followup_appointment_id, $firstTimeslotId, $bookStartTime);
-            $insPa->execute();
-            $insPa->close();
-        }
-
         $remind_dt = (new DateTime($book_start))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $r_sql = 'INSERT INTO schedule_reminders (schedule_id, remind_at, channel, payload) VALUES (?, ?, "in_app", ?)';
-        $payload = json_encode(['appointment_id'=>$appointment_id, 'schedule_id'=>$created_schedule_id]);
+        $r_sql = 'INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, "in_app", ?)';
+        $payload = json_encode([
+            'appointment_id' => $created_followup_appointment_id,
+            'schedule_id' => $created_schedule_id,
+            'patient_schedule_id' => $created_schedule_id,
+        ]);
         $r_stmt = $conn->prepare($r_sql);
         if ($r_stmt) {
             $r_stmt->bind_param('iss', $created_schedule_id, $remind_dt, $payload);
             $r_stmt->execute();
             $r_stmt->close();
         }
-
-        $ust2 = $conn->prepare('UPDATE clinical_records SET schedule_id = ? WHERE appointment_id = ?');
-        $ust2->bind_param('ii', $created_schedule_id, $appointment_id);
-        $ust2->execute();
-        $ust2->close();
     }
 
     // If finalized/submitted, update appointment status and queue, and create billing
@@ -450,37 +592,19 @@ try {
         $ust->execute();
         $ust->close();
 
-        $qst = $conn->prepare('UPDATE patient_arrivals SET status = ? WHERE appointment_id = ?');
-        $qstatus = 'served';
-        $qst->bind_param('si', $qstatus, $appointment_id);
-        $qst->execute();
-        $qst->close();
-
         // Calculate billing: sum of services + materials total + optional doctor fee
         $total = 0.0;
-        // Services (recommended services or treatment plan service_ids)
-        if ($recommended_services && is_array($recommended_services)) {
-            foreach ($recommended_services as $sid) {
+        // Services from recommended services + structured treatment plan service references.
+        if (!empty($service_ids)) {
+            foreach ($service_ids as $sid) {
                 $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
                 $sstmt->bind_param('i', $sid);
                 $sstmt->execute();
                 $res = $sstmt->get_result();
-                if ($res && ($r = $res->fetch_assoc())) $total += (float)$r['initial_price'];
-                $sstmt->close();
-            }
-        }
-        // If treatment_plan contains service references, try to include those too
-        if ($treatment_plan && is_array($treatment_plan)) {
-            foreach ($treatment_plan as $tp) {
-                if (is_array($tp) && isset($tp['service_id'])) {
-                    $sid = (int)$tp['service_id'];
-                    $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
-                    $sstmt->bind_param('i', $sid);
-                    $sstmt->execute();
-                    $res = $sstmt->get_result();
-                    if ($res && ($r = $res->fetch_assoc())) $total += (float)$r['initial_price'];
-                    $sstmt->close();
+                if ($res && ($r = $res->fetch_assoc())) {
+                    $total += (float)$r['initial_price'];
                 }
+                $sstmt->close();
             }
         }
         // Materials

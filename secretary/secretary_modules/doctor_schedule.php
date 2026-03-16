@@ -169,30 +169,6 @@ if ($conn->query("SHOW TABLES LIKE 'doctor_availability'")->num_rows > 0) {
             $availabilityByDoctor[$uid][$weekday] = true;
         }
     }
-} elseif ($conn->query("SHOW TABLES LIKE 'schedule'")->num_rows > 0) {
-    $map = [
-        'sunday' => 0,
-        'monday' => 1,
-        'tuesday' => 2,
-        'wednesday' => 3,
-        'thursday' => 4,
-        'friday' => 5,
-        'saturday' => 6,
-    ];
-    $aq = $conn->query("SELECT user_id, day_of_week FROM schedule WHERE status = 'active'");
-    if ($aq) {
-        while ($r = $aq->fetch_assoc()) {
-            $uid = (int)$r['user_id'];
-            $key = strtolower((string)($r['day_of_week'] ?? ''));
-            if (!isset($map[$key])) {
-                continue;
-            }
-            if (!isset($availabilityByDoctor[$uid])) {
-                $availabilityByDoctor[$uid] = [];
-            }
-            $availabilityByDoctor[$uid][$map[$key]] = true;
-        }
-    }
 }
 
 $leaveRows = [];
@@ -370,6 +346,47 @@ if (!function_exists('secretary_leave_popover_html')) {
     }
 }
 
+if (!function_exists('secretary_present_note')) {
+    function secretary_present_note(array $doctor, $weekday)
+    {
+        $weekday = (int)$weekday;
+        $workType = strtolower((string)($doctor['work_type'] ?? 'regular'));
+        if ($workType === 'part_time') {
+            return 'Part-time availability day';
+        }
+        if ($weekday === 0) {
+            return 'Clinic closed';
+        }
+        return 'Regular schedule day';
+    }
+}
+
+if (!function_exists('secretary_present_popover_html')) {
+    function secretary_present_popover_html(array $items, $dateStr)
+    {
+        if (empty($items)) {
+            return '';
+        }
+
+        $dateLabel = date('M d, Y', strtotime((string)$dateStr));
+        $parts = [];
+        foreach ($items as $item) {
+            $name = trim((string)($item['name'] ?? 'Doctor'));
+            $workType = strtolower((string)($item['work_type'] ?? 'regular'));
+            $typeLabel = $workType === 'part_time' ? 'Part-time' : 'Regular';
+            $note = trim((string)($item['note'] ?? ''));
+
+            $line = $name . ' - ' . $typeLabel;
+            if ($note !== '') {
+                $line .= ' (' . $note . ')';
+            }
+            $parts[] = $line;
+        }
+
+        return htmlspecialchars('Present on ' . $dateLabel . "\n" . implode("\n", $parts), ENT_QUOTES, 'UTF-8');
+    }
+}
+
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
@@ -503,7 +520,14 @@ if (!function_exists('secretary_leave_popover_html')) {
                                             $popover = secretary_leave_popover_html($leaveDetailsByDateDoctor[$dateStr][$selectedDoctor] ?? [], $docName);
                                             echo '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="leave-popover" data-bs-content="' . $popover . '">' . htmlspecialchars($docName) . '</button>';
                                         } elseif ($hasSched) {
-                                            echo '<div class="mark mark-present">' . htmlspecialchars($docName) . '</div>';
+                                            $presentPopover = secretary_present_popover_html([
+                                                [
+                                                    'name' => $docName,
+                                                    'work_type' => (string)($doctorMap[$selectedDoctor]['work_type'] ?? 'regular'),
+                                                    'note' => secretary_present_note($doctorMap[$selectedDoctor] ?? [], $weekday),
+                                                ],
+                                            ], $dateStr);
+                                            echo '<button type="button" class="mark mark-present mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="present-popover" data-bs-content="' . $presentPopover . '">' . htmlspecialchars($docName) . '</button>';
                                         }
                                     } else {
                                         if ($isClinicClosed) {
@@ -511,6 +535,7 @@ if (!function_exists('secretary_leave_popover_html')) {
                                         } else {
                                             $leaveDoctors = [];
                                             $presentCount = 0;
+                                            $presentDoctors = [];
                                             foreach ($doctors as $doc) {
                                                 $uid = (int)$doc['user_id'];
                                                 $isApprovedLeave = !empty($approvedLeaveByDateDoctor[$dateStr][$uid]);
@@ -522,6 +547,11 @@ if (!function_exists('secretary_leave_popover_html')) {
                                                     ];
                                                 } elseif ($hasSched) {
                                                     $presentCount++;
+                                                    $presentDoctors[] = [
+                                                        'name' => 'Dr. ' . trim((string)($doc['last_name'] ?? $doc['first_name'] ?? 'Doctor')),
+                                                        'work_type' => (string)($doc['work_type'] ?? 'regular'),
+                                                        'note' => secretary_present_note($doc, $weekday),
+                                                    ];
                                                 }
                                             }
 
@@ -548,7 +578,8 @@ if (!function_exists('secretary_leave_popover_html')) {
                                                 }
                                             }
                                             if ($presentCount > 0) {
-                                                echo '<div class="mark mark-present">Present ' . (int)$presentCount . '</div>';
+                                                $presentPopover = secretary_present_popover_html($presentDoctors, $dateStr);
+                                                echo '<button type="button" class="mark mark-present mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="present-popover" data-bs-content="' . $presentPopover . '">Present ' . (int)$presentCount . '</button>';
                                             }
                                         }
                                     }
@@ -725,6 +756,10 @@ if (!function_exists('secretary_leave_popover_html')) {
     color: #92400e;
 }
 .leave-popover .popover-body {
+    white-space: pre-line;
+    font-size: 0.82rem;
+}
+.present-popover .popover-body {
     white-space: pre-line;
     font-size: 0.82rem;
 }

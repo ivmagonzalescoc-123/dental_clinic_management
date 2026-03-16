@@ -79,13 +79,13 @@ $appointmentsPendingToday = scalar_int(
 
 $checkedInToday = scalar_int(
 	$conn,
-	"SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status IN ('arrived','late')",
+	"SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status IN ('checked_in','in_progress')",
 	's',
 	[$today]
 );
 $queueWaitingToday = scalar_int(
 	$conn,
-	"SELECT COUNT(*) FROM patient_arrivals pa INNER JOIN appointments a ON a.appointment_id = pa.appointment_id WHERE a.appointment_date = ? AND pa.status = 'pending'",
+	"SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status = 'confirmed'",
 	's',
 	[$today]
 );

@@ -24,21 +24,20 @@ if ($page === 'appointments' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 $today = date('Y-m-d');
 $pendingCount = 0;
 try {
-    if (function_exists('table_exists') && table_exists($conn, 'patient_arrivals')) {
-        $stmt = $conn->prepare(
-            "SELECT COUNT(*) AS c FROM patient_arrivals pa
-             INNER JOIN appointments a ON a.appointment_id = pa.appointment_id
-             WHERE a.appointment_date = ? AND pa.status = 'pending'"
-        );
-        if ($stmt) {
-            $stmt->bind_param('s', $today);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            if ($res && ($r = $res->fetch_assoc())) {
-                $pendingCount = (int)($r['c'] ?? 0);
-            }
-            $stmt->close();
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) AS c
+         FROM appointments
+         WHERE appointment_date = ?
+           AND status = 'confirmed'"
+    );
+    if ($stmt) {
+        $stmt->bind_param('s', $today);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res && ($r = $res->fetch_assoc())) {
+            $pendingCount = (int)($r['c'] ?? 0);
         }
+        $stmt->close();
     }
 } catch (Throwable $e) {
     error_log('Error computing pendingCount: ' . $e->getMessage());

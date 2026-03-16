@@ -10,7 +10,7 @@ $sql = "
 SELECT s.schedule_id, s.appointment_id, s.user_id, s.scheduled_start, s.scheduled_end, s.status,
        a.appointment_date, a.patient_id, p.first_name, p.last_name, p.phone_number,
        (SELECT GROUP_CONCAT(service_name SEPARATOR ', ') FROM selected_services ss JOIN services sv ON ss.service_id = sv.service_id WHERE ss.appointment_id = a.appointment_id) AS services
-FROM schedules s
+FROM patient_schedules s
 LEFT JOIN appointments a ON s.appointment_id = a.appointment_id
 LEFT JOIN patients p ON a.patient_id = p.patient_id
 WHERE s.user_id = ? OR a.user_id = ?

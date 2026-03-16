@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gender_raw = security_clean_string($_POST['gender'] ?? '', 20);
     $address_raw = security_clean_string($_POST['address'] ?? '', 500);
     $work_type_raw = security_clean_string($_POST['work_type'] ?? 'regular', 20);
+    $specialization_id = (int)($_POST['specialization_id'] ?? 0);
 
     $phone_number = $phone_number_raw !== '' ? $phone_number_raw : null;
     $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
@@ -41,8 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $roleStmt->close();
     }
 
+    $is_doctor_role = ($doctor_role_id > 0 && $role_id === $doctor_role_id);
+
     $work_type = 'regular';
-    if ($doctor_role_id > 0 && $role_id === $doctor_role_id) {
+    if ($is_doctor_role) {
         $work_type = ($work_type_raw === 'part_time') ? 'part_time' : 'regular';
     }
 
@@ -59,6 +62,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin/admin.php?page=manage_users&type=users');
         exit;
+    }
+
+    if ($is_doctor_role && $specialization_id <= 0) {
+        $_SESSION['message'] = 'Please select a specialization for doctor accounts.';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: ../../../admin/admin.php?page=manage_users&type=users');
+        exit;
+    }
+
+    if ($is_doctor_role && $specialization_id > 0) {
+        $specCheck = $conn->prepare('SELECT specialization_id FROM specialization WHERE specialization_id = ? LIMIT 1');
+        if ($specCheck) {
+            $specCheck->bind_param('i', $specialization_id);
+            $specCheck->execute();
+            $specExists = (bool)$specCheck->get_result()->fetch_assoc();
+            $specCheck->close();
+            if (!$specExists) {
+                $_SESSION['message'] = 'Selected specialization is invalid.';
+                $_SESSION['message_type'] = 'warning';
+                header('Location: ../../../admin/admin.php?page=manage_users&type=users');
+                exit;
+            }
+        }
     }
 
     // Check if email already exists
@@ -81,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $passwordHash = security_hash_password($defaultPassword);
 
     // Insert new user
-        $sql = "INSERT INTO users (first_name, last_name, email, password_hash, role_id, work_type, phone_number, date_of_birth, gender, address, is_active) 
+    $sql = "INSERT INTO users (first_name, last_name, email, password_hash, role_id, work_type, phone_number, date_of_birth, gender, address, is_active) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
 
     $stmt = $conn->prepare($sql);
@@ -94,18 +120,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt->bind_param("ssssisssss", $first_name, $last_name, $email, $passwordHash, $role_id, $work_type, $phone_number, $date_of_birth, $gender, $address);
 
-    if ($stmt->execute()) {
+    $conn->begin_transaction();
+    try {
+        if (!$stmt->execute()) {
+            throw new Exception('Error adding user: ' . $stmt->error);
+        }
+
         $newUserId = (int)$stmt->insert_id;
+
+        if ($is_doctor_role && $specialization_id > 0) {
+            $spStmt = $conn->prepare('INSERT INTO dentist_specialization (user_id, specialization_id) VALUES (?, ?)');
+            if (!$spStmt) {
+                throw new Exception('Error preparing specialization insert: ' . $conn->error);
+            }
+            $spStmt->bind_param('ii', $newUserId, $specialization_id);
+            if (!$spStmt->execute()) {
+                $spStmt->close();
+                throw new Exception('Error saving specialization: ' . $spStmt->error);
+            }
+            $spStmt->close();
+        }
+
         $forceStmt = $conn->prepare('UPDATE users SET must_change_password = 1, password_updated_at = NOW() WHERE user_id = ?');
         if ($forceStmt) {
             $forceStmt->bind_param('i', $newUserId);
             $forceStmt->execute();
             $forceStmt->close();
         }
+
+        $conn->commit();
         $_SESSION['message'] = 'User added. Default password: ' . $defaultPassword . ' (must change on first login).';
         $_SESSION['message_type'] = 'success';
-    } else {
-        $_SESSION['message'] = 'Error adding user: ' . $stmt->error;
+    } catch (Throwable $e) {
+        $conn->rollback();
+        $_SESSION['message'] = $e->getMessage();
         $_SESSION['message_type'] = 'danger';
     }
 

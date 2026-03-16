@@ -135,7 +135,16 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Fetch users from users table
 $users = [];
-$users_sql = "SELECT u.*, r.role_name FROM users u LEFT JOIN role r ON u.role_id = r.role_id WHERE 1=1";
+$users_sql = "SELECT u.*, r.role_name, ds.specialization_id, sp.specialization_name
+              FROM users u
+              LEFT JOIN role r ON u.role_id = r.role_id
+              LEFT JOIN (
+                  SELECT user_id, MIN(specialization_id) AS specialization_id
+                  FROM dentist_specialization
+                  GROUP BY user_id
+              ) ds ON ds.user_id = u.user_id
+              LEFT JOIN specialization sp ON sp.specialization_id = ds.specialization_id
+              WHERE 1=1";
 
 if (!empty($search)) {
     $search_param = '%' . $search . '%';
@@ -196,6 +205,15 @@ if ($roles_result) {
         $roles[] = $row;
     }
 }
+
+$specializations = [];
+$specRes = $conn->query('SELECT specialization_id, specialization_name FROM specialization ORDER BY specialization_name ASC');
+if ($specRes) {
+    while ($specRow = $specRes->fetch_assoc()) {
+        $specializations[] = $specRow;
+    }
+}
+
 $doctorRoleId = 2;
 foreach ($roles as $roleRow) {
     if (strtolower((string)($roleRow['role_name'] ?? '')) === 'doctor') {
@@ -256,6 +274,7 @@ foreach ($roles as $roleRow) {
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Work Type</th>
+                                <th>Specialization</th>
                                 <th>Phone</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -274,13 +293,20 @@ foreach ($roles as $roleRow) {
                                     </td>
                                     <td>
                                         <?php
-                                            $isDoctor = ((int)($user['role_id'] ?? 0) === 2);
+                                            $isDoctor = ((int)($user['role_id'] ?? 0) === (int)$doctorRoleId);
                                             $workType = ((string)($user['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular';
                                         ?>
                                         <?php if ($isDoctor): ?>
                                             <span class="badge bg-<?php echo $workType === 'Part-time' ? 'warning text-dark' : 'success'; ?>"><?php echo htmlspecialchars($workType); ?></span>
                                         <?php else: ?>
                                             <span class="badge bg-success">Regular</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($isDoctor): ?>
+                                            <?php echo htmlspecialchars($user['specialization_name'] ?? '—'); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($user['phone_number']); ?></td>
@@ -451,6 +477,15 @@ foreach ($roles as $roleRow) {
                             </select>
                             <small class="text-muted">Regular doctors are available Monday-Saturday. Part-time doctors require deployment days from admin.</small>
                         </div>
+                        <div class="col-md-6" id="add_specialization_wrap" style="display:none;">
+                            <label class="form-label">Doctor Specialization</label>
+                            <select class="form-control" id="add_specialization_id" name="specialization_id">
+                                <option value="">Select specialization</option>
+                                <?php foreach ($specializations as $spec): ?>
+                                    <option value="<?php echo (int)$spec['specialization_id']; ?>"><?php echo htmlspecialchars($spec['specialization_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -555,6 +590,15 @@ foreach ($roles as $roleRow) {
                                 <option value="part_time">Part-time</option>
                             </select>
                             <small class="text-muted">Part-time doctors can be deployed on specific weekdays in Admin Doctor Deployment.</small>
+                        </div>
+                        <div class="col-md-6" id="edit_specialization_wrap" style="display:none;">
+                            <label class="form-label">Doctor Specialization</label>
+                            <select class="form-control" name="specialization_id" id="edit_specialization_id">
+                                <option value="">Select specialization</option>
+                                <?php foreach ($specializations as $spec): ?>
+                                    <option value="<?php echo (int)$spec['specialization_id']; ?>"><?php echo htmlspecialchars($spec['specialization_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -730,6 +774,7 @@ function editUser(user) {
     document.getElementById('edit_is_active').value = user.is_active;
     document.getElementById('edit_role_id').value = user.role_id;
     document.getElementById('edit_work_type').value = (user.work_type === 'part_time') ? 'part_time' : 'regular';
+    document.getElementById('edit_specialization_id').value = user.specialization_id ? String(user.specialization_id) : '';
     toggleDoctorWorkTypeFields();
 }
 
@@ -739,18 +784,28 @@ function toggleDoctorWorkTypeFields() {
     const editRole = document.getElementById('edit_role_id');
     const addWrap = document.getElementById('add_work_type_wrap');
     const editWrap = document.getElementById('edit_work_type_wrap');
+    const addSpecWrap = document.getElementById('add_specialization_wrap');
+    const editSpecWrap = document.getElementById('edit_specialization_wrap');
     const addWorkType = document.getElementById('add_work_type');
     const editWorkType = document.getElementById('edit_work_type');
+    const addSpec = document.getElementById('add_specialization_id');
+    const editSpec = document.getElementById('edit_specialization_id');
 
     if (addRole && addWrap) {
         const isDoctor = (String(addRole.value) === String(doctorRoleId));
         addWrap.style.display = isDoctor ? '' : 'none';
+        if (addSpecWrap) addSpecWrap.style.display = isDoctor ? '' : 'none';
+        if (addSpec) addSpec.required = isDoctor;
         if (!isDoctor && addWorkType) addWorkType.value = 'regular';
+        if (!isDoctor && addSpec) addSpec.value = '';
     }
     if (editRole && editWrap) {
         const isDoctor = (String(editRole.value) === String(doctorRoleId));
         editWrap.style.display = isDoctor ? '' : 'none';
+        if (editSpecWrap) editSpecWrap.style.display = isDoctor ? '' : 'none';
+        if (editSpec) editSpec.required = isDoctor;
         if (!isDoctor && editWorkType) editWorkType.value = 'regular';
+        if (!isDoctor && editSpec) editSpec.value = '';
     }
 }
 

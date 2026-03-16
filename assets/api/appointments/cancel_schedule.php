@@ -20,7 +20,7 @@ if ($schedule_id <= 0) {
 
 try {
     // Fetch schedule
-    $stmt = $conn->prepare('SELECT schedule_id, user_id, appointment_id, status FROM schedules WHERE schedule_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT schedule_id, user_id, appointment_id, status FROM patient_schedules WHERE schedule_id = ? LIMIT 1');
     $stmt->bind_param('i', $schedule_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -37,7 +37,7 @@ try {
     }
 
     // Perform cancellation
-    $ust = $conn->prepare('UPDATE schedules SET status = ?, updated_at = NOW() WHERE schedule_id = ?');
+    $ust = $conn->prepare('UPDATE patient_schedules SET status = ?, updated_at = NOW() WHERE schedule_id = ?');
     $status = 'cancelled';
     $ust->bind_param('si', $status, $schedule_id);
     $ust->execute();

@@ -10,12 +10,11 @@ $doctor_id = $_SESSION['user_id'] ?? 0;
 if ($doctor_id && $conn) {
     $today_for_count = date('Y-m-d');
     $qc_stmt = $conn->prepare(
-        "SELECT COUNT(*) AS c FROM patient_arrivals pa
-         INNER JOIN appointments a ON a.appointment_id = pa.appointment_id
+        "SELECT COUNT(*) AS c FROM appointments a
                  LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
                  WHERE COALESCE(a.user_id, t.doctor_id) = ?
                      AND COALESCE(t.slot_date, a.appointment_date) = ?
-                     AND (pa.status IN ('pending','arrived','late') OR a.status = 'checked_in')"
+                     AND a.status IN ('confirmed','checked_in','in_progress')"
     );
     if ($qc_stmt) {
         $qc_stmt->bind_param('is', $doctor_id, $today_for_count);
@@ -333,15 +332,7 @@ if ($page === 'appointments') {
                 });
         }
 
-        if (typeof initSessionIdleMonitor === 'function') {
-            initSessionIdleMonitor({
-                idleLimitSeconds: 3600,
-                countdownSeconds: 60,
-                roleLabel: 'User',
-                pingUrl: '../assets/api/auth/session_ping.php',
-                logoutFn: logout
-            });
-        }
+        // Doctor idle timeout is disabled.
     </script>
 
     <script>
