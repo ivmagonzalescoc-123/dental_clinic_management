@@ -66,8 +66,8 @@ if ($page === 'appointments') {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260316" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260316" rel="stylesheet">
 </head>
 
 <body>

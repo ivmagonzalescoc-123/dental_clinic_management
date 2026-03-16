@@ -3,8 +3,21 @@
    ======================================== */
 
 :root {
-    --primary-color: #0066ff;
-    --primary-hover: #0052cc;
+    --primary-color: #5f43b2;
+    --primary-hover: #4f3796;
+    --profile-primary-color: #0066ff;
+    --profile-primary-hover: #0052cc;
+    --bs-primary: #5f43b2;
+    --bs-primary-rgb: 95, 67, 178;
+    --bs-info: #5f43b2;
+    --bs-info-rgb: 95, 67, 178;
+    --bs-link-color: #5f43b2;
+    --bs-link-hover-color: #4f3796;
+    --bs-focus-ring-color: rgba(95, 67, 178, 0.25);
+    --bs-nav-pills-link-active-bg: #5f43b2;
+    --bs-pagination-active-bg: #5f43b2;
+    --bs-pagination-active-border-color: #5f43b2;
+    --bs-dropdown-link-active-bg: #5f43b2;
     --sidebar-bg: #f8f9fa;
     --sidebar-text: #333;
     --header-bg: #fff;
@@ -14,7 +27,7 @@
     --success: #28a745;
     --danger: #dc3545;
     --warning: #ffc107;
-    --info: #17a2b8;
+    --info: #5f43b2;
 }
 
 body {
@@ -142,6 +155,11 @@ body {
 .header-nav .nav-link:active {
     background-color: var(--primary-color);
     color: white !important;
+}
+
+.header-nav .nav-profile:active {
+    background-color: var(--profile-primary-color);
+    color: #fff !important;
 }
 
 .header-nav .nav-icon {
@@ -372,6 +390,230 @@ body.toggle-sidebar .footer {
     background-color: var(--primary-hover);
 }
 
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-hover);
+    --bs-btn-hover-border-color: var(--primary-hover);
+    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-hover);
+    --bs-btn-active-border-color: var(--primary-hover);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--primary-color);
+    --bs-btn-disabled-border-color: var(--primary-color);
+}
+
+.btn-primary,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus:hover,
+.btn-primary:active:hover,
+.btn-primary.active:hover,
+.show > .btn-primary.dropdown-toggle:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: #fff !important;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-color);
+    --bs-btn-hover-border-color: var(--primary-color);
+    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-hover);
+    --bs-btn-active-border-color: var(--primary-hover);
+    --bs-btn-disabled-color: var(--primary-color);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: var(--primary-color);
+}
+
+.btn-outline-primary,
+.btn-outline-primary:focus,
+.btn-outline-primary:active,
+.btn-outline-primary.active,
+.show > .btn-outline-primary.dropdown-toggle {
+    background-color: transparent !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus:hover,
+.btn-outline-primary:active:hover,
+.btn-outline-primary.active:hover,
+.show > .btn-outline-primary.dropdown-toggle:hover {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.btn-info {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-hover);
+    --bs-btn-hover-border-color: var(--primary-hover);
+    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-hover);
+    --bs-btn-active-border-color: var(--primary-hover);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--primary-color);
+    --bs-btn-disabled-border-color: var(--primary-color);
+}
+
+.btn-info,
+.btn-info:focus,
+.btn-info:active,
+.btn-info.active,
+.show > .btn-info.dropdown-toggle {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.btn-info:hover,
+.btn-info:focus:hover,
+.btn-info:active:hover,
+.btn-info.active:hover,
+.show > .btn-info.dropdown-toggle:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: #fff !important;
+}
+
+.btn-outline-info {
+    --bs-btn-color: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-color);
+    --bs-btn-hover-border-color: var(--primary-color);
+    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-hover);
+    --bs-btn-active-border-color: var(--primary-hover);
+    --bs-btn-disabled-color: var(--primary-color);
+    --bs-btn-disabled-bg: transparent;
+    --bs-btn-disabled-border-color: var(--primary-color);
+}
+
+.btn-outline-info,
+.btn-outline-info:focus,
+.btn-outline-info:active,
+.btn-outline-info.active,
+.show > .btn-outline-info.dropdown-toggle {
+    background-color: transparent !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.btn-outline-info:hover,
+.btn-outline-info:focus:hover,
+.btn-outline-info:active:hover,
+.btn-outline-info.active:hover,
+.show > .btn-outline-info.dropdown-toggle:hover {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.bg-primary,
+.bg-info,
+.text-bg-primary,
+.text-bg-info,
+.badge.bg-primary,
+.badge.bg-info,
+.badge.text-bg-primary,
+.badge.text-bg-info,
+.modal-header.bg-primary,
+.modal-header.bg-info {
+    background-color: var(--primary-color) !important;
+}
+
+.text-primary,
+.text-info,
+.link-primary,
+.link-info,
+a.text-primary,
+a.text-info,
+.btn-link {
+    color: var(--primary-color) !important;
+}
+
+.btn-link:hover,
+.btn-link:focus,
+.btn-link:active {
+    color: var(--primary-hover) !important;
+}
+
+.border-primary,
+.border-info {
+    border-color: var(--primary-color) !important;
+}
+
+.nav-pills .nav-link.active,
+.nav-pills .show > .nav-link {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+.page-link {
+    color: var(--primary-color);
+}
+
+.page-link:hover {
+    color: var(--primary-hover);
+}
+
+.page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.page-link,
+.page-link:focus,
+.page-link:hover {
+    color: var(--primary-color) !important;
+}
+
+.page-item.active .page-link,
+.page-item.active .page-link:focus,
+.page-item.active .page-link:hover {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.fc .fc-button-primary {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.fc .fc-button-primary:hover,
+.fc .fc-button-primary:focus,
+.fc .fc-button-primary:active,
+.fc .fc-button-primary.fc-button-active {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+    color: #fff !important;
+}
+
 /* ========== TABLE STYLES ========== */
 .table-header {
     display: flex;
@@ -565,6 +807,19 @@ table a:hover {
     font-weight: 600;
 }
 
+.header-nav .dropdown-menu.profile .dropdown-item:hover,
+.header-nav .dropdown-menu.profile .dropdown-item:focus,
+.header-nav .dropdown-menu.profile .dropdown-footer a {
+    color: var(--profile-primary-color);
+}
+
+.header-nav .dropdown-menu.profile .dropdown-item:active,
+.header-nav .dropdown-menu.profile .dropdown-item.active,
+.header-nav .dropdown-menu.profile .dropdown-item:focus:active {
+    background-color: var(--profile-primary-color) !important;
+    color: #fff !important;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     #sidebar {
@@ -690,7 +945,7 @@ table a:hover {
 }
 
 .footer-grid a {
-    color: #2563eb;
+    color: var(--primary-color);
     text-decoration: none;
 }
 

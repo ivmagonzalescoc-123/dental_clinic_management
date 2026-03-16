@@ -5,7 +5,7 @@
   --ux-border: #dce3ed;
   --ux-text: #1f2a37;
   --ux-muted: #5b6675;
-  --ux-accent: #1e6bb8;
+  --ux-accent: #5f43b2;
 }
 
 #main .section {
@@ -112,7 +112,7 @@
 #main .form-select:focus,
 #main textarea.form-control:focus {
   border-color: var(--ux-accent);
-  box-shadow: 0 0 0 0.14rem rgba(30, 107, 184, 0.12);
+  box-shadow: 0 0 0 0.14rem rgba(95, 67, 178, 0.12);
 }
 
 #main .btn {
@@ -153,7 +153,7 @@
 }
 
 #main .nav-tabs .nav-link.active {
-  color: #173f73;
+  color: var(--ux-accent);
   border-color: var(--ux-border) var(--ux-border) #fff;
   background: #fff;
 }

@@ -15,17 +15,29 @@ if ($doctors_result) {
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
 
-// Fetch recent billing history for this patient
-$billings = [];
+// Fetch appointment history for this patient
+$appointment_history = [];
 if ($patient_id) {
-    $billSql = "SELECT b.billing_id, b.appointment_id, b.total_amount, b.created_at, a.appointment_date
-                FROM billing b
-                INNER JOIN appointments a ON b.appointment_id = a.appointment_id
-                WHERE a.patient_id = " . (int)$patient_id . "
-                ORDER BY b.created_at DESC LIMIT 50";
-    $billRes = $conn->query($billSql);
-    if ($billRes) {
-        while ($row = $billRes->fetch_assoc()) $billings[] = $row;
+    $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+                          u.first_name AS doctor_first_name, u.last_name AS doctor_last_name,
+                          t.start_time, t.end_time
+                   FROM appointments a
+                   LEFT JOIN users u ON u.user_id = a.user_id
+                   LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+                   WHERE a.patient_id = ?
+                   ORDER BY a.appointment_date DESC, a.appointment_id DESC
+                   LIMIT 100";
+    $historyStmt = $conn->prepare($historySql);
+    if ($historyStmt) {
+        $historyStmt->bind_param('i', $patient_id);
+        $historyStmt->execute();
+        $historyRes = $historyStmt->get_result();
+        if ($historyRes) {
+            while ($row = $historyRes->fetch_assoc()) {
+                $appointment_history[] = $row;
+            }
+        }
+        $historyStmt->close();
     }
 }
 ?>
@@ -130,6 +142,44 @@ if ($patient_id) {
     background: #fee2e2;
     color: #991b1b;
 }
+.patient-appt-card .appt-tab-nav .nav-link {
+    border-radius: 999px;
+    font-weight: 600;
+    color: #0f172a;
+}
+.patient-appt-card .appt-tab-nav .nav-link.active {
+    background: #5f43b2;
+    color: #fff;
+}
+.patient-appt-card #appointmentCalendar .fc-button-primary {
+    background-color: #5f43b2;
+    border-color: #5f43b2;
+}
+.patient-appt-card #appointmentCalendar .fc-button-primary:hover,
+.patient-appt-card #appointmentCalendar .fc-button-primary:focus,
+.patient-appt-card #appointmentCalendar .fc-button-primary:active,
+.patient-appt-card #appointmentCalendar .fc-button-primary.fc-button-active {
+    background-color: #4f3796;
+    border-color: #4f3796;
+}
+.patient-appt-card .history-table-wrap {
+    border: 1px solid #dbe7e4;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.patient-appt-card .history-table-wrap table {
+    margin-bottom: 0;
+}
+.patient-appt-card .history-table-wrap thead th {
+    background: #f0fdf4;
+    color: #14532d;
+    border-bottom: 1px solid #dbe7e4;
+    white-space: nowrap;
+}
+.patient-appt-card .history-empty {
+    color: #64748b;
+    font-style: italic;
+}
 @media (max-width: 767px) {
     .patient-appt-card .calendar-panel {
         padding: 10px;
@@ -141,65 +191,148 @@ if ($patient_id) {
     <div class="card-header">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-                <h5 class="card-title mb-1">Dental Appointment Planner</h5>
+                <h5 class="card-title mb-1">Make an Appointment</h5>
                 <div class="sub-title">Select your preferred doctor, then choose an available date and time slot.</div>
             </div>
-            <span class="badge bg-light text-dark">Patient Booking</span>
         </div>
     </div>
     <div class="card-body">
-        <div id="apptAlert"></div>
-        <form id="createApptForm">
-            <div class="row g-4">
-                <div class="col-lg-7">
-                    <div class="calendar-panel">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="mb-0">Availability Calendar</h6>
-                            <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <ul class="nav nav-pills appt-tab-nav" id="apptTabNav" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" type="button" id="apptTabBook">Create Appointment</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" type="button" id="apptTabHistory">Appointment History</button>
+                </li>
+            </ul>
+            <small class="text-muted">Track your appointment request status in history.</small>
+        </div>
+
+        <div id="apptBookPane">
+            <div id="apptAlert"></div>
+            <form id="createApptForm">
+                <div class="row g-4">
+                    <div class="col-lg-7">
+                        <div class="calendar-panel">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Availability Calendar</h6>
+                                <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
+                            </div>
+                            <input type="hidden" id="appointment_date" name="appointment_date" required>
+                            <div id="appointmentCalendar" aria-live="polite"></div>
+                            <div class="calendar-legend">
+                                <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
+                                <span class="legend-item"><span class="legend-dot legend-busy"></span>With bookings</span>
+                                <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
+                            </div>
                         </div>
-                        <input type="hidden" id="appointment_date" name="appointment_date" required>
-                        <div id="appointmentCalendar" aria-live="polite"></div>
-                        <div class="calendar-legend">
-                            <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
-                            <span class="legend-item"><span class="legend-dot legend-busy"></span>With bookings</span>
-                            <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="mb-3">
+                            <label class="form-label">Choose Doctor</label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">-- Select Doctor --</option>
+                                <?php foreach ($doctors_list as $d): ?>
+                                    <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name'] . ' (' . $doctorType . ')'); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
+
+                        <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
+                            <label class="form-label">Choose Time Slot</label>
+                            <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
+                                <option value="">-- Select a 20-minute slot --</option>
+                            </select>
+                            <div class="form-text">20-minute slots only: 8:00-12:00 and 1:00-5:00.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Reason for Appointment</label>
+                            <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe the reason" required></textarea>
+                        </div>
+
+                        <input type="hidden" name="patient_id" value="<?php echo (int)$patient_id; ?>">
+                        <input type="hidden" name="is_online_appointment" value="0">
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-calendar-check"></i> Request Appointment
+                        </button>
                     </div>
                 </div>
-                <div class="col-lg-5">
-                    <div class="mb-3">
-                        <label class="form-label">Choose Doctor</label>
-                        <select class="form-select" id="user_id" name="user_id" required>
-                            <option value="">-- Select Doctor --</option>
-                            <?php foreach ($doctors_list as $d): ?>
-                                <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
-                                <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name'] . ' (' . $doctorType . ')'); ?></option>
+            </form>
+        </div>
+
+        <div id="apptHistoryPane" class="d-none">
+            <div class="history-table-wrap table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Appointment #</th>
+                            <th>Date</th>
+                            <th>Doctor</th>
+                            <th>Time Slot</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="patientApptHistoryBody">
+                        <?php if (empty($appointment_history)): ?>
+                            <tr id="patientApptHistoryEmpty">
+                                <td colspan="6" class="text-center py-4 history-empty">No appointment history yet.</td>
+                            </tr>
+                        <?php else: ?>
+                            <?php foreach ($appointment_history as $history): ?>
+                                <?php
+                                $statusKey = strtolower((string)($history['status'] ?? 'scheduled'));
+                                $statusLabel = ucwords(str_replace('_', ' ', $statusKey));
+                                $statusBadge = 'secondary';
+                                if ($statusKey === 'confirmed') {
+                                    $statusBadge = 'primary';
+                                } elseif ($statusKey === 'checked_in') {
+                                    $statusBadge = 'info';
+                                } elseif ($statusKey === 'in_progress') {
+                                    $statusBadge = 'warning';
+                                } elseif ($statusKey === 'completed') {
+                                    $statusBadge = 'success';
+                                } elseif ($statusKey === 'cancelled' || $statusKey === 'no_show') {
+                                    $statusBadge = 'danger';
+                                }
+
+                                $doctorName = trim((string)($history['doctor_first_name'] ?? '') . ' ' . (string)($history['doctor_last_name'] ?? ''));
+                                if ($doctorName === '') {
+                                    $doctorName = 'To be assigned';
+                                }
+
+                                $slotLabel = 'TBD';
+                                if (!empty($history['start_time']) && !empty($history['end_time'])) {
+                                    $slotLabel = date('g:i A', strtotime((string)$history['start_time'])) . ' - ' . date('g:i A', strtotime((string)$history['end_time']));
+                                }
+                                ?>
+                                <tr>
+                                    <td>#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
+                                    <td><?php echo !empty($history['appointment_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$history['appointment_date']))) : 'N/A'; ?></td>
+                                    <td><?php echo htmlspecialchars($doctorName); ?></td>
+                                    <td><?php echo htmlspecialchars($slotLabel); ?></td>
+                                    <td><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
+                                    <td><span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
+                                </tr>
                             <?php endforeach; ?>
-                        </select>
-                    </div>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                    <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
-                        <label class="form-label">Choose Time Slot</label>
-                        <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
-                            <option value="">-- Select a 20-minute slot --</option>
-                        </select>
-                        <div class="form-text">20-minute slots only: 8:00-12:00 and 1:00-5:00.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Reason for Appointment</label>
-                        <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe the reason" required></textarea>
-                    </div>
-
-                    <input type="hidden" name="patient_id" value="<?php echo (int)$patient_id; ?>">
-                    <input type="hidden" name="is_online_appointment" value="0">
-
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-calendar-check"></i> Request Appointment
-                    </button>
+        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
+            <div id="bookingResultToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex align-items-center">
+                    <div class="toast-body" id="bookingResultToastBody"></div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                 </div>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -214,6 +347,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeslotWrap = document.getElementById('patientTimeslotWrap');
     const timeslotSelect = document.getElementById('timeslot_id');
     const selectedDateLabel = document.getElementById('selectedDateLabel');
+    const bookTabBtn = document.getElementById('apptTabBook');
+    const historyTabBtn = document.getElementById('apptTabHistory');
+    const bookPane = document.getElementById('apptBookPane');
+    const historyPane = document.getElementById('apptHistoryPane');
+    const historyBody = document.getElementById('patientApptHistoryBody');
+    const historyEmptyRow = document.getElementById('patientApptHistoryEmpty');
+    const bookingToastEl = document.getElementById('bookingResultToast');
+    const bookingToastBodyEl = document.getElementById('bookingResultToastBody');
 
     let appointmentCalendar = null;
     let availabilityByDate = {};
@@ -238,6 +379,107 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!alertBox) return;
         alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
             message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+    }
+
+    function showBookingToast(message, type) {
+        if (!bookingToastEl || !bookingToastBodyEl || typeof bootstrap === 'undefined') {
+            showAlert(message, type === 'success' ? 'success' : 'danger');
+            return;
+        }
+
+        const toastType = String(type || 'success');
+        bookingToastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-dark');
+        if (toastType === 'success') {
+            bookingToastEl.classList.add('bg-success');
+        } else if (toastType === 'warning') {
+            bookingToastEl.classList.add('bg-warning', 'text-dark');
+        } else {
+            bookingToastEl.classList.add('bg-danger');
+        }
+
+        bookingToastBodyEl.textContent = message;
+        const toast = bootstrap.Toast.getOrCreateInstance(bookingToastEl, { autohide: true, delay: 2000 });
+        toast.show();
+    }
+
+    function switchAppointmentsTab(tabName) {
+        const showHistory = tabName === 'history';
+        if (bookTabBtn) {
+            bookTabBtn.classList.toggle('active', !showHistory);
+        }
+        if (historyTabBtn) {
+            historyTabBtn.classList.toggle('active', showHistory);
+        }
+        if (bookPane) {
+            bookPane.classList.toggle('d-none', showHistory);
+        }
+        if (historyPane) {
+            historyPane.classList.toggle('d-none', !showHistory);
+        }
+    }
+
+    function statusBadgeClass(status) {
+        const key = String(status || '').toLowerCase();
+        if (key === 'confirmed') return 'primary';
+        if (key === 'checked_in') return 'info';
+        if (key === 'in_progress') return 'warning';
+        if (key === 'completed') return 'success';
+        if (key === 'cancelled' || key === 'no_show') return 'danger';
+        return 'secondary';
+    }
+
+    function statusLabel(status) {
+        return String(status || 'scheduled').replace(/_/g, ' ').replace(/\b\w/g, function(ch) {
+            return ch.toUpperCase();
+        });
+    }
+
+    function displayDateLabel(isoDate) {
+        if (!isoDate) return 'N/A';
+        const d = new Date(String(isoDate) + 'T00:00:00');
+        return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
+    }
+
+    function appendHistoryRow(payload) {
+        if (!historyBody || !payload) return;
+        if (historyEmptyRow && historyEmptyRow.parentNode) {
+            historyEmptyRow.parentNode.removeChild(historyEmptyRow);
+        }
+
+        const tr = document.createElement('tr');
+
+        const idCell = document.createElement('td');
+        idCell.textContent = '#' + String(payload.appointmentId || 0);
+        tr.appendChild(idCell);
+
+        const dateCell = document.createElement('td');
+        dateCell.textContent = displayDateLabel(payload.date);
+        tr.appendChild(dateCell);
+
+        const doctorCell = document.createElement('td');
+        doctorCell.textContent = String(payload.doctor || 'To be assigned');
+        tr.appendChild(doctorCell);
+
+        const slotCell = document.createElement('td');
+        slotCell.textContent = String(payload.slot || 'TBD');
+        tr.appendChild(slotCell);
+
+        const reasonCell = document.createElement('td');
+        reasonCell.textContent = String(payload.reason || '');
+        tr.appendChild(reasonCell);
+
+        const statusCell = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-' + statusBadgeClass(payload.status);
+        badge.textContent = statusLabel(payload.status);
+        statusCell.appendChild(badge);
+        tr.appendChild(statusCell);
+
+        if (historyBody.firstChild) {
+            historyBody.insertBefore(tr, historyBody.firstChild);
+        } else {
+            historyBody.appendChild(tr);
+        }
     }
 
     function formatDisplayDate(isoDate) {
@@ -487,6 +729,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadDates();
 
+    const initialTab = new URLSearchParams(window.location.search).get('appt_tab') === 'history' ? 'history' : 'book';
+    switchAppointmentsTab(initialTab);
+
+    if (bookTabBtn) {
+        bookTabBtn.addEventListener('click', function() {
+            switchAppointmentsTab('book');
+        });
+    }
+    if (historyTabBtn) {
+        historyTabBtn.addEventListener('click', function() {
+            switchAppointmentsTab('history');
+        });
+    }
+
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
             loadDates();
@@ -501,8 +757,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const tsId = timeslotSelect ? String(timeslotSelect.value || '').trim() : '';
             if (!tsId) {
                 showAlert('Please select a 20-minute timeslot before submitting.', 'warning');
+                showBookingToast('Please select a time slot before booking.', 'warning');
                 return;
             }
+
+            const selectedDoctor = doctorSelect && doctorSelect.selectedOptions.length > 0
+                ? String(doctorSelect.selectedOptions[0].textContent || '').trim()
+                : 'To be assigned';
+            const selectedSlot = timeslotSelect && timeslotSelect.selectedOptions.length > 0
+                ? String(timeslotSelect.selectedOptions[0].textContent || '').trim()
+                : 'TBD';
+            const selectedReason = document.getElementById('reason') ? String(document.getElementById('reason').value || '').trim() : '';
+            const selectedDate = dateSelect ? String(dateSelect.value || '') : '';
 
             const formData = new FormData(form);
             fetch('../assets/api/appointments/create_appointment.php', {
@@ -512,15 +778,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 return r.json();
             }).then(function(resp) {
                 if (resp.success) {
-                    const apptId = resp.appointment_id;
-                    const queue = resp.queue_number ? ('&queue_number=' + resp.queue_number) : '';
-                    window.location.href = 'patient.php?page=appointment_confirmation&appointment_id=' + apptId + queue;
+                    appendHistoryRow({
+                        appointmentId: resp.appointment_id,
+                        date: selectedDate,
+                        doctor: selectedDoctor,
+                        slot: selectedSlot,
+                        reason: selectedReason,
+                        status: resp.status || 'scheduled'
+                    });
+                    showAlert(resp.message || 'Appointment created successfully.', 'success');
+                    showBookingToast(resp.message || 'Appointment created successfully.', 'success');
+
+                    form.reset();
+                    clearSelectedDate();
+                    loadDates();
+                    switchAppointmentsTab('history');
                 } else {
+                    const failType = resp.warning ? 'warning' : 'danger';
                     showAlert(resp.message || 'Failed to create appointment.', 'warning');
+                    showBookingToast(resp.message || 'Failed to create appointment.', failType);
                 }
             }).catch(function(err) {
                 console.error(err);
                 showAlert('Server error creating appointment.', 'danger');
+                showBookingToast('Server error creating appointment.', 'danger');
             });
         });
     }

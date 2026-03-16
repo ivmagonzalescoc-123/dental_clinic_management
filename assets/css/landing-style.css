@@ -1,6 +1,15 @@
 /* Minimalist Landing Page Styles */
 :root {
-    --primary: #2563eb;
+    --primary: #5f43b2;
+    --primary-dark: #4f3796;
+    --primary-deep: #3f2c79;
+    --primary-rgb: 95, 67, 178;
+    --bs-primary: #5f43b2;
+    --bs-primary-rgb: 95, 67, 178;
+    --bs-info: #5f43b2;
+    --bs-info-rgb: 95, 67, 178;
+    --bs-link-color: #5f43b2;
+    --bs-link-hover-color: #4f3796;
     --secondary: #64748b;
     --light: #f8fafc;
     --border: #e2e8f0;
@@ -57,13 +66,13 @@ body {
 }
 
 .navbar-nav .nav-link:hover {
-    background: #2563eb;
+    background: var(--primary);
     color: white !important;
     border-radius: 6px;
 }
 
 .btn-login {
-    background: #2563eb;
+    background: var(--primary);
     color: white !important;
     border: none;
     padding: 0.5rem 1.2rem;
@@ -75,10 +84,122 @@ body {
 }
 
 .btn-login:hover {
-    background: #1d4ed8;
+    background: var(--primary-dark);
     color: white !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.4);
+}
+
+.btn-primary,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus:hover,
+.btn-primary:active:hover,
+.btn-primary.active:hover,
+.show > .btn-primary.dropdown-toggle:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: #fff !important;
+}
+
+.btn-outline-primary,
+.btn-outline-primary:focus,
+.btn-outline-primary:active,
+.btn-outline-primary.active,
+.show > .btn-outline-primary.dropdown-toggle {
+    background-color: transparent !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary:focus:hover,
+.btn-outline-primary:active:hover,
+.btn-outline-primary.active:hover,
+.show > .btn-outline-primary.dropdown-toggle:hover {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.btn-info,
+.btn-info:focus,
+.btn-info:active,
+.btn-info.active,
+.show > .btn-info.dropdown-toggle {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.btn-info:hover,
+.btn-info:focus:hover,
+.btn-info:active:hover,
+.btn-info.active:hover,
+.show > .btn-info.dropdown-toggle:hover {
+    background-color: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+    color: #fff !important;
+}
+
+.btn-outline-info,
+.btn-outline-info:focus,
+.btn-outline-info:active,
+.btn-outline-info.active,
+.show > .btn-outline-info.dropdown-toggle {
+    background-color: transparent !important;
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+}
+
+.btn-outline-info:hover,
+.btn-outline-info:focus:hover,
+.btn-outline-info:active:hover,
+.btn-outline-info.active:hover,
+.show > .btn-outline-info.dropdown-toggle:hover {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.bg-primary,
+.bg-info,
+.text-bg-primary,
+.text-bg-info,
+.badge.bg-primary,
+.badge.bg-info,
+.badge.text-bg-primary,
+.badge.text-bg-info {
+    background-color: var(--primary) !important;
+}
+
+.text-primary,
+.text-info,
+.link-primary,
+.link-info,
+a.text-primary,
+a.text-info,
+.btn-link {
+    color: var(--primary) !important;
+}
+
+.btn-link:hover,
+.btn-link:focus,
+.btn-link:active {
+    color: var(--primary-dark) !important;
+}
+
+.border-primary,
+.border-info {
+    border-color: var(--primary) !important;
 }
 
 /* ==================== HERO SECTION ==================== */
@@ -255,7 +376,7 @@ body {
 }
 
 .btn-primary-minimal {
-    background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
     border: none;
     padding: 0.75rem 1.8rem;
@@ -270,9 +391,9 @@ body {
 }
 
 .btn-primary-minimal:hover {
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%);
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.35);
 }
 
 .btn-primary-minimal:active {
@@ -306,7 +427,7 @@ body {
 .btn-secondary-minimal:hover {
     background: var(--primary);
     color: white;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+    box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.25);
 }
 
 .btn-secondary-minimal i {
@@ -367,7 +488,7 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--primary), #1d4ed8);
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.4s ease;
@@ -386,7 +507,7 @@ body {
 
 .service-card-minimal i {
     font-size: 2.5rem;
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -455,7 +576,7 @@ body {
 }
 
 .about-list i {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -502,7 +623,7 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--primary), #1d4ed8);
+    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
     transform: scaleX(0);
     transform-origin: right;
     transition: transform 0.4s ease;
@@ -521,7 +642,7 @@ body {
 
 .contact-card i {
     font-size: 3rem;
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -617,7 +738,7 @@ body {
 
 .form-floating > .form-control:focus ~ label,
 .form-floating > .form-control:not(:placeholder-shown) ~ label {
-    color: #2563eb;
+    color: var(--primary);
     top: -0.7rem;
     background: white;
     padding: 0 0.3rem;
@@ -654,7 +775,7 @@ body {
 .form-control-sm:focus {
     border-color: var(--primary);
     background: white;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
     outline: none;
 }
 
@@ -745,7 +866,7 @@ body {
 
 .modal-body a:hover {
     text-decoration: underline;
-    color: #1d4ed8;
+    color: var(--primary-dark);
 }
 
 .alert {
