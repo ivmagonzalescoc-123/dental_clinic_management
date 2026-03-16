@@ -71,8 +71,8 @@ try {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260316" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260316" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260316-2" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260316-2" rel="stylesheet">
 </head>
 
 <body>
@@ -276,7 +276,7 @@ try {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/main.js?v=20260316-2"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->

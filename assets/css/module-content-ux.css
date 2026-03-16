@@ -172,6 +172,33 @@
   font-weight: 600;
 }
 
+/* Keep table badges neutral by default; status badges are re-colored via JS marker classes. */
+#main table td .badge.table-badge-neutral,
+#main .table td .badge.table-badge-neutral {
+  background-color: transparent !important;
+  color: var(--ux-text) !important;
+  border: 1px solid var(--ux-border) !important;
+  box-shadow: none !important;
+  font-weight: 500;
+}
+
+#main table td .badge.table-badge-status,
+#main .table td .badge.table-badge-status {
+  border: none;
+  font-weight: 600;
+}
+
+#main table td .badge.table-badge-status.bg-warning,
+#main .table td .badge.table-badge-status.bg-warning,
+#main table td .badge.table-badge-status.text-bg-warning,
+#main .table td .badge.table-badge-status.text-bg-warning,
+#main table td .badge.table-badge-status.bg-light,
+#main .table td .badge.table-badge-status.bg-light,
+#main table td .badge.table-badge-status.text-bg-light,
+#main .table td .badge.table-badge-status.text-bg-light {
+  color: #1f2a37 !important;
+}
+
 @media (max-width: 768px) {
   #main .section {
     padding: 8px;

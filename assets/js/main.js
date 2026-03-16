@@ -357,6 +357,97 @@
   }
   // Expose for debugging: show computed app root in console
   try { console.debug('appRoot computed:', appRoot); } catch(e) {}
+
+  // Normalize table badge colors: only status badges keep accent color.
+  const statusBadgeTerms = [
+    'pending',
+    'confirmed',
+    'checked in',
+    'checked-in',
+    'in progress',
+    'in-progress',
+    'completed',
+    'cancelled',
+    'canceled',
+    'no show',
+    'no-show',
+    'approved',
+    'rejected',
+    'active',
+    'inactive',
+    'scheduled',
+    'rescheduled',
+    'followup',
+    'follow-up',
+    'done',
+    'arrived',
+    'ready for doctor',
+    'in queue',
+    'queued'
+  ];
+
+  function looksLikeStatusBadge(text) {
+    const normalized = String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!normalized) return false;
+    return statusBadgeTerms.some(term => normalized === term || normalized.includes(term));
+  }
+
+  function getStatusColumnIndexes(tableEl) {
+    const indexes = [];
+    if (!(tableEl instanceof HTMLElement)) return indexes;
+    const headers = tableEl.querySelectorAll('thead th');
+    headers.forEach((th, idx) => {
+      const headerText = String(th.textContent || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      if (headerText.includes('status')) {
+        indexes.push(idx);
+      }
+    });
+    return indexes;
+  }
+
+  function normalizeTableBadges() {
+    const tables = document.querySelectorAll('#main table, #main .table');
+    tables.forEach((table) => {
+      if (!(table instanceof HTMLElement)) return;
+      const statusColumns = getStatusColumnIndexes(table);
+      const badges = table.querySelectorAll('tbody td .badge');
+
+      badges.forEach((badge) => {
+        if (!(badge instanceof HTMLElement)) return;
+        const td = badge.closest('td');
+        const tr = td ? td.parentElement : null;
+        let keepByStatusColumn = false;
+
+        if (td && tr && statusColumns.length) {
+          const rowCells = Array.from(tr.children).filter((el) => el instanceof HTMLTableCellElement);
+          const colIdx = rowCells.indexOf(td);
+          keepByStatusColumn = colIdx >= 0 && statusColumns.includes(colIdx);
+        }
+
+        const manualStatus = badge.classList.contains('status-badge') || badge.getAttribute('data-status-badge') === '1';
+        const keepStatusColor = keepByStatusColumn || manualStatus || looksLikeStatusBadge(badge.textContent || '');
+        badge.classList.toggle('table-badge-status', keepStatusColor);
+        badge.classList.toggle('table-badge-neutral', !keepStatusColor);
+      });
+    });
+  }
+
+  let badgeNormalizeTimer = null;
+  const queueBadgeNormalization = () => {
+    if (badgeNormalizeTimer) clearTimeout(badgeNormalizeTimer);
+    badgeNormalizeTimer = setTimeout(normalizeTableBadges, 60);
+  };
+
+  window.addEventListener('load', queueBadgeNormalization);
+  document.addEventListener('DOMContentLoaded', queueBadgeNormalization);
+
+  const mainRoot = document.getElementById('main');
+  if (mainRoot && typeof MutationObserver !== 'undefined') {
+    new MutationObserver(queueBadgeNormalization).observe(mainRoot, {
+      childList: true,
+      subtree: true
+    });
+  }
   
   async function fetchNotifications() {
     try {
