@@ -246,13 +246,12 @@ if ($filter === 'all') {
                         <th>Reason</th>
                         <th>Status</th>
                         <th>Requested At</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($leaves)): ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-3">No leave requests found.</td>
+                            <td colspan="6" class="text-center text-muted py-3">No leave requests found.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($leaves as $leave): ?>
@@ -264,40 +263,44 @@ if ($filter === 'all') {
                                     <?php
                                         $reasonText = (string)($leave['reason'] ?? '');
                                         $isFiledBySecretary = (stripos($reasonText, '[Filed by Secretary #') === 0);
+                                        $displayReasonText = $reasonText;
+                                        if ($isFiledBySecretary) {
+                                            $displayReasonText = preg_replace('/^\[Filed by Secretary #[0-9]+\]\s*/', '', $reasonText) ?? $reasonText;
+                                        }
                                     ?>
                                     <?php if ($isFiledBySecretary): ?>
                                         <span class="badge bg-info text-dark mb-1">Filed by Secretary</span><br>
                                     <?php endif; ?>
-                                    <?php echo htmlspecialchars($reasonText); ?>
+                                    <?php echo htmlspecialchars($displayReasonText); ?>
                                 </td>
                                 <td>
                                     <?php
                                         $status = $leave['status'];
                                         $cls = $status === 'approved' ? 'success' : ($status === 'pending' ? 'warning text-dark' : 'secondary');
                                     ?>
-                                    <span class="badge bg-<?php echo $cls; ?>"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
-                                </td>
-                                <td><?php echo htmlspecialchars($leave['created_at']); ?></td>
-                                <td>
                                     <?php if ($leave['status'] === 'pending'): ?>
-                                        <div class="d-flex gap-1">
-                                            <form method="POST" onsubmit="return confirm('Approve this leave request?');">
-                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                                <input type="hidden" name="action" value="approve">
-                                                <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">
-                                                <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                            </form>
-                                            <form method="POST" onsubmit="return confirm('Reject this leave request?');">
-                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                                <input type="hidden" name="action" value="reject">
-                                                <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
-                                            </form>
+                                        <div class="d-flex flex-column gap-2">
+                                            <span class="badge bg-<?php echo $cls; ?> align-self-start"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
+                                            <div class="d-flex gap-1">
+                                                <form method="POST" onsubmit="return confirm('Approve this leave request?');">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                    <input type="hidden" name="action" value="approve">
+                                                    <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                                </form>
+                                                <form method="POST" onsubmit="return confirm('Reject this leave request?');">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                    <input type="hidden" name="action" value="reject">
+                                                    <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Decline</button>
+                                                </form>
+                                            </div>
                                         </div>
                                     <?php else: ?>
-                                        <span class="text-muted small">Processed</span>
+                                        <span class="badge bg-<?php echo $cls; ?>"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
                                     <?php endif; ?>
                                 </td>
+                                <td><?php echo htmlspecialchars($leave['created_at']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

@@ -131,11 +131,264 @@ if ($stmt) {
     }
     $stmt->close();
 }
+
+$selectedMonth = trim((string)($_GET['month'] ?? date('Y-m')));
+if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+    $selectedMonth = date('Y-m');
+}
+$monthStart = $selectedMonth . '-01';
+$monthEnd = date('Y-m-t', strtotime($monthStart));
+
+$doctorProfile = [
+    'work_type' => 'regular',
+    'first_name' => '',
+    'last_name' => '',
+];
+$doctorStmt = $conn->prepare("SELECT first_name, last_name, COALESCE(work_type, 'regular') AS work_type FROM users WHERE user_id = ? LIMIT 1");
+if ($doctorStmt) {
+    $doctorStmt->bind_param('i', $doctorId);
+    $doctorStmt->execute();
+    $doctorRes = $doctorStmt->get_result();
+    if ($doctorRes && ($doctorRow = $doctorRes->fetch_assoc())) {
+        $doctorProfile = $doctorRow;
+    }
+    $doctorStmt->close();
+}
+
+$availabilityWeekdays = [];
+if ($conn->query("SHOW TABLES LIKE 'doctor_availability'")->num_rows > 0) {
+    $availStmt = $conn->prepare('SELECT weekday FROM doctor_availability WHERE user_id = ?');
+    if ($availStmt) {
+        $availStmt->bind_param('i', $doctorId);
+        $availStmt->execute();
+        $availRes = $availStmt->get_result();
+        while ($a = $availRes->fetch_assoc()) {
+            $weekday = (int)($a['weekday'] ?? -1);
+            if ($weekday >= 0 && $weekday <= 6) {
+                $availabilityWeekdays[$weekday] = true;
+            }
+        }
+        $availStmt->close();
+    }
+}
+
+$approvedLeaveByDate = [];
+$pendingLeaveByDate = [];
+$leaveDetailsByDate = [];
+
+foreach ($leaves as $leave) {
+    $status = strtolower((string)($leave['status'] ?? ''));
+    $from = max($monthStart, (string)($leave['leave_start_date'] ?? ''));
+    $to = min($monthEnd, (string)($leave['leave_end_date'] ?? ''));
+
+    if ($from === '' || $to === '' || $from > $to) {
+        continue;
+    }
+
+    $cursor = new DateTime($from);
+    $end = new DateTime($to);
+    while ($cursor <= $end) {
+        $dateKey = $cursor->format('Y-m-d');
+
+        if ($status === 'approved') {
+            $approvedLeaveByDate[$dateKey] = true;
+        }
+        if ($status === 'pending') {
+            $pendingLeaveByDate[$dateKey] = true;
+        }
+
+        if (!isset($leaveDetailsByDate[$dateKey])) {
+            $leaveDetailsByDate[$dateKey] = [];
+        }
+        $leaveDetailsByDate[$dateKey][] = [
+            'status' => ucfirst($status !== '' ? $status : 'leave'),
+            'start' => (string)($leave['leave_start_date'] ?? ''),
+            'end' => (string)($leave['leave_end_date'] ?? ''),
+            'reason' => trim((string)($leave['reason'] ?? '')),
+        ];
+
+        $cursor->modify('+1 day');
+    }
+}
+
+$workType = strtolower((string)($doctorProfile['work_type'] ?? 'regular'));
+$firstWeekday = (int)date('w', strtotime($monthStart));
+$daysInMonth = (int)date('t', strtotime($monthStart));
+$monthLabel = date('F Y', strtotime($monthStart));
+
+$availableDays = 0;
+$approvedLeaveDays = 0;
+$pendingLeaveDays = 0;
+
+for ($d = 1; $d <= $daysInMonth; $d++) {
+    $dateStr = $selectedMonth . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
+    $weekday = (int)date('w', strtotime($dateStr));
+    $isClosed = ($weekday === 0);
+
+    if (!empty($approvedLeaveByDate[$dateStr])) {
+        $approvedLeaveDays++;
+        continue;
+    }
+    if (!empty($pendingLeaveByDate[$dateStr])) {
+        $pendingLeaveDays++;
+    }
+    if ($isClosed) {
+        continue;
+    }
+
+    $hasAvailability = ($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true;
+    if ($hasAvailability) {
+        $availableDays++;
+    }
+}
+
+$activePage = trim((string)($_GET['page'] ?? 'schedule'));
+$scheduleView = trim((string)($_GET['view'] ?? ''));
+if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
+    $scheduleView = ($activePage === 'leave_requests') ? 'leave_requests' : 'calendar';
+}
 ?>
 
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link <?php echo $scheduleView === 'calendar' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=calendar&month=<?php echo urlencode($selectedMonth); ?>">
+            <i class="bi bi-calendar3 me-1"></i> My Schedule
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $scheduleView === 'leave_requests' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=leave_requests&month=<?php echo urlencode($selectedMonth); ?>">
+            <i class="bi bi-calendar-x me-1"></i> Leave Requests
+        </a>
+    </li>
+</ul>
+
+<?php if ($scheduleView === 'calendar'): ?>
 <div class="card border-0">
     <div class="card-header">
-        <h5 class="card-title mb-0">Doctor Leave Requests</h5>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="card-title mb-0">My Schedule</h5>
+            <form method="GET" action="doctor.php" class="d-flex align-items-center gap-2">
+                <input type="hidden" name="page" value="schedule">
+                <input type="hidden" name="view" value="calendar">
+                <label class="small text-muted mb-0" for="doctorScheduleMonth">Month</label>
+                <input id="doctorScheduleMonth" type="month" class="form-control form-control-sm" name="month" value="<?php echo htmlspecialchars($selectedMonth); ?>" style="min-width: 170px;">
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+            </form>
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">This calendar shows your availability days and leave status, not patient bookings.</p>
+
+        <div class="row g-2 mb-3">
+            <div class="col-sm-4">
+                <div class="schedule-stat-chip schedule-stat-available">Available Days: <?php echo (int)$availableDays; ?></div>
+            </div>
+            <div class="col-sm-4">
+                <div class="schedule-stat-chip schedule-stat-leave">Approved Leave Days: <?php echo (int)$approvedLeaveDays; ?></div>
+            </div>
+            <div class="col-sm-4">
+                <div class="schedule-stat-chip schedule-stat-pending">Pending Leave Days: <?php echo (int)$pendingLeaveDays; ?></div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered doctor-availability-calendar mb-0">
+                <thead>
+                    <tr>
+                        <th>Sun</th>
+                        <th>Mon</th>
+                        <th>Tue</th>
+                        <th>Wed</th>
+                        <th>Thu</th>
+                        <th>Fri</th>
+                        <th>Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $dayNum = 1;
+                    $started = false;
+                    while ($dayNum <= $daysInMonth):
+                        echo '<tr>';
+                        for ($w = 0; $w < 7; $w++):
+                            if (!$started && $w === $firstWeekday) {
+                                $started = true;
+                            }
+
+                            if (!$started || $dayNum > $daysInMonth) {
+                                echo '<td class="bg-light"></td>';
+                                continue;
+                            }
+
+                            $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
+                            $weekday = (int)date('w', strtotime($dateStr));
+                            $isClosed = ($weekday === 0);
+                            $isApprovedLeave = !empty($approvedLeaveByDate[$dateStr]);
+                            $isPendingLeave = !empty($pendingLeaveByDate[$dateStr]);
+                            $isAvailable = !$isClosed && (($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true);
+
+                            $cellClass = 'calendar-cell';
+                            $markHtml = '';
+                            $popoverText = '';
+
+                            if ($isClosed) {
+                                $cellClass .= ' cell-closed';
+                                $markHtml = '<span class="mark mark-closed">Clinic Closed</span>';
+                            } elseif ($isApprovedLeave) {
+                                $cellClass .= ' cell-leave';
+                                $markHtml = '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="top" data-bs-content="{{POPOVER}}">On Leave</button>';
+                            } elseif ($isPendingLeave) {
+                                $cellClass .= ' cell-pending';
+                                $markHtml = '<button type="button" class="mark mark-pending mark-btn" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="top" data-bs-content="{{POPOVER}}">Leave Pending</button>';
+                            } elseif ($isAvailable) {
+                                $cellClass .= ' cell-available';
+                                $markHtml = '<span class="mark mark-available">Available</span>';
+                            } else {
+                                $markHtml = '<span class="mark mark-nosched">No Availability</span>';
+                            }
+
+                            if (!empty($leaveDetailsByDate[$dateStr])) {
+                                $lines = [];
+                                foreach ($leaveDetailsByDate[$dateStr] as $detail) {
+                                    $line = (string)($detail['status'] ?? 'Leave') . ': ' . (string)($detail['start'] ?? '') . ' to ' . (string)($detail['end'] ?? '');
+                                    if (!empty($detail['reason'])) {
+                                        $line .= ' (' . (string)$detail['reason'] . ')';
+                                    }
+                                    $lines[] = $line;
+                                }
+                                $popoverText = htmlspecialchars(implode("\n", $lines), ENT_QUOTES, 'UTF-8');
+                                $markHtml = str_replace('{{POPOVER}}', $popoverText, $markHtml);
+                            }
+
+                            echo '<td class="' . htmlspecialchars($cellClass) . '">';
+                            echo '<div class="calendar-day">' . (int)$dayNum . '</div>';
+                            echo '<div class="calendar-marks">' . $markHtml . '</div>';
+                            echo '</td>';
+
+                            $dayNum++;
+                        endfor;
+                        echo '</tr>';
+                    endwhile;
+                    ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3 small">
+            <span class="legend-chip legend-available">Green: Available</span>
+            <span class="legend-chip legend-leave">Red: Approved Leave</span>
+            <span class="legend-chip legend-pending">Amber: Pending Leave</span>
+            <span class="legend-chip legend-closed">Yellow: Clinic Closed</span>
+            <span class="legend-chip legend-nosched">Gray: No Availability</span>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($scheduleView === 'leave_requests'): ?>
+<div class="card border-0 mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Leave Requests</h5>
     </div>
     <div class="card-body">
         <?php if ($message !== ''): ?>
@@ -212,3 +465,170 @@ if ($stmt) {
         </div>
     </div>
 </div>
+<?php endif; ?>
+
+<style>
+.doctor-availability-calendar th {
+    text-align: center;
+    background: #f8fafc;
+}
+
+.doctor-availability-calendar .calendar-cell {
+    height: 104px;
+    vertical-align: top;
+    background: #ffffff;
+}
+
+.doctor-availability-calendar .calendar-cell.cell-available {
+    background: #f0fdf4;
+}
+
+.doctor-availability-calendar .calendar-cell.cell-leave {
+    background: #fff1f2;
+}
+
+.doctor-availability-calendar .calendar-cell.cell-pending {
+    background: #fffbeb;
+}
+
+.doctor-availability-calendar .calendar-cell.cell-closed {
+    background: #fefce8;
+}
+
+.doctor-availability-calendar .calendar-day {
+    font-weight: 700;
+    font-size: 0.98rem;
+    margin-bottom: 4px;
+}
+
+.doctor-availability-calendar .calendar-marks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mark {
+    display: inline-block;
+    width: fit-content;
+    max-width: 100%;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mark-btn {
+    border: none;
+    cursor: pointer;
+}
+
+.mark-available {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mark-leave {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.mark-pending {
+    background: #fde68a;
+    color: #92400e;
+}
+
+.mark-closed {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.mark-nosched {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.schedule-stat-chip {
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.schedule-stat-available {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.schedule-stat-leave {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.schedule-stat-pending {
+    background: #fde68a;
+    color: #92400e;
+}
+
+.legend-chip {
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.legend-available {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.legend-leave {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.legend-pending {
+    background: #fde68a;
+    color: #92400e;
+}
+
+.legend-closed {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.legend-nosched {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+@media (max-width: 768px) {
+    .doctor-availability-calendar .calendar-cell {
+        height: 86px;
+    }
+
+    .doctor-availability-calendar .calendar-day {
+        font-size: 0.86rem;
+    }
+
+    .mark {
+        font-size: 0.66rem;
+        padding: 2px 6px;
+    }
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof bootstrap === 'undefined' || typeof bootstrap.Popover === 'undefined') {
+        return;
+    }
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
+        new bootstrap.Popover(el, {
+            html: false,
+            sanitize: true,
+            boundary: 'viewport'
+        });
+    });
+});
+</script>

@@ -4,9 +4,9 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 $search = trim((string)($_GET['search'] ?? ''));
 $dateFrom = (string)($_GET['from'] ?? '');
 $dateTo = (string)($_GET['to'] ?? '');
-$view = (string)($_GET['view'] ?? 'user_logs');
+$view = (string)($_GET['view'] ?? 'audit_logs');
 
-$allowedViews = ['user_logs', 'active_users', 'patient_sessions'];
+$allowedViews = ['user_logs', 'active_users', 'patient_sessions', 'audit_logs'];
 if (!in_array($view, $allowedViews, true)) {
     $view = 'user_logs';
 }
@@ -54,6 +54,17 @@ function format_activity_status(?string $logoutTime, ?string $lastActivity, int 
 function session_badge_class(string $status): string
 {
     return $status === 'Active' ? 'success' : 'secondary';
+}
+
+function format_audit_actor(array $r): string
+{
+    $name = trim((string)($r['first_name'] ?? '') . ' ' . (string)($r['last_name'] ?? ''));
+    $email = trim((string)($r['email'] ?? ''));
+
+    if ($name !== '' && $email !== '') return $name . ' (' . $email . ')';
+    if ($name !== '') return $name;
+    if ($email !== '') return $email;
+    return 'System/Unknown';
 }
 
 if (function_exists('table_exists') && table_exists($conn, 'user_logs')) {
@@ -181,7 +192,7 @@ if ($view === 'user_logs') {
         }
         $stmt->close();
     }
-} else {
+} elseif ($view === 'patient_sessions') {
     $sql = "
         SELECT
             p.patient_id,
@@ -230,13 +241,86 @@ if ($view === 'user_logs') {
         }
         $stmt->close();
     }
+} else {
+    if (function_exists('table_exists') && table_exists($conn, 'system_logs')) {
+        $sql = "
+            SELECT
+                sl.system_log_id,
+                sl.created_at,
+                sl.action,
+                sl.entity_type,
+                sl.entity_id,
+                sl.details,
+                sl.ip_address,
+                sl.user_agent,
+                u.user_id,
+                u.first_name,
+                u.last_name,
+                u.email
+            FROM system_logs sl
+            LEFT JOIN users u ON u.user_id = sl.user_id
+            WHERE 1=1
+                            AND sl.action NOT IN ('auth.login', 'auth.logout')
+                            AND sl.action NOT LIKE '%.view%'
+                            AND sl.action NOT LIKE '%.open%'
+                            AND sl.action NOT LIKE '%.show%'
+                            AND sl.action NOT LIKE '%.list%'
+                            AND sl.action NOT LIKE '%.read%'
+        ";
+
+        $params = [];
+        $types = '';
+
+        if ($dateFrom !== '') {
+            $sql .= ' AND DATE(sl.created_at) >= ?';
+            $types .= 's';
+            $params[] = $dateFrom;
+        }
+        if ($dateTo !== '') {
+            $sql .= ' AND DATE(sl.created_at) <= ?';
+            $types .= 's';
+            $params[] = $dateTo;
+        }
+
+        if ($search !== '') {
+            $sql .= " AND (
+                sl.action LIKE ? OR
+                sl.entity_type LIKE ? OR
+                sl.details LIKE ? OR
+                sl.ip_address LIKE ? OR
+                u.first_name LIKE ? OR
+                u.last_name LIKE ? OR
+                u.email LIKE ?
+            )";
+            $types .= 'sssssss';
+            $like = '%' . $search . '%';
+            array_push($params, $like, $like, $like, $like, $like, $like, $like);
+        }
+
+        $sql .= ' ORDER BY sl.created_at DESC LIMIT 1000';
+
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            if ($types !== '') {
+                stmt_bind_params($stmt, $types, $params);
+            }
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($res) {
+                while ($r = $res->fetch_assoc()) {
+                    $rows[] = $r;
+                }
+            }
+            $stmt->close();
+        }
+    }
 }
 ?>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center gap-2" style="flex-wrap: nowrap;">
         <div class="d-flex align-items-center gap-2" style="min-width:0;">
-            <h2 class="card-title mb-0">Login History & Live Session Monitor</h2>
+            <h2 class="card-title mb-0">System Logs</h2>
         </div>
 
         <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
@@ -255,7 +339,7 @@ if ($view === 'user_logs') {
                     <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 320px;">
                         <div class="mb-2 fw-semibold">Filters</div>
 
-                        <?php if ($view === 'user_logs'): ?>
+                        <?php if ($view === 'user_logs' || $view === 'audit_logs'): ?>
                             <div class="mb-2">
                                 <label class="form-label small mb-1">From</label>
                                 <input type="date" class="form-control form-control-sm" name="from" value="<?php echo htmlspecialchars($dateFrom); ?>">
@@ -282,13 +366,16 @@ if ($view === 'user_logs') {
     <div class="card-body border-bottom pb-2">
         <ul class="nav nav-tabs card-header-tabs">
             <li class="nav-item">
-                <a class="nav-link <?php echo $view === 'user_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=user_logs">User Logs</a>
+                <a class="nav-link <?php echo $view === 'user_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=user_logs">Login Logs</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link <?php echo $view === 'active_users' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=active_users">Active Users</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link <?php echo $view === 'patient_sessions' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=patient_sessions">Patient Sessions</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $view === 'audit_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=audit_logs">Audit Logs</a>
             </li>
         </ul>
     </div>
@@ -315,13 +402,22 @@ if ($view === 'user_logs') {
                                 <th style="width: 160px;">IP</th>
                                 <th style="width: 110px;">Status</th>
                             </tr>
-                        <?php else: ?>
+                        <?php elseif ($view === 'patient_sessions'): ?>
                             <tr>
                                 <th style="width: 240px;">Patient</th>
                                 <th style="width: 190px;">Last Login</th>
                                 <th style="width: 190px;">Last Activity</th>
                                 <th style="width: 160px;">IP</th>
                                 <th style="width: 110px;">Status</th>
+                            </tr>
+                        <?php else: ?>
+                            <tr>
+                                <th style="width: 180px;">Timestamp</th>
+                                <th style="width: 240px;">Actor</th>
+                                <th style="width: 180px;">Action</th>
+                                <th style="width: 180px;">Entity</th>
+                                <th>Details</th>
+                                <th style="width: 160px;">IP</th>
                             </tr>
                         <?php endif; ?>
                     </thead>
@@ -350,7 +446,7 @@ if ($view === 'user_logs') {
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                        <?php else: ?>
+                        <?php elseif ($view === 'patient_sessions'): ?>
                             <?php foreach ($rows as $r): ?>
                                 <?php $status = format_activity_status($r['logout_time'] ?? null, $r['last_activity'] ?? null, $patientSessionTimeoutSeconds); ?>
                                 <tr>
@@ -363,6 +459,23 @@ if ($view === 'user_logs') {
                                             <?php echo htmlspecialchars($status); ?>
                                         </span>
                                     </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <?php foreach ($rows as $r): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars((string)($r['created_at'] ?? '')); ?></td>
+                                    <td><?php echo htmlspecialchars(format_audit_actor($r)); ?></td>
+                                    <td><code><?php echo htmlspecialchars((string)($r['action'] ?? '')); ?></code></td>
+                                    <td>
+                                        <?php
+                                            $entityType = (string)($r['entity_type'] ?? '');
+                                            $entityId = (string)($r['entity_id'] ?? '');
+                                            echo htmlspecialchars(trim($entityType . ($entityId !== '' ? ' #' . $entityId : '')));
+                                        ?>
+                                    </td>
+                                    <td><?php echo htmlspecialchars((string)($r['details'] ?? '')); ?></td>
+                                    <td><?php echo htmlspecialchars((string)($r['ip_address'] ?? '')); ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

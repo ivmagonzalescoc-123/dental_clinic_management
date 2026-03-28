@@ -2,6 +2,30 @@
 include_once '../config/session_check.php';
 check_session(['patient']);
 $csrf_token = security_generate_csrf_token();
+
+$header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
+if ($header_display_name === '') {
+    $header_display_name = (string)($_SESSION['email'] ?? 'User');
+}
+
+$role_key = strtolower((string)($_SESSION['role'] ?? ''));
+switch ($role_key) {
+    case 'admin':
+        $header_role_label = 'Administrator';
+        break;
+    case 'doctor':
+        $header_role_label = 'Doctor';
+        break;
+    case 'secretary':
+        $header_role_label = 'Secretary';
+        break;
+    case 'patient':
+        $header_role_label = 'Patient';
+        break;
+    default:
+        $header_role_label = 'User';
+        break;
+}
 ?>
 
 <!DOCTYPE html>
@@ -34,8 +58,8 @@ $csrf_token = security_generate_csrf_token();
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260316-2" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260316-2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
 </head>
 
 <body>
@@ -47,7 +71,7 @@ $csrf_token = security_generate_csrf_token();
                 <img src="../assets/img/main_logo.png" alt="">
                 <div class="ms-2">
                     <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
-                    <small class="d-none d-lg-block text-muted">Patient</small>
+                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
             <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
@@ -56,8 +80,10 @@ $csrf_token = security_generate_csrf_token();
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="patientSearch" name="search">
-            <button class="search-btn">Search</button>
+            <div class="search-input-wrap">
+                <input type="text" placeholder="Search..." class="search-input" id="patientSearch" name="search">
+                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
+            </div>
         </div>
 
         <nav class="header-nav ms-auto">
@@ -73,6 +99,7 @@ $csrf_token = security_generate_csrf_token();
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
                 

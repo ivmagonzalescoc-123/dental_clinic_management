@@ -1,14 +1,56 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['admin']);
+include_once '../config/system_logs.php';
 $csrf_token = security_generate_csrf_token();
 
 // Handle modules that may redirect via headers before any HTML output.
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
+
+if (function_exists('log_system_event') && $_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
+    $normalizedAction = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$action));
+    $entityType = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$page));
+    $isViewOnlyAction = in_array($normalizedAction, ['view', 'open', 'show', 'list', 'read', 'index'], true) || str_starts_with($normalizedAction, 'view_');
+    if ($normalizedAction !== '' && !$isViewOnlyAction) {
+        log_system_event(
+            $conn,
+            'admin.change.' . $normalizedAction,
+            $entityType !== '' ? $entityType : 'admin_module',
+            null,
+            'Admin data change action executed: page=' . $page . ', action=' . $action,
+            (int)($_SESSION['user_id'] ?? 0)
+        );
+    }
+}
+
 if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['archive', 'reset_password'], true)) {
     include 'admin_modules/manage_users.php';
     exit;
+}
+
+$header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
+if ($header_display_name === '') {
+    $header_display_name = (string)($_SESSION['email'] ?? 'User');
+}
+
+$role_key = strtolower((string)($_SESSION['role'] ?? ''));
+switch ($role_key) {
+    case 'admin':
+        $header_role_label = 'Administrator';
+        break;
+    case 'doctor':
+        $header_role_label = 'Doctor';
+        break;
+    case 'secretary':
+        $header_role_label = 'Secretary';
+        break;
+    case 'patient':
+        $header_role_label = 'Patient';
+        break;
+    default:
+        $header_role_label = 'User';
+        break;
 }
 ?>
 
@@ -42,8 +84,8 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260316-2" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260316-2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
 </head>
 
 <body>
@@ -55,6 +97,7 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
                 <img src="../assets/img/main_logo.png" alt="">
                 <div class="ms-2">
                     <span class="d-none d-lg-block fw-bold">Azucena's Dental Clinic</span>
+                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
             <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
@@ -63,13 +106,14 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="adminSearch" name="search">
-            <button class="search-btn">Search</button>
+            <div class="search-input-wrap">
+                <input type="text" placeholder="Search..." class="search-input" id="adminSearch" name="search">
+                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
+            </div>
         </div>
 
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
-                <small class="d-none d-lg-block text-muted">Administrator</small>
                 <li class="nav-item d-block d-lg-none">
                     <a class="nav-link nav-icon search-bar-toggle" href="#">
                         <i class="bi bi-search"></i>
@@ -81,6 +125,7 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
                 
@@ -151,7 +196,7 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
             <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=system_logs">
                     <i class="bi bi-file-text"></i>
-                    <span>User Logs</span>
+                    <span>System Logs</span>
                 </a>
             </li>
 
@@ -183,7 +228,12 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
                                     include "admin_modules/manage_users.php";
                                     break;
                                 case "schedule_board":
-                                    include "admin_modules/schedule_board.php";
+                                    $_GET['tab'] = 'schedule';
+                                    include "admin_modules/doctor_management.php";
+                                    break;
+                                case "appointments":
+                                    $_GET['tab'] = 'schedule';
+                                    include "admin_modules/doctor_management.php";
                                     break;
                                 case "services":
                                     include "admin_modules/services.php";

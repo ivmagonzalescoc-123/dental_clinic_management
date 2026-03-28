@@ -2,6 +2,7 @@
 include_once '../config/session_check.php';
 check_session(['doctor']);
 $csrf_token = security_generate_csrf_token();
+include_once '../config/system_logs.php';
 
 // Get today's arrived (pending) patient count for this doctor (for sidebar badge)
 include_once '../config/database.php';
@@ -29,15 +30,55 @@ if ($doctor_id && $conn) {
 
 // Handle page logic for modules that need to send headers (before any output)
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
+$action = $_GET['action'] ?? ($_POST['action'] ?? '');
+
+if (function_exists('log_system_event') && $_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
+    $normalizedAction = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$action));
+    $entityType = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$page));
+    $isViewOnlyAction = in_array($normalizedAction, ['view', 'open', 'show', 'list', 'read', 'index'], true) || str_starts_with($normalizedAction, 'view_');
+    if ($normalizedAction !== '' && !$isViewOnlyAction) {
+        log_system_event(
+            $conn,
+            'doctor.change.' . $normalizedAction,
+            $entityType !== '' ? $entityType : 'doctor_module',
+            null,
+            'Doctor data change action executed: page=' . $page . ', action=' . $action,
+            (int)($_SESSION['user_id'] ?? 0)
+        );
+    }
+}
 
 // Process appointments module logic before HTML output
 if ($page === 'appointments') {
     // Only run the PHP logic that might send headers
-    $action = $_GET['action'] ?? '';
     if ($action && $_SERVER['REQUEST_METHOD'] === 'POST') {
         include 'doctor_modules/appointments.php';
         exit;
     }
+}
+
+$header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
+if ($header_display_name === '') {
+    $header_display_name = (string)($_SESSION['email'] ?? 'User');
+}
+
+$role_key = strtolower((string)($_SESSION['role'] ?? ''));
+switch ($role_key) {
+    case 'admin':
+        $header_role_label = 'Administrator';
+        break;
+    case 'doctor':
+        $header_role_label = 'Doctor';
+        break;
+    case 'secretary':
+        $header_role_label = 'Secretary';
+        break;
+    case 'patient':
+        $header_role_label = 'Patient';
+        break;
+    default:
+        $header_role_label = 'User';
+        break;
 }
 ?>
 <!DOCTYPE html>
@@ -66,8 +107,8 @@ if ($page === 'appointments') {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260316-2" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260316-2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
 </head>
 
 <body>
@@ -79,7 +120,7 @@ if ($page === 'appointments') {
                 <img src="../assets/img/main_logo.png" alt="">
                 <div class="ms-2">
                     <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
-                    <small class="d-none d-lg-block text-muted">Doctor</small>
+                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
             <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
@@ -88,9 +129,11 @@ if ($page === 'appointments') {
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search"
-                aria-label="Search">
-            <button class="search-btn">Search</button>
+            <div class="search-input-wrap">
+                <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search"
+                    aria-label="Search">
+                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
+            </div>
         </div>
 
         <nav class="header-nav ms-auto">
@@ -106,6 +149,7 @@ if ($page === 'appointments') {
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
 
@@ -158,15 +202,9 @@ if ($page === 'appointments') {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="doctor.php?page=patient_schedule">
-                    <i class="bi bi-calendar-range"></i>
-                    <span>Scheduling</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="doctor.php?page=leave_requests">
-                    <i class="bi bi-calendar-x"></i>
-                    <span>Leave Requests</span>
+                <a class="nav-link collapsed" href="doctor.php?page=schedule">
+                    <i class="bi bi-calendar3"></i>
+                    <span>Schedule</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -248,9 +286,11 @@ if ($page === 'appointments') {
                                     include "doctor_modules/patients.php";
                                     break;
                                 case "patient_schedule":
-                                    include "doctor_modules/patient_schedule.php";
+                                    $_GET['tab'] = 'followup';
+                                    include "doctor_modules/appointments.php";
                                     break;
                                 case "leave_requests":
+                                case "schedule":
                                     include "doctor_modules/leave_requests.php";
                                     break;
                                 case "profile":

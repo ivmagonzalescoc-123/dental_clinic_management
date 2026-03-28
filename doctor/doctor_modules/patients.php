@@ -292,13 +292,23 @@ usort($patientList, function ($a, $b) use ($sort) {
                         $appointmentCount = count($appointments);
                         $collapseId = 'patientAppointments' . $patientId;
                         $cardId = 'patientCard' . $patientId;
+                        $latestAppointmentId = 0;
+                        if (!empty($appointments)) {
+                            $latestAppt = reset($appointments);
+                            $latestAppointmentId = (int)($latestAppt['appointment_id'] ?? 0);
+                        }
                     ?>
                     <div class="col-12">
                         <div class="card h-100" id="<?php echo htmlspecialchars($cardId); ?>">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start gap-3">
                                     <div class="flex-grow-1">
-                                        <h5 class="card-title mb-0"><?php echo htmlspecialchars(format_patient_name($patient)); ?></h5>
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <h5 class="card-title mb-0"><?php echo htmlspecialchars(format_patient_name($patient)); ?></h5>
+                                            <?php if ($latestAppointmentId > 0): ?>
+                                                <button type="button" class="btn btn-outline-info btn-sm" onclick="openPatientProfileModal(<?php echo (int)$latestAppointmentId; ?>, '<?php echo htmlspecialchars(format_patient_name($patient), ENT_QUOTES); ?>')">Profile</button>
+                                            <?php endif; ?>
+                                        </div>
                                         <div class="text-muted small">
                                             <?php if (!empty($patient['phone_number'])): ?>
                                                 <div><i class="bi bi-telephone"></i> <?php echo htmlspecialchars($patient['phone_number']); ?></div>
@@ -325,7 +335,7 @@ usort($patientList, function ($a, $b) use ($sort) {
                                                 <?php
                                                     $apptId = (int)$appt['appointment_id'];
                                                     $apptCollapseId = 'apptCollapse' . $patientId . '-' . $apptId;
-                                                    $serviceTitle = 'No service selected';
+                                                    $serviceTitle = 'No service availed';
                                                     if (!empty($appt['services'])) {
                                                         $serviceTitle = $appt['services'][0]['service_name'] ?? $serviceTitle;
                                                     }
@@ -383,7 +393,7 @@ usort($patientList, function ($a, $b) use ($sort) {
 
                                                             <?php if (!empty($appt['start_time']) || !empty($appt['end_time'])): ?>
                                                                 <div class="mb-2">
-                                                                    <div class="fw-semibold small text-muted">Scheduled</div>
+                                                                    <div class="fw-semibold small text-muted">Followup Schedule</div>
                                                                     <div><?php echo htmlspecialchars($appt['start_time'] ?? '') . ' ' . (empty($appt['end_time']) ? '' : ' — ' . htmlspecialchars($appt['end_time'])); ?></div>
                                                                 </div>
                                                             <?php endif; ?>
@@ -409,3 +419,89 @@ usort($patientList, function ($a, $b) use ($sort) {
         <?php endif; ?>
     </div>
 </div>
+
+<div class="modal fade" id="patientProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Patient Profiling</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2"><strong>Patient:</strong> <span id="profilePatientName">-</span></div>
+                <div class="row g-2">
+                    <div class="col-md-6"><strong>Medical History:</strong><div class="small text-muted" id="profileMedicalHistory">-</div></div>
+                    <div class="col-md-6"><strong>Medications:</strong><div class="small text-muted" id="profileMedications">-</div></div>
+                    <div class="col-md-4"><strong>Allergies:</strong><div class="small text-muted" id="profileAllergies">-</div></div>
+                    <div class="col-md-4"><strong>Smoking:</strong><div class="small text-muted" id="profileSmoking">-</div></div>
+                    <div class="col-md-4"><strong>Alcohol:</strong><div class="small text-muted" id="profileAlcohol">-</div></div>
+                    <div class="col-md-4"><strong>ASA:</strong><div class="small text-muted" id="profileASA">-</div></div>
+                    <div class="col-md-8"><strong>Last Visit:</strong><div class="small text-muted" id="profileLastVisit">-</div></div>
+                    <div class="col-12"><strong>Periodontal / Oral Exam:</strong><div class="small text-muted" id="profilePeriodontal">-</div></div>
+                    <div class="col-12"><strong>Dental Chart / Findings:</strong><div class="small text-muted" id="profileDentalChart">-</div></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setProfileText(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = (value === null || value === undefined || String(value).trim() === '') ? '-' : String(value);
+    el.textContent = v;
+}
+
+function clearProfileModal() {
+    setProfileText('profileMedicalHistory', '-');
+    setProfileText('profileMedications', '-');
+    setProfileText('profileAllergies', '-');
+    setProfileText('profileSmoking', '-');
+    setProfileText('profileAlcohol', '-');
+    setProfileText('profileASA', '-');
+    setProfileText('profileLastVisit', '-');
+    setProfileText('profilePeriodontal', '-');
+    setProfileText('profileDentalChart', '-');
+}
+
+async function openPatientProfileModal(appointmentId, patientName) {
+    const modalEl = document.getElementById('patientProfileModal');
+    if (!modalEl) return;
+    const modal = new bootstrap.Modal(modalEl);
+
+    setProfileText('profilePatientName', patientName || '-');
+    clearProfileModal();
+    modal.show();
+
+    try {
+        const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
+        const data = await res.json();
+        if (!data || !data.success || !data.record) {
+            return;
+        }
+
+        const rec = data.record;
+        const pfRaw = rec.profiling || rec.patient_profiling || null;
+        if (!pfRaw) {
+            return;
+        }
+
+        const pf = (typeof pfRaw === 'string') ? JSON.parse(pfRaw) : pfRaw;
+        setProfileText('profileMedicalHistory', pf.medical_history || '');
+        setProfileText('profileMedications', pf.medications || '');
+        setProfileText('profileAllergies', pf.allergies || '');
+        setProfileText('profileSmoking', pf.smoking || '');
+        setProfileText('profileAlcohol', pf.alcohol || '');
+        setProfileText('profileASA', pf.asa || '');
+        setProfileText('profileLastVisit', pf.last_visit || '');
+        setProfileText('profilePeriodontal', pf.periodontal || '');
+        setProfileText('profileDentalChart', pf.dental_chart || '');
+    } catch (err) {
+        console.warn('Failed to load patient profiling', err);
+    }
+}
+</script>

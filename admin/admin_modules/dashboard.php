@@ -215,80 +215,54 @@ function fmt_time(?string $dt): string
 }
 ?>
 
+<div class="dental-dashboard-shell">
+	<div class="dental-dashboard-hero">
+		<div>
+			<h4 class="mb-1">Admin Dashboard</h4>
+			<p class="small">Oversee clinic activity, patient flow, workforce, and operational trends.</p>
+		</div>
+		<span class="dental-chip">Operations Center</span>
+	</div>
+
 <div class="row g-3">
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card info-card">
-			<div class="card-body">
-				<h5 class="card-title">Patients <span>| Total</span></h5>
-				<div class="d-flex align-items-center">
-					<div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-						<i class="bi bi-people"></i>
-					</div>
-					<div class="ps-3">
-						<h6 class="mb-0"><?php echo (int)$patientsTotal; ?></h6>
-						<a class="small" href="admin.php?page=patients">View records</a>
-					</div>
-				</div>
-			</div>
+		<div class="card dental-kpi-card p-3 h-100">
+			<h6 class="mb-1">Patients</h6>
+			<div class="display-6 fw-bold"><?php echo (int)$patientsTotal; ?></div>
+			<div class="text-muted small">Total records</div>
+			<div class="mt-2"><a class="small" href="admin.php?page=manage_users&type=patients">View records</a></div>
 		</div>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card info-card">
-			<div class="card-body">
-				<h5 class="card-title">Appointments <span>| Today</span></h5>
-				<div class="d-flex align-items-center">
-					<div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-						<i class="bi bi-calendar-check"></i>
-					</div>
-					<div class="ps-3">
-						<h6 class="mb-0"><?php echo (int)$appointmentsToday; ?></h6>
-						<span class="text-muted small"><?php echo (int)$appointmentsPendingToday; ?> pending</span>
-						<div><a class="small" href="admin.php?page=appointments&view=today">Open today</a></div>
-					</div>
-				</div>
-			</div>
+		<div class="card dental-kpi-card p-3 h-100">
+			<h6 class="mb-1">Appointments Today</h6>
+			<div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div>
+			<div class="text-muted small"><?php echo (int)$appointmentsPendingToday; ?> pending</div>
+			<div class="mt-2"><a class="small" href="admin.php?page=doctor_management&tab=schedule">Open today</a></div>
 		</div>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card info-card">
-			<div class="card-body">
-				<h5 class="card-title">Arrivals <span>| Today</span></h5>
-				<div class="d-flex align-items-center">
-					<div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-						<i class="bi bi-person-check"></i>
-					</div>
-					<div class="ps-3">
-						<h6 class="mb-0"><?php echo (int)$checkedInToday; ?> arrived</h6>
-						<span class="text-muted small"><?php echo (int)$queueWaitingToday; ?> pending</span>
-						<div><a class="small" href="admin.php?page=schedule_board">View schedule board</a></div>
-					</div>
-				</div>
-			</div>
+		<div class="card dental-kpi-card p-3 h-100">
+			<h6 class="mb-1">Arrivals Today</h6>
+			<div class="display-6 fw-bold"><?php echo (int)$checkedInToday; ?></div>
+			<div class="text-muted small"><?php echo (int)$queueWaitingToday; ?> pending</div>
+			<div class="mt-2"><a class="small" href="admin.php?page=doctor_management&tab=schedule">View schedule board</a></div>
 		</div>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card info-card">
-			<div class="card-body">
-				<h5 class="card-title">Users <span>| Active</span></h5>
-				<div class="d-flex align-items-center">
-					<div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
-						<i class="bi bi-person-badge"></i>
-					</div>
-					<div class="ps-3">
-						<h6 class="mb-0"><?php echo (int)$usersTotal; ?></h6>
-						<span class="text-muted small"><?php echo (int)$doctorsTotal; ?> doctors, <?php echo (int)$secretariesTotal; ?> secretaries</span>
-						<div><a class="small" href="admin.php?page=manage_users&type=users">Manage</a></div>
-					</div>
-				</div>
-			</div>
+		<div class="card dental-kpi-card p-3 h-100">
+			<h6 class="mb-1">Users Active</h6>
+			<div class="display-6 fw-bold"><?php echo (int)$usersTotal; ?></div>
+			<div class="text-muted small"><?php echo (int)$doctorsTotal; ?> doctors, <?php echo (int)$secretariesTotal; ?> secretaries</div>
+			<div class="mt-2"><a class="small" href="admin.php?page=manage_users&type=users">Manage</a></div>
 		</div>
 	</div>
 
 	<div class="col-12">
-		<div class="card">
+		<div class="card dental-surface-card">
 			<div class="card-body">
 				<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
 					<div class="d-flex align-items-center gap-2">
@@ -302,17 +276,19 @@ function fmt_time(?string $dt): string
 					</div>
 					<div class="text-muted small">Services active: <?php echo (int)$servicesTotal; ?> • Appointments total: <?php echo (int)$appointmentsTotal; ?></div>
 				</div>
-				<div id="appt7Chart" style="min-height: 260px;"></div>
+				<div class="dental-chart-frame mt-3">
+					<div id="appt7Chart" style="min-height: 260px;"></div>
+				</div>
 			</div>
 		</div>
 	</div>
 
 	<div class="col-12 col-xl-6">
-		<div class="card">
+		<div class="card dental-surface-card">
 			<div class="card-body">
 				<div class="d-flex justify-content-between align-items-center">
 					<h5 class="card-title mb-0">Today’s Appointments <span>| Next 10</span></h5>
-					<a class="small" href="admin.php?page=appointments&view=today">View all</a>
+					<a class="small" href="admin.php?page=doctor_management&tab=schedule">View all</a>
 				</div>
 
 				<?php if (empty($todayAppointments)): ?>
@@ -366,7 +342,7 @@ function fmt_time(?string $dt): string
 	</div>
 
 	<div class="col-12 col-xl-6">
-		<div class="card">
+		<div class="card dental-surface-card">
 			<div class="card-body">
 				<div class="d-flex justify-content-between align-items-center">
 					<h5 class="card-title mb-0">User Logs <span>| Recent</span></h5>
@@ -407,6 +383,7 @@ function fmt_time(?string $dt): string
 			</div>
 		</div>
 	</div>
+</div>
 </div>
 
 <script>

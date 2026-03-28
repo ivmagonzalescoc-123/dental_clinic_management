@@ -1,15 +1,174 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
+include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 security_ensure_work_type_column($conn);
 
+$conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    appointment_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    requested_doctor_id INT NULL,
+    requested_date DATE NOT NULL,
+    requested_timeslot_id INT NOT NULL,
+    request_note VARCHAR(500) NULL,
+    status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    review_note VARCHAR(500) NULL,
+    reviewed_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_arr_status_created (status, created_at),
+    KEY idx_arr_appointment_status (appointment_id, status),
+    KEY idx_arr_patient_status (patient_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 $action = $_GET['action'] ?? '';
-$view = $_GET['view'] ?? 'all'; // 'all' | 'today'
+$view = $_GET['view'] ?? 'all'; // 'all' | 'today' | 'reschedule'
 $search = $_GET['search'] ?? '';
 
 $today = date('Y-m-d');
-if ($view !== 'all' && $view !== 'today') {
+if (!in_array($view, ['all', 'today', 'reschedule'], true)) {
     $view = 'all';
+}
+
+if ($action === 'approve_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestId = (int)($_POST['request_id'] ?? 0);
+    if ($requestId <= 0) {
+        $_SESSION['message'] = 'Invalid reschedule request.';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
+
+    try {
+        $reqStmt = $conn->prepare("SELECT r.request_id, r.appointment_id, r.requested_doctor_id, r.requested_date, r.requested_timeslot_id, r.status,
+                                          a.user_id AS current_doctor_id, a.appointment_date, a.timeslot_id AS current_timeslot_id, a.status AS appointment_status
+                                   FROM appointment_reschedule_requests r
+                                   INNER JOIN appointments a ON a.appointment_id = r.appointment_id
+                                   WHERE r.request_id = ?
+                                   LIMIT 1");
+        if (!$reqStmt) throw new Exception('Unable to load request.');
+        $reqStmt->bind_param('i', $requestId);
+        $reqStmt->execute();
+        $req = $reqStmt->get_result()->fetch_assoc();
+        $reqStmt->close();
+
+        if (!$req) throw new Exception('Reschedule request not found.');
+        if ((string)$req['status'] !== 'pending') throw new Exception('Request is no longer pending.');
+
+        $targetDoctorId = (int)($req['requested_doctor_id'] ?: $req['current_doctor_id']);
+        $targetDate = (string)$req['requested_date'];
+        $targetTimeslotId = (int)$req['requested_timeslot_id'];
+        $currentTimeslotId = (int)($req['current_timeslot_id'] ?? 0);
+
+        [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $targetDoctorId, $targetDate);
+        if (!$bookable) throw new Exception($bookableMsg);
+
+        $slotStmt = $conn->prepare('SELECT timeslot_id, doctor_id, slot_date, status FROM timeslot WHERE timeslot_id = ? LIMIT 1');
+        if (!$slotStmt) throw new Exception('Unable to validate requested slot.');
+        $slotStmt->bind_param('i', $targetTimeslotId);
+        $slotStmt->execute();
+        $slot = $slotStmt->get_result()->fetch_assoc();
+        $slotStmt->close();
+
+        if (!$slot) throw new Exception('Requested timeslot not found.');
+        if ((int)$slot['doctor_id'] !== $targetDoctorId || (string)$slot['slot_date'] !== $targetDate) {
+            throw new Exception('Requested timeslot does not match doctor/date.');
+        }
+        if ((string)$slot['status'] !== 'available' && $targetTimeslotId !== $currentTimeslotId) {
+            throw new Exception('Requested timeslot is already taken.');
+        }
+
+        $conn->begin_transaction();
+
+        if ($currentTimeslotId > 0 && $currentTimeslotId !== $targetTimeslotId) {
+            $freeOld = $conn->prepare("UPDATE timeslot SET status = 'available' WHERE timeslot_id = ? AND status = 'booked'");
+            if (!$freeOld) throw new Exception('Failed to free old timeslot.');
+            $freeOld->bind_param('i', $currentTimeslotId);
+            $freeOld->execute();
+            $freeOld->close();
+        }
+
+        if ($targetTimeslotId !== $currentTimeslotId) {
+            $bookNew = $conn->prepare("UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'");
+            if (!$bookNew) throw new Exception('Failed to book requested timeslot.');
+            $bookNew->bind_param('i', $targetTimeslotId);
+            $bookNew->execute();
+            if ($bookNew->affected_rows === 0) {
+                $bookNew->close();
+                throw new Exception('Requested timeslot is already taken.');
+            }
+            $bookNew->close();
+        }
+
+        $appStatus = (string)$req['appointment_status'];
+        if ($appStatus === 'cancelled' || $appStatus === 'no_show') {
+            $appStatus = 'scheduled';
+        }
+
+        $updAppt = $conn->prepare('UPDATE appointments SET user_id = ?, appointment_date = ?, timeslot_id = ?, status = ? WHERE appointment_id = ?');
+        if (!$updAppt) throw new Exception('Failed to update appointment.');
+        $updAppt->bind_param('isisi', $targetDoctorId, $targetDate, $targetTimeslotId, $appStatus, $req['appointment_id']);
+        $updAppt->execute();
+        $updAppt->close();
+
+        $reviewedBy = (int)($_SESSION['user_id'] ?? 0);
+        $reviewNote = 'Approved by secretary';
+        $approvedStatus = 'approved';
+        $updReq = $conn->prepare('UPDATE appointment_reschedule_requests SET status = ?, reviewed_by = ?, review_note = ?, reviewed_at = NOW() WHERE request_id = ?');
+        if (!$updReq) throw new Exception('Failed to finalize request approval.');
+        $updReq->bind_param('sisi', $approvedStatus, $reviewedBy, $reviewNote, $requestId);
+        $updReq->execute();
+        $updReq->close();
+
+        $conn->commit();
+        $_SESSION['message'] = 'Patient reschedule request approved and applied.';
+        $_SESSION['message_type'] = 'success';
+    } catch (Exception $e) {
+        try { $conn->rollback(); } catch (Exception $ignore) {}
+        $_SESSION['message'] = 'Failed to approve request: ' . $e->getMessage();
+        $_SESSION['message_type'] = 'danger';
+    }
+
+    header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+    exit;
+}
+
+if ($action === 'reject_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $requestId = (int)($_POST['request_id'] ?? 0);
+    $reviewNote = trim((string)($_POST['review_note'] ?? 'Rejected by secretary'));
+    if ($requestId <= 0) {
+        $_SESSION['message'] = 'Invalid reschedule request.';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
+
+    try {
+        if (mb_strlen($reviewNote) > 500) {
+            $reviewNote = mb_substr($reviewNote, 0, 500);
+        }
+        $reviewedBy = (int)($_SESSION['user_id'] ?? 0);
+        $rejectedStatus = 'rejected';
+        $pendingStatus = 'pending';
+        $stmt = $conn->prepare('UPDATE appointment_reschedule_requests SET status = ?, reviewed_by = ?, review_note = ?, reviewed_at = NOW() WHERE request_id = ? AND status = ?');
+        if (!$stmt) throw new Exception('Could not reject request.');
+        $stmt->bind_param('sisis', $rejectedStatus, $reviewedBy, $reviewNote, $requestId, $pendingStatus);
+        $stmt->execute();
+        $affected = (int)$stmt->affected_rows;
+        $stmt->close();
+
+        if ($affected <= 0) throw new Exception('Request is not pending or already handled.');
+
+        $_SESSION['message'] = 'Patient reschedule request rejected.';
+        $_SESSION['message_type'] = 'success';
+    } catch (Exception $e) {
+        $_SESSION['message'] = 'Failed to reject request: ' . $e->getMessage();
+        $_SESSION['message_type'] = 'danger';
+    }
+
+    header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+    exit;
 }
 
 
@@ -136,6 +295,7 @@ if ($stmt) {
 
 // Fetch appointments - ALL APPOINTMENTS (no filtering)
 $appointments = [];
+$pendingRescheduleRequests = [];
 $appointments_sql = "
     SELECT
         a.*,
@@ -206,7 +366,30 @@ if ($view === 'today') {
         }
     }
 }
+
+$pendingReqSql = "SELECT r.request_id, r.appointment_id, r.requested_date, r.requested_timeslot_id, r.request_note, r.created_at,
+                         p.first_name, p.last_name,
+                         COALESCE(u2.first_name, u1.first_name) AS req_doc_first,
+                         COALESCE(u2.last_name, u1.last_name) AS req_doc_last,
+                         t.start_time, t.end_time,
+                         a.status AS appointment_status
+                  FROM appointment_reschedule_requests r
+                  INNER JOIN appointments a ON a.appointment_id = r.appointment_id
+                  INNER JOIN patients p ON p.patient_id = r.patient_id
+                  LEFT JOIN users u1 ON u1.user_id = a.user_id
+                  LEFT JOIN users u2 ON u2.user_id = r.requested_doctor_id
+                  LEFT JOIN timeslot t ON t.timeslot_id = r.requested_timeslot_id
+                  WHERE r.status = 'pending'
+                  ORDER BY r.created_at DESC";
+$pendingReqRes = $conn->query($pendingReqSql);
+if ($pendingReqRes) {
+    while ($pr = $pendingReqRes->fetch_assoc()) {
+        $pendingRescheduleRequests[] = $pr;
+    }
+}
 ?>
+
+<?php $pendingReqCount = (int)count($pendingRescheduleRequests); ?>
 
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
@@ -233,8 +416,79 @@ if ($view === 'today') {
                 <i class="bi bi-calendar-check"></i> Today (<?php echo (int)$todayCount; ?>)
             </button>
         </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $view === 'reschedule' ? 'active' : ''; ?>" type="button"
+                    onclick="window.location.href='secretary.php?page=appointments&view=reschedule'">
+                <i class="bi bi-arrow-repeat"></i> Reschedule Requests (<?php echo $pendingReqCount; ?>)
+            </button>
+        </li>
     </ul>
 </div>
+
+<?php if ($view === 'reschedule'): ?>
+<div class="card border-0 mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title mb-0">Pending Patient Reschedule Requests</h2>
+        <span class="badge bg-warning text-dark"><?php echo $pendingReqCount; ?> pending</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Requested At</th>
+                        <th>Patient</th>
+                        <th>Appointment #</th>
+                        <th>Requested Date</th>
+                        <th>Requested Slot</th>
+                        <th>Doctor</th>
+                        <th>Note</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($pendingRescheduleRequests)): ?>
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">No pending patient reschedule requests.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($pendingRescheduleRequests as $req): ?>
+                            <?php
+                                $slotText = 'TBD';
+                                if (!empty($req['start_time']) && !empty($req['end_time'])) {
+                                    $slotText = date('g:i A', strtotime((string)$req['start_time'])) . ' - ' . date('g:i A', strtotime((string)$req['end_time']));
+                                }
+                            ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars((string)$req['created_at']); ?></td>
+                                <td><?php echo htmlspecialchars(trim((string)$req['first_name'] . ' ' . (string)$req['last_name'])); ?></td>
+                                <td>#<?php echo (int)$req['appointment_id']; ?></td>
+                                <td><?php echo htmlspecialchars((string)$req['requested_date']); ?></td>
+                                <td><?php echo htmlspecialchars($slotText); ?></td>
+                                <td><?php echo htmlspecialchars(trim((string)$req['req_doc_first'] . ' ' . (string)$req['req_doc_last'])); ?></td>
+                                <td><?php echo htmlspecialchars((string)($req['request_note'] ?? '')); ?></td>
+                                <td>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <form method="POST" action="secretary.php?page=appointments&action=approve_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Approve and apply this reschedule request?');">
+                                            <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                        </form>
+                                        <form method="POST" action="secretary.php?page=appointments&action=reject_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Reject this reschedule request?');">
+                                            <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
+                                            <input type="hidden" name="review_note" value="Rejected by secretary">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php else: ?>
 
 <!-- Appointments List -->
 <div class="card border-0">
@@ -326,11 +580,11 @@ if ($view === 'today') {
                                     <?php endif; ?>
                                 </td>
                                 
-                                <td>
+                                <td class="appointments-actions-cell">
                                     <?php 
                                         $isDisabled = $isCompleted || $isCancelled;
                                     ?>
-                                    <div class="d-flex flex-wrap gap-1" style="justify-content: flex-start;">
+                                    <div class="appointments-actions-grid">
                                         
                                         
                                         <?php if ($status === 'scheduled' && !$isDisabled): ?>
@@ -382,13 +636,14 @@ if ($view === 'today') {
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
 .secretary-booking-calendar {
     border: 1px solid #dce4ef;
     border-radius: 14px;
-    background: linear-gradient(180deg, #f9fcff 0%, #f2f7ff 100%);
+    background: #f4f8ff;
     padding: 12px;
 }
 .secretary-booking-calendar .selected-date-chip {
@@ -423,26 +678,45 @@ if ($view === 'today') {
     font-size: 1rem;
     font-weight: 700;
 }
+#bookCalendar .fc-daygrid-day-frame {
+    border-radius: 8px;
+    transition: box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
+}
+#bookCalendar .fc-daygrid-day-number {
+    font-weight: 700;
+    color: #1f3b5a;
+}
 #bookCalendar .fc-button {
     border-radius: 10px;
 }
 #bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(22, 163, 74, 0.14), rgba(22, 163, 74, 0.05));
+    background: rgba(22, 163, 74, 0.1);
 }
 #bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.07));
+    background: rgba(245, 158, 11, 0.12);
 }
 #bookCalendar .fc-daygrid-day.book-day-closed .fc-daygrid-day-frame,
 #bookCalendar .fc-daygrid-day.book-day-disabled .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(220, 38, 38, 0.16), rgba(220, 38, 38, 0.07));
+    background: rgba(220, 38, 38, 0.12);
 }
 #bookCalendar .fc-daygrid-day.book-day-selected {
     box-shadow: inset 0 0 0 2px #0369a1;
 }
+#bookCalendar .fc-daygrid-day.book-day-open,
+#bookCalendar .fc-daygrid-day.book-day-busy {
+    cursor: pointer;
+}
+#bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame,
+#bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
+    cursor: pointer;
+}
 #bookCalendar .fc-daygrid-day.book-day-open:hover,
 #bookCalendar .fc-daygrid-day.book-day-busy:hover {
-    cursor: pointer;
     box-shadow: inset 0 0 0 2px rgba(3, 105, 161, 0.35);
+}
+#bookCalendar .fc-daygrid-day.book-day-open:hover .fc-daygrid-day-frame,
+#bookCalendar .fc-daygrid-day.book-day-busy:hover .fc-daygrid-day-frame {
+    transform: translateY(-1px);
 }
 #bookCalendar .book-day-badge {
     display: inline-flex;
@@ -465,6 +739,36 @@ if ($view === 'today') {
     background: #fee2e2;
     color: #991b1b;
 }
+
+.appointments-actions-cell {
+    width: 92px;
+    min-width: 92px;
+}
+
+.appointments-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 36px);
+    grid-auto-rows: 32px;
+    gap: 0.25rem;
+    width: calc(72px + 0.25rem);
+    margin: 0 auto;
+    justify-content: center;
+    align-content: start;
+}
+
+.appointments-actions-grid > .btn {
+    width: 36px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.appointments-actions-grid > .btn i {
+    font-size: 0.85rem;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 
@@ -478,7 +782,7 @@ if ($view === 'today') {
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-                    <form id="bookAppointmentForm" method="POST" action="#">
+                    <form id="bookAppointmentForm" method="POST" action="#" class="ux-form-shell">
                 <div class="modal-body">
                     <!-- Step 1: Patient Info -->
                     <div id="stepPatient" class="modal-step">
@@ -486,7 +790,7 @@ if ($view === 'today') {
 
                         <div class="mb-3">
                             <label for="bookPatientSelect" class="form-label"><strong>Select Patient</strong></label>
-                            <select id="bookPatientSelect" name="patient_id" class="form-select" required>
+                            <select id="bookPatientSelect" name="patient_id" class="form-select compact-control" required>
                                 <option value="">-- Select Patient --</option>
                                 <?php foreach ($patients as $p): ?>
                                     <?php $fullname = trim($p['first_name'] . ' ' . ($p['middle_name'] ? $p['middle_name'] . ' ' : '') . $p['last_name']); ?>
@@ -501,7 +805,7 @@ if ($view === 'today') {
                     <div id="stepBooking" class="modal-step" style="display:none;">
                         <div class="mb-3">
                             <label for="bookDoctorSelect" class="form-label"><strong>Select Doctor</strong></label>
-                            <select id="bookDoctorSelect" name="user_id" class="form-select" required>
+                            <select id="bookDoctorSelect" name="user_id" class="form-select compact-control" required>
                                 <option value="">-- Select Doctor --</option>
                                 <?php foreach ($doctors as $d): ?>
                                     <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
@@ -512,7 +816,7 @@ if ($view === 'today') {
 
                         <div class="mb-3">
                             <label for="bookAppointmentType" class="form-label"><strong>Appointment Type</strong></label>
-                            <select id="bookAppointmentType" name="is_online_appointment" class="form-select" required>
+                            <select id="bookAppointmentType" name="is_online_appointment" class="form-select compact-control" required>
                                 <option value="0" selected>Walk-In</option>
                                 <option value="1">Online</option>
                             </select>
@@ -537,7 +841,7 @@ if ($view === 'today') {
 
                         <div class="mb-3" id="bookTimeslotWrapper" style="display:none;">
                             <label for="bookTimeslotSelect" class="form-label"><strong>Time Slot</strong></label>
-                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select" required disabled>
+                            <select id="bookTimeslotSelect" name="timeslot_id" class="form-select compact-control" required disabled>
                                 <option value="">-- Select a Time Slot --</option>
                             </select>
                             <small class="text-muted">20-minute slots (8:00-12:00, 1:00-5:00). A slot is required.</small>
@@ -772,19 +1076,23 @@ if ($view === 'today') {
                     arg.el.classList.add('book-day-disabled');
                     badge.classList.add('state-closed');
                     badge.textContent = 'Past';
+                    arg.el.setAttribute('title', 'Past date');
                 } else if (arg.date.getDay() === 0) {
                     arg.el.classList.add('book-day-closed');
                     badge.classList.add('state-closed');
                     badge.textContent = 'Closed';
+                    arg.el.setAttribute('title', 'Clinic closed');
                 } else if (item && item.available) {
                     if ((item.count || 0) > 0) {
                         arg.el.classList.add('book-day-busy');
                         badge.classList.add('state-busy');
                         badge.textContent = item.count + ' booked';
+                        arg.el.setAttribute('title', 'Selectable date with existing bookings');
                     } else {
                         arg.el.classList.add('book-day-open');
                         badge.classList.add('state-open');
                         badge.textContent = 'Open';
+                        arg.el.setAttribute('title', 'Selectable date');
                     }
                 } else {
                     arg.el.classList.add('book-day-closed');
@@ -792,10 +1100,13 @@ if ($view === 'today') {
                     const reason = String(item && item.reason ? item.reason : '').toLowerCase();
                     if (reason.includes('leave')) {
                         badge.textContent = 'On leave';
+                        arg.el.setAttribute('title', 'Doctor on leave');
                     } else if (reason.includes('schedule')) {
                         badge.textContent = 'No schedule';
+                        arg.el.setAttribute('title', 'No schedule available');
                     } else {
                         badge.textContent = 'Unavailable';
+                        arg.el.setAttribute('title', 'Date unavailable');
                     }
                 }
 
@@ -1063,6 +1374,13 @@ if ($view === 'today') {
                 <input type="hidden" id="rescheduleDoctorIdSec" />
                 <div class="mb-2"><label id="rescheduleStartLabelSec" class="form-label">Start</label><input id="rescheduleStartSec" class="form-control" type="datetime-local"/></div>
                 <div class="mb-2" id="rescheduleEndWrapSec"><label class="form-label">End (optional)</label><input id="rescheduleEndSec" class="form-control" type="datetime-local"/></div>
+                <div class="mb-2" id="rescheduleTimeslotWrapSec" style="display:none;">
+                    <label class="form-label">Time Slot</label>
+                    <select id="rescheduleTimeslotSec" class="form-select">
+                        <option value="">-- Select available slot --</option>
+                    </select>
+                    <small class="text-muted">Only available slots are shown to avoid overlaps.</small>
+                </div>
                 <div class="mb-2"><button id="rescheduleSuggestSec" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
                 <div id="rescheduleSuggestionsSec" class="list-group"></div>
             </div>
@@ -1094,6 +1412,10 @@ function initSecPickers() {
 }
 initSecPickers();
 function toLocalInputSec(dtStr) { if (!dtStr) return ''; return dtStr.replace(' ', 'T').replace(/:00$/,''); }
+function toDateOnlySec(dtStr) {
+    if (!dtStr) return '';
+    return String(dtStr).slice(0, 10);
+}
 function toServerFormatSec(localVal) { 
     if (!localVal) return ''; 
     try {
@@ -1103,14 +1425,58 @@ function toServerFormatSec(localVal) {
         return localVal;
     } catch (e) { return localVal; }
 }
+
+async function loadRescheduleTimeslotsSec(preselectTimeslotId) {
+    const doctorId = document.getElementById('rescheduleDoctorIdSec').value || '';
+    const dateVal = toDateOnlySec(document.getElementById('rescheduleStartSec').value || '');
+    const select = document.getElementById('rescheduleTimeslotSec');
+    const wrap = document.getElementById('rescheduleTimeslotWrapSec');
+    if (!select || !wrap) return;
+
+    if (!doctorId || !dateVal) {
+        wrap.style.display = 'none';
+        select.innerHTML = '<option value="">-- Select available slot --</option>';
+        return;
+    }
+
+    wrap.style.display = '';
+    select.innerHTML = '<option value="">Loading slots...</option>';
+
+    try {
+        const url = '../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(dateVal);
+        const res = await fetch(url);
+        const j = await res.json();
+        select.innerHTML = '<option value="">-- Select available slot --</option>';
+        if (!j.success || !Array.isArray(j.slots) || j.slots.length === 0) {
+            select.innerHTML = '<option value="">No available slots for this date</option>';
+            return;
+        }
+        (j.slots || []).forEach(function(slot) {
+            const opt = document.createElement('option');
+            opt.value = String(slot.timeslot_id || '');
+            opt.textContent = String(slot.label || (slot.start_time + ' - ' + slot.end_time));
+            if (preselectTimeslotId && Number(preselectTimeslotId) === Number(slot.timeslot_id)) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.error(e);
+        select.innerHTML = '<option value="">Error loading slots</option>';
+    }
+}
+
 function openRescheduleModalSec(schedule) {
     document.getElementById('rescheduleScheduleIdSec').value = schedule.schedule_id || '';
+    document.getElementById('rescheduleAppointmentIdSec').value = '';
+    document.getElementById('rescheduleDoctorIdSec').value = schedule.user_id || '';
     // restore labels and fields for schedule reschedule
     try { document.getElementById('rescheduleStartLabelSec').textContent = 'Start'; } catch(e){}
     try { document.getElementById('rescheduleStartSec').type = 'datetime-local'; } catch(e){}
     try { document.getElementById('rescheduleEndWrapSec').style.display = ''; } catch(e){}
     try { document.getElementById('rescheduleEndSec').type = 'datetime-local'; } catch(e){}
     try { document.getElementById('rescheduleSuggestSec').style.display = ''; } catch(e){}
+    try { document.getElementById('rescheduleTimeslotWrapSec').style.display = 'none'; } catch(e){}
     // if flatpickr is used, reconfigure to show time
     try {
         if (fpStartSec && typeof fpStartSec.set === 'function') fpStartSec.set({ enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
@@ -1134,11 +1500,12 @@ function openRescheduleForAppointmentSec(appointment) {
     document.getElementById('rescheduleAppointmentIdSec').value = appointment.appointment_id || '';
     document.getElementById('rescheduleScheduleIdSec').value = '';
     document.getElementById('rescheduleDoctorIdSec').value = appointment.user_id || '';
-    // use date-only for appointment (no timeslot)
+    // use date + timeslot for appointment reschedule
     try { document.getElementById('rescheduleStartLabelSec').textContent = 'Date'; } catch(e){}
     try { document.getElementById('rescheduleStartSec').type = 'date'; } catch(e){}
     try { document.getElementById('rescheduleEndWrapSec').style.display = 'none'; } catch(e){}
-    try { document.getElementById('rescheduleSuggestSec').style.display = 'none'; } catch(e){}
+    try { document.getElementById('rescheduleSuggestSec').style.display = ''; } catch(e){}
+    try { document.getElementById('rescheduleTimeslotWrapSec').style.display = ''; } catch(e){}
     // if flatpickr is used, reconfigure to date-only
     try {
         if (fpStartSec && typeof fpStartSec.set === 'function') fpStartSec.set({ enableTime: false, dateFormat: 'Y-m-d' });
@@ -1151,10 +1518,20 @@ function openRescheduleForAppointmentSec(appointment) {
     if (fpStartSec && typeof fpStartSec.setDate === 'function') fpStartSec.setDate(startLocal);
     else document.getElementById('rescheduleStartSec').value = startLocal;
     document.getElementById('rescheduleSuggestionsSec').innerHTML = '';
+    loadRescheduleTimeslotsSec(appointment.timeslot_id || 0);
     resModalSec.show();
 }
+
+document.getElementById('rescheduleStartSec').addEventListener('change', function() {
+    const apptId = document.getElementById('rescheduleAppointmentIdSec').value;
+    if (apptId) {
+        loadRescheduleTimeslotsSec();
+    }
+});
+
 document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
     const sid = document.getElementById('rescheduleScheduleIdSec').value;
+    const apptId = document.getElementById('rescheduleAppointmentIdSec').value;
     const apptDoctor = document.getElementById('rescheduleDoctorIdSec').value || '';
     const btn = this; btn.disabled = true;
     try {
@@ -1174,7 +1551,25 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
         const j = await res.json();
         const wrap = document.getElementById('rescheduleSuggestionsSec'); wrap.innerHTML = '';
         if (!j.success) return alert(j.message || 'No suggestions');
-        (j.slots || []).slice(0,10).forEach(slot => { const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action'; a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : ''); a.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('rescheduleStartSec').value = slot.start.replace(' ', 'T'); document.getElementById('rescheduleEndSec').value = slot.end ? slot.end.replace(' ', 'T') : ''; }); wrap.appendChild(a); });
+        (j.slots || []).slice(0,10).forEach(slot => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'list-group-item list-group-item-action';
+            a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
+            a.addEventListener('click', async function(e){
+                e.preventDefault();
+                if (apptId) {
+                    document.getElementById('rescheduleStartSec').value = toDateOnlySec(slot.start);
+                    await loadRescheduleTimeslotsSec(slot.timeslot_id || 0);
+                    const tsSelect = document.getElementById('rescheduleTimeslotSec');
+                    if (tsSelect && slot.timeslot_id) tsSelect.value = String(slot.timeslot_id);
+                } else {
+                    document.getElementById('rescheduleStartSec').value = slot.start.replace(' ', 'T');
+                    document.getElementById('rescheduleEndSec').value = slot.end ? slot.end.replace(' ', 'T') : '';
+                }
+            });
+            wrap.appendChild(a);
+        });
     } catch(e){ console.error(e); alert('Error fetching suggestions'); }
     btn.disabled = false;
 });
@@ -1189,7 +1584,21 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     this.disabled = true;
     try {
         if (apptId) {
-            const fd = new FormData(); fd.append('appointment_id', apptId); fd.append('user_id', doctorId); fd.append('appointment_date', start);
+            const timeslotId = document.getElementById('rescheduleTimeslotSec')?.value || '';
+            const dateOnly = toDateOnlySec(start);
+            if (!dateOnly) {
+                alert('Please select a date.');
+                return;
+            }
+            if (!timeslotId) {
+                alert('Please select an available timeslot.');
+                return;
+            }
+            const fd = new FormData();
+            fd.append('appointment_id', apptId);
+            fd.append('user_id', doctorId);
+            fd.append('appointment_date', dateOnly);
+            fd.append('timeslot_id', timeslotId);
             const r = await fetch('../assets/api/appointments/update_appointment.php', { method: 'POST', body: fd });
             const j = await r.json();
             if (!j.success) {

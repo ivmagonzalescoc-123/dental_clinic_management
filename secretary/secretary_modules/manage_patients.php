@@ -73,7 +73,7 @@ if ($res) {
 				<h5 class="modal-title"><i class="bi bi-person-plus"></i> Add Patient</h5>
 				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
-			<form id="addPatientForm">
+			<form id="addPatientForm" class="ux-form-shell">
 				<div class="modal-body">
 					<input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token); ?>">
 					<div class="row">
@@ -93,7 +93,7 @@ if ($res) {
 					<div class="row">
 						<div class="col-md-3 mb-3">
 							<label class="form-label">Password</label>
-							<input type="text" class="form-control" value="Auto-generated if email is provided" readonly>
+							<input type="text" class="form-control compact-control" value="Auto-generated if email is provided" readonly>
 							<small class="text-muted">System generates a secure default password when email is provided.</small>
 						</div>
 						<div class="col-md-2 mb-3">
@@ -107,11 +107,11 @@ if ($res) {
 						</div>
 						<div class="col-md-2 mb-3">
 							<label class="form-label">Phone</label>
-							<input type="tel" name="phone_number" class="form-control">
+							<input type="tel" name="phone_number" class="form-control compact-control">
 						</div>
 						<div class="col-md-2 mb-3">
 							<label class="form-label">Date of Birth</label>
-							<input type="date" name="date_of_birth" class="form-control">
+							<input type="date" name="date_of_birth" class="form-control compact-control">
 						</div>
 					</div>
 					<div class="row">
@@ -143,7 +143,7 @@ if ($res) {
 				<h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Profiling</h5>
 				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
 			</div>
-			<form id="profilingForm">
+			<form id="profilingForm" class="ux-form-shell narrow">
 				<div class="modal-body">
 					<input type="hidden" id="profiling_patient_id" name="patient_id">
 					<div class="mb-3" id="profilingPatientName" class="alert alert-light"></div>

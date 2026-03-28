@@ -1,30 +1,36 @@
-/* Simple module-only UX layer (content area only) */
+/* Modern module UX layer (content area only) */
 #main {
-  --ux-bg: #f6f8fb;
+  --ux-bg: #f4f7fb;
   --ux-surface: #ffffff;
-  --ux-border: #dce3ed;
-  --ux-text: #1f2a37;
-  --ux-muted: #5b6675;
-  --ux-accent: #5f43b2;
+  --ux-border: #d9e3f0;
+  --ux-border-soft: #edf2f8;
+  --ux-text: #122132;
+  --ux-muted: #5d6f85;
+  --ux-accent: #0b6fbf;
+  --ux-accent-soft: #e3f2ff;
+  --ux-radius: 14px;
 }
 
 #main .section {
-  background: var(--ux-bg);
-  border-radius: 10px;
-  padding: 14px;
+  background:
+    radial-gradient(circle at 96% 4%, rgba(11, 111, 191, 0.1) 0, rgba(11, 111, 191, 0) 30%),
+    radial-gradient(circle at 2% 95%, rgba(16, 185, 129, 0.08) 0, rgba(16, 185, 129, 0) 24%),
+    var(--ux-bg);
+  border-radius: 16px;
+  padding: 16px;
 }
 
 #main .card {
   border: 1px solid var(--ux-border);
-  border-radius: 10px;
-  box-shadow: none;
+  border-radius: var(--ux-radius);
+  box-shadow: 0 10px 30px rgba(15, 35, 60, 0.05);
   background: var(--ux-surface);
 }
 
 #main .card .card-header {
   background: #fff;
-  border-bottom: 1px solid var(--ux-border);
-  padding: 0.75rem 0.95rem;
+  border-bottom: 1px solid var(--ux-border-soft);
+  padding: 0.9rem 1rem;
 }
 
 #main .card .card-body {
@@ -47,8 +53,8 @@
 #main h6,
 #main .card-title {
   color: var(--ux-text);
-  font-weight: 600;
-  margin-bottom: 0.6rem;
+  font-weight: 700;
+  margin-bottom: 0.58rem;
 }
 
 #main p,
@@ -57,67 +63,153 @@
   color: var(--ux-muted) !important;
 }
 
-#main .table {
+/* Table readability for high-density medical workflows */
+#main .table-responsive {
   border: 1px solid var(--ux-border);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  background: #fff;
 }
 
-#main .table thead th {
-  background: #f1f4f8;
-  color: #314055;
+#main .table,
+#main .dataTable-table {
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#main .table thead th,
+#main .dataTable-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fbff;
+  color: #2a425f;
   border-bottom: 1px solid var(--ux-border);
-  font-size: 0.82rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   vertical-align: middle;
+  padding: 0.72rem 0.85rem;
 }
 
-#main .table tbody td {
+#main .table tbody td,
+#main .dataTable-table tbody td {
   color: var(--ux-text);
-  border-top: 1px solid #edf1f6;
+  border-top: 1px solid var(--ux-border-soft);
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
   vertical-align: middle;
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
+  padding: 0.72rem 0.85rem;
 }
 
-#main .table-hover tbody tr:hover {
-  background: #f7fbff;
+#main .table tbody tr:first-child td,
+#main .dataTable-table tbody tr:first-child td {
+  border-top: 0;
 }
 
+#main .table-hover tbody tr:hover,
+#main .dataTable-table tbody tr:hover {
+  background: #f4faff;
+}
+
+#main .table > :not(caption) > * > * {
+  box-shadow: none;
+}
+
+#main .table-bordered > :not(caption) > * > * {
+  border-left: 0;
+  border-right: 0;
+  border-color: var(--ux-border-soft);
+}
+
+#main .dataTable-wrapper .dataTable-top,
+#main .dataTable-wrapper .dataTable-bottom {
+  padding: 0.7rem 0.85rem;
+  border-color: var(--ux-border-soft);
+}
+
+#main .dataTable-wrapper .dataTable-input,
+#main .dataTable-wrapper .dataTable-selector {
+  border: 1px solid var(--ux-border);
+  border-radius: 10px;
+  padding: 0.42rem 0.62rem;
+}
+
+/* Professional form system without unnecessarily wide fields */
 #main .form-label {
-  color: #2a3646;
-  font-weight: 600;
-  margin-bottom: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #213548;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 0.34rem;
+  width: auto;
+  max-width: 100%;
 }
 
 #main .form-text,
 #main .invalid-feedback,
 #main .valid-feedback {
-  font-size: 0.82rem;
+  font-size: 0.79rem;
 }
 
 #main .form-control,
 #main .form-select,
 #main textarea.form-control {
-  border-color: var(--ux-border);
-  border-radius: 8px;
+  border: 1px solid var(--ux-border);
+  border-radius: 10px;
   color: var(--ux-text);
+  background-color: #fff;
   box-shadow: none;
+  padding: 0.55rem 0.7rem;
+  min-height: calc(1.5em + 1rem + 2px);
+}
+
+#main textarea.form-control {
+  min-height: 88px;
 }
 
 #main .form-control:focus,
 #main .form-select:focus,
 #main textarea.form-control:focus {
-  border-color: var(--ux-accent);
-  box-shadow: 0 0 0 0.14rem rgba(95, 67, 178, 0.12);
+  border-color: #54a4e0;
+  box-shadow: 0 0 0 0.18rem rgba(84, 164, 224, 0.15);
+}
+
+#main .ux-form-shell {
+  max-width: 1020px;
+  width: 100%;
+}
+
+#main .ux-form-shell.narrow {
+  max-width: 720px;
+}
+
+#main .ux-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.9rem 1rem;
+}
+
+#main .ux-form-grid .form-span-2 {
+  grid-column: 1 / -1;
+}
+
+#main .compact-control {
+  max-width: 360px;
 }
 
 #main .btn {
-  border-radius: 8px;
-  font-weight: 500;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 #main .btn + .btn,
@@ -126,20 +218,48 @@
 }
 
 #main .row {
-  --bs-gutter-y: 0.8rem;
+  --bs-gutter-y: 0.72rem;
 }
 
 #main .alert {
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 0.75rem;
 }
 
 #main .pagination .page-link {
-  border-radius: 6px;
+  border-radius: 8px;
+  border-color: var(--ux-border);
+}
+
+#main .modal-content {
+  border: 1px solid var(--ux-border);
+  border-radius: 14px;
+}
+
+#main .modal-header,
+#main .modal-footer {
+  border-color: var(--ux-border-soft);
+}
+
+#main .modal-header[class*="bg-"] {
+  color: #fff;
+}
+
+#main .modal-header[class*="bg-"] .modal-title,
+#main .modal-header[class*="bg-"] h1,
+#main .modal-header[class*="bg-"] h2,
+#main .modal-header[class*="bg-"] h3,
+#main .modal-header[class*="bg-"] h4,
+#main .modal-header[class*="bg-"] h5,
+#main .modal-header[class*="bg-"] h6,
+#main .modal-header[class*="bg-"] .bi,
+#main .modal-header[class*="bg-"] small,
+#main .modal-header[class*="bg-"] span {
+  color: #fff !important;
 }
 
 #main .modal-body {
-  padding: 0.9rem 1rem;
+  padding: 1rem;
 }
 
 #main .nav-tabs {
@@ -158,62 +278,112 @@
   background: #fff;
 }
 
-#main .modal-content {
-  border: 1px solid var(--ux-border);
-  border-radius: 10px;
-}
-
-#main .modal-header,
-#main .modal-footer {
-  border-color: var(--ux-border);
-}
-
 #main .badge {
   font-weight: 600;
 }
 
-/* Keep table badges neutral by default; status badges are re-colored via JS marker classes. */
-#main table td .badge.table-badge-neutral,
-#main .table td .badge.table-badge-neutral {
-  background-color: transparent !important;
-  color: var(--ux-text) !important;
-  border: 1px solid var(--ux-border) !important;
+/* Unified status tags for table cells: softer corners and lighter borders for visual consistency. */
+#main table td .badge,
+#main .table td .badge {
+  border-radius: 8px !important;
+  padding: 0.24rem 0.62rem !important;
+  font-size: 0.74rem;
+  line-height: 1.15;
+  border: 1px solid transparent;
   box-shadow: none !important;
-  font-weight: 500;
-}
-
-#main table td .badge.table-badge-status,
-#main .table td .badge.table-badge-status {
-  border: none;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
-#main table td .badge.table-badge-status.bg-warning,
-#main .table td .badge.table-badge-status.bg-warning,
-#main table td .badge.table-badge-status.text-bg-warning,
-#main .table td .badge.table-badge-status.text-bg-warning,
-#main table td .badge.table-badge-status.bg-light,
-#main .table td .badge.table-badge-status.bg-light,
-#main table td .badge.table-badge-status.text-bg-light,
-#main .table td .badge.table-badge-status.text-bg-light {
-  color: #1f2a37 !important;
+/* Neutral text badges used for non-status labels. */
+#main table td .badge.table-badge-neutral,
+#main .table td .badge.table-badge-neutral,
+#main table td .badge.bg-light,
+#main .table td .badge.bg-light,
+#main table td .badge.text-bg-light,
+#main .table td .badge.text-bg-light,
+#main table td .badge.bg-secondary,
+#main .table td .badge.bg-secondary,
+#main table td .badge.text-bg-secondary,
+#main .table td .badge.text-bg-secondary {
+  background: #f3f7fb !important;
+  color: #3a5167 !important;
+  border-color: #d5e4f1 !important;
+}
+
+/* Info and blue-family statuses (scheduled/confirmed/followup/online). */
+#main table td .badge.bg-primary,
+#main .table td .badge.bg-primary,
+#main table td .badge.text-bg-primary,
+#main .table td .badge.text-bg-primary,
+#main table td .badge.bg-info,
+#main .table td .badge.bg-info,
+#main table td .badge.text-bg-info,
+#main .table td .badge.text-bg-info {
+  background: #eaf4ff !important;
+  color: #185f9f !important;
+  border-color: #c5dcf3 !important;
+}
+
+/* Success statuses (checked-in/completed/paid). */
+#main table td .badge.bg-success,
+#main .table td .badge.bg-success,
+#main table td .badge.text-bg-success,
+#main .table td .badge.text-bg-success {
+  background: #e9f7ef !important;
+  color: #1f7a4d !important;
+  border-color: #bfe6cf !important;
+}
+
+/* Warning statuses (pending/rescheduled/in-progress/partial). */
+#main table td .badge.bg-warning,
+#main .table td .badge.bg-warning,
+#main table td .badge.text-bg-warning,
+#main .table td .badge.text-bg-warning {
+  background: #fff5df !important;
+  color: #8f6200 !important;
+  border-color: #f0dcab !important;
+}
+
+/* Emergency and negative statuses (cancelled/no-show). */
+#main table td .badge.bg-danger,
+#main .table td .badge.bg-danger,
+#main table td .badge.text-bg-danger,
+#main .table td .badge.text-bg-danger {
+  background: #fdecec !important;
+  color: #b02f2f !important;
+  border-color: #f3c2c2 !important;
+}
+
+@media (max-width: 992px) {
+  #main .ux-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #main .ux-form-grid .form-span-2 {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 768px) {
   #main .section {
-    padding: 8px;
+    padding: 10px;
+    border-radius: 12px;
   }
 
   #main .card .card-body,
   #main .card .card-header {
-    padding: 0.75rem;
+    padding: 0.8rem;
   }
 
-  #main .table {
-    font-size: 0.92rem;
+  #main .table thead th,
+  #main .dataTable-table thead th,
+  #main .table tbody td,
+  #main .dataTable-table tbody td {
+    padding: 0.6rem 0.65rem;
   }
 
-  #main .btn {
+  #main .btn.btn-block-mobile {
     width: 100%;
   }
 
@@ -222,4 +392,92 @@
     margin-left: 0;
     margin-top: 0.4rem;
   }
+}
+
+/* Dentistry dashboard system */
+#main .dental-dashboard-shell {
+  background: transparent;
+  border: 0;
+  border-radius: 16px;
+  padding: 0;
+}
+
+#main .dental-dashboard-hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d5e8fb;
+  background: #1173c1;
+}
+
+#main .dental-dashboard-hero h4,
+#main .dental-dashboard-hero p,
+#main .dental-dashboard-hero .small,
+#main .dental-dashboard-hero .badge,
+#main .dental-dashboard-hero strong {
+  color: #fff !important;
+}
+
+#main .dental-dashboard-hero p {
+  margin: 0;
+  opacity: 0.92;
+}
+
+#main .dental-kpi-card {
+  position: static;
+  overflow: visible;
+  border: 1px solid #d8e7f5;
+}
+
+#main .dental-kpi-card::before {
+  content: none;
+}
+
+#main .dental-kpi-card .card-icon,
+#main .dental-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9f4ff;
+  color: #0b6fbf;
+  border: 1px solid #cbe4fa;
+}
+
+#main .dental-kpi-card .display-6,
+#main .dental-kpi-card h6 {
+  color: #0f2133;
+}
+
+#main .dental-surface-card {
+  border: 1px solid #dce9f6;
+  background: #ffffff;
+}
+
+#main .dental-surface-card .card-title {
+  letter-spacing: 0.01em;
+}
+
+#main .dental-chip {
+  border-radius: 999px;
+  padding: 4px 10px;
+  border: 1px solid #cfe3f6;
+  background: #eff7ff;
+  color: #214a70;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+#main .dental-chart-frame {
+  border-radius: 12px;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }

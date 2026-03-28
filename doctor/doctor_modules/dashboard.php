@@ -52,23 +52,32 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
 
 ?>
 
+<div class="dental-dashboard-shell">
+    <div class="dental-dashboard-hero">
+        <div>
+            <h4 class="mb-1">Doctor Dashboard</h4>
+            <p class="small">Track patient flow, upcoming care sessions, and your weekly appointment trend.</p>
+        </div>
+        <span class="dental-chip">Today: <?php echo date('M d, Y'); ?></span>
+    </div>
+
 <div class="row g-3">
     <div class="col-md-4">
-        <div class="card p-3">
+        <div class="card dental-kpi-card p-3">
             <h6 class="mb-1">Upcoming Appointments</h6>
             <div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div>
             <div class="text-muted small">Scheduled & confirmed</div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card p-3">
+        <div class="card dental-kpi-card p-3">
             <h6 class="mb-1">Past Visits</h6>
             <div class="display-6 fw-bold"><?php echo (int)$past; ?></div>
             <div class="text-muted small">Historical appointments</div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card p-3">
+        <div class="card dental-kpi-card p-3">
             <h6 class="mb-1">Patients Today</h6>
             <div class="display-6 fw-bold"><?php echo (int)$queueToday; ?></div>
             <div class="text-muted small">Pending / arrived</div>
@@ -76,19 +85,21 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
     </div>
 
     <div class="col-12">
-        <div class="card">
+        <div class="card dental-surface-card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Appointments | Last 7 days</h5>
                     <div class="text-muted small">Total: <?php echo (int)$appointmentsTotal; ?></div>
                 </div>
-                <div id="doctorAppt7Chart" style="min-height:220px;margin-top:1rem;"></div>
+                <div class="dental-chart-frame mt-3">
+                    <div id="doctorAppt7Chart" style="min-height:220px;"></div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-12 col-md-6">
-        <div class="card">
+        <div class="card dental-surface-card">
             <div class="card-body">
                 <h6 class="card-title">Upcoming Appointments</h6>
                 <?php if (empty($nextAppts)): ?>
@@ -109,6 +120,7 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <script>

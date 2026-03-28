@@ -1,15 +1,17 @@
 /* Minimalist Landing Page Styles */
 :root {
-    --primary: #5f43b2;
-    --primary-dark: #4f3796;
-    --primary-deep: #3f2c79;
-    --primary-rgb: 95, 67, 178;
-    --bs-primary: #5f43b2;
-    --bs-primary-rgb: 95, 67, 178;
-    --bs-info: #5f43b2;
-    --bs-info-rgb: 95, 67, 178;
-    --bs-link-color: #5f43b2;
-    --bs-link-hover-color: #4f3796;
+    --primary: #1173c1;
+    --primary-dark: #0a4f88;
+    --primary-deep: #083f6d;
+    --primary-rgb: 17, 115, 193;
+    --primary-gradient: #1173c1;
+    --primary-gradient-hover: #0a4f88;
+    --bs-primary: #1173c1;
+    --bs-primary-rgb: 17, 115, 193;
+    --bs-info: #1173c1;
+    --bs-info-rgb: 17, 115, 193;
+    --bs-link-color: #1173c1;
+    --bs-link-hover-color: #0a4f88;
     --secondary: #64748b;
     --light: #f8fafc;
     --border: #e2e8f0;
@@ -96,6 +98,7 @@ body {
 .btn-primary.active,
 .show > .btn-primary.dropdown-toggle {
     background-color: var(--primary) !important;
+    background-image: none !important;
     border-color: var(--primary) !important;
     color: #fff !important;
 }
@@ -106,6 +109,7 @@ body {
 .btn-primary.active:hover,
 .show > .btn-primary.dropdown-toggle:hover {
     background-color: var(--primary-dark) !important;
+    background-image: none !important;
     border-color: var(--primary-dark) !important;
     color: #fff !important;
 }
@@ -126,6 +130,7 @@ body {
 .btn-outline-primary.active:hover,
 .show > .btn-outline-primary.dropdown-toggle:hover {
     background-color: var(--primary) !important;
+    background-image: none !important;
     border-color: var(--primary) !important;
     color: #fff !important;
 }
@@ -136,6 +141,7 @@ body {
 .btn-info.active,
 .show > .btn-info.dropdown-toggle {
     background-color: var(--primary) !important;
+    background-image: none !important;
     border-color: var(--primary) !important;
     color: #fff !important;
 }
@@ -146,6 +152,7 @@ body {
 .btn-info.active:hover,
 .show > .btn-info.dropdown-toggle:hover {
     background-color: var(--primary-dark) !important;
+    background-image: none !important;
     border-color: var(--primary-dark) !important;
     color: #fff !important;
 }
@@ -166,6 +173,7 @@ body {
 .btn-outline-info.active:hover,
 .show > .btn-outline-info.dropdown-toggle:hover {
     background-color: var(--primary) !important;
+    background-image: none !important;
     border-color: var(--primary) !important;
     color: #fff !important;
 }
@@ -286,7 +294,7 @@ a.text-info,
     position: relative;
     width: 100%;
     height: 420px;
-    background: linear-gradient(135deg, var(--light) 0%, #e0e7ff 100%);
+    background: var(--light);
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -376,7 +384,7 @@ a.text-info,
 }
 
 .btn-primary-minimal {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    background: var(--primary);
     color: white;
     border: none;
     padding: 0.75rem 1.8rem;
@@ -391,7 +399,7 @@ a.text-info,
 }
 
 .btn-primary-minimal:hover {
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-deep) 100%);
+    background: var(--primary-dark);
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(var(--primary-rgb), 0.35);
 }
@@ -475,7 +483,7 @@ a.text-info,
     border: 1px solid var(--border);
     border-radius: 12px;
     text-align: center;
-    background: linear-gradient(135deg, white 0%, #f9fafb 100%);
+    background: white;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -488,7 +496,7 @@ a.text-info,
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    background: var(--primary);
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 0.4s ease;
@@ -498,7 +506,7 @@ a.text-info,
     border-color: var(--primary);
     box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15);
     transform: translateY(-6px);
-    background: linear-gradient(135deg, #f0f4ff 0%, white 100%);
+    background: #f0f7ff;
 }
 
 .service-card-minimal:hover::before {
@@ -507,10 +515,7 @@ a.text-info,
 
 .service-card-minimal i {
     font-size: 2.5rem;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--primary);
     margin-bottom: 1rem;
     display: block;
     transition: transform 0.4s ease;
@@ -576,10 +581,7 @@ a.text-info,
 }
 
 .about-list i {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--primary);
     font-size: 1.2rem;
     flex-shrink: 0;
 }
@@ -610,7 +612,7 @@ a.text-info,
     border: 1px solid var(--border);
     border-radius: 12px;
     text-align: center;
-    background: linear-gradient(135deg, white 0%, #f9fafb 100%);
+    background: white;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
@@ -623,7 +625,7 @@ a.text-info,
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--primary), var(--primary-dark));
+    background: var(--primary);
     transform: scaleX(0);
     transform-origin: right;
     transition: transform 0.4s ease;
@@ -633,7 +635,7 @@ a.text-info,
     border-color: var(--primary);
     box-shadow: 0 12px 24px rgba(37, 99, 235, 0.15);
     transform: translateY(-6px);
-    background: linear-gradient(135deg, #f0f4ff 0%, white 100%);
+    background: #f0f7ff;
 }
 
 .contact-card:hover::after {
@@ -642,10 +644,7 @@ a.text-info,
 
 .contact-card i {
     font-size: 3rem;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--primary);
     margin-bottom: 1rem;
     display: block;
     transition: transform 0.4s ease;
@@ -728,21 +727,39 @@ a.text-info,
     color: #1e293b;
     font-weight: 500;
     font-size: 0.9rem;
-    padding: 0.5rem 0.85rem;
+    padding: 0.35rem 0.5rem;
     position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
+    top: 0.85rem;
+    left: 0.65rem;
+    transform: none;
     transition: all 0.3s ease;
+    pointer-events: none;
+    background: transparent;
 }
 
 .form-floating > .form-control:focus ~ label,
-.form-floating > .form-control:not(:placeholder-shown) ~ label {
+.form-floating > .form-control:not(:placeholder-shown) ~ label,
+.form-floating > .form-control:-webkit-autofill ~ label {
     color: var(--primary);
-    top: -0.7rem;
+    top: -0.55rem;
+    left: 0.5rem;
     background: white;
-    padding: 0 0.3rem;
+    padding: 0 0.35rem;
     font-size: 0.8rem;
+}
+
+.form-floating > .form-control {
+    padding: 1.3rem 0.75rem 0.45rem;
+    min-height: 3.3rem;
+    line-height: 1.25;
+}
+
+/* Keep autofill styling consistent and ensure text stays visible below floated label */
+.form-floating > .form-control:-webkit-autofill,
+.form-floating > .form-control:-webkit-autofill:hover,
+.form-floating > .form-control:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1e293b;
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset;
 }
 
 .form-control,

@@ -20,9 +20,19 @@ if ($patientId) {
 }
 ?>
 
-<div class="row g-3">
-    <div class="col-md-4"><div class="card p-3"><h6>Upcoming Appointments</h6><div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div></div></div>
-    <div class="col-md-4"><div class="card p-3"><h6>Past Visits</h6><div class="display-6 fw-bold"><?php echo (int)$past; ?></div></div></div>
-    <div class="col-md-4"><div class="card p-3"><h6>Next Appointment</h6><div class="fw-semibold"><?php echo $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None'; ?></div><div class="text-muted small"><?php echo $nextAppt ? htmlspecialchars($nextAppt['status']) : ''; ?></div></div></div>
+<div class="dental-dashboard-shell">
+    <div class="dental-dashboard-hero">
+        <div>
+            <h4 class="mb-1">Patient Dashboard</h4>
+            <p class="small">View your treatment timeline and upcoming appointments at a glance.</p>
+        </div>
+        <span class="dental-chip">Care Overview</span>
+    </div>
 
+    <div class="row g-3">
+        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Upcoming Appointments</h6><div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div></div></div>
+        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Past Visits</h6><div class="display-6 fw-bold"><?php echo (int)$past; ?></div></div></div>
+        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Next Appointment</h6><div class="fw-semibold"><?php echo $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None'; ?></div><div class="text-muted small"><?php echo $nextAppt ? htmlspecialchars($nextAppt['status']) : ''; ?></div></div></div>
+
+    </div>
 </div>

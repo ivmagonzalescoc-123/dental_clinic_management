@@ -238,6 +238,141 @@ if ($stmt) {
     $stmt->close();
 }
 
+$appointmentsTab = trim((string)($_GET['tab'] ?? 'recent'));
+if (!in_array($appointmentsTab, ['recent', 'general', 'followup'], true)) {
+    $appointmentsTab = 'recent';
+}
+
+$appointmentEntries = [];
+$generalSql = "
+    SELECT
+        a.appointment_id,
+        a.patient_id,
+        p.first_name,
+        p.last_name,
+        COALESCE(t.slot_date, a.appointment_date) AS event_date,
+        t.start_time,
+        t.end_time,
+        a.status,
+        a.reason,
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history
+    FROM appointments a
+    INNER JOIN patients p ON p.patient_id = a.patient_id
+    LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+    WHERE a.user_id = ?
+            AND a.status <> 'cancelled'
+    ORDER BY COALESCE(t.slot_date, a.appointment_date) DESC, t.start_time DESC, a.created_at DESC
+    LIMIT 500
+";
+
+$generalStmt = $conn->prepare($generalSql);
+if ($generalStmt) {
+    $generalStmt->bind_param('i', $doctor_id);
+    $generalStmt->execute();
+    $generalRes = $generalStmt->get_result();
+    while ($row = $generalRes->fetch_assoc()) {
+        $row['entry_type'] = 'appointment';
+        $appointmentEntries[] = $row;
+    }
+    $generalStmt->close();
+}
+
+$followupSql = "
+    SELECT
+        s.schedule_id,
+        s.appointment_id,
+        a.patient_id,
+        p.first_name,
+        p.last_name,
+        DATE(s.scheduled_start) AS event_date,
+        TIME(s.scheduled_start) AS start_time,
+        TIME(s.scheduled_end) AS end_time,
+        s.status,
+        '' AS reason,
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history
+    FROM patient_schedules s
+    INNER JOIN appointments a ON a.appointment_id = s.appointment_id
+    INNER JOIN patients p ON p.patient_id = a.patient_id
+    WHERE s.user_id = ?
+      AND s.status IN ('scheduled', 'rescheduled', 'arrived', 'completed')
+      AND s.scheduled_start IS NOT NULL
+    ORDER BY s.scheduled_start DESC
+    LIMIT 500
+";
+
+$followupEntries = [];
+$followupStmt = $conn->prepare($followupSql);
+if ($followupStmt) {
+    $followupStmt->bind_param('i', $doctor_id);
+    $followupStmt->execute();
+    $followupRes = $followupStmt->get_result();
+    while ($row = $followupRes->fetch_assoc()) {
+        $row['entry_type'] = 'followup';
+        $followupEntries[] = $row;
+    }
+    $followupStmt->close();
+}
+
+$generalAppointments = array_merge($appointmentEntries, $followupEntries);
+
+usort($generalAppointments, function ($a, $b) {
+    $aDate = (string)($a['event_date'] ?? '');
+    $bDate = (string)($b['event_date'] ?? '');
+    $aTime = (string)($a['start_time'] ?? '');
+    $bTime = (string)($b['start_time'] ?? '');
+    $aKey = $aDate . ' ' . $aTime;
+    $bKey = $bDate . ' ' . $bTime;
+    return strcmp($bKey, $aKey);
+});
+
+$calendarCountsByDate = [];
+$calendarHoverByDate = [];
+
+foreach ($generalAppointments as $entry) {
+    $eventDate = (string)($entry['event_date'] ?? '');
+    if ($eventDate === '') {
+        continue;
+    }
+
+    $firstName = trim((string)($entry['first_name'] ?? ''));
+    $lastName = trim((string)($entry['last_name'] ?? ''));
+    $patientName = trim($firstName . ' ' . $lastName);
+    if ($patientName === '') {
+        $patientName = 'Patient';
+    }
+
+    $entryType = (string)($entry['entry_type'] ?? 'appointment');
+    $isFollowup = ($entryType === 'followup');
+    $label = $isFollowup ? 'Follow-up' : 'Appointment';
+
+    $startTime = (string)($entry['start_time'] ?? '');
+    $endTime = (string)($entry['end_time'] ?? '');
+    $timeLabel = 'All day';
+    if ($startTime !== '') {
+        $timeLabel = substr($startTime, 0, 5);
+        if ($endTime !== '') {
+            $timeLabel .= ' - ' . substr($endTime, 0, 5);
+        }
+    }
+
+    if (!isset($calendarCountsByDate[$eventDate])) {
+        $calendarCountsByDate[$eventDate] = [
+            'appointments' => 0,
+            'followups' => 0,
+        ];
+    }
+    if ($isFollowup) {
+        $calendarCountsByDate[$eventDate]['followups']++;
+    } else {
+        $calendarCountsByDate[$eventDate]['appointments']++;
+    }
+
+    if (!isset($calendarHoverByDate[$eventDate])) {
+        $calendarHoverByDate[$eventDate] = [];
+    }
+    $calendarHoverByDate[$eventDate][] = $label . ': ' . $patientName . ' (' . $timeLabel . ')';
+}
+
 // Fetch services for the dropdown
 $services = [];
 $stmt = $conn->query('SELECT service_id, service_name, initial_price FROM services WHERE is_active = 1 ORDER BY service_name');
@@ -275,65 +410,236 @@ if ($stmt) {
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<!-- Recent Appointments (full width on appointments page) -->
-<div class="row">
-    <div class="col-lg-12">
-        <div class="card border-0">
-            <div class="card-header">
-                <h2 class="card-title mb-0">
-                    <i class="bi bi-calendar-check"></i> Recent Appointments
-                </h2>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Patient</th>
-                                <th>Date</th>
-                                <th>Status</th>
-                                <th>Schedule</th>
-                                <th>Record</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($allAppointments as $appt): ?>
+<ul class="nav nav-tabs doctor-appointments-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link <?php echo $appointmentsTab === 'recent' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=recent">
+            <i class="bi bi-clock-history me-1"></i> Recent Appointments
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $appointmentsTab === 'general' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=general">
+            <i class="bi bi-calendar3 me-1"></i> Appointments Calendar & List
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $appointmentsTab === 'followup' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=followup">
+            <i class="bi bi-calendar-range me-1"></i> Follow-up Appointments
+        </a>
+    </li>
+</ul>
+
+<?php if ($appointmentsTab === 'recent'): ?>
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card border-0">
+                <div class="card-header">
+                    <h2 class="card-title mb-0">
+                        <i class="bi bi-calendar-check"></i> Recent Appointments
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        <input type="text" id="doctorRecentSearchInput" class="form-control form-control-sm" placeholder="Search recent appointments" style="max-width: 280px;">
+                        <button type="button" id="doctorRecentSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
+                        <button type="button" id="doctorRecentSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle doctor-recent-appointments-table" id="doctorRecentAppointmentsTable">
+                            <thead>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($appt['first_name'] . ' ' . $appt['last_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($appt['appointment_date']); ?></td>
-                                    <td>
-                                        <span class="badge bg-<?php echo $appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning'); ?>">
-                                            <?php echo htmlspecialchars(ucfirst($appt['status'])); ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($appt['schedule_status'])): ?>
-                                            <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
-                                                <?php echo ($appt['schedule_status'] === 'scheduled') ? 'Followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
-                                            </span>
-                                            <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
-                                        <?php else: ?>
-                                            <span class="text-muted small">No schedule</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if (!empty($appt['has_history'])): ?>
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
-                                                <i class="bi bi-file-earmark-text"></i> View
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="text-muted small">No record</span>
-                                        <?php endif; ?>
-                                    </td>
+                                    <th>Patient</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Followup</th>
+                                    <th>Record</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($allAppointments as $appt): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($appt['first_name'] . ' ' . $appt['last_name']); ?></td>
+                                        <td><?php echo htmlspecialchars($appt['appointment_date']); ?></td>
+                                        <td>
+                                            <span class="badge bg-<?php echo $appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning'); ?>">
+                                                <?php echo htmlspecialchars(ucfirst($appt['status'])); ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($appt['schedule_status'])): ?>
+                                                <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
+                                                    <?php echo ($appt['schedule_status'] === 'scheduled') ? 'Followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
+                                                </span>
+                                                <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
+                                            <?php else: ?>
+                                                <span class="text-muted small">No schedule</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="record-col-cell">
+                                            <?php if (!empty($appt['has_history'])): ?>
+                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-clickable" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
+                                                    <i class="bi bi-file-earmark-text"></i> View
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-disabled" type="button" disabled aria-disabled="true" title="No clinical record available">
+                                                    <i class="bi bi-file-earmark-text"></i> View
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+<?php elseif ($appointmentsTab === 'general'): ?>
+    <div class="card border-0 mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0"><i class="bi bi-calendar3"></i> Appointments Calendar</h2>
+            <div class="small text-muted">Hover a day to preview names. Click a date to filter the table below.</div>
+        </div>
+        <div class="card-body">
+            <div id="doctorAppointmentsCalendar"></div>
+            <div id="doctorCalendarLegend" class="small text-muted mt-2"></div>
+        </div>
+    </div>
+
+    <div class="card border-0">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h2 class="card-title mb-0"><i class="bi bi-list-check"></i> Appointments and Follow-up List</h2>
+            <div class="d-flex align-items-center gap-2">
+                <span id="appointmentsFilterBadge" class="small fw-semibold text-muted" style="display:none;"></span>
+                <button id="clearAppointmentsDateFilter" type="button" class="btn btn-sm btn-outline-secondary" style="display:none;">Show All</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <input type="text" id="doctorGeneralSearchInput" class="form-control form-control-sm" placeholder="Search appointments list" style="max-width: 280px;">
+                <button type="button" id="doctorGeneralSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
+                <button type="button" id="doctorGeneralSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorGeneralAppointmentsTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Patient</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($appointmentEntries)): ?>
+                            <tr><td colspan="5" class="text-center text-muted">No appointments found.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($appointmentEntries as $appt): ?>
+                                <?php
+                                    $eventDate = (string)($appt['event_date'] ?? '');
+                                    $startTime = (string)($appt['start_time'] ?? '');
+                                    $endTime = (string)($appt['end_time'] ?? '');
+                                    $timeLabel = 'All day';
+                                    if ($startTime !== '') {
+                                        $timeLabel = substr($startTime, 0, 5);
+                                        if ($endTime !== '') {
+                                            $timeLabel .= ' - ' . substr($endTime, 0, 5);
+                                        }
+                                    }
+                                ?>
+                                <tr data-event-date="<?php echo htmlspecialchars($eventDate); ?>">
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-secondary-emphasis">
+                                            Appointment
+                                        </span>
+                                    </td>
+                                    <td><?php echo htmlspecialchars(trim((string)$appt['first_name'] . ' ' . (string)$appt['last_name'])); ?></td>
+                                    <td><?php echo htmlspecialchars($eventDate); ?></td>
+                                    <td><?php echo htmlspecialchars($timeLabel); ?></td>
+                                    <td>
+                                        <span class="badge bg-<?php echo ($appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning text-dark')); ?>">
+                                            <?php echo htmlspecialchars(ucfirst((string)$appt['status'])); ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            <tr id="doctorGeneralNoMatchRow" style="display:none;"><td colspan="5" class="text-center text-muted">No records for selected date.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<?php else: ?>
+    <div class="card border-0">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0"><i class="bi bi-calendar-range"></i> Follow-up Appointments</h2>
+            <div class="small text-muted">All scheduled follow-up entries assigned to you.</div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                <input type="text" id="doctorFollowupSearchInput" class="form-control form-control-sm" placeholder="Search follow-up appointments" style="max-width: 280px;">
+                <button type="button" id="doctorFollowupSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
+                <button type="button" id="doctorFollowupSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorFollowupAppointmentsTable">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Record</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($followupEntries)): ?>
+                            <tr><td colspan="5" class="text-center text-muted">No follow-up appointments found.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($followupEntries as $appt): ?>
+                                <?php
+                                    $eventDate = (string)($appt['event_date'] ?? '');
+                                    $startTime = (string)($appt['start_time'] ?? '');
+                                    $endTime = (string)($appt['end_time'] ?? '');
+                                    $timeLabel = 'All day';
+                                    if ($startTime !== '') {
+                                        $timeLabel = substr($startTime, 0, 5);
+                                        if ($endTime !== '') {
+                                            $timeLabel .= ' - ' . substr($endTime, 0, 5);
+                                        }
+                                    }
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars(trim((string)$appt['first_name'] . ' ' . (string)$appt['last_name'])); ?></td>
+                                    <td><?php echo htmlspecialchars($eventDate); ?></td>
+                                    <td><?php echo htmlspecialchars($timeLabel); ?></td>
+                                    <td>
+                                        <span class="badge bg-<?php echo ($appt['status'] === 'completed' ? 'success' : 'warning text-dark'); ?>">
+                                            <?php echo htmlspecialchars(ucfirst((string)$appt['status'])); ?>
+                                        </span>
+                                    </td>
+                                    <td class="record-col-cell">
+                                        <?php if (!empty($appt['has_history']) && !empty($appt['appointment_id'])): ?>
+                                            <button class="btn btn-sm doctor-record-btn doctor-record-btn-clickable" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
+                                                <i class="bi bi-file-earmark-text"></i> View
+                                            </button>
+                                        <?php else: ?>
+                                            <button class="btn btn-sm doctor-record-btn doctor-record-btn-disabled" type="button" disabled aria-disabled="true" title="No clinical record available">
+                                                <i class="bi bi-file-earmark-text"></i> View
+                                            </button>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
 
             <!-- History Modal (read-only) -->
             <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
@@ -530,7 +836,126 @@ if ($stmt) {
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
+.doctor-recent-appointments-table thead th {
+    white-space: nowrap;
+}
+
+.doctor-appointments-tabs .nav-link {
+    font-weight: 600;
+}
+
+.doctor-general-appointments-table thead th {
+    white-space: nowrap;
+}
+
+.doctor-general-appointments-table tbody td {
+    vertical-align: middle;
+}
+
+#doctorAppointmentsCalendar {
+    min-height: 560px;
+}
+
+#doctorAppointmentsCalendar .fc-toolbar-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+#doctorAppointmentsCalendar .fc-daygrid-day-frame {
+    position: relative;
+}
+
+#doctorAppointmentsCalendar .fc-daygrid-day-number {
+    font-weight: 700;
+}
+
+.doctor-day-counts {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: flex-end;
+    pointer-events: none;
+}
+
+.doctor-booking-count {
+    border-radius: 999px;
+    color: #111827;
+    background: #e5e7eb;
+    font-size: 0.64rem;
+    font-weight: 700;
+    min-width: 54px;
+    line-height: 1.25;
+    text-align: center;
+    padding: 2px 6px;
+}
+
+.doctor-booking-count.type-appointment {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.doctor-booking-count.type-followup {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.doctor-recent-appointments-table tbody td {
+    vertical-align: middle;
+}
+
+.doctor-recent-appointments-table tbody tr {
+    transition: background-color 0.16s ease;
+}
+
+.doctor-recent-appointments-table tbody tr:hover {
+    background-color: #f3f4f6;
+}
+
+.doctor-recent-appointments-table .record-col-cell {
+    min-width: 140px;
+}
+
+.doctor-record-btn {
+    min-width: 92px;
+    border-radius: 9px;
+    font-weight: 600;
+    border-width: 1px;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.doctor-record-btn i {
+    margin-right: 4px;
+}
+
+.doctor-record-btn-clickable {
+    border-color: #1173c1;
+    color: #ffffff;
+    background: #1173c1;
+}
+
+.doctor-record-btn-clickable:hover,
+.doctor-record-btn-clickable:focus {
+    border-color: #0a4f88;
+    background: #0a4f88;
+    color: #ffffff;
+    box-shadow: 0 0 0 0.12rem rgba(17, 115, 193, 0.22);
+}
+
+.doctor-record-btn-disabled,
+.doctor-record-btn-disabled:hover,
+.doctor-record-btn-disabled:focus {
+    border-color: #b8bfc9;
+    color: #7b8491;
+    background-color: #f5f6f8;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .tooth-selector {
     min-width: 120px;
 }
@@ -538,8 +963,10 @@ if ($stmt) {
 .tooth-selector select {
     font-size: 0.85rem;
 }
+
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
 function loadPatientEHR(patient) {
     document.getElementById('modalAppointmentId').value = patient.appointment_id;
@@ -566,6 +993,309 @@ const serviceMap = {
 // Current session role/user for client-side role checks
 const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+const doctorCalendarCountsByDate = <?php echo json_encode($calendarCountsByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+const doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+let generalDateFilter = '';
+let generalMonthFilter = '';
+let generalSearchTerm = '';
+
+function initSimpleTableSearch(config) {
+    const table = document.getElementById(config.tableId);
+    const input = document.getElementById(config.inputId);
+    const searchBtn = document.getElementById(config.searchBtnId);
+    const clearBtn = document.getElementById(config.clearBtnId);
+    if (!table || !input || !searchBtn || !clearBtn) return;
+
+    const noMatchRowId = config.noMatchRowId || '';
+
+    const apply = function () {
+        const query = input.value.trim().toLowerCase();
+        const rows = table.querySelectorAll('tbody tr');
+        let visibleCount = 0;
+
+        rows.forEach(function (row) {
+            if (noMatchRowId && row.id === noMatchRowId) return;
+            const text = (row.textContent || '').toLowerCase();
+            const match = query === '' || text.indexOf(query) !== -1;
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        if (noMatchRowId) {
+            const noMatchRow = document.getElementById(noMatchRowId);
+            if (noMatchRow) {
+                noMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+        }
+    };
+
+    searchBtn.addEventListener('click', apply);
+    clearBtn.addEventListener('click', function () {
+        input.value = '';
+        apply();
+    });
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            apply();
+        }
+    });
+}
+
+function applyGeneralTableFilters(shouldScroll) {
+    const table = document.getElementById('doctorGeneralAppointmentsTable');
+    if (!table) return;
+
+    const rows = table.querySelectorAll('tbody tr[data-event-date]');
+    const noMatchRow = document.getElementById('doctorGeneralNoMatchRow');
+    let visibleCount = 0;
+
+    rows.forEach(function (row) {
+        const rowDate = row.getAttribute('data-event-date') || '';
+        const rowMonth = rowDate.length >= 7 ? rowDate.slice(0, 7) : '';
+        const rowText = (row.textContent || '').toLowerCase();
+        const matchMonth = !generalMonthFilter || rowMonth === generalMonthFilter;
+        const matchDate = !generalDateFilter || rowDate === generalDateFilter;
+        const matchSearch = !generalSearchTerm || rowText.indexOf(generalSearchTerm) !== -1;
+        const match = matchMonth && matchDate && matchSearch;
+        row.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+    });
+
+    if (noMatchRow) {
+        noMatchRow.style.display = (rows.length > 0 && visibleCount === 0) ? '' : 'none';
+    }
+
+    const badge = document.getElementById('appointmentsFilterBadge');
+    const clearBtn = document.getElementById('clearAppointmentsDateFilter');
+    if (badge && clearBtn) {
+        if (generalDateFilter) {
+            badge.style.display = 'inline-block';
+            badge.textContent = 'Filtered by ' + generalDateFilter + ' (' + visibleCount + ')';
+            clearBtn.style.display = 'inline-block';
+            if (shouldScroll) {
+                table.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        } else if (generalMonthFilter) {
+            badge.style.display = 'inline-block';
+            badge.textContent = 'Month: ' + generalMonthFilter + ' (' + visibleCount + ')';
+            clearBtn.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+            badge.textContent = '';
+            clearBtn.style.display = 'none';
+        }
+    }
+}
+
+function filterGeneralAppointmentsByDate(dateStr, shouldScroll) {
+    generalDateFilter = (dateStr || '').trim();
+    applyGeneralTableFilters(shouldScroll);
+}
+
+function initDoctorAppointmentsCalendar() {
+    const calendarEl = document.getElementById('doctorAppointmentsCalendar');
+    if (!calendarEl || typeof FullCalendar === 'undefined') {
+        return;
+    }
+
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        height: 'auto',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth'
+        },
+        dayCellDidMount: function (info) {
+            const y = info.date.getFullYear();
+            const m = String(info.date.getMonth() + 1).padStart(2, '0');
+            const d = String(info.date.getDate()).padStart(2, '0');
+            const dateKey = y + '-' + m + '-' + d;
+            const counts = doctorCalendarCountsByDate[dateKey] || { appointments: 0, followups: 0 };
+            const appointmentCount = Number(counts.appointments || 0);
+            const followupCount = Number(counts.followups || 0);
+            const lines = Array.isArray(doctorCalendarHoverByDate[dateKey]) ? doctorCalendarHoverByDate[dateKey] : [];
+
+            if (appointmentCount > 0 || followupCount > 0) {
+                const badgesWrap = document.createElement('div');
+                badgesWrap.className = 'doctor-day-counts';
+
+                if (appointmentCount > 0) {
+                    const appointmentBadge = document.createElement('span');
+                    appointmentBadge.className = 'doctor-booking-count type-appointment';
+                    appointmentBadge.textContent = 'A: ' + String(appointmentCount);
+                    badgesWrap.appendChild(appointmentBadge);
+                }
+
+                if (followupCount > 0) {
+                    const followupBadge = document.createElement('span');
+                    followupBadge.className = 'doctor-booking-count type-followup';
+                    followupBadge.textContent = 'F: ' + String(followupCount);
+                    badgesWrap.appendChild(followupBadge);
+                }
+
+                const frame = info.el.querySelector('.fc-daygrid-day-frame');
+                if (frame) {
+                    frame.appendChild(badgesWrap);
+                }
+            }
+
+            if (lines.length > 0) {
+                const capped = lines.slice(0, 10);
+                const moreCount = lines.length - capped.length;
+                const title = [
+                    'Appointments: ' + appointmentCount,
+                    'Follow-up: ' + followupCount,
+                    capped.join('\n'),
+                    moreCount > 0 ? ('+' + moreCount + ' more') : ''
+                ].filter(Boolean).join('\n');
+                info.el.setAttribute('title', title);
+            }
+        },
+        dateClick: function (info) {
+            filterGeneralAppointmentsByDate(info.dateStr, true);
+        },
+        datesSet: function (info) {
+            const activeDate = info.view && info.view.currentStart ? info.view.currentStart : info.start;
+            const y = activeDate.getFullYear();
+            const m = String(activeDate.getMonth() + 1).padStart(2, '0');
+            generalMonthFilter = y + '-' + m;
+            generalDateFilter = '';
+            applyGeneralTableFilters(false);
+        }
+    });
+
+    calendar.render();
+
+    const legendEl = document.getElementById('doctorCalendarLegend');
+    if (legendEl) {
+        const totalDays = Object.keys(doctorCalendarCountsByDate).length;
+        legendEl.textContent = 'Legend: A = appointments, F = follow-up schedules. Hover a day to see names and time. Days with at least one booking: ' + totalDays + '.';
+    }
+
+    const clearBtn = document.getElementById('clearAppointmentsDateFilter');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            generalDateFilter = '';
+            generalMonthFilter = '';
+            filterGeneralAppointmentsByDate('');
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    initDoctorAppointmentsCalendar();
+
+    initSimpleTableSearch({
+        tableId: 'doctorRecentAppointmentsTable',
+        inputId: 'doctorRecentSearchInput',
+        searchBtnId: 'doctorRecentSearchBtn',
+        clearBtnId: 'doctorRecentSearchClearBtn'
+    });
+
+    initSimpleTableSearch({
+        tableId: 'doctorFollowupAppointmentsTable',
+        inputId: 'doctorFollowupSearchInput',
+        searchBtnId: 'doctorFollowupSearchBtn',
+        clearBtnId: 'doctorFollowupSearchClearBtn'
+    });
+
+    const generalInput = document.getElementById('doctorGeneralSearchInput');
+    const generalSearchBtn = document.getElementById('doctorGeneralSearchBtn');
+    const generalClearBtn = document.getElementById('doctorGeneralSearchClearBtn');
+
+    if (generalInput && generalSearchBtn && generalClearBtn) {
+        generalSearchBtn.addEventListener('click', function () {
+            generalSearchTerm = generalInput.value.trim().toLowerCase();
+            applyGeneralTableFilters(false);
+        });
+
+        generalClearBtn.addEventListener('click', function () {
+            generalInput.value = '';
+            generalSearchTerm = '';
+            applyGeneralTableFilters(false);
+        });
+
+        generalInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generalSearchTerm = generalInput.value.trim().toLowerCase();
+                applyGeneralTableFilters(false);
+            }
+        });
+    }
+});
+
+function tryParseJson(value) {
+    if (typeof value !== 'string') return value;
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    try {
+        return JSON.parse(trimmed);
+    } catch (e) {
+        return value;
+    }
+}
+
+function formatPrimitive(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).trim();
+}
+
+function formatMaterialsDisplay(materials) {
+    const parsed = tryParseJson(materials);
+
+    if (!parsed || (typeof parsed === 'string' && !parsed.trim())) {
+        return 'No materials recorded.';
+    }
+
+    if (typeof parsed === 'string') {
+        return parsed;
+    }
+
+    if (Array.isArray(parsed)) {
+        if (!parsed.length) return 'No materials recorded.';
+
+        const lines = parsed.map(function(item, index) {
+            if (item && typeof item === 'object') {
+                const name = formatPrimitive(item.name || item.material || item.item || ('Material ' + (index + 1)));
+                const qty = item.qty !== undefined ? item.qty : item.quantity;
+                const price = item.price !== undefined ? item.price : item.cost;
+
+                let line = name;
+                if (qty !== undefined && qty !== null && String(qty).trim() !== '') {
+                    line += ' x' + qty;
+                }
+                if (price !== undefined && price !== null && String(price).trim() !== '') {
+                    line += ' (PHP ' + price + ')';
+                }
+                return '- ' + line;
+            }
+            return '- ' + formatPrimitive(item);
+        }).filter(function(line) {
+            return line !== '- ';
+        });
+
+        return lines.length ? lines.join('\n') : 'No materials recorded.';
+    }
+
+    if (typeof parsed === 'object') {
+        const keys = Object.keys(parsed);
+        if (!keys.length) return 'No materials recorded.';
+
+        const lines = keys.map(function(key) {
+            const value = parsed[key];
+            if (value !== null && typeof value === 'object') {
+                return key + ': ' + JSON.stringify(value);
+            }
+            return key + ': ' + formatPrimitive(value);
+        });
+        return lines.join('\n');
+    }
+
+    return String(parsed);
+}
 
 // If page requested to show history on load, trigger modal
 <?php if (!empty($_GET['show_history']) && !empty($_GET['appointment_id'])): ?>
@@ -641,7 +1371,7 @@ async function openHistoryModal(appointmentId) {
 
         // treatment plan and materials
         document.getElementById('histTreatment').textContent = JSON.stringify(rec.treatment_plan || {}, null, 2);
-        document.getElementById('histMaterials').textContent = JSON.stringify(rec.materials_used || {}, null, 2);
+        document.getElementById('histMaterials').textContent = formatMaterialsDisplay(rec.materials_used);
 
         // images
         const imgWrap = document.getElementById('histImages');

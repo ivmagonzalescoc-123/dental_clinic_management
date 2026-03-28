@@ -10,7 +10,7 @@ $appointment_id = isset($_GET['appointment_id']) ? (int) $_GET['appointment_id']
 // If no appointment_id provided, fetch today's arrived patients for this doctor
 $queueItems = [];
 if (!$appointment_id) {
-        $sql = "SELECT
+    $sql = "SELECT
                                 a.appointment_id,
                                 a.is_emergency,
                                 a.patient_id,
@@ -52,7 +52,6 @@ if (!$appointment_id) {
     $res = $stmt->get_result();
     $appt = $res ? $res->fetch_assoc() : null;
     $stmt->close();
-
     if ($appt) {
         // populate a single queue-like item so UI can reuse the same dropdown/prefill logic
         $queueItems[] = ['appointment_id' => $appt['appointment_id'], 'patient_id' => $appt['patient_id'], 'first_name' => $appt['first_name'], 'last_name' => $appt['last_name'], 'appointment_date' => $appt['appointment_date']];
@@ -128,58 +127,84 @@ if ($tstmt) {
 
 
     <div class="mb-3">
-        <label class="form-label">Recommended Services</label>
-        <div>
-            <?php foreach ($services as $s): ?>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="<?php echo (int) $s['service_id']; ?>"
-                        id="srv-<?php echo (int) $s['service_id']; ?>"
-                        data-default-duration="<?php echo (int) $s['default_duration_minutes']; ?>">
-                    <label class="form-check-label"
-                        for="srv-<?php echo (int) $s['service_id']; ?>"><?php echo htmlspecialchars($s['service_name']); ?>
-                        — ₱<?php echo number_format($s['initial_price'], 2); ?></label>
-                </div>
-            <?php endforeach; ?>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+            <label class="form-label mb-0">Recommended Services and Treatments</label>
+            <button type="button" id="ehrServiceToggleBtn" class="btn btn-outline-primary btn-sm" aria-expanded="false">
+                <i id="ehrServiceToggleIcon" class="bi bi-plus-circle"></i>
+                <span id="ehrServiceToggleText">Add Services</span>
+            </button>
         </div>
-    </div>
+        <small class="text-muted d-block mb-2">Toggle this section to add services and treatments without extending the form.</small>
 
-    <div class="mb-3">
-        <label class="form-label">Treatment Lookup</label>
-        <input type="text" class="form-control mb-2" id="treatmentLookupInput" placeholder="Search treatment name or type...">
-        <div id="treatmentLookupList" class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
-            <?php if (!empty($treatments)): ?>
-                <?php foreach ($treatments as $t): ?>
-                    <?php
-                        $lookupText = strtolower(trim((string)($t['treatment_name'] ?? '') . ' ' . (string)($t['treatment_type'] ?? '')));
-                    ?>
-                    <div class="form-check treatment-lookup-item" data-lookup="<?php echo htmlspecialchars($lookupText); ?>">
-                        <input class="form-check-input treatment-lookup-checkbox" type="checkbox" value="<?php echo (int)$t['treatment_id']; ?>"
-                            id="trt-<?php echo (int)$t['treatment_id']; ?>">
-                        <label class="form-check-label" for="trt-<?php echo (int)$t['treatment_id']; ?>">
-                            <?php echo htmlspecialchars($t['treatment_name']); ?>
-                            <?php if (!empty($t['treatment_type'])): ?>
-                                <span class="text-muted">(<?php echo htmlspecialchars($t['treatment_type']); ?>)</span>
-                            <?php endif; ?>
-                        </label>
+        <div id="ehrServiceTreatmentPanel" style="display:none;">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <label class="form-label">Recommended Services</label>
+                        <div id="ehrServicesList" style="max-height: 220px; overflow-y: auto;">
+                            <?php foreach ($services as $s): ?>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="<?php echo (int) $s['service_id']; ?>"
+                                        id="srv-<?php echo (int) $s['service_id']; ?>"
+                                        data-default-duration="<?php echo (int) $s['default_duration_minutes']; ?>">
+                                    <label class="form-check-label"
+                                        for="srv-<?php echo (int) $s['service_id']; ?>"><?php echo htmlspecialchars($s['service_name']); ?>
+                                        — ₱<?php echo number_format($s['initial_price'], 2); ?></label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="text-muted small">No treatments found. Add treatments from Admin Services.</div>
-            <?php endif; ?>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <label class="form-label">Treatment Lookup</label>
+                        <input type="text" class="form-control mb-2" id="treatmentLookupInput" placeholder="Search treatment name or type...">
+                        <div id="treatmentLookupList" class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
+                            <?php if (!empty($treatments)): ?>
+                                <?php foreach ($treatments as $t): ?>
+                                    <?php
+                                        $lookupText = strtolower(trim((string)($t['treatment_name'] ?? '') . ' ' . (string)($t['treatment_type'] ?? '')));
+                                    ?>
+                                    <div class="form-check treatment-lookup-item" data-lookup="<?php echo htmlspecialchars($lookupText); ?>">
+                                        <input class="form-check-input treatment-lookup-checkbox" type="checkbox" value="<?php echo (int)$t['treatment_id']; ?>"
+                                            id="trt-<?php echo (int)$t['treatment_id']; ?>">
+                                        <label class="form-check-label" for="trt-<?php echo (int)$t['treatment_id']; ?>">
+                                            <?php echo htmlspecialchars($t['treatment_name']); ?>
+                                            <?php if (!empty($t['treatment_type'])): ?>
+                                                <span class="text-muted">(<?php echo htmlspecialchars($t['treatment_type']); ?>)</span>
+                                            <?php endif; ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-muted small">No treatments found. Add treatments from Admin Services.</div>
+                            <?php endif; ?>
+                        </div>
+                        <small class="text-muted">Select specific treatments performed or recommended for this session.</small>
+                    </div>
+                </div>
+            </div>
         </div>
-        <small class="text-muted">Select specific treatments performed or recommended for this session.</small>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">Treatment Plan Notes (optional JSON/plain text)</label>
+        <label class="form-label">Treatment Plan</label>
         <textarea class="form-control" name="treatment_plan" id="treatment_plan" rows="3"></textarea>
     </div>
 
     <div class="mb-3">
         <label class="form-label">Materials Used</label>
+        <div class="d-flex flex-wrap gap-2 mb-2" id="materialQuickPick"></div>
+        <div class="input-group input-group-sm mb-2 compact-control">
+            <input type="text" id="materialPresetInput" class="form-control" list="materialCatalogList" placeholder="Type or pick common material">
+            <button type="button" class="btn btn-outline-secondary" id="addPresetMaterialBtn">Add</button>
+        </div>
+        <datalist id="materialCatalogList"></datalist>
         <div id="materialsList"></div>
         <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addMaterialBtn">Add
             Material</button>
+        <small class="text-muted d-block mt-2">Tip: use quick picks for common items, then adjust quantity and price per case.</small>
     </div>
 
 
@@ -211,9 +236,15 @@ if ($tstmt) {
         <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
         <div class="d-flex align-items-center mb-2 gap-2">
             <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
+            <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
         </div>
-        <div id="odontogramContainer">
-            <!-- iframe will be created here on demand -->
+        <div id="odontogramViewport" class="odontogram-viewport">
+            <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                <i class="bi bi-x-lg"></i> Close
+            </button>
+            <div id="odontogramContainer">
+                <!-- iframe will be created here on demand -->
+            </div>
         </div>
         <input type="hidden" id="odontogram_data" name="odontogram">
     </div>
@@ -233,21 +264,169 @@ if ($tstmt) {
 // odontogram integration. No additional server endpoints are required.
 ?>
 
+<style>
+.odontogram-viewport {
+    position: relative;
+}
+
+.odontogram-fs-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+}
+
+.odontogram-viewport:fullscreen {
+    background: #ffffff;
+    padding: 10px;
+}
+
+.odontogram-viewport:fullscreen #odontogramContainer,
+.odontogram-viewport:-webkit-full-screen #odontogramContainer {
+    height: calc(100vh - 20px);
+}
+
+.odontogram-viewport:fullscreen #odontogramFrame,
+.odontogram-viewport:-webkit-full-screen #odontogramFrame {
+    height: calc(100vh - 20px) !important;
+    border: 0 !important;
+}
+</style>
+
 <script>
     // Basic EHR frontend behavior: materials list, save draft / finalize, prefill
     (function () {
-        // Minimal addMaterial implementation (simple inputs)
-        document.getElementById('addMaterialBtn')?.addEventListener('click', function () {
-            const wrap = document.getElementById('materialsList');
-            const div = document.createElement('div');
-            div.className = 'd-flex gap-2 mb-2';
-            div.innerHTML = '<input class="form-control form-control-sm" placeholder="Name">\n' +
-                '<input class="form-control form-control-sm" placeholder="Qty" style="width:80px;">\n' +
-                '<input class="form-control form-control-sm" placeholder="Price" style="width:120px;">\n' +
-                '<button type="button" class="btn btn-sm btn-danger">Remove</button>';
-            wrap.appendChild(div);
-            div.querySelector('button')?.addEventListener('click', () => div.remove());
+        const serviceToggleBtn = document.getElementById('ehrServiceToggleBtn');
+        const serviceToggleText = document.getElementById('ehrServiceToggleText');
+        const serviceToggleIcon = document.getElementById('ehrServiceToggleIcon');
+        const servicePanel = document.getElementById('ehrServiceTreatmentPanel');
+
+        function setServicePanelState(expanded) {
+            if (!servicePanel || !serviceToggleText || !serviceToggleIcon) return;
+            servicePanel.style.display = expanded ? 'block' : 'none';
+            serviceToggleText.textContent = expanded ? 'Hide Services' : 'Add Services';
+            serviceToggleIcon.className = expanded ? 'bi bi-dash-circle' : 'bi bi-plus-circle';
+            if (serviceToggleBtn) {
+                serviceToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            }
+        }
+
+        if (serviceToggleBtn && servicePanel) {
+            setServicePanelState(false);
+            serviceToggleBtn.addEventListener('click', function () {
+                const isExpanded = servicePanel.style.display !== 'none';
+                setServicePanelState(!isExpanded);
+            });
+        }
+
+        const defaultMaterialCatalog = [
+            'Local anesthesia cartridge',
+            'Topical anesthetic',
+            'Cotton rolls',
+            'Gauze',
+            'Gloves (pair)',
+            'Mask',
+            'Saliva ejector',
+            'Suction tip',
+            'Etchant gel',
+            'Bonding agent',
+            'Composite resin',
+            'Glass ionomer cement',
+            'Temporary filling material',
+            'Impression material',
+            'Prophy paste',
+            'Fluoride varnish'
+        ];
+
+        const materialsList = document.getElementById('materialsList');
+        const quickPickWrap = document.getElementById('materialQuickPick');
+        const presetInput = document.getElementById('materialPresetInput');
+        const datalistEl = document.getElementById('materialCatalogList');
+
+        function materialRowMarkup(materialName, qty, price) {
+            return '<div class="row g-2 align-items-end material-row mb-2">' +
+                '<div class="col-12 col-md-6">' +
+                '<input class="form-control form-control-sm material-name" placeholder="Material name" list="materialCatalogList" value="' + materialName + '">' +
+                '</div>' +
+                '<div class="col-6 col-md-2">' +
+                '<input class="form-control form-control-sm material-qty" type="number" min="0" step="0.01" placeholder="Qty" value="' + qty + '">' +
+                '</div>' +
+                '<div class="col-6 col-md-2">' +
+                '<input class="form-control form-control-sm material-price" type="number" min="0" step="0.01" placeholder="Price" value="' + price + '">' +
+                '</div>' +
+                '<div class="col-12 col-md-2">' +
+                '<button type="button" class="btn btn-sm btn-outline-danger w-100 material-remove">Remove</button>' +
+                '</div>' +
+                '</div>';
+        }
+
+        function addMaterialRow(material = {}) {
+            if (!materialsList) return;
+            const name = String(material.name || '').replace(/"/g, '&quot;');
+            const qty = (material.qty !== undefined && material.qty !== null) ? String(material.qty).replace(/"/g, '&quot;') : '';
+            const price = (material.price !== undefined && material.price !== null) ? String(material.price).replace(/"/g, '&quot;') : '';
+
+            const wrap = document.createElement('div');
+            wrap.innerHTML = materialRowMarkup(name, qty, price);
+            const row = wrap.firstChild;
+            row.querySelector('.material-remove')?.addEventListener('click', function () {
+                row.remove();
+            });
+            materialsList.appendChild(row);
+            return row;
+        }
+
+        function setupMaterialCatalog() {
+            if (datalistEl) {
+                datalistEl.innerHTML = '';
+                defaultMaterialCatalog.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item;
+                    datalistEl.appendChild(opt);
+                });
+            }
+
+            if (quickPickWrap) {
+                quickPickWrap.innerHTML = '';
+                defaultMaterialCatalog.slice(0, 8).forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-secondary rounded-pill';
+                    btn.textContent = item;
+                    btn.addEventListener('click', function () {
+                        const row = addMaterialRow({ name: item, qty: 1, price: '' });
+                        const qtyInput = row?.querySelector('.material-qty');
+                        if (qtyInput) qtyInput.focus();
+                    });
+                    quickPickWrap.appendChild(btn);
+                });
+            }
+        }
+
+        setupMaterialCatalog();
+
+        document.getElementById('addPresetMaterialBtn')?.addEventListener('click', function () {
+            const value = (presetInput?.value || '').trim();
+            if (!value) return;
+            addMaterialRow({ name: value, qty: 1, price: '' });
+            presetInput.value = '';
         });
+
+        presetInput?.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('addPresetMaterialBtn')?.click();
+            }
+        });
+
+        // Add manual material row
+        document.getElementById('addMaterialBtn')?.addEventListener('click', function () {
+            addMaterialRow();
+        });
+
+        if (materialsList && materialsList.children.length === 0) {
+            addMaterialRow();
+        }
 
         async function saveClinical(finalize) {
             const appointment_id = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
@@ -257,10 +436,11 @@ if ($tstmt) {
                 .map(cb => parseInt(cb.value, 10))
                 .filter(v => Number.isInteger(v) && v > 0);
             const treatment_plan = document.getElementById('treatment_plan').value || '';
-            const materials = [...document.getElementById('materialsList').querySelectorAll('div')].map(d => {
-                const inputs = d.querySelectorAll('input');
-                return { name: inputs[0]?.value || '', qty: parseFloat(inputs[1]?.value) || 0, price: parseFloat(inputs[2]?.value) || 0 };
-            });
+            const materials = [...document.querySelectorAll('#materialsList .material-row')].map(row => ({
+                name: (row.querySelector('.material-name')?.value || '').trim(),
+                qty: parseFloat(row.querySelector('.material-qty')?.value || '') || 0,
+                price: parseFloat(row.querySelector('.material-price')?.value || '') || 0
+            })).filter(item => item.name !== '');
             const odontogram = document.getElementById('odontogram_data')?.value || '';
             const doctor_notes = document.getElementById('doctor_notes')?.value || '';
             const follow_up_date = document.getElementById('follow_up_date')?.value || '';
@@ -394,40 +574,10 @@ if ($tstmt) {
                     const wrap = document.getElementById('materialsList');
                     if (wrap) {
                         wrap.innerHTML = '';
-                        rec.materials_used.forEach(m => {
-                            const div = document.createElement('div');
-                            div.className = 'd-flex gap-2 mb-2';
-
-                            const inputName = document.createElement('input');
-                            inputName.className = 'form-control form-control-sm';
-                            inputName.placeholder = 'Name';
-                            inputName.value = m.name || '';
-
-                            const inputQty = document.createElement('input');
-                            inputQty.className = 'form-control form-control-sm';
-                            inputQty.placeholder = 'Qty';
-                            inputQty.style.width = '80px';
-                            inputQty.value = (m.qty !== undefined && m.qty !== null) ? m.qty : '';
-
-                            const inputPrice = document.createElement('input');
-                            inputPrice.className = 'form-control form-control-sm';
-                            inputPrice.placeholder = 'Price';
-                            inputPrice.style.width = '120px';
-                            inputPrice.value = (m.price !== undefined && m.price !== null) ? m.price : '';
-
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-sm btn-danger';
-                            btn.textContent = 'Remove';
-                            btn.addEventListener('click', () => div.remove());
-
-                            div.appendChild(inputName);
-                            div.appendChild(inputQty);
-                            div.appendChild(inputPrice);
-                            div.appendChild(btn);
-                            wrap.appendChild(div);
-                        });
+                        rec.materials_used.forEach(m => addMaterialRow(m || {}));
                     }
+                } else if (materialsList && materialsList.children.length === 0) {
+                    addMaterialRow();
                 }
                 if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
                 if (rec.follow_up_date) document.getElementById('follow_up_date').value = rec.follow_up_date;
@@ -570,6 +720,39 @@ if ($tstmt) {
             else btn.textContent = 'Hide';
         }
 
+        function getOdontogramFullscreenElement() {
+            return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+        }
+
+        function isOdontogramFullscreen() {
+            const viewport = document.getElementById('odontogramViewport');
+            return !!viewport && getOdontogramFullscreenElement() === viewport;
+        }
+
+        function requestOdontogramFullscreen() {
+            const viewport = document.getElementById('odontogramViewport');
+            if (!viewport) return;
+
+            showOdontogram();
+
+            const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
+            if (requestFn) requestFn.call(viewport);
+        }
+
+        function exitOdontogramFullscreen() {
+            const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            if (exitFn) exitFn.call(document);
+        }
+
+        function syncOdontogramFullscreenUI() {
+            const closeBtn = document.getElementById('closeOdontogramFullscreenBtn');
+            const openBtn = document.getElementById('openOdontogramFullscreenBtn');
+            const active = isOdontogramFullscreen();
+
+            if (closeBtn) closeBtn.style.display = active ? '' : 'none';
+            if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+        }
+
         // toggle button
         document.getElementById('toggleOdontogramBtn')?.addEventListener('click', function () {
             const container = document.getElementById('odontogramContainer');
@@ -582,6 +765,28 @@ if ($tstmt) {
                 hideOdontogram();
             }
         });
+
+        document.getElementById('openOdontogramFullscreenBtn')?.addEventListener('click', function () {
+            if (isOdontogramFullscreen()) {
+                exitOdontogramFullscreen();
+                return;
+            }
+            requestOdontogramFullscreen();
+        });
+
+        document.getElementById('closeOdontogramFullscreenBtn')?.addEventListener('click', function () {
+            exitOdontogramFullscreen();
+        });
+
+        document.addEventListener('fullscreenchange', syncOdontogramFullscreenUI);
+        document.addEventListener('webkitfullscreenchange', syncOdontogramFullscreenUI);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isOdontogramFullscreen()) {
+                exitOdontogramFullscreen();
+            }
+        });
+
+        syncOdontogramFullscreenUI();
 
         // cleanup: removed extra controls; toggle button handles show/hide and reload
     })();

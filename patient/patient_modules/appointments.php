@@ -15,12 +15,39 @@ if ($doctors_result) {
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
 
+// Ensure patient reschedule requests table exists.
+$conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    appointment_id INT NOT NULL,
+    patient_id INT NOT NULL,
+    requested_doctor_id INT NULL,
+    requested_date DATE NOT NULL,
+    requested_timeslot_id INT NOT NULL,
+    request_note VARCHAR(500) NULL,
+    status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    review_note VARCHAR(500) NULL,
+    reviewed_at DATETIME NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_arr_status_created (status, created_at),
+    KEY idx_arr_appointment_status (appointment_id, status),
+    KEY idx_arr_patient_status (patient_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
 // Fetch appointment history for this patient
 $appointment_history = [];
 if ($patient_id) {
-    $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+        $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+                                                    a.user_id,
+                                                    a.timeslot_id,
                           u.first_name AS doctor_first_name, u.last_name AS doctor_last_name,
-                          t.start_time, t.end_time
+                                                    t.start_time, t.end_time,
+                                                    (
+                                                            SELECT COUNT(*)
+                                                            FROM appointment_reschedule_requests rr
+                                                            WHERE rr.appointment_id = a.appointment_id
+                                                                AND rr.status = 'pending'
+                                                    ) AS pending_reschedule_count
                    FROM appointments a
                    LEFT JOIN users u ON u.user_id = a.user_id
                    LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
@@ -45,7 +72,7 @@ if ($patient_id) {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
 .patient-appt-card .card-header {
-    background: linear-gradient(135deg, #0f766e 0%, #14532d 100%);
+    background: #1173c1;
     color: #fff;
 }
 .patient-appt-card .card-header .sub-title {
@@ -55,7 +82,7 @@ if ($patient_id) {
 .patient-appt-card .calendar-panel {
     border: 1px solid #dbe7e4;
     border-radius: 14px;
-    background: linear-gradient(180deg, #f8fffd 0%, #f2f8f6 100%);
+    background: #f4f8ff;
     padding: 14px;
 }
 .patient-appt-card .selected-date-chip {
@@ -107,14 +134,14 @@ if ($patient_id) {
     cursor: pointer;
 }
 .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-open .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(22, 163, 74, 0.14), rgba(22, 163, 74, 0.05));
+    background: rgba(22, 163, 74, 0.1);
 }
 .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-busy .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0.07));
+    background: rgba(245, 158, 11, 0.12);
 }
 .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-closed .fc-daygrid-day-frame,
 .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-disabled .fc-daygrid-day-frame {
-    background: linear-gradient(180deg, rgba(220, 38, 38, 0.15), rgba(220, 38, 38, 0.06));
+    background: rgba(220, 38, 38, 0.12);
 }
 .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-selected {
     box-shadow: inset 0 0 0 2px #0f766e;
@@ -148,19 +175,25 @@ if ($patient_id) {
     color: #0f172a;
 }
 .patient-appt-card .appt-tab-nav .nav-link.active {
-    background: #5f43b2;
+    background: #1173c1;
     color: #fff;
 }
 .patient-appt-card #appointmentCalendar .fc-button-primary {
-    background-color: #5f43b2;
-    border-color: #5f43b2;
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    color: #000;
+    box-shadow: none;
 }
 .patient-appt-card #appointmentCalendar .fc-button-primary:hover,
 .patient-appt-card #appointmentCalendar .fc-button-primary:focus,
 .patient-appt-card #appointmentCalendar .fc-button-primary:active,
 .patient-appt-card #appointmentCalendar .fc-button-primary.fc-button-active {
-    background-color: #4f3796;
-    border-color: #4f3796;
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    color: #000;
+    box-shadow: none;
 }
 .patient-appt-card .history-table-wrap {
     border: 1px solid #dbe7e4;
@@ -275,12 +308,13 @@ if ($patient_id) {
                             <th>Time Slot</th>
                             <th>Reason</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="patientApptHistoryBody">
                         <?php if (empty($appointment_history)): ?>
                             <tr id="patientApptHistoryEmpty">
-                                <td colspan="6" class="text-center py-4 history-empty">No appointment history yet.</td>
+                                <td colspan="7" class="text-center py-4 history-empty">No appointment history yet.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($appointment_history as $history): ?>
@@ -309,6 +343,12 @@ if ($patient_id) {
                                 if (!empty($history['start_time']) && !empty($history['end_time'])) {
                                     $slotLabel = date('g:i A', strtotime((string)$history['start_time'])) . ' - ' . date('g:i A', strtotime((string)$history['end_time']));
                                 }
+
+                                $apptDateRaw = (string)($history['appointment_date'] ?? '');
+                                $apptDateTs = $apptDateRaw !== '' ? strtotime($apptDateRaw) : false;
+                                $isFutureOrToday = ($apptDateTs !== false) ? (date('Y-m-d', $apptDateTs) >= date('Y-m-d')) : false;
+                                $hasPendingResched = ((int)($history['pending_reschedule_count'] ?? 0) > 0);
+                                $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed'], true) && $isFutureOrToday && !$hasPendingResched;
                                 ?>
                                 <tr>
                                     <td>#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
@@ -317,11 +357,65 @@ if ($patient_id) {
                                     <td><?php echo htmlspecialchars($slotLabel); ?></td>
                                     <td><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
                                     <td><span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
+                                    <td>
+                                        <?php if ($canRequestReschedule): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-outline-warning patient-resched-btn"
+                                                data-appointment-id="<?php echo (int)$history['appointment_id']; ?>"
+                                                data-doctor-id="<?php echo (int)($history['user_id'] ?? 0); ?>"
+                                                data-current-date="<?php echo htmlspecialchars($apptDateRaw); ?>"
+                                            >
+                                                <i class="bi bi-calendar2-week"></i> Request Reschedule
+                                            </button>
+                                        <?php elseif ($hasPendingResched): ?>
+                                            <span class="badge bg-warning text-dark">Reschedule Pending Approval</span>
+                                        <?php else: ?>
+                                            <span class="text-muted small">-</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="patientRescheduleModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title"><i class="bi bi-calendar2-week"></i> Request Appointment Reschedule</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="patientRescheduleAppointmentId">
+                        <input type="hidden" id="patientRescheduleDoctorId">
+
+                        <div class="mb-3">
+                            <label class="form-label">Preferred New Date</label>
+                            <input type="date" id="patientRescheduleDate" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Preferred Time Slot</label>
+                            <select id="patientRescheduleTimeslot" class="form-select" disabled>
+                                <option value="">-- Select available slot --</option>
+                            </select>
+                            <small class="text-muted">Only available slots can be requested. Secretary approval is required.</small>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label">Note to Secretary (optional)</label>
+                            <textarea id="patientRescheduleNote" class="form-control" rows="3" placeholder="Preferred time reason or constraints"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-warning" id="submitPatientRescheduleBtn">Submit Request</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -355,6 +449,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const historyEmptyRow = document.getElementById('patientApptHistoryEmpty');
     const bookingToastEl = document.getElementById('bookingResultToast');
     const bookingToastBodyEl = document.getElementById('bookingResultToastBody');
+    const patientRescheduleModalEl = document.getElementById('patientRescheduleModal');
+    const patientRescheduleDateEl = document.getElementById('patientRescheduleDate');
+    const patientRescheduleTimeslotEl = document.getElementById('patientRescheduleTimeslot');
+    const patientRescheduleAppointmentIdEl = document.getElementById('patientRescheduleAppointmentId');
+    const patientRescheduleDoctorIdEl = document.getElementById('patientRescheduleDoctorId');
+    const patientRescheduleNoteEl = document.getElementById('patientRescheduleNote');
+    const submitPatientRescheduleBtn = document.getElementById('submitPatientRescheduleBtn');
+    let patientRescheduleModal = null;
 
     let appointmentCalendar = null;
     let availabilityByDate = {};
@@ -474,6 +576,17 @@ document.addEventListener('DOMContentLoaded', function() {
         badge.textContent = statusLabel(payload.status);
         statusCell.appendChild(badge);
         tr.appendChild(statusCell);
+
+        const actionCell = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-warning patient-resched-btn';
+        btn.setAttribute('data-appointment-id', String(payload.appointmentId || ''));
+        btn.setAttribute('data-doctor-id', String(payload.doctorId || ''));
+        btn.setAttribute('data-current-date', String(payload.date || ''));
+        btn.innerHTML = '<i class="bi bi-calendar2-week"></i> Request Reschedule';
+        actionCell.appendChild(btn);
+        tr.appendChild(actionCell);
 
         if (historyBody.firstChild) {
             historyBody.insertBefore(tr, historyBody.firstChild);
@@ -727,6 +840,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    async function loadPatientRescheduleTimeslots() {
+        if (!patientRescheduleTimeslotEl) return;
+        const doctorId = patientRescheduleDoctorIdEl ? String(patientRescheduleDoctorIdEl.value || '').trim() : '';
+        const dateVal = patientRescheduleDateEl ? String(patientRescheduleDateEl.value || '').trim() : '';
+
+        patientRescheduleTimeslotEl.disabled = true;
+        patientRescheduleTimeslotEl.innerHTML = '<option value="">-- Select available slot --</option>';
+
+        if (!doctorId || !dateVal) {
+            return;
+        }
+
+        patientRescheduleTimeslotEl.innerHTML = '<option value="">Loading time slots...</option>';
+        try {
+            const r = await fetch('../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(dateVal));
+            const data = await r.json();
+            patientRescheduleTimeslotEl.innerHTML = '<option value="">-- Select available slot --</option>';
+            if (!data.success || !Array.isArray(data.slots) || data.slots.length === 0) {
+                patientRescheduleTimeslotEl.innerHTML = '<option value="">No available slots for this date</option>';
+                patientRescheduleTimeslotEl.disabled = true;
+                return;
+            }
+
+            data.slots.forEach(function(slot) {
+                const opt = document.createElement('option');
+                opt.value = String(slot.timeslot_id || '');
+                opt.textContent = String(slot.label || 'Slot');
+                patientRescheduleTimeslotEl.appendChild(opt);
+            });
+            patientRescheduleTimeslotEl.disabled = false;
+        } catch (e) {
+            console.error(e);
+            patientRescheduleTimeslotEl.innerHTML = '<option value="">Unable to load timeslots</option>';
+            patientRescheduleTimeslotEl.disabled = true;
+        }
+    }
+
     loadDates();
 
     const initialTab = new URLSearchParams(window.location.search).get('appt_tab') === 'history' ? 'history' : 'book';
@@ -746,6 +896,95 @@ document.addEventListener('DOMContentLoaded', function() {
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
             loadDates();
+        });
+    }
+
+    if (typeof bootstrap !== 'undefined' && patientRescheduleModalEl) {
+        patientRescheduleModal = bootstrap.Modal.getOrCreateInstance(patientRescheduleModalEl);
+    }
+
+    if (patientRescheduleDateEl) {
+        patientRescheduleDateEl.min = todayIso;
+        patientRescheduleDateEl.addEventListener('change', function() {
+            loadPatientRescheduleTimeslots();
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.patient-resched-btn');
+        if (!btn) return;
+
+        const appointmentId = String(btn.getAttribute('data-appointment-id') || '').trim();
+        const doctorId = String(btn.getAttribute('data-doctor-id') || '').trim();
+        const currentDate = String(btn.getAttribute('data-current-date') || '').trim();
+
+        if (!appointmentId || !doctorId) {
+            showBookingToast('Unable to open reschedule request. Missing appointment details.', 'danger');
+            return;
+        }
+
+        if (patientRescheduleAppointmentIdEl) patientRescheduleAppointmentIdEl.value = appointmentId;
+        if (patientRescheduleDoctorIdEl) patientRescheduleDoctorIdEl.value = doctorId;
+        if (patientRescheduleDateEl) {
+            patientRescheduleDateEl.value = currentDate ? String(currentDate).slice(0, 10) : '';
+        }
+        if (patientRescheduleNoteEl) {
+            patientRescheduleNoteEl.value = '';
+        }
+
+        loadPatientRescheduleTimeslots();
+        if (patientRescheduleModal) patientRescheduleModal.show();
+    });
+
+    if (submitPatientRescheduleBtn) {
+        submitPatientRescheduleBtn.addEventListener('click', async function() {
+            const appointmentId = patientRescheduleAppointmentIdEl ? String(patientRescheduleAppointmentIdEl.value || '').trim() : '';
+            const doctorId = patientRescheduleDoctorIdEl ? String(patientRescheduleDoctorIdEl.value || '').trim() : '';
+            const requestedDate = patientRescheduleDateEl ? String(patientRescheduleDateEl.value || '').trim() : '';
+            const requestedTimeslot = patientRescheduleTimeslotEl ? String(patientRescheduleTimeslotEl.value || '').trim() : '';
+            const requestNote = patientRescheduleNoteEl ? String(patientRescheduleNoteEl.value || '').trim() : '';
+
+            if (!appointmentId || !doctorId || !requestedDate || !requestedTimeslot) {
+                showBookingToast('Please select date and available slot for your request.', 'warning');
+                return;
+            }
+
+            submitPatientRescheduleBtn.disabled = true;
+            try {
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                fd.append('requested_doctor_id', doctorId);
+                fd.append('requested_date', requestedDate);
+                fd.append('requested_timeslot_id', requestedTimeslot);
+                fd.append('request_note', requestNote);
+
+                const r = await fetch('../assets/api/appointments/request_reschedule.php', {
+                    method: 'POST',
+                    body: fd
+                });
+                const j = await r.json();
+
+                if (!j.success) {
+                    showBookingToast(j.message || 'Failed to submit reschedule request.', 'danger');
+                    return;
+                }
+
+                if (patientRescheduleModal) patientRescheduleModal.hide();
+                showBookingToast(j.message || 'Reschedule request submitted.', 'success');
+
+                const triggerBtn = document.querySelector('.patient-resched-btn[data-appointment-id="' + appointmentId + '"]');
+                if (triggerBtn) {
+                    const td = triggerBtn.closest('td');
+                    if (td) {
+                        td.innerHTML = '<span class="badge bg-warning text-dark">Reschedule Pending Approval</span>';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                showBookingToast('Server error while submitting request.', 'danger');
+            } finally {
+                submitPatientRescheduleBtn.disabled = false;
+            }
         });
     }
 
@@ -782,6 +1021,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         appointmentId: resp.appointment_id,
                         date: selectedDate,
                         doctor: selectedDoctor,
+                        doctorId: doctorSelect ? String(doctorSelect.value || '') : '',
                         slot: selectedSlot,
                         reason: selectedReason,
                         status: resp.status || 'scheduled'

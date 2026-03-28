@@ -4,10 +4,31 @@ check_session(['secretary']);
 $csrf_token = security_generate_csrf_token();
 // include database to show queue counts in sidebar (use include_once to avoid re-definitions)
 include_once '../config/database.php';
+include_once '../config/system_logs.php';
 
 // Handle AJAX API requests before HTML output
 $page = $_GET['page'] ?? '';
 $action = $_GET['action'] ?? '';
+
+if ($action === '' && isset($_POST['action'])) {
+    $action = (string)$_POST['action'];
+}
+
+if (function_exists('log_system_event') && $_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
+    $normalizedAction = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$action));
+    $entityType = preg_replace('/[^a-z0-9_\.-]/i', '_', strtolower((string)$page));
+    $isViewOnlyAction = in_array($normalizedAction, ['view', 'open', 'show', 'list', 'read', 'index'], true) || str_starts_with($normalizedAction, 'view_');
+    if ($normalizedAction !== '' && !$isViewOnlyAction) {
+        log_system_event(
+            $conn,
+            'secretary.change.' . $normalizedAction,
+            $entityType !== '' ? $entityType : 'secretary_module',
+            null,
+            'Secretary data change action executed: page=' . $page . ', action=' . $action,
+            (int)($_SESSION['user_id'] ?? 0)
+        );
+    }
+}
 
 if ($page === 'billing' && $action === 'record_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
@@ -43,6 +64,30 @@ try {
     error_log('Error computing pendingCount: ' . $e->getMessage());
     $pendingCount = 0;
 }
+
+$header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
+if ($header_display_name === '') {
+    $header_display_name = (string)($_SESSION['email'] ?? 'User');
+}
+
+$role_key = strtolower((string)($_SESSION['role'] ?? ''));
+switch ($role_key) {
+    case 'admin':
+        $header_role_label = 'Administrator';
+        break;
+    case 'doctor':
+        $header_role_label = 'Doctor';
+        break;
+    case 'secretary':
+        $header_role_label = 'Secretary';
+        break;
+    case 'patient':
+        $header_role_label = 'Patient';
+        break;
+    default:
+        $header_role_label = 'User';
+        break;
+}
 ?>
 
 <!DOCTYPE html>
@@ -71,8 +116,8 @@ try {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260316-2" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260316-2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
 </head>
 
 <body>
@@ -84,7 +129,7 @@ try {
                 <img src="../assets/img/main_logo.png" alt="">
                 <div class="ms-2">
                     <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
-                    <small class="d-none d-lg-block text-muted">Secretary</small>
+                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
             <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
@@ -93,8 +138,10 @@ try {
         </div>
 
         <div class="header-search">
-            <input type="text" placeholder="Search..." class="search-input" id="secretarySearch" name="search">
-            <button class="search-btn">Search</button>
+            <div class="search-input-wrap">
+                <input type="text" placeholder="Search..." class="search-input" id="secretarySearch" name="search">
+                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
+            </div>
         </div>
 
         <nav class="header-nav ms-auto">
@@ -110,6 +157,7 @@ try {
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
                         <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
                 

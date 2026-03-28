@@ -54,7 +54,7 @@ $login_captcha_question = build_login_captcha_question();
     <title>Azucena's Dental Clinic</title>
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="assets/css/landing-style.css?v=20260316" rel="stylesheet">
+    <link href="assets/css/landing-style.css?v=20260328-theme3" rel="stylesheet">
 </head>
 
 <body>
@@ -299,7 +299,7 @@ $login_captcha_question = build_login_captcha_question();
                     <div class="mt-4 text-center">
                         <p class="mb-2" style="color: #1e293b; font-size: 0.9rem;">Don't have an account?</p>
                         <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal"
-                            style="font-weight: 700; color: #5f43b2; text-decoration: none;">Create Account</a>
+                            style="font-weight: 700; color: #1173c1; text-decoration: none;">Create Account</a>
                     </div>
                 </div>
             </div>

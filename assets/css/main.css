@@ -3,31 +3,33 @@
    ======================================== */
 
 :root {
-    --primary-color: #5f43b2;
-    --primary-hover: #4f3796;
-    --profile-primary-color: #0066ff;
-    --profile-primary-hover: #0052cc;
-    --bs-primary: #5f43b2;
-    --bs-primary-rgb: 95, 67, 178;
-    --bs-info: #5f43b2;
-    --bs-info-rgb: 95, 67, 178;
-    --bs-link-color: #5f43b2;
-    --bs-link-hover-color: #4f3796;
-    --bs-focus-ring-color: rgba(95, 67, 178, 0.25);
-    --bs-nav-pills-link-active-bg: #5f43b2;
-    --bs-pagination-active-bg: #5f43b2;
-    --bs-pagination-active-border-color: #5f43b2;
-    --bs-dropdown-link-active-bg: #5f43b2;
-    --sidebar-bg: #f8f9fa;
-    --sidebar-text: #333;
-    --header-bg: #fff;
-    --border-color: #ddd;
+    --primary-color: #1173c1;
+    --primary-hover: #0a4f88;
+    --primary-gradient: #1173c1;
+    --primary-gradient-hover: #0a4f88;
+    --profile-primary-color: #1173c1;
+    --profile-primary-hover: #0a4f88;
+    --bs-primary: #1173c1;
+    --bs-primary-rgb: 17, 115, 193;
+    --bs-info: #1173c1;
+    --bs-info-rgb: 17, 115, 193;
+    --bs-link-color: #1173c1;
+    --bs-link-hover-color: #0a4f88;
+    --bs-focus-ring-color: rgba(17, 115, 193, 0.25);
+    --bs-nav-pills-link-active-bg: #1173c1;
+    --bs-pagination-active-bg: #1173c1;
+    --bs-pagination-active-border-color: #1173c1;
+    --bs-dropdown-link-active-bg: #1173c1;
+    --sidebar-bg: #f3f8ff;
+    --sidebar-text: #1f3347;
+    --header-bg: var(--primary-color);
+    --border-color: #d6e4f2;
     --light-bg: #f5f6fa;
     --text-muted: #6c757d;
     --success: #28a745;
     --danger: #dc3545;
-    --warning: #ffc107;
-    --info: #5f43b2;
+    --warning: #1173c1;
+    --info: #1173c1;
 }
 
 body {
@@ -40,10 +42,10 @@ body {
 
 /* ========== HEADER ========== */
 #header {
-    background-color: var(--header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background: var(--header-bg);
+    border-bottom: 0;
     padding: 10px 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 8px 24px rgba(10, 79, 136, 0.2);
     z-index: 100;
     width: 100%;
     top: 0;
@@ -53,7 +55,7 @@ body {
     display: flex;
     align-items: center;
     text-decoration: none;
-    color: var(--sidebar-text);
+    color: #ffffff;
     font-weight: 600;
 }
 
@@ -72,13 +74,13 @@ body {
 
 #header .logo small {
     font-size: 12px;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .toggle-sidebar-btn {
     cursor: pointer;
     font-size: 24px;
-    color: var(--sidebar-text);
+    color: #ffffff;
     display: inline-block;
     padding: 8px 12px;
     margin-left: 15px;
@@ -88,12 +90,13 @@ body {
 }
 
 .toggle-sidebar-btn:hover {
-    color: var(--primary-color);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
 }
 
 .header-search {
     display: flex;
-    gap: 8px;
     align-items: center;
     margin: 0 auto;
     flex: 1;
@@ -101,37 +104,50 @@ body {
     justify-content: center;
 }
 
+.search-input-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+}
+
 .search-input {
-    padding: 8px 12px;
+    padding: 8px 38px 8px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 30px;
     font-size: 14px;
-    background-color: #f0f1f3;
-    min-width: 350px;
+    background-color: #f8fbff;
+    width: 100%;
+    box-shadow: 0 4px 12px rgba(10, 79, 136, 0.12);
+}
+
+.search-input-icon {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #5f7e95;
+    pointer-events: none;
 }
 
 .search-input::placeholder {
     color: var(--text-muted);
 }
 
-.search-btn {
-    padding: 8px 20px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    transition: background-color 0.3s ease;
-}
-
-.search-btn:hover {
-    background-color: var(--primary-hover);
+.search-input:focus {
+    outline: none;
+    border-color: #1173c1;
+    box-shadow: 0 0 0 0.12rem rgba(17, 115, 193, 0.16), 0 4px 12px rgba(10, 79, 136, 0.16);
 }
 
 .header-nav {
     margin-left: auto;
+}
+
+#header .text-muted,
+#header small,
+#header .header-nav small {
+    color: rgba(255, 255, 255, 0.92) !important;
 }
 
 .header-nav .nav-item {
@@ -140,25 +156,25 @@ body {
 
 .header-nav .nav-link {
     position: relative;
-    color: var(--sidebar-text) !important;
+    color: #ffffff !important;
     text-decoration: none;
     padding: 8px 15px;
     margin: 0 5px;
-    border-radius: 4px;
+    border-radius: 8px;
     transition: background-color 0.2s ease;
 }
 
 .header-nav .nav-link:hover {
-    background-color: rgba(0, 0, 0, 0.08);
+    background-color: transparent;
 }
 
 .header-nav .nav-link:active {
-    background-color: var(--primary-color);
+    background-color: transparent;
     color: white !important;
 }
 
 .header-nav .nav-profile:active {
-    background-color: var(--profile-primary-color);
+    background-color: transparent;
     color: #fff !important;
 }
 
@@ -170,8 +186,8 @@ body {
     position: absolute;
     top: -5px;
     right: 5px;
-    background-color: var(--primary-color);
-    color: white;
+    background-color: #ffffff;
+    color: #0a4f88;
     border-radius: 10px;
     padding: 2px 6px;
     font-size: 10px;
@@ -183,6 +199,14 @@ body {
     margin-right: 10px;
 }
 
+.header-nav .nav-profile .user-display-name {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.92rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 /* ========== SIDEBAR ========== */
 #sidebar {
     position: fixed;
@@ -190,10 +214,10 @@ body {
     top: 0;
     width: 260px;
     height: 100vh;
-    background-color: var(--sidebar-bg);
+    background: var(--sidebar-bg);
     padding-top: 90px;
     overflow-y: auto;
-    border-right: 1px solid var(--border-color);
+    border-right: 1px solid #c9deef;
     z-index: 99;
     transition: width 0.3s ease;
 }
@@ -241,34 +265,36 @@ body.toggle-sidebar .footer {
 
 .sidebar-nav .nav-link:not(.active):hover,
 .sidebar-nav .nav-link:not(.active):focus {
-    background-color: rgba(0, 0, 0, 0.08) !important;
-    color: var(--sidebar-text) !important;
+    background-color: rgba(17, 115, 193, 0.12) !important;
+    color: #0c3f67 !important;
     border-left-color: transparent !important;
     border-radius: 30px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 4px 12px rgba(10, 79, 136, 0.12) !important;
     padding: 12px 20px !important;
 }
 
 .sidebar-nav .nav-link.active {
     background-color: var(--primary-color) !important;
+    background-image: none !important;
     color: #fff !important;
     border-left-color: transparent !important;
     border-radius: 30px !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+    box-shadow: 0 8px 18px rgba(10, 79, 136, 0.24) !important;
     padding: 12px 20px !important;
     font-weight: 600 !important;
 }
 
 .sidebar-nav .nav-link.active:hover,
 .sidebar-nav .nav-link.active:focus {
-    background-color: var(--primary-color) !important;
+    background-color: var(--primary-hover) !important;
+    background-image: none !important;
     color: #fff !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+    box-shadow: 0 8px 18px rgba(10, 79, 136, 0.24) !important;
 }
 
 .sidebar-nav .nav-link:active {
     transform: none !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18) !important;
+    box-shadow: 0 8px 18px rgba(10, 79, 136, 0.24) !important;
 }
 
 .sidebar-nav .nav-link.collapsed {
@@ -359,22 +385,24 @@ body.toggle-sidebar .footer {
 
 .search-bar button {
     padding: 12px 30px;
-    background-color: var(--primary-color);
+    background: var(--primary-color);
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: 30px;
     cursor: pointer;
     font-weight: 600;
-    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 12px rgba(10, 79, 136, 0.2);
+    transition: background-color 0.3s ease, box-shadow 0.2s ease;
 }
 
 .search-bar button:hover {
-    background-color: var(--primary-hover);
+    background: var(--primary-hover);
+    box-shadow: 0 6px 14px rgba(10, 79, 136, 0.24);
 }
 
 .btn-add-new {
     padding: 10px 20px;
-    background-color: var(--primary-color);
+    background: var(--primary-color);
     color: white;
     border: none;
     border-radius: 6px;
@@ -387,7 +415,7 @@ body.toggle-sidebar .footer {
 }
 
 .btn-add-new:hover {
-    background-color: var(--primary-hover);
+    background: var(--primary-hover);
 }
 
 .btn-primary {
@@ -397,7 +425,7 @@ body.toggle-sidebar .footer {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-focus-shadow-rgb: 17, 115, 193;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -412,6 +440,7 @@ body.toggle-sidebar .footer {
 .btn-primary.active,
 .show > .btn-primary.dropdown-toggle {
     background-color: var(--primary-color) !important;
+    background-image: none !important;
     border-color: var(--primary-color) !important;
     color: #fff !important;
 }
@@ -422,6 +451,7 @@ body.toggle-sidebar .footer {
 .btn-primary.active:hover,
 .show > .btn-primary.dropdown-toggle:hover {
     background-color: var(--primary-hover) !important;
+    background-image: none !important;
     border-color: var(--primary-hover) !important;
     color: #fff !important;
 }
@@ -432,7 +462,7 @@ body.toggle-sidebar .footer {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-color);
     --bs-btn-hover-border-color: var(--primary-color);
-    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-focus-shadow-rgb: 17, 115, 193;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -457,6 +487,7 @@ body.toggle-sidebar .footer {
 .btn-outline-primary.active:hover,
 .show > .btn-outline-primary.dropdown-toggle:hover {
     background-color: var(--primary-color) !important;
+    background-image: none !important;
     border-color: var(--primary-color) !important;
     color: #fff !important;
 }
@@ -468,7 +499,7 @@ body.toggle-sidebar .footer {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-focus-shadow-rgb: 17, 115, 193;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -483,6 +514,7 @@ body.toggle-sidebar .footer {
 .btn-info.active,
 .show > .btn-info.dropdown-toggle {
     background-color: var(--primary-color) !important;
+    background-image: none !important;
     border-color: var(--primary-color) !important;
     color: #fff !important;
 }
@@ -493,6 +525,7 @@ body.toggle-sidebar .footer {
 .btn-info.active:hover,
 .show > .btn-info.dropdown-toggle:hover {
     background-color: var(--primary-hover) !important;
+    background-image: none !important;
     border-color: var(--primary-hover) !important;
     color: #fff !important;
 }
@@ -503,7 +536,7 @@ body.toggle-sidebar .footer {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-color);
     --bs-btn-hover-border-color: var(--primary-color);
-    --bs-btn-focus-shadow-rgb: 95, 67, 178;
+    --bs-btn-focus-shadow-rgb: 17, 115, 193;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -528,8 +561,83 @@ body.toggle-sidebar .footer {
 .btn-outline-info.active:hover,
 .show > .btn-outline-info.dropdown-toggle:hover {
     background-color: var(--primary-color) !important;
+    background-image: none !important;
     border-color: var(--primary-color) !important;
     color: #fff !important;
+}
+
+.btn-warning {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: var(--primary-color);
+    --bs-btn-border-color: var(--primary-color);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--primary-hover);
+    --bs-btn-hover-border-color: var(--primary-hover);
+    --bs-btn-focus-shadow-rgb: 17, 115, 193;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--primary-hover);
+    --bs-btn-active-border-color: var(--primary-hover);
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: var(--primary-color);
+    --bs-btn-disabled-border-color: var(--primary-color);
+}
+
+.btn-warning,
+.btn-warning:focus,
+.btn-warning:active,
+.btn-warning.active,
+.show > .btn-warning.dropdown-toggle {
+    background-color: var(--primary-color) !important;
+    background-image: none !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.btn-warning:hover,
+.btn-warning:focus:hover,
+.btn-warning:active:hover,
+.btn-warning.active:hover,
+.show > .btn-warning.dropdown-toggle:hover {
+    background-color: var(--primary-hover) !important;
+    background-image: none !important;
+    border-color: var(--primary-hover) !important;
+    color: #fff !important;
+}
+
+.btn-outline-warning,
+.btn-outline-warning:focus,
+.btn-outline-warning:active,
+.btn-outline-warning.active,
+.show > .btn-outline-warning.dropdown-toggle {
+    background-color: transparent !important;
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+}
+
+.btn-outline-warning:hover,
+.btn-outline-warning:focus:hover,
+.btn-outline-warning:active:hover,
+.btn-outline-warning.active:hover,
+.show > .btn-outline-warning.dropdown-toggle:hover {
+    background-color: var(--primary-color) !important;
+    background-image: none !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.bg-warning,
+.text-bg-warning,
+.badge.bg-warning,
+.badge.text-bg-warning,
+.alert-warning {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+.text-warning,
+a.text-warning {
+    color: var(--primary-color) !important;
 }
 
 .bg-primary,
@@ -600,18 +708,22 @@ a.text-info,
 }
 
 .fc .fc-button-primary {
-    background-color: var(--primary-color) !important;
-    border-color: var(--primary-color) !important;
-    color: #fff !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
 }
 
 .fc .fc-button-primary:hover,
 .fc .fc-button-primary:focus,
 .fc .fc-button-primary:active,
 .fc .fc-button-primary.fc-button-active {
-    background-color: var(--primary-hover) !important;
-    border-color: var(--primary-hover) !important;
-    color: #fff !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border-color: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
 }
 
 /* ========== TABLE STYLES ========== */
@@ -688,23 +800,25 @@ table a:hover {
 }
 
 .btn-view {
-    background-color: #e7f3ff;
-    color: var(--primary-color);
+    background: var(--primary-color);
+    color: #fff;
 }
 
 .btn-view:hover {
-    background-color: var(--primary-color);
-    color: white;
+    background: var(--primary-hover);
+    color: #fff;
 }
 
 .btn-edit {
-    background-color: #fff3cd;
-    color: #856404;
+    background-color: rgba(17, 115, 193, 0.1);
+    border: 1px solid rgba(17, 115, 193, 0.28);
+    color: #0b4c80;
 }
 
 .btn-edit:hover {
-    background-color: var(--warning);
-    color: white;
+    background: var(--primary-color);
+    border-color: transparent;
+    color: #fff;
 }
 
 .btn-remove {
@@ -743,6 +857,7 @@ table a:hover {
     bottom: 40px;
     z-index: 9999;
     background-color: var(--primary-color);
+    background-image: none;
     width: 44px;
     height: 44px;
     border-radius: 50%;
@@ -761,6 +876,7 @@ table a:hover {
 
 .back-to-top:hover {
     background-color: var(--primary-hover);
+    background-image: none;
     bottom: 50px;
 }
 
