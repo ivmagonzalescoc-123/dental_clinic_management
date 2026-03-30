@@ -267,6 +267,7 @@ try {
 
     // Keep appointment-level service links in selected_services (appointments.service_id is removed).
     $existingServiceLinkIds = [];
+    $existingServiceIds = [];
     $findLinks = $conn->prepare('SELECT selected_service_id FROM selected_services WHERE appointment_id = ?');
     if ($findLinks) {
         $findLinks->bind_param('i', $appointment_id);
@@ -276,6 +277,26 @@ try {
             $existingServiceLinkIds[] = (int)$linkRow['selected_service_id'];
         }
         $findLinks->close();
+    }
+
+    $findExistingServices = $conn->prepare('SELECT service_id FROM selected_services WHERE appointment_id = ?');
+    if ($findExistingServices) {
+        $findExistingServices->bind_param('i', $appointment_id);
+        $findExistingServices->execute();
+        $existingServiceRes = $findExistingServices->get_result();
+        while ($existingServiceRes && ($existingServiceRow = $existingServiceRes->fetch_assoc())) {
+            $sid = (int)($existingServiceRow['service_id'] ?? 0);
+            if ($sid > 0) {
+                $existingServiceIds[$sid] = $sid;
+            }
+        }
+        $findExistingServices->close();
+    }
+
+    // Keep the originally selected appointment services in addition to any clinical recommendations.
+    // This ensures base checkup/service pricing is always part of billing.
+    if (!empty($existingServiceIds)) {
+        $service_ids = normalize_positive_int_list(array_merge($service_ids, array_values($existingServiceIds)));
     }
 
     if (!empty($existingServiceLinkIds)) {

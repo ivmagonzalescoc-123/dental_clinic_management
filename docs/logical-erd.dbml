@@ -1,0 +1,259 @@
+Table role {
+  role_id int [pk]
+  role_name varchar
+  description text
+}
+
+Table users {
+  user_id int [pk]
+  role_id int
+  added_by int
+  first_name varchar
+  last_name varchar
+  email varchar
+  is_active boolean
+  work_type varchar
+}
+
+Table patients {
+  patient_id int [pk]
+  added_by int
+  first_name varchar
+  last_name varchar
+  email varchar
+}
+
+Table appointments {
+  appointment_id int [pk]
+  appointment_date date
+  timeslot_id int
+  user_id int
+  rescheduled_from int
+  patient_id int
+  status varchar
+}
+
+Table timeslot {
+  timeslot_id int [pk]
+  doctor_id int
+  slot_date date
+  start_time time
+  end_time time
+  status varchar
+}
+
+Table appointment_reschedule_requests {
+  request_id int [pk]
+  appointment_id int
+  patient_id int
+  requested_doctor_id int
+  reviewed_by int
+  requested_date date
+  status varchar
+}
+
+Table billing {
+  billing_id int [pk]
+  appointment_id int [unique]
+  user_id int
+  processed_by int
+  total_amount decimal
+  status varchar
+}
+
+Table clinical_records {
+  record_id int [pk]
+  appointment_id int
+  doctor_id int
+  patient_id int
+  submitted_by int
+  status varchar
+}
+
+Table patient_schedules {
+  schedule_id int [pk]
+  appointment_id int
+  user_id int
+  scheduled_start datetime
+  scheduled_end datetime
+  status varchar
+}
+
+Table schedule_reminders {
+  reminder_id int [pk]
+  patient_schedule_id int
+  remind_at datetime
+  channel varchar
+}
+
+Table services {
+  service_id int [pk]
+  added_by int
+  service_name varchar
+  initial_price decimal
+}
+
+Table selected_services {
+  selected_service_id int [pk]
+  appointment_id int
+  service_id int
+}
+
+Table treatments {
+  treatment_id int [pk]
+  treatment_name varchar
+  treatment_type varchar
+}
+
+Table selected_treatments {
+  selected_treatment_id int [pk]
+  selected_service_id int
+  treatment_id int
+  status varchar
+}
+
+Table prescriptions {
+  prescription_id int [pk]
+  appointment_id int
+  selected_treatment_id int
+}
+
+Table timeslot_service {
+  id int [pk]
+  service_id int [unique]
+  duration_minutes int
+  buffer_minutes int
+}
+
+Table specialization {
+  specialization_id int [pk]
+  specialization_name varchar
+}
+
+Table dentist_specialization {
+  doctor_specialized_id int [pk]
+  user_id int
+  specialization_id int
+}
+
+Table doctor_availability {
+  availability_id int [pk]
+  user_id int
+  weekday int
+}
+
+Table doctor_leaves {
+  leave_id int [pk]
+  user_id int
+  leave_start_date date
+  leave_end_date date
+  status varchar
+}
+
+Table tooth {
+  tooth_id int [pk]
+  tooth_number varchar
+}
+
+Table tooth_status_type {
+  status_type_id int [pk]
+  tooth_id int
+  category varchar
+}
+
+Table tooth_status {
+  tooth_status_id int [pk]
+  tooth_selected int
+  status_type_id int
+  selected_treatment_id int
+  status varchar
+}
+
+Table tooth_images {
+  image_id int [pk]
+  selected_treatment_id int
+}
+
+Table user_logs {
+  user_log_id int [pk]
+  user_id int
+}
+
+Table patient_logs {
+  patient_log_id int [pk]
+  patient_id int
+}
+
+Table patient_profiling_audit {
+  audit_id int [pk]
+  patient_id int
+}
+
+Table system_logs {
+  system_log_id int [pk]
+  user_id int
+}
+
+Table notifications {
+  notification_id int [pk]
+  user_id int
+}
+
+Table backup {
+  backup_id int [pk]
+  user_id int
+}
+
+Ref: users.role_id > role.role_id
+Ref: users.added_by > users.user_id
+Ref: patients.added_by > users.user_id
+
+Ref: doctor_availability.user_id > users.user_id
+Ref: doctor_leaves.user_id > users.user_id
+Ref: dentist_specialization.user_id > users.user_id
+Ref: dentist_specialization.specialization_id > specialization.specialization_id
+
+Ref: timeslot.doctor_id > users.user_id
+Ref: appointments.patient_id > patients.patient_id
+Ref: appointments.user_id > users.user_id
+Ref: appointments.timeslot_id > timeslot.timeslot_id
+Ref: appointments.rescheduled_from > appointments.appointment_id
+
+Ref: billing.appointment_id > appointments.appointment_id
+Ref: billing.user_id > users.user_id
+Ref: billing.processed_by > users.user_id
+
+Ref: clinical_records.appointment_id > appointments.appointment_id
+Ref: clinical_records.doctor_id > users.user_id
+Ref: clinical_records.patient_id > patients.patient_id
+Ref: clinical_records.submitted_by > users.user_id
+
+Ref: patient_schedules.appointment_id > appointments.appointment_id
+Ref: patient_schedules.user_id > users.user_id
+Ref: schedule_reminders.patient_schedule_id > patient_schedules.schedule_id
+
+Ref: appointment_reschedule_requests.appointment_id > appointments.appointment_id
+Ref: appointment_reschedule_requests.patient_id > patients.patient_id
+Ref: appointment_reschedule_requests.requested_doctor_id > users.user_id
+Ref: appointment_reschedule_requests.reviewed_by > users.user_id
+
+Ref: selected_services.appointment_id > appointments.appointment_id
+Ref: selected_services.service_id > services.service_id
+Ref: selected_treatments.selected_service_id > selected_services.selected_service_id
+Ref: selected_treatments.treatment_id > treatments.treatment_id
+Ref: prescriptions.appointment_id > appointments.appointment_id
+Ref: prescriptions.selected_treatment_id > selected_treatments.selected_treatment_id
+Ref: timeslot_service.service_id > services.service_id
+
+Ref: tooth_status.tooth_selected > tooth.tooth_id
+Ref: tooth_status.status_type_id > tooth_status_type.status_type_id
+Ref: tooth_status.selected_treatment_id > selected_treatments.selected_treatment_id
+Ref: tooth_status_type.tooth_id > tooth.tooth_id
+Ref: tooth_images.selected_treatment_id > selected_treatments.selected_treatment_id
+
+Ref: user_logs.user_id > users.user_id
+Ref: patient_logs.patient_id > patients.patient_id
+Ref: patient_profiling_audit.patient_id > patients.patient_id
+Ref: system_logs.user_id > users.user_id
+Ref: notifications.user_id > users.user_id
+Ref: backup.user_id > users.user_id
