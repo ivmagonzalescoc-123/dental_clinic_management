@@ -1,13 +1,34 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success'=>false,'message'=>'Method not allowed']);
+    exit;
+}
 
 $role = $_SESSION['role'] ?? '';
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!in_array($role, ['admin','secretary','doctor'])) {
     http_response_code(403);
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
+    exit;
+}
+if (!capabilities_can('appointment.manage')) {
+    http_response_code(403);
+    echo json_encode(['success'=>false,'message'=>'Access denied: missing appointment management permission.']);
+    exit;
+}
+
+$csrfToken = $_POST['csrf_token'] ?? '';
+if (!security_validate_csrf_token($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success'=>false,'message'=>'Invalid CSRF token. Please refresh and try again.']);
     exit;
 }
 
@@ -43,6 +64,17 @@ try {
     $ust->execute();
     $affected = $ust->affected_rows;
     $ust->close();
+
+    if ($affected > 0 && function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'schedule.cancel',
+            'patient_schedules',
+            $schedule_id,
+            'Cancelled schedule for appointment_id=' . (int)($sch['appointment_id'] ?? 0),
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
 
     echo json_encode(['success'=>true,'message'=>'Schedule cancelled','schedule_id'=>$schedule_id,'affected'=>$affected]);
 } catch (Exception $e) {

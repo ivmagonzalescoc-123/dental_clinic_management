@@ -28,7 +28,6 @@ if ($patient_id) {
 <div class="card border-0">
 	<div class="card-header d-flex justify-content-between align-items-center">
 		<h5 class="card-title mb-0">Transactions</h5>
-		<a href="patient.php?page=transactions_export" class="btn btn-sm btn-outline-secondary">Export</a>
 	</div>
 	<div class="card-body">
 		<?php if (empty($billings)): ?>

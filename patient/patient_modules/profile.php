@@ -24,15 +24,104 @@ if ($patientId > 0) {
         <?php if (!$patient): ?>
             <div class="alert alert-warning">Unable to load account details.</div>
         <?php else: ?>
-            <div class="row g-3">
-                <div class="col-md-6"><strong>Name:</strong> <?php echo htmlspecialchars(trim(($patient['first_name'] ?? '') . ' ' . ($patient['middle_name'] ?? '') . ' ' . ($patient['last_name'] ?? ''))); ?></div>
-                <div class="col-md-6"><strong>Email:</strong> <?php echo htmlspecialchars((string)($patient['email'] ?? '')); ?></div>
-                <div class="col-md-6"><strong>Phone:</strong> <?php echo htmlspecialchars((string)($patient['phone_number'] ?? '')); ?></div>
-                <div class="col-md-6"><strong>Date of Birth:</strong> <?php echo htmlspecialchars((string)($patient['date_of_birth'] ?? '')); ?></div>
-                <div class="col-md-6"><strong>Gender:</strong> <?php echo htmlspecialchars((string)($patient['gender'] ?? '')); ?></div>
-                <div class="col-md-6"><strong>Created:</strong> <?php echo htmlspecialchars((string)($patient['created_at'] ?? '')); ?></div>
-                <div class="col-12"><strong>Address:</strong> <?php echo htmlspecialchars((string)($patient['address'] ?? '')); ?></div>
-            </div>
+            <div id="profileAlert"></div>
+            <form id="profileForm" class="row g-3" novalidate>
+                <div class="col-md-4">
+                    <label class="form-label">First Name</label>
+                    <input type="text" class="form-control" id="firstName" value="<?php echo htmlspecialchars((string)($patient['first_name'] ?? '')); ?>" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Middle Name</label>
+                    <input type="text" class="form-control" id="middleName" value="<?php echo htmlspecialchars((string)($patient['middle_name'] ?? '')); ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" class="form-control" id="lastName" value="<?php echo htmlspecialchars((string)($patient['last_name'] ?? '')); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" value="<?php echo htmlspecialchars((string)($patient['email'] ?? '')); ?>" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-control" id="phoneNumber" value="<?php echo htmlspecialchars((string)($patient['phone_number'] ?? '')); ?>">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="form-control" id="dateOfBirth" value="<?php echo htmlspecialchars((string)($patient['date_of_birth'] ?? '')); ?>">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Gender</label>
+                    <select class="form-select" id="gender">
+                        <option value="">Select gender</option>
+                        <option value="male" <?php echo strtolower((string)($patient['gender'] ?? '')) === 'male' ? 'selected' : ''; ?>>Male</option>
+                        <option value="female" <?php echo strtolower((string)($patient['gender'] ?? '')) === 'female' ? 'selected' : ''; ?>>Female</option>
+                        <option value="other" <?php echo strtolower((string)($patient['gender'] ?? '')) === 'other' ? 'selected' : ''; ?>>Other</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Address</label>
+                    <textarea class="form-control" id="address" rows="2"><?php echo htmlspecialchars((string)($patient['address'] ?? '')); ?></textarea>
+                </div>
+                <div class="col-12 d-flex align-items-center justify-content-between">
+                    <small class="text-muted">Account created: <?php echo htmlspecialchars((string)($patient['created_at'] ?? '')); ?></small>
+                    <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+                </div>
+            </form>
         <?php endif; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('profileForm');
+    if (!form) return;
+
+    const alertBox = document.getElementById('profileAlert');
+    const submitBtn = document.getElementById('saveProfileBtn');
+
+    function showAlert(message, type) {
+        alertBox.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const payload = {
+            csrf_token: <?php echo json_encode($csrf_token ?? ''); ?>,
+            first_name: document.getElementById('firstName').value.trim(),
+            middle_name: document.getElementById('middleName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            phone_number: document.getElementById('phoneNumber').value.trim(),
+            date_of_birth: document.getElementById('dateOfBirth').value,
+            gender: document.getElementById('gender').value,
+            address: document.getElementById('address').value.trim()
+        };
+
+        try {
+            const resp = await fetch('../assets/api/auth/update_profile_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.success) {
+                showAlert(data.message || 'Unable to update profile.', 'danger');
+            } else {
+                showAlert('Profile updated successfully. Reloading...', 'success');
+                setTimeout(function () {
+                    window.location.href = 'patient.php?page=profile';
+                }, 700);
+            }
+        } catch (err) {
+            showAlert('Unable to update profile right now. Please try again.', 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save Changes';
+        }
+    });
+});
+</script>

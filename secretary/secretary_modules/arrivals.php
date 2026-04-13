@@ -32,6 +32,7 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 </div>
 
 <script>
+const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 const ARR_TODAY    = <?= json_encode($today) ?>;
 const ARR_TOMORROW = <?= json_encode($tomorrow) ?>;
 let currentArrivalDate = ARR_TODAY;
@@ -128,12 +129,17 @@ async function doArrived(id) {
     if (!confirm('Mark this patient as arrived?')) return;
     const fd = new FormData();
     fd.append('appointment_id', id);
+    fd.append('csrf_token', secretaryCsrfToken);
     try {
         const resp = await fetch('../assets/api/arrivals/mark_arrived.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
             const b = document.getElementById('secretaryArrivalsBadge');
-            if (b) b.textContent = Math.max(0, (parseInt(b.textContent) || 1) - 1);
+            if (b) {
+                const nextCount = Math.max(0, (parseInt(b.textContent, 10) || 1) - 1);
+                b.textContent = nextCount;
+                b.style.display = nextCount > 0 ? '' : 'none';
+            }
             showArrToast(data.message, 'success');
             loadArrivalSchedule(currentArrivalDate);
         } else {
@@ -146,12 +152,17 @@ async function doNoShow(id) {
     if (!confirm('Mark this patient as no-show?')) return;
     const fd = new FormData();
     fd.append('appointment_id', id);
+    fd.append('csrf_token', secretaryCsrfToken);
     try {
         const resp = await fetch('../assets/api/arrivals/mark_no_show.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
             const b = document.getElementById('secretaryArrivalsBadge');
-            if (b) b.textContent = Math.max(0, (parseInt(b.textContent) || 1) - 1);
+            if (b) {
+                const nextCount = Math.max(0, (parseInt(b.textContent, 10) || 1) - 1);
+                b.textContent = nextCount;
+                b.style.display = nextCount > 0 ? '' : 'none';
+            }
             showArrToast('Marked as no-show.', 'warning');
             loadArrivalSchedule(currentArrivalDate);
         } else {

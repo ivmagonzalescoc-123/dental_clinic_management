@@ -7,7 +7,15 @@ ini_set('error_log', dirname(__FILE__) . '/error.log');
 session_start();
 header('Content-Type: application/json');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
+
 try {
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
     include __DIR__ . '/availability_guard.php';
 
@@ -19,6 +27,13 @@ try {
     if ($sessionPatientId <= 0) {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Only patients can submit reschedule requests.']);
+        exit;
+    }
+
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
         exit;
     }
 
@@ -142,6 +157,17 @@ try {
     }
     $requestId = (int)$conn->insert_id;
     $ins->close();
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'appointment.reschedule_request.create',
+            'appointment_reschedule_requests',
+            $requestId,
+            'Requested date=' . $requestedDate . ', requested_doctor_id=' . $requestedDoctorId . ', timeslot_id=' . $requestedTimeslotId,
+            null
+        );
+    }
 
     echo json_encode([
         'success' => true,

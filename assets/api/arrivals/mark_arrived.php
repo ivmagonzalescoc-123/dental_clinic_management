@@ -8,11 +8,32 @@ session_start();
 header('Content-Type: application/json');
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['secretary', 'admin'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Forbidden']);
+    exit;
+}
+if (!capabilities_can('arrivals.manage')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access denied: missing arrival management permission.']);
+    exit;
+}
+
+$csrfToken = $_POST['csrf_token'] ?? '';
+if (!security_validate_csrf_token($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
     exit;
 }
 
@@ -43,6 +64,11 @@ try {
 
     if (!$appt) throw new Exception('Appointment not found or has no timeslot assigned');
 
+    $currentStatus = strtolower((string)($appt['status'] ?? ''));
+    if (!in_array($currentStatus, ['confirmed', 'scheduled', 'checked_in'], true)) {
+        throw new Exception('Cannot mark arrived from current status: ' . $currentStatus);
+    }
+
     // Determine if arriving late (15-min grace period)
     $expectedTs = strtotime($appt['slot_date'] . ' ' . $appt['start_time']);
     $isLate = ($expectedTs && (time() - $expectedTs) > 900);
@@ -55,6 +81,17 @@ try {
     $updA->close();
 
     $conn->commit();
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'arrival.mark_arrived',
+            'appointments',
+            $appointment_id,
+            'Marked checked_in; arrival_status=' . $newStatus,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
 
     echo json_encode([
         'success' => true,

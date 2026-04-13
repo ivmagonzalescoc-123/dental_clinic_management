@@ -7,10 +7,33 @@ ini_set('error_log', dirname(__FILE__) . '/error.log');
 session_start();
 header('Content-Type: application/json');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
+
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
     include __DIR__ . '/availability_guard.php';
     if (!$conn) throw new Exception('Database connection failed');
+
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
+        exit;
+    }
+
+    if (!isset($_SESSION['user_id']) && !isset($_SESSION['patient_id'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Authentication required. Please log in again.']);
+        exit;
+    }
+    capabilities_require_json('appointment.create');
 
     $patient_id            = isset($_POST['patient_id'])            ? (int)$_POST['patient_id']            : 0;
     $appointment_date      = isset($_POST['appointment_date'])      ? trim($_POST['appointment_date'])      : '';
@@ -26,6 +49,21 @@ try {
     $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
 
     $requester_role = $_SESSION['role'] ?? '';
+    $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
+
+    if ($isPatientRequester) {
+        $sessionPatientId = (int)($_SESSION['patient_id'] ?? 0);
+        if ($sessionPatientId <= 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Patient session expired. Please log in again.']);
+            exit;
+        }
+        if ($patient_id !== $sessionPatientId) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'You can only create appointments for your own account.']);
+            exit;
+        }
+    }
 
     if (empty($patient_id) || empty($appointment_date) || empty($user_id)) {
         echo json_encode(['success' => false, 'message' => 'Patient, doctor and appointment date are required!']);
@@ -146,8 +184,6 @@ try {
         }
     }
 
-    $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
-
     if ($isPatientRequester) {
         $is_online_appointment = 1;
     }
@@ -206,6 +242,17 @@ try {
     }
 
     $conn->commit();
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'appointment.create',
+            'appointments',
+            $appointment_id,
+            'Created appointment with status=' . $status . ', doctor_id=' . $user_id . ', timeslot_id=' . $timeslot_id,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
 
     $responseMsg = ($status === 'confirmed')
         ? 'Appointment created and confirmed.'

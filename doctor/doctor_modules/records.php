@@ -138,6 +138,7 @@ if ($stmt) {
         </div>
 
         <script>
+        const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
         // Service map lookup (load names)
         const serviceMapRec = {
             <?php
@@ -293,7 +294,7 @@ if ($stmt) {
                                     if (!confirm('Cancel this schedule?')) return;
                                     btn.disabled = true;
                                     try {
-                                        const fd = new FormData(); fd.append('schedule_id', sid);
+                                        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);
                                         const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
                                         const j = await r.json();
                                         if (j.success) { header.querySelector('strong').textContent = 'CANCELLED'; }
@@ -403,5 +404,5 @@ if ($stmt) {
         });
         document.getElementById('rescheduleSaveBtnRec').addEventListener('click', async function(){
             const sid = document.getElementById('rescheduleScheduleIdRec').value; const start = toServerFormatRec(document.getElementById('rescheduleStartRec').value); const end = toServerFormatRec(document.getElementById('rescheduleEndRec').value);
-            if (!sid || !start) return alert('Start datetime required'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return alert(j.message || 'Failed to reschedule'); alert('Rescheduled'); resModalRec.hide(); location.reload(); } catch(e){ console.error(e); alert('Error'); } this.disabled = false; });
+            if (!sid || !start) return alert('Start datetime required'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); fd.append('csrf_token', doctorCsrfToken); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return alert(j.message || 'Failed to reschedule'); alert('Rescheduled'); resModalRec.hide(); location.reload(); } catch(e){ console.error(e); alert('Error'); } this.disabled = false; });
         </script>

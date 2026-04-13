@@ -2,8 +2,10 @@
 include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/session_check.php';
+include '../../../config/capabilities.php';
 security_start_session();
 check_session(['admin']);
+capabilities_require_web('manage_users', '../../admin.php?page=manage_users&type=patients');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';

@@ -1,8 +1,11 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/capabilities.php';
+include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 security_ensure_work_type_column($conn);
+$csrf_token = security_generate_csrf_token();
 
 $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -23,11 +26,43 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
 $action = $_GET['action'] ?? '';
-$view = $_GET['view'] ?? 'all'; // 'all' | 'today' | 'reschedule'
+$view = $_GET['view'] ?? 'all'; // 'all' | 'today' | 'tomorrow' | 'one_hour' | 'missed' | 'no_show' | 'reschedule'
 $search = $_GET['search'] ?? '';
 
+function appointment_can_transition_secretary(string $from, string $to): bool
+{
+    if ($from === $to) {
+        return true;
+    }
+
+    $matrix = [
+        'scheduled' => ['confirmed', 'cancelled', 'no_show'],
+        'confirmed' => ['checked_in', 'cancelled', 'no_show'],
+        'checked_in' => ['in_progress', 'no_show'],
+        'in_progress' => ['completed'],
+        'completed' => [],
+        'cancelled' => [],
+        'no_show' => [],
+    ];
+
+    return in_array($to, $matrix[$from] ?? [], true);
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
+    capabilities_require_web('appointment.manage', 'secretary.php?page=appointments&view=' . urlencode($view));
+
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Invalid security token. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
+}
+
 $today = date('Y-m-d');
-if (!in_array($view, ['all', 'today', 'reschedule'], true)) {
+$tomorrow = date('Y-m-d', strtotime('+1 day'));
+if (!in_array($view, ['all', 'today', 'tomorrow', 'one_hour', 'missed', 'no_show', 'reschedule'], true)) {
     $view = 'all';
 }
 
@@ -101,9 +136,9 @@ if ($action === 'approve_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === '
             $bookNew->close();
         }
 
-        $appStatus = (string)$req['appointment_status'];
-        if ($appStatus === 'cancelled' || $appStatus === 'no_show') {
-            $appStatus = 'scheduled';
+        $appStatus = strtolower((string)$req['appointment_status']);
+        if (!in_array($appStatus, ['scheduled', 'confirmed'], true)) {
+            throw new Exception('Only scheduled/confirmed appointments can be rescheduled. Current status: ' . $appStatus);
         }
 
         $updAppt = $conn->prepare('UPDATE appointments SET user_id = ?, appointment_date = ?, timeslot_id = ?, status = ? WHERE appointment_id = ?');
@@ -122,6 +157,16 @@ if ($action === 'approve_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === '
         $updReq->close();
 
         $conn->commit();
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.reschedule_request.approve',
+                'appointment_reschedule_requests',
+                $requestId,
+                'Approved and applied to appointment_id=' . (int)$req['appointment_id'] . ', doctor_id=' . $targetDoctorId . ', date=' . $targetDate,
+                $reviewedBy
+            );
+        }
         $_SESSION['message'] = 'Patient reschedule request approved and applied.';
         $_SESSION['message_type'] = 'success';
     } catch (Exception $e) {
@@ -160,6 +205,17 @@ if ($action === 'reject_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === 'P
 
         if ($affected <= 0) throw new Exception('Request is not pending or already handled.');
 
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.reschedule_request.reject',
+                'appointment_reschedule_requests',
+                $requestId,
+                'Rejected by secretary. Note: ' . $reviewNote,
+                $reviewedBy
+            );
+        }
+
         $_SESSION['message'] = 'Patient reschedule request rejected.';
         $_SESSION['message_type'] = 'success';
     } catch (Exception $e) {
@@ -185,12 +241,41 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     try {
+        $curStmt = $conn->prepare('SELECT status FROM appointments WHERE appointment_id = ? LIMIT 1');
+        if (!$curStmt) {
+            throw new Exception('Unable to validate appointment status.');
+        }
+        $curStmt->bind_param('i', $appointmentId);
+        $curStmt->execute();
+        $cur = $curStmt->get_result()->fetch_assoc();
+        $curStmt->close();
+
+        if (!$cur) {
+            throw new Exception('Appointment not found.');
+        }
+
+        $currentStatus = strtolower((string)($cur['status'] ?? 'scheduled'));
         $status = 'cancelled';
+        if (!appointment_can_transition_secretary($currentStatus, $status)) {
+            throw new Exception('Invalid status transition: ' . $currentStatus . ' -> ' . $status . '.');
+        }
+
         $stmt = $conn->prepare('UPDATE appointments SET status = ?, notes = ? WHERE appointment_id = ?');
         if ($stmt) {
             $stmt->bind_param('ssi', $status, $reason, $appointmentId);
             $stmt->execute();
             $stmt->close();
+        }
+
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.decline',
+                'appointments',
+                $appointmentId,
+                'Declined by secretary. Reason: ' . $reason,
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+            );
         }
         
         $_SESSION['message'] = 'Appointment declined and cancelled.';
@@ -217,7 +302,7 @@ if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Get appointment date
-    $stmt = $conn->prepare('SELECT appointment_date FROM appointments WHERE appointment_id = ?');
+    $stmt = $conn->prepare('SELECT appointment_date, status FROM appointments WHERE appointment_id = ?');
     if ($stmt) {
         $stmt->bind_param('i', $appointmentId);
         $stmt->execute();
@@ -234,6 +319,13 @@ if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $apptDate = $appt['appointment_date'];
+    $currentStatus = strtolower((string)($appt['status'] ?? 'scheduled'));
+    if (!appointment_can_transition_secretary($currentStatus, 'confirmed')) {
+        $_SESSION['message'] = 'Cannot approve appointment from current status: ' . $currentStatus . '.';
+        $_SESSION['message_type'] = 'danger';
+        header('Location: secretary.php?page=appointments&view=' . urlencode($view));
+        exit;
+    }
 
     // Count already approved/confirmed for that date
     $cap_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')");
@@ -262,6 +354,17 @@ if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
         }
 
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.approve',
+                'appointments',
+                $appointmentId,
+                'Approved by secretary; status set to confirmed.',
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+            );
+        }
+
         $_SESSION['message'] = 'Appointment approved.';
         $_SESSION['message_type'] = 'success';
     } catch (Exception $e) {
@@ -276,6 +379,10 @@ if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 // Counts for tabs - ALL APPOINTMENTS (no filtering)
 $totalCount = 0;
 $todayCount = 0;
+$tomorrowCount = 0;
+$oneHourCount = 0;
+$missedCount = 0;
+$noShowCount = 0;
 
 $countResult = $conn->query('SELECT COUNT(*) AS c FROM appointments');
 if ($countResult && ($r = $countResult->fetch_assoc())) {
@@ -291,6 +398,44 @@ if ($stmt) {
         $todayCount = (int)($r['c'] ?? 0);
     }
     $stmt->close();
+}
+
+$stmt = $conn->prepare('SELECT COUNT(*) AS c FROM appointments WHERE DATE(appointment_date) = ?');
+if ($stmt) {
+    $stmt->bind_param('s', $tomorrow);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res && ($r = $res->fetch_assoc())) {
+        $tomorrowCount = (int)($r['c'] ?? 0);
+    }
+    $stmt->close();
+}
+
+$oneHourSql = "SELECT COUNT(DISTINCT a.appointment_id) AS c
+               FROM appointments a
+               INNER JOIN patient_schedules s ON s.appointment_id = a.appointment_id
+               WHERE a.status IN ('scheduled','confirmed')
+                 AND s.status IN ('scheduled','rescheduled')
+                 AND s.scheduled_start BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 1 HOUR)";
+$oneHourRes = $conn->query($oneHourSql);
+if ($oneHourRes && ($r = $oneHourRes->fetch_assoc())) {
+    $oneHourCount = (int)($r['c'] ?? 0);
+}
+
+$missedSql = "SELECT COUNT(DISTINCT a.appointment_id) AS c
+              FROM appointments a
+              INNER JOIN patient_schedules s ON s.appointment_id = a.appointment_id
+              WHERE a.status IN ('scheduled','confirmed')
+                AND s.status IN ('scheduled','rescheduled')
+                AND s.scheduled_start < DATE_SUB(NOW(), INTERVAL 5 MINUTE)";
+$missedRes = $conn->query($missedSql);
+if ($missedRes && ($r = $missedRes->fetch_assoc())) {
+    $missedCount = (int)($r['c'] ?? 0);
+}
+
+$noShowRes = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE status = 'no_show'");
+if ($noShowRes && ($r = $noShowRes->fetch_assoc())) {
+    $noShowCount = (int)($r['c'] ?? 0);
 }
 
 // Fetch appointments - ALL APPOINTMENTS (no filtering)
@@ -317,7 +462,27 @@ $appointments_sql = "
 ";
 
 if ($view === 'today') {
-    $appointments_sql .= " WHERE DATE(a.appointment_date) = ? ";
+    $appointments_sql .= " WHERE DATE(a.appointment_date) = CURDATE() ";
+} elseif ($view === 'tomorrow') {
+    $appointments_sql .= " WHERE DATE(a.appointment_date) = DATE_ADD(CURDATE(), INTERVAL 1 DAY) ";
+} elseif ($view === 'one_hour') {
+    $appointments_sql .= " WHERE a.status IN ('scheduled','confirmed')
+        AND EXISTS (
+            SELECT 1 FROM patient_schedules s2
+            WHERE s2.appointment_id = a.appointment_id
+              AND s2.status IN ('scheduled','rescheduled')
+              AND s2.scheduled_start BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 1 HOUR)
+        ) ";
+} elseif ($view === 'missed') {
+    $appointments_sql .= " WHERE a.status IN ('scheduled','confirmed')
+        AND EXISTS (
+            SELECT 1 FROM patient_schedules s2
+            WHERE s2.appointment_id = a.appointment_id
+              AND s2.status IN ('scheduled','rescheduled')
+              AND s2.scheduled_start < DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+        ) ";
+} elseif ($view === 'no_show') {
+    $appointments_sql .= " WHERE a.status = 'no_show' ";
 }
 // Fetch doctors for the booking dropdown (role_id = 2)
 $doctors = [];
@@ -343,27 +508,14 @@ if ($pat_stmt) {
     $pat_stmt->close();
 }
 
-$appointments_sql .= " ORDER BY  a.created_at DESC";
+$appointments_sql .= in_array($view, ['today', 'tomorrow', 'one_hour', 'missed'], true)
+    ? " ORDER BY a.appointment_date ASC, a.created_at DESC"
+    : " ORDER BY a.created_at DESC";
 
-if ($view === 'today') {
-    $stmt = $conn->prepare($appointments_sql);
-    if ($stmt) {
-        $stmt->bind_param('s', $today);
-        $stmt->execute();
-        $appointments_result = $stmt->get_result();
-        if ($appointments_result) {
-            while ($row = $appointments_result->fetch_assoc()) {
-                $appointments[] = $row;
-            }
-        }
-        $stmt->close();
-    }
-} else {
-    $appointments_result = $conn->query($appointments_sql);
-    if ($appointments_result) {
-        while ($row = $appointments_result->fetch_assoc()) {
-            $appointments[] = $row;
-        }
+$appointments_result = $conn->query($appointments_sql);
+if ($appointments_result) {
+    while ($row = $appointments_result->fetch_assoc()) {
+        $appointments[] = $row;
     }
 }
 
@@ -390,6 +542,17 @@ if ($pendingReqRes) {
 ?>
 
 <?php $pendingReqCount = (int)count($pendingRescheduleRequests); ?>
+<?php
+$appointmentsTitleMap = [
+    'all' => 'All Appointments',
+    'today' => 'Today Appointments',
+    'tomorrow' => 'Tomorrow Appointments',
+    'one_hour' => 'Upcoming in 1 Hour',
+    'missed' => 'Missed Appointments',
+    'no_show' => 'No-Show Appointments',
+];
+$appointmentsTitle = $appointmentsTitleMap[$view] ?? 'Appointments';
+?>
 
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
@@ -414,6 +577,30 @@ if ($pendingReqRes) {
             <button class="nav-link <?php echo $view === 'today' ? 'active' : ''; ?>" type="button"
                     onclick="window.location.href='secretary.php?page=appointments&view=today'">
                 <i class="bi bi-calendar-check"></i> Today (<?php echo (int)$todayCount; ?>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $view === 'tomorrow' ? 'active' : ''; ?>" type="button"
+                    onclick="window.location.href='secretary.php?page=appointments&view=tomorrow'">
+                <i class="bi bi-calendar2-event"></i> Tomorrow (<?php echo (int)$tomorrowCount; ?>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $view === 'one_hour' ? 'active' : ''; ?>" type="button"
+                    onclick="window.location.href='secretary.php?page=appointments&view=one_hour'">
+                <i class="bi bi-alarm"></i> 1 Hour (<?php echo (int)$oneHourCount; ?>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $view === 'missed' ? 'active' : ''; ?>" type="button"
+                    onclick="window.location.href='secretary.php?page=appointments&view=missed'">
+                <i class="bi bi-exclamation-triangle"></i> Missed (<?php echo (int)$missedCount; ?>)
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link <?php echo $view === 'no_show' ? 'active' : ''; ?>" type="button"
+                    onclick="window.location.href='secretary.php?page=appointments&view=no_show'">
+                <i class="bi bi-person-x"></i> No-Show (<?php echo (int)$noShowCount; ?>)
             </button>
         </li>
         <li class="nav-item" role="presentation">
@@ -471,11 +658,13 @@ if ($pendingReqRes) {
                                     <div class="d-flex gap-1 flex-wrap">
                                         <form method="POST" action="secretary.php?page=appointments&action=approve_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Approve and apply this reschedule request?');">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                         </form>
                                         <form method="POST" action="secretary.php?page=appointments&action=reject_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Reject this reschedule request?');">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
                                             <input type="hidden" name="review_note" value="Rejected by secretary">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
                                         </form>
                                     </div>
@@ -493,7 +682,7 @@ if ($pendingReqRes) {
 <!-- Appointments List -->
 <div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">All Appointments</h2>
+        <h2 class="card-title mb-0"><?php echo htmlspecialchars($appointmentsTitle); ?></h2>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bookAppointmentModal">
             <i class="bi bi-plus-circle"></i> Book New Appointment
         </button>
@@ -877,6 +1066,7 @@ if ($pendingReqRes) {
             <form method="POST" action="secretary.php?page=appointments&view=all&action=decline" onsubmit="return confirm('Are you sure you want to decline this appointment?');">
                 <div class="modal-body">
                     <input type="hidden" id="declineAppointmentId" name="appointment_id">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     
                     <div class="mb-3">
                         <label for="declineReason" class="form-label"><strong>Reason for Declining</strong></label>
@@ -922,11 +1112,43 @@ if ($pendingReqRes) {
 
 <!-- Initialize DataTable -->
 <script>
+    const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     function setDeclineAppointment(appointmentId) {
         document.getElementById('declineAppointmentId').value = appointmentId;
     }
     
     document.addEventListener('DOMContentLoaded', function() {
+        function showSecretaryActionFeedback(message, type = 'info') {
+            const holderId = 'secretaryActionFeedbackHolder';
+            let holder = document.getElementById(holderId);
+            if (!holder) {
+                holder = document.createElement('div');
+                holder.id = holderId;
+                holder.style.position = 'fixed';
+                holder.style.top = '84px';
+                holder.style.right = '18px';
+                holder.style.zIndex = '2000';
+                holder.style.minWidth = '260px';
+                holder.style.maxWidth = '420px';
+                document.body.appendChild(holder);
+            }
+
+            const el = document.createElement('div');
+            el.className = 'alert alert-' + type + ' alert-dismissible fade show shadow-sm';
+            el.role = 'alert';
+            el.innerHTML = '<span>' + message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+            holder.appendChild(el);
+
+            window.setTimeout(function() {
+                if (el && el.parentNode) {
+                    el.classList.remove('show');
+                    window.setTimeout(function() {
+                        if (el.parentNode) el.parentNode.removeChild(el);
+                    }, 180);
+                }
+            }, 2800);
+        }
+
         if (window.SimpleDataTable) {
             new SimpleDataTable({
                 element: document.querySelector('.datatable'),
@@ -960,18 +1182,18 @@ if ($pendingReqRes) {
                 try {
                     const fd = new FormData();
                     fd.append('appointment_id', appointmentId);
+                    fd.append('csrf_token', secretaryCsrfToken);
                     const resp = await fetch('../assets/api/appointments/confirm_appointment.php', { method: 'POST', body: fd });
                     const j = await resp.json();
                     if (j.success) {
-                        // reload to reflect changes; show simple alert
-                        alert(j.message || 'Appointment approved');
+                        showSecretaryActionFeedback(j.message || 'Appointment approved', 'success');
                         window.location.reload();
                     } else {
-                        alert('Approve failed: ' + (j.message || 'unknown'));
+                        showSecretaryActionFeedback('Approve failed: ' + (j.message || 'unknown'), 'danger');
                     }
                 } catch (err) {
                     console.error(err);
-                    alert('Approve error');
+                    showSecretaryActionFeedback('Approve error', 'danger');
                 }
             };
 
@@ -1328,6 +1550,7 @@ if ($pendingReqRes) {
                     const isEmergency = document.getElementById('bookIsEmergency') ? (document.getElementById('bookIsEmergency').checked ? 1 : 0) : 0;
                     ad.append('is_emergency', isEmergency);
                     ad.append('timeslot_id', timeslotId);
+                    ad.append('csrf_token', secretaryCsrfToken);
 
                     let aresp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: ad });
                     let ajson = await aresp.json();
@@ -1599,6 +1822,7 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
             fd.append('user_id', doctorId);
             fd.append('appointment_date', dateOnly);
             fd.append('timeslot_id', timeslotId);
+            fd.append('csrf_token', secretaryCsrfToken);
             const r = await fetch('../assets/api/appointments/update_appointment.php', { method: 'POST', body: fd });
             const j = await r.json();
             if (!j.success) {
@@ -1609,7 +1833,7 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
                 location.reload();
             }
         } else {
-            const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
+            const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); fd.append('csrf_token', secretaryCsrfToken);
             const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
             const j = await r.json();
             if (!j.success) {

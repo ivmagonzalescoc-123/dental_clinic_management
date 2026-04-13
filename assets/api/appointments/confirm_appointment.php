@@ -6,9 +6,17 @@ ini_set('error_log', dirname(__FILE__) . '/error.log');
 
 ob_start();
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 include __DIR__ . '/availability_guard.php';
 header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    send_json(['success' => false, 'message' => 'Method not allowed'], 405);
+}
 
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
@@ -31,6 +39,14 @@ function send_json($payload, $code = 200) {
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['secretary', 'doctor', 'admin'])) {
     send_json(['success' => false, 'message' => 'Forbidden'], 403);
+}
+if (!capabilities_can('appointment.manage')) {
+    send_json(['success' => false, 'message' => 'Access denied: missing appointment management permission.'], 403);
+}
+
+$csrfToken = $_POST['csrf_token'] ?? '';
+if (!security_validate_csrf_token($csrfToken)) {
+    send_json(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.'], 403);
 }
 
 $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
@@ -55,14 +71,37 @@ if (!$appointment) {
     send_json(['success' => false, 'message' => 'Appointment not found'], 404);
 }
 
+$currentStatus = strtolower((string)($appointment['status'] ?? 'scheduled'));
+
+if ($role === 'doctor' && (int)$appointment['user_id'] !== (int)($_SESSION['user_id'] ?? 0)) {
+    send_json(['success' => false, 'message' => 'Doctors can only confirm their own appointments.'], 403);
+}
+
 // DECLINE
 if ($action === 'decline') {
+    if (!in_array($currentStatus, ['scheduled', 'confirmed'], true)) {
+        send_json(['success' => false, 'message' => 'Cannot decline appointment from status: ' . $currentStatus], 409);
+    }
     $reason = 'declined by ' . ($_SESSION['user_id'] ?? 'system');
     $upd = $conn->prepare("UPDATE appointments SET status = 'cancelled', notes = CONCAT(IFNULL(notes,''), '\n', ?) WHERE appointment_id = ?");
     $upd->bind_param('si', $reason, $appointment_id);
     $upd->execute();
     $upd->close();
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'appointment.decline',
+            'appointments',
+            $appointment_id,
+            'Declined appointment request.',
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
     send_json(['success' => true, 'message' => 'Appointment declined']);
+}
+
+if (!in_array($currentStatus, ['scheduled', 'confirmed'], true)) {
+    send_json(['success' => false, 'message' => 'Cannot confirm appointment from status: ' . $currentStatus], 409);
 }
 
 // ACCEPT — set confirmed
@@ -116,15 +155,19 @@ if ($timeslot_id > 0) {
         $schedule_id = $conn->insert_id;
         $ins_s->close();
 
-        // Reminder 24 hours before
-        $remind_at = (new DateTime($schStart))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
-        $ins_r = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
-        $ins_r->bind_param('iss', $schedule_id, $remind_at, $payload);
-        $ins_r->execute();
-        $ins_r->close();
+        reminder_queue_default_pack($conn, $schedule_id, $schStart, $appointment_id);
 
         $conn->commit();
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.confirm',
+                'appointments',
+                $appointment_id,
+                'Confirmed with timeslot_id=' . $timeslot_id . ', schedule_id=' . $schedule_id,
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+            );
+        }
         send_json([
             'success'     => true,
             'message'     => 'Appointment confirmed and timeslot booked',
@@ -139,6 +182,16 @@ if ($timeslot_id > 0) {
 
 // ── SECRETARY FAST CONFIRM (no timeslot given yet) ──────────────────────────
 if ($role === 'secretary' && empty($book_start)) {
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'appointment.confirm',
+            'appointments',
+            $appointment_id,
+            'Confirmed without schedule assignment yet.',
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
     send_json(['success' => true, 'message' => 'Appointment confirmed. Assign a timeslot to complete scheduling.']);
 }
 
@@ -155,12 +208,18 @@ if (!empty($book_start)) {
     $schedule_id = $conn->insert_id;
     $ins->close();
 
-    $remind_at = (new DateTime($book_start))->modify('-24 hours')->format('Y-m-d H:i:s');
-    $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
-    $r = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
-    $r->bind_param('iss', $schedule_id, $remind_at, $payload);
-    $r->execute();
-    $r->close();
+    reminder_queue_default_pack($conn, $schedule_id, $book_start, $appointment_id);
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'appointment.confirm',
+            'appointments',
+            $appointment_id,
+            'Confirmed and legacy schedule created with schedule_id=' . $schedule_id,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
 
     send_json(['success' => true, 'message' => 'Appointment confirmed and scheduled', 'schedule_id' => $schedule_id]);
 }
@@ -212,12 +271,18 @@ if (!empty($availability)) {
         $schedule_id = $conn->insert_id;
         $ins2->close();
 
-        $remind_at = (new DateTime($found['start']))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $payload   = json_encode(['appointment_id' => $appointment_id, 'schedule_id' => $schedule_id, 'patient_schedule_id' => $schedule_id]);
-        $r2 = $conn->prepare("INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, 'email', ?)");
-        $r2->bind_param('iss', $schedule_id, $remind_at, $payload);
-        $r2->execute();
-        $r2->close();
+        reminder_queue_default_pack($conn, $schedule_id, $found['start'], $appointment_id);
+
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.confirm',
+                'appointments',
+                $appointment_id,
+                'Confirmed and auto-scheduled with schedule_id=' . $schedule_id,
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+            );
+        }
 
         send_json(['success' => true, 'message' => 'Appointment confirmed and earliest slot scheduled', 'schedule_id' => $schedule_id]);
     }

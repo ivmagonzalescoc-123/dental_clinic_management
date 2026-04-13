@@ -1,14 +1,36 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 include __DIR__ . '/availability_guard.php';
 header('Content-Type: application/json');
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success'=>false,'message'=>'Method not allowed']);
+    exit;
+}
 
 $role = $_SESSION['role'] ?? '';
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 if (!in_array($role, ['admin','secretary','doctor'])) {
     http_response_code(403);
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
+    exit;
+}
+if (!capabilities_can('appointment.manage')) {
+    http_response_code(403);
+    echo json_encode(['success'=>false,'message'=>'Access denied: missing appointment management permission.']);
+    exit;
+}
+
+$csrfToken = $_POST['csrf_token'] ?? '';
+if (!security_validate_csrf_token($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success'=>false,'message'=>'Invalid CSRF token. Please refresh and try again.']);
     exit;
 }
 
@@ -87,12 +109,18 @@ try {
     $affected = $ust->affected_rows;
     $ust->close();
 
-    // Optionally create a reminder row
-    $rins = $conn->prepare('INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, DATE_SUB(?, INTERVAL 1 DAY), "in_app", ?)');
-    $payload = json_encode(['schedule_id'=>$schedule_id,'patient_schedule_id'=>$schedule_id,'appointment_id'=>$sch['appointment_id']]);
-    $rins->bind_param('iss', $schedule_id, $start, $payload);
-    $rins->execute();
-    if ($rins) $rins->close();
+    if ($affected > 0 && function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'schedule.reschedule',
+            'patient_schedules',
+            $schedule_id,
+            'Rescheduled schedule to doctor_id=' . $targetDoctorId . ', start=' . $start . ', end=' . $end,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
+
+    reminder_queue_default_pack($conn, $schedule_id, $start, (int)$sch['appointment_id']);
 
     echo json_encode([
         'success'=>true,

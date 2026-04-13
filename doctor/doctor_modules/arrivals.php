@@ -33,6 +33,7 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 </div>
 
 <script>
+const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 const DOC_TODAY    = <?= json_encode($today) ?>;
 const DOC_TOMORROW = <?= json_encode($tomorrow) ?>;
 const DOC_UID      = <?= json_encode($doctor_id) ?>;
@@ -140,6 +141,7 @@ async function doStartSession(appointmentId) {
     if (!confirm('Start session for this patient?')) return;
     const fd = new FormData();
     fd.append('appointment_id', appointmentId);
+    fd.append('csrf_token', doctorCsrfToken);
     try {
         const resp = await fetch('../assets/api/arrivals/start_session.php', { method: 'POST', body: fd });
         const data = await resp.json();

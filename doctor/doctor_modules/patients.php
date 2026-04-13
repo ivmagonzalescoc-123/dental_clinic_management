@@ -186,6 +186,27 @@ function patient_latest_appointment_date($patient)
     return $latest;
 }
 
+function patient_latest_appointment($patient)
+{
+    if (empty($patient['appointments'])) return null;
+    $latest = null;
+    foreach ($patient['appointments'] as $appt) {
+        $d = $appt['appointment_date'] ?? null;
+        if ($d && ($latest === null || $d > ($latest['appointment_date'] ?? ''))) {
+            $latest = $appt;
+        }
+    }
+    return $latest;
+}
+
+function format_date_display($value)
+{
+    if (empty($value)) return '—';
+    $ts = strtotime((string)$value);
+    if (!$ts) return htmlspecialchars((string)$value);
+    return date('M d, Y', $ts);
+}
+
 $patientList = array_values($patients);
 
 usort($patientList, function ($a, $b) use ($sort) {
@@ -210,6 +231,33 @@ usort($patientList, function ($a, $b) use ($sort) {
             return $nameA <=> $nameB;
     }
 });
+
+$selectedPatientId = (int)($_GET['patient_id'] ?? 0);
+if ($selectedPatientId <= 0 && !empty($patientList)) {
+    $selectedPatientId = (int)($patientList[0]['patient_id'] ?? 0);
+}
+
+$selectedPatient = null;
+foreach ($patientList as $pItem) {
+    if ((int)$pItem['patient_id'] === $selectedPatientId) {
+        $selectedPatient = $pItem;
+        break;
+    }
+}
+
+if ($selectedPatient === null && !empty($patientList)) {
+    $selectedPatient = $patientList[0];
+    $selectedPatientId = (int)$selectedPatient['patient_id'];
+}
+
+$basePatientParams = [
+    'page' => 'patients',
+    'q' => $q,
+    'date_from' => $dateFrom,
+    'date_to' => $dateTo,
+    'year' => $year,
+    'sort' => $sort,
+];
 ?>
 
 <div class="card border-0">
@@ -284,137 +332,143 @@ usort($patientList, function ($a, $b) use ($sort) {
         <?php if (empty($patientList)): ?>
             <div class="alert alert-info mb-0">No patients found.</div>
         <?php else: ?>
-            <div class="row g-3">
-                <?php foreach ($patientList as $patient): ?>
-                    <?php
-                        $patientId = (int)$patient['patient_id'];
-                        $appointments = $patient['appointments'];
-                        $appointmentCount = count($appointments);
-                        $collapseId = 'patientAppointments' . $patientId;
-                        $cardId = 'patientCard' . $patientId;
-                        $latestAppointmentId = 0;
-                        if (!empty($appointments)) {
-                            $latestAppt = reset($appointments);
-                            $latestAppointmentId = (int)($latestAppt['appointment_id'] ?? 0);
-                        }
-                    ?>
-                    <div class="col-12">
-                        <div class="card h-100" id="<?php echo htmlspecialchars($cardId); ?>">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start gap-3">
-                                    <div class="flex-grow-1">
-                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                            <h5 class="card-title mb-0"><?php echo htmlspecialchars(format_patient_name($patient)); ?></h5>
-                                            <?php if ($latestAppointmentId > 0): ?>
-                                                <button type="button" class="btn btn-outline-info btn-sm" onclick="openPatientProfileModal(<?php echo (int)$latestAppointmentId; ?>, '<?php echo htmlspecialchars(format_patient_name($patient), ENT_QUOTES); ?>')">Profile</button>
+            <div class="row g-3 align-items-start">
+                <div class="col-12 col-xl-7">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Patient</th>
+                                    <th>Latest Appointment</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Records</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($patientList as $patient): ?>
+                                    <?php
+                                        $pId = (int)$patient['patient_id'];
+                                        $latest = patient_latest_appointment($patient);
+                                        $rowParams = $basePatientParams;
+                                        $rowParams['patient_id'] = $pId;
+                                        $href = 'doctor.php?' . http_build_query($rowParams);
+                                    ?>
+                                    <tr class="<?php echo $pId === $selectedPatientId ? 'table-primary' : ''; ?>" style="cursor:pointer;" onclick="window.location.href='<?php echo htmlspecialchars($href, ENT_QUOTES); ?>'">
+                                        <td>
+                                            <div class="fw-semibold"><?php echo htmlspecialchars(format_patient_name($patient)); ?></div>
+                                            <div class="small text-muted">
+                                                <?php echo htmlspecialchars((string)($patient['email'] ?? '')); ?>
+                                                <?php if (!empty($patient['phone_number'])): ?>
+                                                    • <?php echo htmlspecialchars((string)$patient['phone_number']); ?>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <?php if ($latest): ?>
+                                                <div><?php echo htmlspecialchars(format_date_display($latest['appointment_date'] ?? '')); ?></div>
+                                                <div class="small text-muted"><?php echo htmlspecialchars(format_time_range($latest['start_time'] ?? '', $latest['end_time'] ?? '')); ?></div>
+                                            <?php else: ?>
+                                                <span class="text-muted">—</span>
                                             <?php endif; ?>
-                                        </div>
-                                        <div class="text-muted small">
-                                            <?php if (!empty($patient['phone_number'])): ?>
-                                                <div><i class="bi bi-telephone"></i> <?php echo htmlspecialchars($patient['phone_number']); ?></div>
+                                        </td>
+                                        <td>
+                                            <?php if ($latest): ?>
+                                                <span class="badge bg-<?php echo htmlspecialchars(status_badge_class($latest['status'] ?? 'scheduled')); ?>">
+                                                    <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', (string)($latest['status'] ?? 'scheduled')))); ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-secondary">No Appointments</span>
                                             <?php endif; ?>
-                                            <?php if (!empty($patient['email'])): ?>
-                                                <div><i class="bi bi-envelope"></i> <?php echo htmlspecialchars($patient['email']); ?></div>
-                                            <?php endif; ?>
-                                        </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="badge bg-secondary"><?php echo count($patient['appointments']); ?></span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-12 col-xl-5">
+                    <div class="card border h-100">
+                        <div class="card-body">
+                            <?php if (!$selectedPatient): ?>
+                                <div class="text-muted">Select a patient to view details.</div>
+                            <?php else: ?>
+                                <?php $selectedLatest = patient_latest_appointment($selectedPatient); ?>
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                                    <div>
+                                        <h5 class="mb-1"><?php echo htmlspecialchars(format_patient_name($selectedPatient)); ?></h5>
+                                        <div class="small text-muted"><?php echo htmlspecialchars((string)($selectedPatient['email'] ?? '')); ?></div>
+                                        <div class="small text-muted"><?php echo htmlspecialchars((string)($selectedPatient['phone_number'] ?? '')); ?></div>
                                     </div>
-                                    <div class="d-flex flex-column align-items-end">
-                                        <span class="badge bg-secondary"><?php echo $appointmentCount; ?> Appt<?php echo $appointmentCount === 1 ? '' : 's'; ?></span>
-                                        <button class="btn btn-outline-primary btn-sm mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo htmlspecialchars($collapseId); ?>" aria-expanded="false" aria-controls="<?php echo htmlspecialchars($collapseId); ?>">
-                                            View Appointment Records
-                                        </button>
-                                    </div>
+                                    <?php if ($selectedLatest): ?>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="openPatientProfileModal(<?php echo (int)$selectedLatest['appointment_id']; ?>, '<?php echo htmlspecialchars(format_patient_name($selectedPatient), ENT_QUOTES); ?>')">Profile</button>
+                                    <?php endif; ?>
                                 </div>
 
-                                <div class="collapse mt-3" id="<?php echo htmlspecialchars($collapseId); ?>">
-                                    <?php if (empty($appointments)): ?>
-                                        <div class="alert alert-light border mb-0">No appointment records yet.</div>
-                                    <?php else: ?>
-                                        <div class="accordion" id="accordion-<?php echo htmlspecialchars($patientId); ?>">
-                                            <?php foreach ($appointments as $appt): ?>
+                                <div class="d-flex gap-2 flex-wrap mb-3">
+                                    <span class="badge bg-primary-subtle text-primary border">Total Records: <?php echo count($selectedPatient['appointments']); ?></span>
+                                    <?php if ($selectedLatest): ?>
+                                        <span class="badge bg-light text-dark border">Latest: <?php echo htmlspecialchars(format_date_display($selectedLatest['appointment_date'] ?? '')); ?></span>
+                                    <?php endif; ?>
+                                </div>
+
+                                <h6 class="mb-2">Appointment Timeline</h6>
+                                <?php if (empty($selectedPatient['appointments'])): ?>
+                                    <div class="alert alert-light border mb-0">No appointment records yet.</div>
+                                <?php else: ?>
+                                    <div style="max-height: 520px; overflow:auto;">
+                                        <div class="list-group list-group-flush">
+                                            <?php foreach ($selectedPatient['appointments'] as $appt): ?>
                                                 <?php
                                                     $apptId = (int)$appt['appointment_id'];
-                                                    $apptCollapseId = 'apptCollapse' . $patientId . '-' . $apptId;
                                                     $serviceTitle = 'No service availed';
                                                     if (!empty($appt['services'])) {
                                                         $serviceTitle = $appt['services'][0]['service_name'] ?? $serviceTitle;
                                                     }
-                                                    $timeRange = format_time_range($appt['start_time'], $appt['end_time']);
+                                                    $timeRange = format_time_range($appt['start_time'] ?? '', $appt['end_time'] ?? '');
                                                 ?>
-                                                <div class="accordion-item mb-2">
-                                                    <h2 class="accordion-header" id="heading-<?php echo htmlspecialchars($patientId . '-' . $apptId); ?>">
-                                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#<?php echo htmlspecialchars($apptCollapseId); ?>" aria-expanded="false" aria-controls="<?php echo htmlspecialchars($apptCollapseId); ?>">
-                                                            <div class="w-100">
-                                                                <div class="d-flex justify-content-between align-items-center">
-                                                                    <div class="me-2">
-                                                                        <div class="fw-semibold"><?php echo htmlspecialchars($serviceTitle); ?></div>
-                                                                        <div class="small text-muted">
-                                                                            <?php echo htmlspecialchars($appt['appointment_date']); ?>
-                                                                            <?php if ($timeRange !== ''): ?>
-                                                                                • <?php echo htmlspecialchars($timeRange); ?>
-                                                                            <?php endif; ?>
-                                                                        </div>
-                                                                    </div>
-                                                                    <span class="badge bg-<?php echo htmlspecialchars(status_badge_class($appt['status'])); ?>">
-                                                                        <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $appt['status']))); ?>
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </button>
-                                                    </h2>
-                                                    <div id="<?php echo htmlspecialchars($apptCollapseId); ?>" class="accordion-collapse collapse" aria-labelledby="heading-<?php echo htmlspecialchars($patientId . '-' . $apptId); ?>" data-bs-parent="#accordion-<?php echo htmlspecialchars($patientId); ?>">
-                                                        <div class="accordion-body">
-                                                            <div class="d-flex flex-wrap gap-2 mb-2">
-                                                                <?php if (!empty($appt['is_online_appointment'])): ?>
-                                                                    <span class="badge bg-info">Online</span>
-                                                                <?php else: ?>
-                                                                    <span class="badge bg-secondary">In-Person</span>
+                                                <div class="list-group-item px-0">
+                                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                                        <div>
+                                                            <div class="fw-semibold"><?php echo htmlspecialchars($serviceTitle); ?></div>
+                                                            <div class="small text-muted">
+                                                                <?php echo htmlspecialchars(format_date_display($appt['appointment_date'] ?? '')); ?>
+                                                                <?php if ($timeRange !== ''): ?>
+                                                                    • <?php echo htmlspecialchars($timeRange); ?>
                                                                 <?php endif; ?>
-                                                                <span class="badge bg-light text-dark border">Appointment ID: <?php echo htmlspecialchars($apptId); ?></span>
                                                             </div>
-
-                                                            <?php if (!empty($appt['services'])): ?>
-                                                                <div class="mb-2">
-                                                                    <div class="fw-semibold small text-muted mb-1">Selected Service(s)</div>
-                                                                    <div class="d-flex flex-wrap gap-2">
-                                                                        <?php foreach ($appt['services'] as $svc): ?>
-                                                                            <span class="badge bg-primary"><?php echo htmlspecialchars($svc['service_name']); ?></span>
-                                                                        <?php endforeach; ?>
-                                                                    </div>
-                                                                </div>
-                                                            <?php endif; ?>
-
                                                             <?php if (!empty($appt['reason'])): ?>
-                                                                <div class="mb-2">
-                                                                    <div class="fw-semibold small text-muted">Reason</div>
-                                                                    <div><?php echo htmlspecialchars($appt['reason']); ?></div>
-                                                                </div>
+                                                                <div class="small"><?php echo htmlspecialchars($appt['reason']); ?></div>
                                                             <?php endif; ?>
-
-                                                            <?php if (!empty($appt['start_time']) || !empty($appt['end_time'])): ?>
-                                                                <div class="mb-2">
-                                                                    <div class="fw-semibold small text-muted">Followup Schedule</div>
-                                                                    <div><?php echo htmlspecialchars($appt['start_time'] ?? '') . ' ' . (empty($appt['end_time']) ? '' : ' — ' . htmlspecialchars($appt['end_time'])); ?></div>
-                                                                </div>
-                                                            <?php endif; ?>
-
                                                             <?php if (!empty($appt['notes'])): ?>
-                                                                <div class="mb-2">
-                                                                    <div class="fw-semibold small text-muted">Notes</div>
-                                                                    <div><?php echo htmlspecialchars($appt['notes']); ?></div>
-                                                                </div>
+                                                                <div class="small text-muted mt-1"><?php echo htmlspecialchars($appt['notes']); ?></div>
                                                             <?php endif; ?>
                                                         </div>
+                                                        <div class="text-end">
+                                                            <span class="badge bg-<?php echo htmlspecialchars(status_badge_class($appt['status'] ?? 'scheduled')); ?> mb-1"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', (string)($appt['status'] ?? 'scheduled')))); ?></span>
+                                                            <div class="small text-muted">#<?php echo (int)$apptId; ?></div>
+                                                            <div class="small text-muted"><?php echo !empty($appt['is_online_appointment']) ? 'Online' : 'In-Person'; ?></div>
+                                                        </div>
                                                     </div>
+                                                    <?php if (!empty($appt['services']) && count($appt['services']) > 1): ?>
+                                                        <div class="d-flex flex-wrap gap-1 mt-2">
+                                                            <?php foreach ($appt['services'] as $svc): ?>
+                                                                <span class="badge bg-primary-subtle text-primary border"><?php echo htmlspecialchars((string)$svc['service_name']); ?></span>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>
+                </div>
             </div>
         <?php endif; ?>
     </div>

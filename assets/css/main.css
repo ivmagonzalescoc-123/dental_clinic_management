@@ -923,6 +923,14 @@ table a:hover {
     font-weight: 600;
 }
 
+#header .dropdown-menu.notifications .dropdown-item,
+#header .dropdown-menu.notifications .dropdown-item .fw-bold,
+#header .dropdown-menu.notifications .dropdown-item .small,
+#header .dropdown-menu.notifications .text-muted,
+#header .dropdown-menu.notifications small {
+    color: #000 !important;
+}
+
 .header-nav .dropdown-menu.profile .dropdown-item:hover,
 .header-nav .dropdown-menu.profile .dropdown-item:focus,
 .header-nav .dropdown-menu.profile .dropdown-footer a {

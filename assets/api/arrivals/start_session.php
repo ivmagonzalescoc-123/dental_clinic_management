@@ -8,11 +8,32 @@ session_start();
 header('Content-Type: application/json');
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['doctor', 'secretary', 'admin'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Forbidden']);
+    exit;
+}
+if (!capabilities_can('arrivals.manage')) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access denied: missing arrival management permission.']);
+    exit;
+}
+
+$csrfToken = $_POST['csrf_token'] ?? '';
+if (!security_validate_csrf_token($csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
     exit;
 }
 
@@ -29,7 +50,7 @@ try {
 
     // Verify patient is checked-in before starting a session.
     $paStmt = $conn->prepare(
-        "SELECT a.status AS appointment_status
+        "SELECT a.status AS appointment_status, a.user_id AS assigned_doctor_id
          FROM appointments a
          WHERE a.appointment_id = ?
          LIMIT 1"
@@ -47,6 +68,11 @@ try {
     $appointmentStatus = $paRow['appointment_status'] ?? '';
     if (!in_array($appointmentStatus, ['checked_in', 'in_progress'], true)) {
         throw new Exception('Patient has not been checked in yet.');
+    }
+
+    $assignedDoctorId = isset($paRow['assigned_doctor_id']) ? (int)$paRow['assigned_doctor_id'] : 0;
+    if ($role === 'doctor' && $assignedDoctorId > 0 && $assignedDoctorId !== $doctor_id) {
+        throw new Exception('Doctors can only start sessions for their own appointments.');
     }
 
     // Assign doctor and mark appointment in_progress
@@ -98,6 +124,18 @@ try {
     }
 
     $conn->commit();
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'arrival.start_session',
+            'appointments',
+            $appointment_id,
+            'Started session with schedule_id=' . $schedule_id,
+            isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+        );
+    }
+
     echo json_encode([
         'success'        => true,
         'message'        => 'Session started',

@@ -1,6 +1,7 @@
 <?php
 include_once '../config/database.php';
 include_once '../config/security.php';
+include_once '../config/capabilities.php';
 security_start_session();
 security_ensure_auth_columns($conn);
 security_ensure_work_type_column($conn);
@@ -27,6 +28,7 @@ if (!function_exists('manage_users_redirect')) {
 
 // Handle ARCHIVE action (change status to inactive)
 if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
         $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
@@ -60,6 +62,7 @@ if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Handle RESET PASSWORD action (admin only for system users)
 if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
         $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';

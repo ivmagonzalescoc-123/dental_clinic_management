@@ -227,6 +227,18 @@ $doctorTotalAppts = [];
 $doctorCompletion = [];
 foreach ($doctorPerformanceData as $d) { $doctorLabels[] = $d['first_name'] . ' ' . $d['last_name']; $doctorTotalAppts[] = (int)$d['total_appointments']; $doctorCompletion[] = (float)$d['completion_rate']; }
 
+$totalAppointmentsRange = array_sum($statusCounts);
+$completedAppointmentsRange = 0;
+$cancelledAppointmentsRange = 0;
+foreach ($statusSummary as $s) {
+    $k = strtolower((string)($s['status'] ?? ''));
+    if ($k === 'completed') $completedAppointmentsRange = (int)$s['count'];
+    if ($k === 'cancelled') $cancelledAppointmentsRange = (int)$s['count'];
+}
+$completionRateRange = $totalAppointmentsRange > 0 ? round(($completedAppointmentsRange / $totalAppointmentsRange) * 100, 1) : 0;
+$dayCount = max(1, count($dateLabels));
+$avgAppointmentsPerDay = $totalAppointmentsRange > 0 ? round($totalAppointmentsRange / $dayCount, 1) : 0;
+
 // Patient analytics pie: new vs returning
 $returning = max(0, (int)$totalPatients - (int)$newPatients);
  $patientPie = [ 'labels' => ['New Patients','Returning Patients'], 'data' => [ (int)$newPatients, $returning ] ];
@@ -308,6 +320,56 @@ $returning = max(0, (int)$totalPatients - (int)$newPatients);
         </div>
 
         <hr>
+
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card dental-kpi-card p-3 h-100">
+                    <h6 class="mb-1">Appointments in Range</h6>
+                    <div class="display-6 fw-bold"><?php echo (int)$totalAppointmentsRange; ?></div>
+                    <div class="text-muted small"><?php echo htmlspecialchars($startDate); ?> to <?php echo htmlspecialchars($endDate); ?></div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card dental-kpi-card p-3 h-100">
+                    <h6 class="mb-1">Completed</h6>
+                    <div class="display-6 fw-bold"><?php echo (int)$completedAppointmentsRange; ?></div>
+                    <div class="text-muted small">Completion rate: <?php echo (float)$completionRateRange; ?>%</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card dental-kpi-card p-3 h-100">
+                    <h6 class="mb-1">Cancelled</h6>
+                    <div class="display-6 fw-bold"><?php echo (int)$cancelledAppointmentsRange; ?></div>
+                    <div class="text-muted small">Status trend indicator</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <div class="card dental-kpi-card p-3 h-100">
+                    <h6 class="mb-1">Avg per Day</h6>
+                    <div class="display-6 fw-bold"><?php echo (float)$avgAppointmentsPerDay; ?></div>
+                    <div class="text-muted small">Across selected date window</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-xl-5">
+                <div class="card dental-surface-card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title small mb-2">Overall Status Breakdown</h6>
+                        <div id="overviewStatusChart" style="min-height:240px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-xl-7">
+                <div class="card dental-surface-card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title small mb-2">Daily Appointments Trend</h6>
+                        <div id="overviewTrendChart" style="min-height:240px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Tab Content -->
         <div class="tab-content">
@@ -553,64 +615,157 @@ document.getElementById('endDate')?.addEventListener('keypress', (e) => {
 });
 </script>
 <script>
-// Render ApexCharts for reports (if available)
+// Render ApexCharts for reports after vendor scripts are loaded
 (function () {
-    if (typeof ApexCharts === 'undefined') return;
+    const renderNoData = (id, label) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = '<div class="d-flex align-items-center justify-content-center text-muted small" style="min-height:220px;">No data available for ' + label + '.</div>';
+    };
 
-    // Appointments status pie
-    const statusLabels = <?php echo json_encode($statusLabels); ?>;
-    const statusCounts = <?php echo json_encode($statusCounts); ?>;
-    if (statusLabels && statusLabels.length) {
-        const opts = {
-            chart: { type: 'donut', height: 250 },
-            series: statusCounts,
-            labels: statusLabels,
-            legend: { position: 'bottom' }
-        };
-        new ApexCharts(document.getElementById('appointmentsStatusChart'), opts).render();
-    }
+    const renderCharts = () => {
 
-    // Appointments time series
-    const apptLabels = <?php echo json_encode($dateLabels); ?>;
-    const apptValues = <?php echo json_encode($dateValues); ?>;
-    if (apptLabels && apptLabels.length) {
-        const opts2 = {
-            chart: { type: 'area', height: 250, toolbar: { show: false } },
-            series: [{ name: 'Appointments', data: apptValues }],
-            xaxis: { categories: apptLabels },
-            stroke: { curve: 'smooth' },
-            colors: ['#2b8aef']
-        };
-        new ApexCharts(document.getElementById('appointmentsTimeSeriesChart'), opts2).render();
-    }
+        // Appointments status pie
+        const statusLabels = <?php echo json_encode($statusLabels); ?>;
+        const statusCounts = <?php echo json_encode($statusCounts); ?>;
+        if (statusLabels && statusLabels.length) {
+            const statusEl = document.getElementById('appointmentsStatusChart');
+            const overviewStatusEl = document.getElementById('overviewStatusChart');
 
-    // Services usage
-    const svcLabels = <?php echo json_encode($servicesLabels); ?>;
-    const svcCounts = <?php echo json_encode($servicesCounts); ?>;
-    if (svcLabels && svcLabels.length) {
-        const opts3 = { chart: { type: 'bar', height: 320 }, series: [{ name: 'Usage', data: svcCounts }], xaxis: { categories: svcLabels }, plotOptions: { bar: { horizontal: false } } };
-        new ApexCharts(document.getElementById('servicesUsageChart'), opts3).render();
-    }
+            const opts = {
+                chart: { type: 'donut', height: 250 },
+                series: statusCounts,
+                labels: statusLabels,
+                legend: { position: 'bottom' }
+            };
+            if (statusEl) new ApexCharts(statusEl, opts).render();
 
-    // Doctor performance
-    const docLabels = <?php echo json_encode($doctorLabels); ?>;
-    const docAppts = <?php echo json_encode($doctorTotalAppts); ?>;
-    const docComp = <?php echo json_encode($doctorCompletion); ?>;
-    if (docLabels && docLabels.length) {
-        const opts4 = {
-            chart: { type: 'bar', height: 320 },
-            series: [{ name: 'Total Appts', data: docAppts }, { name: 'Completion %', data: docComp }],
-            xaxis: { categories: docLabels },
-            yaxis: [{ title: { text: 'Count' } }, { opposite: true, title: { text: 'Completion %' } }]
-        };
-        new ApexCharts(document.getElementById('doctorPerfChart'), opts4).render();
-    }
+            const overviewDonut = {
+                chart: { type: 'donut', height: 240 },
+                series: statusCounts,
+                labels: statusLabels,
+                legend: { position: 'bottom' },
+                colors: ['#0d6efd', '#198754', '#dc3545', '#ffc107', '#6f42c1', '#20c997']
+            };
+            if (overviewStatusEl) new ApexCharts(overviewStatusEl, overviewDonut).render();
+        } else {
+            renderNoData('appointmentsStatusChart', 'appointment status');
+            renderNoData('overviewStatusChart', 'status breakdown');
+        }
 
-    // Patient analytics pie
-    const patientPie = <?php echo json_encode($patientPie); ?>;
-    if (patientPie && patientPie.labels) {
-        const opts5 = { chart: { type: 'donut', height: 220 }, series: patientPie.data, labels: patientPie.labels, legend: { position: 'bottom' } };
-        new ApexCharts(document.getElementById('patientAnalyticsChart'), opts5).render();
+        // Appointments time series
+        const apptLabels = <?php echo json_encode($dateLabels); ?>;
+        const apptValues = <?php echo json_encode($dateValues); ?>;
+        if (apptLabels && apptLabels.length) {
+            const timeSeriesEl = document.getElementById('appointmentsTimeSeriesChart');
+            const overviewTrendEl = document.getElementById('overviewTrendChart');
+
+            const opts2 = {
+                chart: { type: 'area', height: 250, toolbar: { show: false } },
+                series: [{ name: 'Appointments', data: apptValues }],
+                xaxis: { categories: apptLabels },
+                stroke: { curve: 'smooth' },
+                colors: ['#2b8aef']
+            };
+            if (timeSeriesEl) new ApexCharts(timeSeriesEl, opts2).render();
+
+            const overviewTrend = {
+                chart: { type: 'area', height: 240, toolbar: { show: false } },
+                series: [{ name: 'Appointments', data: apptValues }],
+                xaxis: { categories: apptLabels },
+                stroke: { curve: 'smooth', width: 2 },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.35,
+                        opacityTo: 0.06,
+                        stops: [0, 90, 100]
+                    }
+                },
+                colors: ['#0d6efd']
+            };
+            if (overviewTrendEl) new ApexCharts(overviewTrendEl, overviewTrend).render();
+        } else {
+            renderNoData('appointmentsTimeSeriesChart', 'appointments over time');
+            renderNoData('overviewTrendChart', 'appointments trend');
+        }
+
+        // Services usage
+        const svcLabels = <?php echo json_encode($servicesLabels); ?>;
+        const svcCounts = <?php echo json_encode($servicesCounts); ?>;
+        if (svcLabels && svcLabels.length) {
+            const svcEl = document.getElementById('servicesUsageChart');
+            const opts3 = { chart: { type: 'bar', height: 320 }, series: [{ name: 'Usage', data: svcCounts }], xaxis: { categories: svcLabels }, plotOptions: { bar: { horizontal: false } } };
+            if (svcEl) new ApexCharts(svcEl, opts3).render();
+        } else {
+            renderNoData('servicesUsageChart', 'services usage');
+        }
+
+        // Doctor performance
+        const docLabels = <?php echo json_encode($doctorLabels); ?>;
+        const docAppts = <?php echo json_encode($doctorTotalAppts); ?>;
+        const docComp = <?php echo json_encode($doctorCompletion); ?>;
+        if (docLabels && docLabels.length) {
+            const docEl = document.getElementById('doctorPerfChart');
+            const opts4 = {
+                chart: { type: 'bar', height: 320 },
+                series: [{ name: 'Total Appts', data: docAppts }, { name: 'Completion %', data: docComp }],
+                xaxis: { categories: docLabels },
+                yaxis: [{ title: { text: 'Count' } }, { opposite: true, title: { text: 'Completion %' } }]
+            };
+            if (docEl) new ApexCharts(docEl, opts4).render();
+        } else {
+            renderNoData('doctorPerfChart', 'doctor performance');
+        }
+
+        // Patient analytics pie
+        const patientPie = <?php echo json_encode($patientPie); ?>;
+        if (patientPie && patientPie.labels) {
+            const patientEl = document.getElementById('patientAnalyticsChart');
+            const opts5 = { chart: { type: 'donut', height: 220 }, series: patientPie.data, labels: patientPie.labels, legend: { position: 'bottom' } };
+            if (patientEl) new ApexCharts(patientEl, opts5).render();
+        } else {
+            renderNoData('patientAnalyticsChart', 'patient analytics');
+        }
+    };
+
+    let attempt = 0;
+    const maxAttempts = 30;
+    const bootstrapCharts = () => {
+        attempt += 1;
+        if (typeof ApexCharts === 'undefined') {
+            if (attempt < maxAttempts) {
+                setTimeout(bootstrapCharts, 100);
+                return;
+            }
+            renderNoData('overviewStatusChart', 'status breakdown (chart library failed to load)');
+            renderNoData('overviewTrendChart', 'appointments trend (chart library failed to load)');
+            renderNoData('appointmentsStatusChart', 'appointment status (chart library failed to load)');
+            renderNoData('appointmentsTimeSeriesChart', 'appointments over time (chart library failed to load)');
+            renderNoData('servicesUsageChart', 'services usage (chart library failed to load)');
+            renderNoData('doctorPerfChart', 'doctor performance (chart library failed to load)');
+            renderNoData('patientAnalyticsChart', 'patient analytics (chart library failed to load)');
+            return;
+        }
+        try {
+            renderCharts();
+        } catch (e) {
+            console.error('Reports chart render error:', e);
+            renderNoData('overviewStatusChart', 'status breakdown');
+            renderNoData('overviewTrendChart', 'appointments trend');
+            renderNoData('appointmentsStatusChart', 'appointment status');
+            renderNoData('appointmentsTimeSeriesChart', 'appointments over time');
+            renderNoData('servicesUsageChart', 'services usage');
+            renderNoData('doctorPerfChart', 'doctor performance');
+            renderNoData('patientAnalyticsChart', 'patient analytics');
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrapCharts);
+    } else {
+        bootstrapCharts();
     }
 })();
 </script>

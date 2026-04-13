@@ -63,21 +63,21 @@ if ($stmt) { $stmt->bind_param('is', $userId, $today); $stmt->execute(); $res = 
 
 <div class="row g-3">
     <div class="col-md-4">
-        <div class="card dental-kpi-card p-3">
+        <div class="card dental-kpi-card p-3 h-100">
             <h6 class="mb-1">Upcoming Appointments</h6>
             <div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div>
             <div class="text-muted small">Scheduled & confirmed</div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card dental-kpi-card p-3">
+        <div class="card dental-kpi-card p-3 h-100">
             <h6 class="mb-1">Past Visits</h6>
             <div class="display-6 fw-bold"><?php echo (int)$past; ?></div>
             <div class="text-muted small">Historical appointments</div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card dental-kpi-card p-3">
+        <div class="card dental-kpi-card p-3 h-100">
             <h6 class="mb-1">Patients Today</h6>
             <div class="display-6 fw-bold"><?php echo (int)$queueToday; ?></div>
             <div class="text-muted small">Pending / arrived</div>

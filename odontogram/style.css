@@ -136,6 +136,14 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   color: rgba(255,255,255,.6);
 }
 
+.btn--reset {
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  background: rgba(122,162,255,.16);
+  border-color: rgba(122,162,255,.45);
+}
+
 .viewport {
   position: relative;
 }

@@ -35,9 +35,27 @@ if ($stmt){ $stmt->bind_param('ss', $last7Start, $today); $stmt->execute(); $r =
 	</div>
 
 	<div class="row g-3">
-		<div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Arrived Today</h6><div class="display-6 fw-bold"><?php echo (int)$checkedIn; ?></div></div></div>
-		<div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Pending Today</h6><div class="display-6 fw-bold"><?php echo (int)$queueWaiting; ?></div></div></div>
-		<div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Appointments Today</h6><div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div></div></div>
+		<div class="col-md-4">
+			<div class="card dental-kpi-card p-3 h-100">
+				<h6 class="mb-1">Arrived Today</h6>
+				<div class="display-6 fw-bold"><?php echo (int)$checkedIn; ?></div>
+				<div class="text-muted small">Checked-in and in-progress</div>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="card dental-kpi-card p-3 h-100">
+				<h6 class="mb-1">Pending Today</h6>
+				<div class="display-6 fw-bold"><?php echo (int)$queueWaiting; ?></div>
+				<div class="text-muted small">Waiting for arrival</div>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<div class="card dental-kpi-card p-3 h-100">
+				<h6 class="mb-1">Appointments Today</h6>
+				<div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div>
+				<div class="text-muted small">Total calendar load</div>
+			</div>
+		</div>
 
 		<div class="col-12"><div class="card dental-surface-card"><div class="card-body"><h5 class="card-title">Appointments | Last 7 days</h5><div class="dental-chart-frame mt-3"><div id="secAppt7Chart" style="min-height:220px;"></div></div></div></div></div>
 	</div>

@@ -2,9 +2,11 @@
 include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/session_check.php';
+include '../../../config/capabilities.php';
 security_start_session();
 security_ensure_work_type_column($conn);
 check_session(['admin']);
+capabilities_require_web('manage_users', '../../../admin/admin.php?page=manage_users&type=users');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $redirectUrl = '../../../admin/admin.php?page=manage_users&type=users';

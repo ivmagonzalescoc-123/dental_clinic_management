@@ -124,6 +124,7 @@ if ($aStmt) {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const modalEl = document.getElementById('createScheduleModal');
     const bsModal = new bootstrap.Modal(modalEl);
     document.getElementById('btnOpenCreateSchedule').addEventListener('click', ()=>bsModal.show());
@@ -200,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function(){
     document.querySelectorAll('.btn-cancel').forEach(btn=>btn.addEventListener('click', async function(){
         if (!confirm('Cancel this schedule?')) return;
         const sid = this.getAttribute('data-sid');
-        const fd = new FormData(); fd.append('schedule_id', sid);
+        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
         if (!j.success) return alert(j.message || 'Cancel failed');

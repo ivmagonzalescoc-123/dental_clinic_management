@@ -64,6 +64,23 @@ function column_exists(mysqli $conn, string $table, string $column): bool
 	return $ok;
 }
 
+function table_exists_local(mysqli $conn, string $table): bool
+{
+	$sql = "SELECT 1
+		FROM information_schema.TABLES
+		WHERE TABLE_SCHEMA = DATABASE()
+			AND TABLE_NAME = ?
+		LIMIT 1";
+	$stmt = $conn->prepare($sql);
+	if (!$stmt) return false;
+	$stmt->bind_param('s', $table);
+	$stmt->execute();
+	$res = $stmt->get_result();
+	$ok = $res && $res->num_rows > 0;
+	$stmt->close();
+	return $ok;
+}
+
 $usersHasIsActive = column_exists($conn, 'users', 'is_active');
 $servicesHasIsActive = column_exists($conn, 'services', 'is_active');
 
@@ -111,6 +128,24 @@ $secretariesTotal = scalar_int(
 		? "SELECT COUNT(*) FROM users u INNER JOIN role r ON r.role_id = u.role_id WHERE r.role_name = 'secretary' AND u.is_active = 1"
 		: "SELECT COUNT(*) FROM users u INNER JOIN role r ON r.role_id = u.role_id WHERE r.role_name = 'secretary'"
 );
+
+$pipelineScheduled = scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'scheduled'");
+$pipelineConfirmed = scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'confirmed'");
+$pipelineCheckedIn = scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'checked_in'");
+$pipelineInProgress = scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'in_progress'");
+$pipelineCompleted = scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'completed'");
+
+$pipelineBilled = 0;
+$pipelinePaid = 0;
+if (table_exists_local($conn, 'billing')) {
+	$pipelineBilled = scalar_int($conn, 'SELECT COUNT(*) FROM billing');
+	if (column_exists($conn, 'billing', 'status')) {
+		$pipelinePaid = scalar_int($conn, "SELECT COUNT(*) FROM billing WHERE status = 'paid'");
+	}
+}
+
+$pipelineTotal = max(1, $pipelineScheduled + $pipelineConfirmed + $pipelineCheckedIn + $pipelineInProgress + $pipelineCompleted);
+$pipelineCompletionPct = (int)round(($pipelineCompleted / $pipelineTotal) * 100);
 
 // Appointments by day (last 7 days)
 $seriesLabels = [];
@@ -258,6 +293,28 @@ function fmt_time(?string $dt): string
 			<div class="display-6 fw-bold"><?php echo (int)$usersTotal; ?></div>
 			<div class="text-muted small"><?php echo (int)$doctorsTotal; ?> doctors, <?php echo (int)$secretariesTotal; ?> secretaries</div>
 			<div class="mt-2"><a class="small" href="admin.php?page=manage_users&type=users">Manage</a></div>
+		</div>
+	</div>
+
+	<div class="col-12">
+		<div class="card dental-surface-card">
+			<div class="card-body">
+				<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+					<h5 class="card-title mb-0">Dental Management Pipeline <span>| End-to-end workflow</span></h5>
+					<span class="badge bg-primary">Completion: <?php echo (int)$pipelineCompletionPct; ?>%</span>
+				</div>
+				<div class="progress mb-3" style="height: 10px;">
+					<div class="progress-bar bg-success" role="progressbar" style="width: <?php echo (int)$pipelineCompletionPct; ?>%" aria-valuenow="<?php echo (int)$pipelineCompletionPct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
+				</div>
+				<div class="row g-2">
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Scheduled</div><div class="h5 mb-0"><?php echo (int)$pipelineScheduled; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Confirmed</div><div class="h5 mb-0"><?php echo (int)$pipelineConfirmed; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Checked In</div><div class="h5 mb-0"><?php echo (int)$pipelineCheckedIn; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">In Progress</div><div class="h5 mb-0"><?php echo (int)$pipelineInProgress; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Completed</div><div class="h5 mb-0"><?php echo (int)$pipelineCompleted; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Billed / Paid</div><div class="h5 mb-0"><?php echo (int)$pipelineBilled; ?> / <?php echo (int)$pipelinePaid; ?></div></div></div>
+				</div>
+			</div>
 		</div>
 	</div>
 

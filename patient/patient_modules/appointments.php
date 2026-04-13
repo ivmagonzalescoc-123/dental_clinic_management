@@ -433,6 +433,7 @@ if ($patient_id) {
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const appointmentCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const DAYS_AHEAD = 150;
     const dateSelect = document.getElementById('appointment_date');
     const alertBox = document.getElementById('apptAlert');
@@ -957,6 +958,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 fd.append('requested_date', requestedDate);
                 fd.append('requested_timeslot_id', requestedTimeslot);
                 fd.append('request_note', requestNote);
+                fd.append('csrf_token', appointmentCsrfToken);
 
                 const r = await fetch('../assets/api/appointments/request_reschedule.php', {
                     method: 'POST',
@@ -1010,6 +1012,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedDate = dateSelect ? String(dateSelect.value || '') : '';
 
             const formData = new FormData(form);
+            formData.append('csrf_token', appointmentCsrfToken);
             fetch('../assets/api/appointments/create_appointment.php', {
                 method: 'POST',
                 body: formData

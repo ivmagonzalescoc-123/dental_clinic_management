@@ -7,9 +7,37 @@ ini_set('error_log', dirname(__FILE__) . '/error.log');
 session_start();
 header('Content-Type: application/json');
 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
+
 try {
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+    include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
     include __DIR__ . '/availability_guard.php';
+
+    if (!in_array($_SESSION['role'] ?? '', ['admin', 'secretary', 'doctor'], true)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Forbidden']);
+        exit;
+    }
+    if (!capabilities_can('appointment.manage')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Access denied: missing appointment management permission.']);
+        exit;
+    }
+
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
+        exit;
+    }
     
     if (!$conn) {
         throw new Exception('Database connection failed');
@@ -43,6 +71,12 @@ try {
         exit;
     }
 
+    if (($_SESSION['role'] ?? '') === 'doctor' && (int)$current['user_id'] !== (int)($_SESSION['user_id'] ?? 0)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Doctors can only update their own appointments.']);
+        exit;
+    }
+
     if ($user_id <= 0) {
         $user_id = (int)$current['user_id'];
     }
@@ -64,6 +98,21 @@ try {
         $status = (string)$current['status'];
     } elseif (!in_array($status, $allowedStatus, true)) {
         $status = (string)$current['status'];
+    }
+
+    $currentStatus = (string)($current['status'] ?? 'scheduled');
+    $transitionMatrix = [
+        'scheduled' => ['confirmed', 'cancelled', 'no_show'],
+        'confirmed' => ['checked_in', 'cancelled', 'no_show', 'scheduled'],
+        'checked_in' => ['in_progress', 'no_show'],
+        'in_progress' => ['completed'],
+        'completed' => [],
+        'cancelled' => [],
+        'no_show' => [],
+    ];
+    if ($status !== $currentStatus && !in_array($status, $transitionMatrix[$currentStatus] ?? [], true)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid appointment status transition: ' . $currentStatus . ' -> ' . $status . '.']);
+        exit;
     }
 
     if ($timeslot_id <= 0) {
@@ -181,6 +230,17 @@ try {
         $update_stmt->close();
 
         $conn->commit();
+
+        if (function_exists('log_system_event')) {
+            log_system_event(
+                $conn,
+                'appointment.update',
+                'appointments',
+                $appointment_id,
+                'Updated appointment to status=' . $status . ', doctor_id=' . $user_id . ', timeslot_id=' . $timeslot_id,
+                isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
+            );
+        }
     } catch (Exception $txe) {
         $conn->rollback();
         throw $txe;

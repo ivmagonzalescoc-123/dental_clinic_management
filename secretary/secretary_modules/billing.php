@@ -1,8 +1,113 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include dirname(dirname(__DIR__)) . '/config/capabilities.php';
+include_once dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 
 $action = $_GET['action'] ?? '';
 $today = date('Y-m-d');
+$csrf_token = security_generate_csrf_token();
+
+function billing_can_transition(string $from, string $to): bool
+{
+    $matrix = [
+        'unpaid' => ['partial', 'paid'],
+        'partial' => ['unpaid', 'paid'],
+        'paid' => [],
+    ];
+
+    if ($from === $to) {
+        return true;
+    }
+
+    return in_array($to, $matrix[$from] ?? [], true);
+}
+
+if ($action === 'record_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
+        exit;
+    }
+
+    if (!capabilities_can('billing.record')) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Access denied: missing billing update permission.']);
+        exit;
+    }
+
+    $billingId = (int)($_POST['billing_id'] ?? 0);
+    if ($billingId <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Invalid billing ID.']);
+        exit;
+    }
+
+    $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+
+    $curStmt = $conn->prepare('SELECT status FROM billing WHERE billing_id = ? LIMIT 1');
+    if (!$curStmt) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Unable to validate billing status.']);
+        exit;
+    }
+    $curStmt->bind_param('i', $billingId);
+    $curStmt->execute();
+    $cur = $curStmt->get_result()->fetch_assoc();
+    $curStmt->close();
+
+    if (!$cur) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Billing record not found.']);
+        exit;
+    }
+
+    $currentStatus = (string)($cur['status'] ?? 'unpaid');
+    if ($currentStatus === 'paid') {
+        echo json_encode(['success' => true, 'message' => 'Billing record is already paid.', 'billing_id' => $billingId, 'status' => 'paid']);
+        exit;
+    }
+
+    $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = ? WHERE billing_id = ?');
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Unable to prepare payment update.']);
+        exit;
+    }
+
+    $paidStatus = 'paid';
+    $stmt->bind_param('sii', $paidStatus, $currentUserId, $billingId);
+    $ok = $stmt->execute();
+    $affected = (int)$stmt->affected_rows;
+    $stmt->close();
+
+    if (!$ok) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Failed to record payment.']);
+        exit;
+    }
+
+    if ($affected === 0) {
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Billing record not found or already paid.']);
+        exit;
+    }
+
+    if (function_exists('log_system_event')) {
+        log_system_event(
+            $conn,
+            'billing.record_payment',
+            'billing',
+            $billingId,
+            'Recorded payment and set status=paid',
+            $currentUserId
+        );
+    }
+
+    echo json_encode(['success' => true, 'message' => 'Payment recorded successfully.', 'billing_id' => $billingId, 'status' => 'paid']);
+    exit;
+}
 
 // detect or create status column
 $hasStatus = false;
@@ -21,6 +126,19 @@ if ($colRes && $colRes->num_rows > 0) {
 
 // Handle secretary marking billing status
 if ($action === 'mark_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Invalid security token. Please try again.';
+        $_SESSION['message_type'] = 'danger';
+        if (!headers_sent()) {
+            header('Location: secretary.php?page=billing');
+            exit;
+        } else {
+            echo "<script>window.location.href='secretary.php?page=billing';</script>";
+            exit;
+        }
+    }
+
     $billingId = (int) ($_POST['billing_id'] ?? 0);
     $newStatus = ($_POST['status'] ?? '');
     $allowed = ['unpaid', 'partial', 'paid'];
@@ -40,7 +158,54 @@ if ($action === 'mark_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    if (!capabilities_can('billing.record')) {
+        $_SESSION['message'] = 'Access denied: missing billing update permission.';
+        $_SESSION['message_type'] = 'danger';
+        if (!headers_sent()) {
+            header('Location: secretary.php?page=billing');
+            exit;
+        } else {
+            echo "<script>window.location.href='secretary.php?page=billing';</script>";
+            exit;
+        }
+    }
+
     if ($billingId > 0 && in_array($newStatus, $allowed, true) && $hasStatus) {
+        $curStmt = $conn->prepare('SELECT status FROM billing WHERE billing_id = ? LIMIT 1');
+        if ($curStmt) {
+            $curStmt->bind_param('i', $billingId);
+            $curStmt->execute();
+            $cur = $curStmt->get_result()->fetch_assoc();
+            $curStmt->close();
+        } else {
+            $cur = null;
+        }
+
+        if (!$cur) {
+            $_SESSION['message'] = 'Billing record not found.';
+            $_SESSION['message_type'] = 'warning';
+            if (!headers_sent()) {
+                header('Location: secretary.php?page=billing');
+                exit;
+            } else {
+                echo "<script>window.location.href='secretary.php?page=billing';</script>";
+                exit;
+            }
+        }
+
+        $currentStatus = (string)($cur['status'] ?? 'unpaid');
+        if (!billing_can_transition($currentStatus, $newStatus)) {
+            $_SESSION['message'] = 'Invalid billing status transition: ' . $currentStatus . ' -> ' . $newStatus . '.';
+            $_SESSION['message_type'] = 'warning';
+            if (!headers_sent()) {
+                header('Location: secretary.php?page=billing');
+                exit;
+            } else {
+                echo "<script>window.location.href='secretary.php?page=billing';</script>";
+                exit;
+            }
+        }
+
         if ($newStatus === 'paid') {
             $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = ? WHERE billing_id = ?');
             if ($stmt) {
@@ -58,6 +223,16 @@ if ($action === 'mark_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($stmt->execute()) {
                 $_SESSION['message'] = 'Billing status updated.';
                 $_SESSION['message_type'] = 'success';
+                if (function_exists('log_system_event')) {
+                    log_system_event(
+                        $conn,
+                        'billing.status_update',
+                        'billing',
+                        $billingId,
+                        'Updated billing status: ' . $currentStatus . ' -> ' . $newStatus,
+                        $currentUserId
+                    );
+                }
             } else {
                 $_SESSION['message'] = 'Error updating status: ' . $stmt->error;
                 $_SESSION['message_type'] = 'danger';
@@ -252,6 +427,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                                         <?php if (($billing['status'] ?? '') !== 'paid'): ?>
                                             <form method="POST" action="secretary.php?page=billing&action=mark_status"
                                                 style="display:inline-block; margin-left:6px;">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                 <input type="hidden" name="billing_id"
                                                     value="<?php echo htmlspecialchars($billing['billing_id']); ?>">
                                                 <input type="hidden" name="status" value="paid">

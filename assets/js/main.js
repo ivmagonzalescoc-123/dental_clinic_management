@@ -457,14 +457,32 @@
       if (!j.success) return;
       // update badge if present
       const nb = document.getElementById('navNotificationBadge');
-      if (nb) nb.textContent = j.unread || 0;
+      if (nb) {
+        const unread = parseInt(j.unread || 0, 10) || 0;
+        nb.textContent = unread;
+        nb.style.display = unread > 0 ? '' : 'none';
+      }
       // optionally populate dropdown list
       const list = document.getElementById('navNotificationList');
       if (list) {
         list.innerHTML = '';
         (j.notifications || []).slice(0,10).forEach(n => {
-          const a = document.createElement('a');
-          a.href = n.link || '#';
+          const rawLink = String(n.link || '').trim();
+          const isNavigable = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
+
+          let resolvedHref = '#';
+          if (isNavigable) {
+            if (/^https?:\/\//i.test(rawLink)) {
+              resolvedHref = rawLink;
+            } else if (rawLink.startsWith('/')) {
+              resolvedHref = rawLink.startsWith(appRoot + '/') ? rawLink : (appRoot + rawLink);
+            } else {
+              resolvedHref = rawLink;
+            }
+          }
+
+          const a = document.createElement(isNavigable ? 'a' : 'div');
+          if (isNavigable) a.href = resolvedHref;
           a.className = 'dropdown-item d-flex justify-content-between align-items-start';
           a.dataset.notificationId = n.notification_id || '';
           const left = document.createElement('div');
@@ -474,16 +492,18 @@
           right.textContent = new Date(n.created_at).toLocaleString();
           a.appendChild(left);
           a.appendChild(right);
-          a.addEventListener('click', async function(e){
-            // mark read then navigate
-            e.preventDefault();
-            const nid = this.dataset.notificationId;
-            if (nid) {
-              try { await fetch(appRoot + '/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
-            }
-            const href = this.getAttribute('href') || '#';
-            if (href && href !== '#') window.location.href = href;
-          });
+          if (isNavigable) {
+            a.addEventListener('click', async function(e){
+              // mark read then navigate
+              e.preventDefault();
+              const nid = this.dataset.notificationId;
+              if (nid) {
+                try { await fetch(appRoot + '/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
+              }
+              const href = this.getAttribute('href') || '#';
+              if (href && href !== '#') window.location.href = href;
+            });
+          }
           list.appendChild(a);
         });
       }

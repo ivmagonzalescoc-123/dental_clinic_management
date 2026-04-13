@@ -1,5 +1,26 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
+
+function appointment_can_transition_doctor(string $from, string $to): bool
+{
+    if ($from === $to) {
+        return true;
+    }
+
+    $matrix = [
+        'scheduled' => ['confirmed', 'cancelled', 'no_show'],
+        'confirmed' => ['checked_in', 'cancelled', 'no_show'],
+        'checked_in' => ['in_progress', 'no_show'],
+        'in_progress' => ['completed'],
+        'completed' => [],
+        'cancelled' => [],
+        'no_show' => [],
+    ];
+
+    return in_array($to, $matrix[$from] ?? [], true);
+}
 
 // Get logged-in doctor ID
 $doctor_id = $_SESSION['user_id'] ?? 0;
@@ -17,6 +38,14 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
     
     // Handle COMPLETE VISIT (submit EHR and send to billing)
     if ($action === 'complete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $csrf = $_POST['csrf_token'] ?? '';
+        if (!security_validate_csrf_token($csrf)) {
+            $_SESSION['message'] = 'Invalid security token. Please refresh and try again.';
+            $_SESSION['message_type'] = 'danger';
+            header('Location: doctor.php?page=appointments');
+            exit;
+        }
+
         $appointmentId = (int)($_POST['appointment_id'] ?? 0);
         $serviceId = (int)($_POST['service_id'] ?? 0);
         $toothData = $_POST['tooth_data'] ?? []; // Array of tooth updates
@@ -37,7 +66,7 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
         $conn->begin_transaction();
         try {
             // Verify appointment exists and belongs to this doctor
-            $stmt = $conn->prepare('SELECT appointment_id, patient_id, user_id FROM appointments WHERE appointment_id = ? AND user_id = ?');
+            $stmt = $conn->prepare('SELECT appointment_id, patient_id, user_id, status FROM appointments WHERE appointment_id = ? AND user_id = ?');
             if (!$stmt) throw new Exception('Error preparing statement.');
             $stmt->bind_param('ii', $appointmentId, $doctor_id);
             $stmt->execute();
@@ -50,6 +79,10 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
             }
             
             $patientId = $appt['patient_id'];
+            $currentStatus = strtolower((string)($appt['status'] ?? ''));
+            if (!appointment_can_transition_doctor($currentStatus, 'completed')) {
+                throw new Exception('Cannot complete visit from status: ' . $currentStatus);
+            }
             
             // Update appointment status to completed and add notes
             $status = 'completed';
@@ -155,6 +188,17 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
             }
             
             $conn->commit();
+
+            if (function_exists('log_system_event')) {
+                log_system_event(
+                    $conn,
+                    'appointment.complete_visit',
+                    'appointments',
+                    $appointmentId,
+                    'Completed visit and generated/updated billing.',
+                    (int)$doctor_id
+                );
+            }
             
             $_SESSION['message'] = 'Visit completed successfully. Patient sent to secretary for billing.';
             $_SESSION['message_type'] = 'success';
@@ -170,6 +214,14 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
     
     // Handle ACCEPT patient (start visit) - set arrival status in_progress and appointment status
     if ($action === 'accept' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $csrf = $_POST['csrf_token'] ?? '';
+        if (!security_validate_csrf_token($csrf)) {
+            $_SESSION['message'] = 'Invalid security token. Please refresh and try again.';
+            $_SESSION['message_type'] = 'danger';
+            header('Location: doctor.php?page=appointments');
+            exit;
+        }
+
         $appointmentId = (int)($_POST['appointment_id'] ?? 0);
         if ($appointmentId <= 0) {
             $_SESSION['message'] = 'Invalid appointment.';
@@ -180,7 +232,25 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
 
         $conn->begin_transaction();
         try {
+            $stStmt = $conn->prepare('SELECT status FROM appointments WHERE appointment_id = ? AND user_id = ? LIMIT 1');
+            if (!$stStmt) {
+                throw new Exception('Unable to validate appointment status.');
+            }
+            $stStmt->bind_param('ii', $appointmentId, $doctor_id);
+            $stStmt->execute();
+            $stRow = $stStmt->get_result()->fetch_assoc();
+            $stStmt->close();
+
+            if (!$stRow) {
+                throw new Exception('Appointment not found or access denied.');
+            }
+
+            $currentStatus = strtolower((string)($stRow['status'] ?? ''));
             $apptStatus = 'in_progress';
+            if (!appointment_can_transition_doctor($currentStatus, $apptStatus)) {
+                throw new Exception('Cannot start visit from status: ' . $currentStatus);
+            }
+
             $ust = $conn->prepare('UPDATE appointments SET status = ? WHERE appointment_id = ? AND user_id = ?');
             if ($ust) {
                 $ust->bind_param('sii', $apptStatus, $appointmentId, $doctor_id);
@@ -189,6 +259,16 @@ if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
             }
 
             $conn->commit();
+            if (function_exists('log_system_event')) {
+                log_system_event(
+                    $conn,
+                    'appointment.start_visit',
+                    'appointments',
+                    $appointmentId,
+                    'Doctor started visit (status=in_progress).',
+                    (int)$doctor_id
+                );
+            }
             $_SESSION['message'] = 'Patient accepted. Visit started.';
             $_SESSION['message_type'] = 'success';
         } catch (Throwable $e) {
@@ -716,6 +796,7 @@ if ($stmt) {
             </div>
             <form method="POST" action="doctor.php?page=appointments&action=complete">
                 <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? ''); ?>">
                     <input type="hidden" name="appointment_id" id="modalAppointmentId">
                     <input type="hidden" name="patient_id" id="modalPatientId">
                     
@@ -1478,6 +1559,7 @@ async function openHistoryModal(appointmentId) {
                             btn.disabled = true;
                             try {
                                 const fd = new FormData(); fd.append('schedule_id', sid);
+                                fd.append('csrf_token', doctorCsrfToken);
                                 const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
                                 const j = await r.json();
                                 if (j.success) {
@@ -1505,9 +1587,7 @@ async function openHistoryModal(appointmentId) {
     }
 }
 </script>
-
 <!-- Reschedule Modal -->
-<!-- flatpickr CSS/JS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
@@ -1533,6 +1613,7 @@ async function openHistoryModal(appointmentId) {
 </div>
 
 <script>
+const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 const resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
 // initialize flatpickr on modal inputs
 let fpStart = null, fpEnd = null;
@@ -1612,7 +1693,11 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
     if (!sid || !start) return alert('Start datetime required');
     this.disabled = true;
     try {
-        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end);
+        const fd = new FormData();
+        fd.append('schedule_id', sid);
+        fd.append('scheduled_start', start);
+        fd.append('scheduled_end', end);
+        fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
         if (!j.success) return alert(j.message || 'Failed to reschedule');

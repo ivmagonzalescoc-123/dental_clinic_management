@@ -290,6 +290,7 @@ foreach ($schedules as $row) {
 
 <script>
 (function() {
+    const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     let modal = null;
 
     function ensureToastContainer() {
@@ -419,6 +420,7 @@ foreach ($schedules as $row) {
         fd.append('scheduled_start', start);
         fd.append('scheduled_end', end);
         fd.append('user_id', document.getElementById('scDoctorId').value || '');
+        fd.append('csrf_token', secretaryCsrfToken);
 
         try {
             const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
@@ -440,6 +442,7 @@ foreach ($schedules as $row) {
         }
         const fd = new FormData();
         fd.append('schedule_id', scheduleId);
+        fd.append('csrf_token', secretaryCsrfToken);
 
         try {
             const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });

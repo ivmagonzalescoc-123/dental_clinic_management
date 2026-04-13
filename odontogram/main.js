@@ -36,6 +36,7 @@ const odontogramEl = document.getElementById("odontogram");
 const selectedToothEl = document.getElementById("selectedTooth");
 const statusSummaryEl = document.getElementById("statusSummary");
 const clearStatusBtn = document.getElementById("clearStatus");
+const resetViewBtn = document.getElementById("resetView");
 
 const statusButtons = [...document.querySelectorAll(".btn[data-status]")];
 const toothButtons = new Map();
@@ -145,6 +146,13 @@ camera.position.set(0, 10, 26);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.target.set(0, 2.5, 0);
+controls.minDistance = 9;
+controls.maxDistance = 42;
+controls.minPolarAngle = 0.35;
+controls.maxPolarAngle = Math.PI / 2.02;
+controls.maxAzimuthAngle = Math.PI * 0.7;
+controls.minAzimuthAngle = -Math.PI * 0.7;
+controls.enablePan = false;
 // Default view (used when no tooth is selected)
 const defaultCamPos = camera.position.clone();
 const defaultTarget = controls.target.clone();
@@ -345,7 +353,13 @@ function clearSelection() {
     highlightMesh = null;
   }
 
-  // animate camera back to default view
+  resetCameraView();
+
+  // reset blur pulse
+  focusProgress = 0;
+}
+
+function resetCameraView() {
   camAnim.start(
     camera.position.clone(),
     defaultCamPos.clone(),
@@ -353,9 +367,13 @@ function clearSelection() {
     defaultTarget.clone(),
     650
   );
+}
 
-  // reset blur pulse
-  focusProgress = 0;
+if (resetViewBtn) {
+  resetViewBtn.addEventListener("click", () => {
+    // Camera reset must not modify tooth status labels/state.
+    resetCameraView();
+  });
 }
 
 function selectTooth(toothNum) {
@@ -440,6 +458,17 @@ function animate() {
   resizeToDisplaySize();
 
   controls.update();
+
+  // Keep target and distance bounded so wheel zoom cannot "lose" the teeth model.
+  controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 8);
+  controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, 8.5);
+  controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 8);
+  const distance = camera.position.distanceTo(controls.target);
+  if (distance < controls.minDistance || distance > controls.maxDistance) {
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    const clampedDistance = THREE.MathUtils.clamp(distance, controls.minDistance, controls.maxDistance);
+    camera.position.copy(controls.target.clone().add(dir.multiplyScalar(clampedDistance)));
+  }
 
   if (camAnim.active) {
     const t = (performance.now() - camAnim.t0) / camAnim.dur;

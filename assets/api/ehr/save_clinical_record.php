@@ -1,11 +1,14 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+include dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 include_once __DIR__ . '/../appointments/availability_guard.php';
 header('Content-Type: application/json');
 
 // Only doctors may save clinical records
 check_session(['doctor']);
+capabilities_require_json('clinical.save');
 $doctor_id = $_SESSION['user_id'] ?? 0;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -84,6 +87,13 @@ $odontogram = isset($_POST['odontogram']) ? json_decode($_POST['odontogram'], tr
 $doctor_notes = $_POST['doctor_notes'] ?? '';
 $follow_up_date = isset($_POST['follow_up_date']) ? trim($_POST['follow_up_date']) : null;
 $submit_and_finalize = isset($_POST['finalize']) && $_POST['finalize'] == '1';
+
+$doctorFirstName = trim((string)($_SESSION['first_name'] ?? ''));
+$doctorLastName = trim((string)($_SESSION['last_name'] ?? ''));
+$doctorDisplayName = trim($doctorFirstName . ' ' . $doctorLastName);
+if ($doctorDisplayName === '') {
+    $doctorDisplayName = 'doctor #' . (int)$doctor_id;
+}
 
 if ($appointment_id <= 0) {
     http_response_code(400);
@@ -589,26 +599,14 @@ try {
         $created_schedule_id = (int)$conn->insert_id;
         $ins->close();
 
-        $remind_dt = (new DateTime($book_start))->modify('-24 hours')->format('Y-m-d H:i:s');
-        $r_sql = 'INSERT INTO schedule_reminders (patient_schedule_id, remind_at, channel, payload) VALUES (?, ?, "in_app", ?)';
-        $payload = json_encode([
-            'appointment_id' => $created_followup_appointment_id,
-            'schedule_id' => $created_schedule_id,
-            'patient_schedule_id' => $created_schedule_id,
-        ]);
-        $r_stmt = $conn->prepare($r_sql);
-        if ($r_stmt) {
-            $r_stmt->bind_param('iss', $created_schedule_id, $remind_dt, $payload);
-            $r_stmt->execute();
-            $r_stmt->close();
-        }
+        reminder_queue_default_pack($conn, $created_schedule_id, $book_start, $created_followup_appointment_id);
     }
 
     // If finalized/submitted, update appointment status and queue, and create billing
     if ($submit_and_finalize) {
         $status = 'completed';
         $ust = $conn->prepare("UPDATE appointments SET status = ?, notes = CONCAT(IFNULL(notes,''), ?) WHERE appointment_id = ?");
-        $note_append = "\n[Clinical record submitted by doctor {$doctor_id}]";
+        $note_append = "\n[Clinical record submitted by " . $doctorDisplayName . "]";
         $ust->bind_param('ssi', $status, $note_append, $appointment_id);
         $ust->execute();
         $ust->close();

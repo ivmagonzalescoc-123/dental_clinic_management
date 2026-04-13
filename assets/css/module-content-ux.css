@@ -432,6 +432,11 @@
   position: static;
   overflow: visible;
   border: 1px solid #d8e7f5;
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
 }
 
 #main .dental-kpi-card::before {

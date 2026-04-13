@@ -30,9 +30,27 @@ if ($patientId) {
     </div>
 
     <div class="row g-3">
-        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Upcoming Appointments</h6><div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div></div></div>
-        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Past Visits</h6><div class="display-6 fw-bold"><?php echo (int)$past; ?></div></div></div>
-        <div class="col-md-4"><div class="card dental-kpi-card p-3"><h6>Next Appointment</h6><div class="fw-semibold"><?php echo $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None'; ?></div><div class="text-muted small"><?php echo $nextAppt ? htmlspecialchars($nextAppt['status']) : ''; ?></div></div></div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Upcoming Appointments</h6>
+                <div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div>
+                <div class="text-muted small">Scheduled and upcoming visits</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Past Visits</h6>
+                <div class="display-6 fw-bold"><?php echo (int)$past; ?></div>
+                <div class="text-muted small">Completed appointment history</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Next Appointment</h6>
+                <div class="fw-semibold"><?php echo $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None'; ?></div>
+                <div class="text-muted small"><?php echo $nextAppt ? htmlspecialchars($nextAppt['status']) : 'No active booking'; ?></div>
+            </div>
+        </div>
 
     </div>
 </div>

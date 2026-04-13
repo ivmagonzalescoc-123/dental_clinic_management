@@ -94,6 +94,18 @@ switch ($role_key) {
                     </a>
                 </li>
 
+                <li class="nav-item dropdown">
+                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-label="Notifications">
+                        <i class="bi bi-bell"></i>
+                        <span id="navNotificationBadge" class="badge bg-danger badge-number" style="display:none;">0</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications" style="min-width: 360px;">
+                        <li class="dropdown-header">Notifications</li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li id="navNotificationList" class="notifications-list px-2"></li>
+                    </ul>
+                </li>
+
                 
 
                 <li class="nav-item dropdown pe-3">
@@ -195,6 +207,9 @@ switch ($role_key) {
                                 case "transactions":
                                     include "patient_modules/transactions.php";
                                     break;
+                                case "billing_view":
+                                    include "patient_modules/billing_view.php";
+                                    break;
                                 case "settings":
                                     include "patient_modules/settings.php";
                                     break;
@@ -261,6 +276,151 @@ switch ($role_key) {
                     link.classList.remove('collapsed');
                 }
             });
+
+            const searchInput = document.getElementById('patientSearch');
+            const searchIcon = document.querySelector('.header-search .search-input-icon');
+
+            if (searchInput) {
+                const portalBaseFile = 'patient.php';
+                const pageKeywordMap = {
+                    dashboard: ['home', 'overview', 'summary'],
+                    appointments: ['booking', 'schedule', 'calendar'],
+                    services: ['treatments', 'procedures', 'pricing'],
+                    transactions: ['billing', 'payments', 'history'],
+                    settings: ['preferences', 'configuration'],
+                    profile: ['account', 'my profile']
+                };
+
+                const styleId = 'portalSearchSuggestionStyles';
+                if (!document.getElementById(styleId)) {
+                    const style = document.createElement('style');
+                    style.id = styleId;
+                    style.textContent = '' +
+                        '.search-suggest-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #dbe4f0;border-radius:10px;box-shadow:0 10px 24px rgba(24,45,74,.14);max-height:280px;overflow:auto;z-index:1200;display:none;}' +
+                        '.search-suggest-item{display:block;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;cursor:pointer;}' +
+                        '.search-suggest-item:hover,.search-suggest-item.active{background:#eef5ff;}' +
+                        '.search-suggest-title{font-size:14px;color:#153b66;font-weight:600;}' +
+                        '.search-suggest-meta{font-size:12px;color:#6b7f95;}' +
+                        '.search-suggest-empty{padding:10px 12px;font-size:13px;color:#71839a;}' +
+                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}';
+                    document.head.appendChild(style);
+                }
+
+                const wrap = searchInput.closest('.search-input-wrap');
+                const menu = document.createElement('div');
+                menu.className = 'search-suggest-menu';
+                if (wrap) {
+                    wrap.style.position = 'relative';
+                    wrap.appendChild(menu);
+                }
+
+                const linkNodes = document.querySelectorAll('#sidebar-nav a.nav-link[href*="page="], .dropdown-menu a.dropdown-item[href*="page="]');
+                const seen = new Set();
+                const pages = [];
+
+                linkNodes.forEach((a) => {
+                    let urlObj;
+                    try {
+                        urlObj = new URL(a.href, window.location.origin);
+                    } catch (err) {
+                        return;
+                    }
+                    const page = (urlObj.searchParams.get('page') || '').trim();
+                    if (!page) return;
+
+                    const title = (a.textContent || '').replace(/\s+/g, ' ').trim() || page.replace(/_/g, ' ');
+                    const key = page + '|' + title.toLowerCase();
+                    if (seen.has(key)) return;
+                    seen.add(key);
+
+                    const keywords = [title, page.replace(/_/g, ' ')].concat(pageKeywordMap[page] || []);
+                    const normalized = Array.from(new Set(keywords.map((k) => String(k).toLowerCase().trim()).filter(Boolean)));
+
+                    pages.push({
+                        title: title,
+                        page: page,
+                        href: portalBaseFile + '?page=' + encodeURIComponent(page),
+                        keywords: normalized
+                    });
+                });
+
+                const highlightText = (text, term) => {
+                    if (!term) return text;
+                    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    return text.replace(new RegExp('(' + escaped + ')', 'ig'), '<mark>$1</mark>');
+                };
+
+                const findMatches = (term) => {
+                    const q = (term || '').trim().toLowerCase();
+                    if (!q) return pages.slice(0, 6);
+                    const tokens = q.split(/\s+/).filter(Boolean);
+                    return pages.filter((p) => {
+                        const hay = (p.title + ' ' + p.page + ' ' + p.keywords.join(' ')).toLowerCase();
+                        return tokens.every((t) => hay.indexOf(t) !== -1);
+                    }).slice(0, 6);
+                };
+
+                let currentSuggestions = [];
+                const renderMenu = (term) => {
+                    currentSuggestions = findMatches(term);
+                    if (!currentSuggestions.length) {
+                        menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
+                        menu.style.display = 'block';
+                        return;
+                    }
+                    menu.innerHTML = currentSuggestions.map((s, idx) => {
+                        const meta = s.keywords.slice(0, 4).join(' • ');
+                        return '<button type="button" class="search-suggest-item' + (idx === 0 ? ' active' : '') + '" data-href="' + s.href + '">' +
+                            '<div class="search-suggest-title">' + highlightText(s.title, term) + '</div>' +
+                            '<div class="search-suggest-meta">' + highlightText(meta, term) + '</div>' +
+                            '</button>';
+                    }).join('');
+                    menu.style.display = 'block';
+                };
+
+                const navigateFirst = () => {
+                    const first = currentSuggestions[0];
+                    if (first && first.href) window.location.href = first.href;
+                };
+
+                searchInput.addEventListener('input', function () {
+                    renderMenu(searchInput.value || '');
+                });
+
+                searchInput.addEventListener('focus', function () {
+                    renderMenu(searchInput.value || '');
+                });
+
+                searchInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (menu.style.display === 'none') renderMenu(searchInput.value || '');
+                        navigateFirst();
+                    }
+                    if (e.key === 'Escape') {
+                        menu.style.display = 'none';
+                    }
+                });
+
+                if (searchIcon) {
+                    searchIcon.style.cursor = 'pointer';
+                    searchIcon.addEventListener('click', function () {
+                        renderMenu(searchInput.value || '');
+                        navigateFirst();
+                    });
+                }
+
+                menu.addEventListener('click', function (e) {
+                    const btn = e.target.closest('.search-suggest-item');
+                    if (!btn) return;
+                    const href = btn.getAttribute('data-href');
+                    if (href) window.location.href = href;
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!wrap || !wrap.contains(e.target)) menu.style.display = 'none';
+                });
+            }
 
             if (mustChangePassword && !window.location.search.includes('page=settings')) {
                 window.location.href = 'patient.php?page=settings&force_password_change=1';
