@@ -5,7 +5,16 @@ $patient_id = $_SESSION['patient_id'] ?? 0;
 
 // Fetch services
 $services = [];
-$svcSql = "SELECT service_id, service_name, initial_price, description FROM services WHERE is_active = 1 ORDER BY service_name ASC";
+$svcSql = "SELECT s.service_id,
+				  s.service_name,
+				  s.initial_price,
+				  s.description,
+				  ROUND(AVG(COALESCE(ts.duration_minutes, 0) + COALESCE(ts.buffer_minutes, 0))) AS avg_service_minutes
+		   FROM services s
+		   LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+		   WHERE s.is_active = 1
+		   GROUP BY s.service_id, s.service_name, s.initial_price, s.description
+		   ORDER BY s.service_name ASC";
 $svcRes = $conn->query($svcSql);
 if ($svcRes) {
 	while ($r = $svcRes->fetch_assoc()) $services[] = $r;
@@ -24,10 +33,15 @@ if ($svcRes) {
 				<div class="service-card card p-3 shadow-sm" data-service-id="<?php echo htmlspecialchars($s['service_id']); ?>">
 					<div class="service-name fw-bold mb-2"><?php echo htmlspecialchars($s['service_name']); ?></div>
 					<div class="service-price text-muted mb-2">Starting Price ₱<?php echo htmlspecialchars(number_format((float)$s['initial_price'],2)); ?></div>
-					<div class="service-desc text-muted small" style="min-height:40px"><?php echo htmlspecialchars($s['description'] ?? ''); ?></div>
-					<div class="mt-3 text-end">
-						<a href="patient.php?page=service_view&service_id=<?php echo htmlspecialchars($s['service_id']); ?>" class="btn btn-sm btn-outline-secondary">Details</a>
+					<div class="service-time text-muted small mb-2">
+						Average Time:
+						<?php if (!empty($s['avg_service_minutes'])): ?>
+							<?php echo htmlspecialchars((string)((int)$s['avg_service_minutes'])); ?> min
+						<?php else: ?>
+							TBD
+						<?php endif; ?>
 					</div>
+					<div class="service-desc text-muted small" style="min-height:40px"><?php echo htmlspecialchars($s['description'] ?? ''); ?></div>
 				</div>
 			<?php endforeach; endif; ?>
 		</div>

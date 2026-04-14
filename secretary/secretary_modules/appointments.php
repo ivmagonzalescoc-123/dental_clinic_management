@@ -137,13 +137,15 @@ if ($action === 'approve_patient_reschedule' && $_SERVER['REQUEST_METHOD'] === '
         }
 
         $appStatus = strtolower((string)$req['appointment_status']);
-        if (!in_array($appStatus, ['scheduled', 'confirmed'], true)) {
-            throw new Exception('Only scheduled/confirmed appointments can be rescheduled. Current status: ' . $appStatus);
+        if (!in_array($appStatus, ['scheduled', 'confirmed', 'missed'], true)) {
+            throw new Exception('Only scheduled/confirmed/missed appointments can be rescheduled. Current status: ' . $appStatus);
         }
+
+        $updatedStatus = ($appStatus === 'missed') ? 'confirmed' : $appStatus;
 
         $updAppt = $conn->prepare('UPDATE appointments SET user_id = ?, appointment_date = ?, timeslot_id = ?, status = ? WHERE appointment_id = ?');
         if (!$updAppt) throw new Exception('Failed to update appointment.');
-        $updAppt->bind_param('isisi', $targetDoctorId, $targetDate, $targetTimeslotId, $appStatus, $req['appointment_id']);
+        $updAppt->bind_param('isisi', $targetDoctorId, $targetDate, $targetTimeslotId, $updatedStatus, $req['appointment_id']);
         $updAppt->execute();
         $updAppt->close();
 

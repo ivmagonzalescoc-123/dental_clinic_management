@@ -330,6 +330,8 @@ if ($patient_id) {
                                     $statusBadge = 'warning';
                                 } elseif ($statusKey === 'completed') {
                                     $statusBadge = 'success';
+                                } elseif ($statusKey === 'missed') {
+                                    $statusBadge = 'warning';
                                 } elseif ($statusKey === 'cancelled' || $statusKey === 'no_show') {
                                     $statusBadge = 'danger';
                                 }
@@ -347,8 +349,21 @@ if ($patient_id) {
                                 $apptDateRaw = (string)($history['appointment_date'] ?? '');
                                 $apptDateTs = $apptDateRaw !== '' ? strtotime($apptDateRaw) : false;
                                 $isFutureOrToday = ($apptDateTs !== false) ? (date('Y-m-d', $apptDateTs) >= date('Y-m-d')) : false;
+                                $slotEndRaw = (string)($history['end_time'] ?? '');
+                                $apptDateOnly = ($apptDateTs !== false) ? date('Y-m-d', $apptDateTs) : '';
+                                $slotEndTs = false;
+                                if ($apptDateOnly !== '' && $slotEndRaw !== '') {
+                                    $slotEndTs = strtotime($apptDateOnly . ' ' . $slotEndRaw);
+                                }
+                                $baseTimeTs = $slotEndTs !== false ? $slotEndTs : $apptDateTs;
+                                $isComputedMissed = in_array($statusKey, ['scheduled', 'confirmed'], true) && ($baseTimeTs !== false) && ($baseTimeTs < time());
+                                if ($isComputedMissed) {
+                                    $statusKey = 'missed';
+                                    $statusLabel = 'Missed';
+                                    $statusBadge = 'warning';
+                                }
                                 $hasPendingResched = ((int)($history['pending_reschedule_count'] ?? 0) > 0);
-                                $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed'], true) && $isFutureOrToday && !$hasPendingResched;
+                                $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed', 'missed'], true) && !$hasPendingResched;
                                 ?>
                                 <tr>
                                     <td>#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
@@ -419,14 +434,6 @@ if ($patient_id) {
             </div>
         </div>
 
-        <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
-            <div id="bookingResultToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex align-items-center">
-                    <div class="toast-body" id="bookingResultToastBody"></div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -448,8 +455,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const historyPane = document.getElementById('apptHistoryPane');
     const historyBody = document.getElementById('patientApptHistoryBody');
     const historyEmptyRow = document.getElementById('patientApptHistoryEmpty');
-    const bookingToastEl = document.getElementById('bookingResultToast');
-    const bookingToastBodyEl = document.getElementById('bookingResultToastBody');
     const patientRescheduleModalEl = document.getElementById('patientRescheduleModal');
     const patientRescheduleDateEl = document.getElementById('patientRescheduleDate');
     const patientRescheduleTimeslotEl = document.getElementById('patientRescheduleTimeslot');
@@ -485,24 +490,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showBookingToast(message, type) {
-        if (!bookingToastEl || !bookingToastBodyEl || typeof bootstrap === 'undefined') {
-            showAlert(message, type === 'success' ? 'success' : 'danger');
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(message, type || 'info');
             return;
         }
 
-        const toastType = String(type || 'success');
-        bookingToastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-dark');
-        if (toastType === 'success') {
-            bookingToastEl.classList.add('bg-success');
-        } else if (toastType === 'warning') {
-            bookingToastEl.classList.add('bg-warning', 'text-dark');
-        } else {
-            bookingToastEl.classList.add('bg-danger');
-        }
-
-        bookingToastBodyEl.textContent = message;
-        const toast = bootstrap.Toast.getOrCreateInstance(bookingToastEl, { autohide: true, delay: 2000 });
-        toast.show();
+        showAlert(message, type === 'success' ? 'success' : 'danger');
     }
 
     function switchAppointmentsTab(tabName) {
@@ -526,6 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (key === 'confirmed') return 'primary';
         if (key === 'checked_in') return 'info';
         if (key === 'in_progress') return 'warning';
+        if (key === 'missed') return 'warning';
         if (key === 'completed') return 'success';
         if (key === 'cancelled' || key === 'no_show') return 'danger';
         return 'secondary';

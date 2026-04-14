@@ -97,7 +97,7 @@ try {
     }
 
     $statusKey = strtolower((string)($appt['status'] ?? ''));
-    if (!in_array($statusKey, ['scheduled', 'confirmed'], true)) {
+    if (!in_array($statusKey, ['scheduled', 'confirmed', 'missed'], true)) {
         echo json_encode(['success' => false, 'message' => 'This appointment cannot be rescheduled in its current status.']);
         exit;
     }

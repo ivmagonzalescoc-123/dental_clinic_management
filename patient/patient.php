@@ -210,6 +210,9 @@ switch ($role_key) {
                                 case "billing_view":
                                     include "patient_modules/billing_view.php";
                                     break;
+                                case "notifications":
+                                    include "patient_modules/notifications.php";
+                                    break;
                                 case "settings":
                                     include "patient_modules/settings.php";
                                     break;

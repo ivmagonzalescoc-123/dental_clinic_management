@@ -250,6 +250,9 @@ switch ($role_key) {
                                 case "reports":
                                     include "admin_modules/reports.php";
                                     break;
+                                case "notifications":
+                                    include "admin_modules/notifications.php";
+                                    break;
                                 case "system_logs":
                                     include "admin_modules/system_logs.php";
                                     break;

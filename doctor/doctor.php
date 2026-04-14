@@ -294,6 +294,9 @@ switch ($role_key) {
                                 case "records":
                                     include "doctor_modules/records.php";
                                     break;
+                                case "notifications":
+                                    include "doctor_modules/notifications.php";
+                                    break;
                                 case "patients":
                                     include "doctor_modules/patients.php";
                                     break;
@@ -533,27 +536,14 @@ switch ($role_key) {
     </script>
 
     <script>
-        // quick bootstrap-like toast using alert banners
+        // Use shared compact top toast across all roles/pages.
         function showToast(message, type) {
-            // type: success, danger, info, warning
-            const containerId = 'toastContainer';
-            let container = document.getElementById(containerId);
-            if (!container) {
-                container = document.createElement('div');
-                container.id = containerId;
-                container.style.position = 'fixed';
-                container.style.top = '16px';
-                container.style.right = '16px';
-                container.style.zIndex = 1060;
-                document.body.appendChild(container);
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(message, type || 'info');
+                return;
             }
-            const el = document.createElement('div');
-            el.className = 'alert alert-' + (type || 'info');
-            el.role = 'alert';
-            el.style.minWidth = '200px';
-            el.innerHTML = message;
-            container.appendChild(el);
-            setTimeout(() => { try { el.remove(); } catch (e) { } }, 4000);
+
+            alert(String(message || ''));
         }
     </script>
 

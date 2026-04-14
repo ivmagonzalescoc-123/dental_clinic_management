@@ -38,6 +38,93 @@
     el.addEventListener('scroll', listener)
   }
 
+  function ensureAppToastHost() {
+    let host = document.getElementById('appToastHost')
+    if (host) return host
+
+    host = document.createElement('div')
+    host.id = 'appToastHost'
+    host.className = 'app-toast-host'
+    host.setAttribute('aria-live', 'polite')
+    host.setAttribute('aria-atomic', 'true')
+    document.body.appendChild(host)
+    return host
+  }
+
+  function toastTypeFromAlertClass(alertEl) {
+    if (!alertEl || !alertEl.classList) return 'info'
+    if (alertEl.classList.contains('alert-success')) return 'success'
+    if (alertEl.classList.contains('alert-danger')) return 'danger'
+    if (alertEl.classList.contains('alert-warning')) return 'warning'
+    return 'info'
+  }
+
+  function getAlertText(alertEl) {
+    if (!alertEl) return ''
+    const clone = alertEl.cloneNode(true)
+    clone.querySelectorAll('.btn-close,[data-bs-dismiss="alert"]').forEach((el) => el.remove())
+    return String(clone.textContent || '').replace(/\s+/g, ' ').trim()
+  }
+
+  function showAppToast(message, type = 'info', options = {}) {
+    const text = String(message || '').trim()
+    if (!text) return
+
+    const host = ensureAppToastHost()
+    const toast = document.createElement('div')
+    toast.className = 'app-toast app-toast-' + String(type || 'info')
+    toast.setAttribute('role', 'status')
+
+    const body = document.createElement('div')
+    body.className = 'app-toast-body'
+    body.textContent = text
+
+    const closeBtn = document.createElement('button')
+    closeBtn.type = 'button'
+    closeBtn.className = 'app-toast-close'
+    closeBtn.setAttribute('aria-label', 'Dismiss notification')
+    closeBtn.innerHTML = '&times;'
+
+    toast.appendChild(body)
+    toast.appendChild(closeBtn)
+    host.appendChild(toast)
+
+    requestAnimationFrame(() => toast.classList.add('is-visible'))
+
+    let removed = false
+    const removeToast = () => {
+      if (removed) return
+      removed = true
+      toast.classList.remove('is-visible')
+      setTimeout(() => {
+        try { toast.remove() } catch (e) {}
+      }, 180)
+    }
+
+    closeBtn.addEventListener('click', removeToast)
+    const delay = Number(options.delay || 3200)
+    setTimeout(removeToast, delay)
+  }
+
+  function convertInlineAlertsToToasts(scope) {
+    const root = scope instanceof HTMLElement ? scope : document
+    const alerts = root.querySelectorAll('.alert.alert-dismissible.fade.show:not([data-toastified="1"])')
+    alerts.forEach((alertEl) => {
+      if (!(alertEl instanceof HTMLElement)) return
+      if (alertEl.closest('.modal')) return
+      if (alertEl.closest('.app-toast-host')) return
+      if (alertEl.getAttribute('data-keep-inline-alert') === '1') return
+
+      const message = getAlertText(alertEl)
+      const type = toastTypeFromAlertClass(alertEl)
+      alertEl.setAttribute('data-toastified', '1')
+      if (message) showAppToast(message, type)
+      alertEl.remove()
+    })
+  }
+
+  window.showAppToast = showAppToast
+
   /**
    * Sidebar toggle
    */
@@ -320,6 +407,91 @@
     });
   })
 
+  function ensureUnifiedTableSearch(tableEl) {
+    if (!(tableEl instanceof HTMLTableElement)) return
+    if (tableEl.dataset.unifiedSearchInit === '1') return
+    if (tableEl.closest('.fc')) return
+    if (tableEl.getAttribute('role') === 'presentation') return
+
+    const tbody = tableEl.tBodies && tableEl.tBodies[0] ? tableEl.tBodies[0] : null
+    if (!tbody) return
+
+    const host = tableEl.closest('.table-responsive') || tableEl.parentElement
+    if (!host || !host.parentElement) return
+
+    const searchWrap = document.createElement('div')
+    searchWrap.className = 'unified-table-search-wrap'
+
+    const searchInput = document.createElement('input')
+    searchInput.type = 'search'
+    searchInput.className = 'form-control unified-table-search-input'
+    searchInput.placeholder = 'Search table...'
+    searchInput.setAttribute('aria-label', 'Search table')
+
+    const clearBtn = document.createElement('button')
+    clearBtn.type = 'button'
+    clearBtn.className = 'unified-table-search-clear'
+    clearBtn.setAttribute('aria-label', 'Clear search')
+    clearBtn.innerHTML = '&times;'
+    clearBtn.style.display = 'none'
+
+    searchWrap.appendChild(searchInput)
+    searchWrap.appendChild(clearBtn)
+
+    host.parentElement.insertBefore(searchWrap, host)
+
+    const filterRows = () => {
+      const term = String(searchInput.value || '').toLowerCase().trim()
+      const rows = Array.from(tbody.querySelectorAll(':scope > tr')).filter((row) => !row.classList.contains('unified-table-no-results'))
+      let visibleCount = 0
+
+      rows.forEach((row) => {
+        const text = String(row.textContent || '').toLowerCase()
+        const match = !term || text.includes(term)
+        row.style.display = match ? '' : 'none'
+        if (match) visibleCount++
+      })
+
+      clearBtn.style.display = term ? '' : 'none'
+
+      let noResultRow = tbody.querySelector(':scope > tr.unified-table-no-results')
+      if (term && rows.length > 0 && visibleCount === 0) {
+        if (!noResultRow) {
+          noResultRow = document.createElement('tr')
+          noResultRow.className = 'unified-table-no-results'
+          const td = document.createElement('td')
+          td.colSpan = tableEl.tHead && tableEl.tHead.rows[0] ? tableEl.tHead.rows[0].cells.length : 1
+          td.className = 'text-center text-muted py-3'
+          td.textContent = 'No matching records found.'
+          noResultRow.appendChild(td)
+          tbody.appendChild(noResultRow)
+        }
+        noResultRow.style.display = ''
+      } else if (noResultRow) {
+        noResultRow.remove()
+      }
+    }
+
+    searchInput.addEventListener('input', filterRows)
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = ''
+      filterRows()
+      searchInput.focus()
+    })
+
+    tableEl.dataset.unifiedSearchInit = '1'
+    filterRows()
+  }
+
+  function initUnifiedTableSearch(root) {
+    const scope = root instanceof HTMLElement ? root : document
+    const tables = scope.querySelectorAll('#main table, #main .table-responsive table')
+    tables.forEach((table) => ensureUnifiedTableSearch(table))
+  }
+
+  window.addEventListener('load', () => initUnifiedTableSearch(document))
+  document.addEventListener('DOMContentLoaded', () => initUnifiedTableSearch(document))
+
   /**
    * Autoresize echart charts
    */
@@ -357,6 +529,16 @@
   }
   // Expose for debugging: show computed app root in console
   try { console.debug('appRoot computed:', appRoot); } catch(e) {}
+
+  function currentPortalNotificationsUrl() {
+    const p = window.location.pathname || '';
+    const parts = p.split('/').filter(Boolean);
+    const file = parts.length ? parts[parts.length - 1].toLowerCase() : '';
+    if (['admin.php', 'doctor.php', 'secretary.php', 'patient.php'].includes(file)) {
+      return file + '?page=notifications';
+    }
+    return '#';
+  }
 
   // Normalize table badge colors: only status badges keep accent color.
   const statusBadgeTerms = [
@@ -440,10 +622,15 @@
 
   window.addEventListener('load', queueBadgeNormalization);
   document.addEventListener('DOMContentLoaded', queueBadgeNormalization);
+  document.addEventListener('DOMContentLoaded', () => convertInlineAlertsToToasts(document));
 
   const mainRoot = document.getElementById('main');
   if (mainRoot && typeof MutationObserver !== 'undefined') {
-    new MutationObserver(queueBadgeNormalization).observe(mainRoot, {
+    new MutationObserver(() => {
+      queueBadgeNormalization();
+      convertInlineAlertsToToasts(mainRoot);
+      initUnifiedTableSearch(mainRoot);
+    }).observe(mainRoot, {
       childList: true,
       subtree: true
     });
@@ -468,10 +655,12 @@
         list.innerHTML = '';
         (j.notifications || []).slice(0,10).forEach(n => {
           const rawLink = String(n.link || '').trim();
-          const isNavigable = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
+          const hasValidRawLink = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
+          const fallbackLink = currentPortalNotificationsUrl();
+          const isNavigable = hasValidRawLink || fallbackLink !== '#';
 
           let resolvedHref = '#';
-          if (isNavigable) {
+          if (hasValidRawLink) {
             if (/^https?:\/\//i.test(rawLink)) {
               resolvedHref = rawLink;
             } else if (rawLink.startsWith('/')) {
@@ -479,6 +668,8 @@
             } else {
               resolvedHref = rawLink;
             }
+          } else if (fallbackLink !== '#') {
+            resolvedHref = fallbackLink;
           }
 
           const a = document.createElement(isNavigable ? 'a' : 'div');

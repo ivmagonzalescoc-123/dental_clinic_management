@@ -297,6 +297,9 @@ switch ($role_key) {
                                     case "arrivals":
                                         include "secretary_modules/arrivals.php";
                                         break;
+                                    case "notifications":
+                                        include "secretary_modules/notifications.php";
+                                        break;
                                     case "profile":
                                         include "secretary_modules/profile.php";
                                         break;

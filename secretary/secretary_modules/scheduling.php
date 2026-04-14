@@ -293,35 +293,13 @@ foreach ($schedules as $row) {
     const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     let modal = null;
 
-    function ensureToastContainer() {
-        let container = document.getElementById('secToastContainer');
-        if (container) return container;
-        container = document.createElement('div');
-        container.id = 'secToastContainer';
-        container.className = 'toast-container position-fixed top-0 end-0 p-3';
-        container.style.zIndex = '1080';
-        document.body.appendChild(container);
-        return container;
-    }
-
     function showToast(message, type) {
-        const t = type || 'info';
-        const cls = t === 'success' ? 'text-bg-success' : (t === 'danger' ? 'text-bg-danger' : (t === 'warning' ? 'text-bg-warning' : 'text-bg-primary'));
-        const container = ensureToastContainer();
-        const toastEl = document.createElement('div');
-        toastEl.className = 'toast align-items-center ' + cls + ' border-0';
-        toastEl.setAttribute('role', 'alert');
-        toastEl.setAttribute('aria-live', 'assertive');
-        toastEl.setAttribute('aria-atomic', 'true');
-        toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + String(message || '') + '</div></div>';
-        container.appendChild(toastEl);
-        if (window.bootstrap && window.bootstrap.Toast) {
-            const instance = new bootstrap.Toast(toastEl, { delay: 2800 });
-            toastEl.addEventListener('hidden.bs.toast', function () { toastEl.remove(); });
-            instance.show();
-        } else {
-            setTimeout(function () { toastEl.remove(); }, 2800);
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(message, type || 'info');
+            return;
         }
+
+        alert(String(message || ''));
     }
 
     document.addEventListener('DOMContentLoaded', function() {

@@ -60,6 +60,52 @@ if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     manage_users_redirect($type);
 }
 
+// Handle REACTIVATE action (change status to active)
+if ($action === 'reactivate' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
+    $csrf = $_POST['csrf_token'] ?? '';
+    if (!security_validate_csrf_token($csrf)) {
+        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect($_POST['type'] ?? 'users');
+    }
+
+    $id = (int)($_POST['id'] ?? 0);
+    $type = $_POST['type'] ?? 'users';
+
+    if ($type === 'patients') {
+        $_SESSION['message'] = 'Patients cannot be reactivated from this view.';
+        $_SESSION['message_type'] = 'warning';
+        manage_users_redirect($type);
+    }
+
+    if ($id <= 0) {
+        $_SESSION['message'] = 'Invalid user selected for reactivation.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+
+    $sql = 'UPDATE users SET is_active = 1 WHERE user_id = ?';
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        $_SESSION['message'] = 'Error preparing user reactivation.';
+        $_SESSION['message_type'] = 'danger';
+        manage_users_redirect('users');
+    }
+
+    $stmt->bind_param('i', $id);
+    if ($stmt->execute()) {
+        $_SESSION['message'] = 'User reactivated successfully!';
+        $_SESSION['message_type'] = 'success';
+    } else {
+        $_SESSION['message'] = 'Error reactivating user.';
+        $_SESSION['message_type'] = 'danger';
+    }
+    $stmt->close();
+
+    manage_users_redirect('users');
+}
+
 // Handle RESET PASSWORD action (admin only for system users)
 if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
@@ -333,16 +379,29 @@ foreach ($roles as $roleRow) {
                                                 <i class="bi bi-key"></i>
                                             </button>
                                         </form>
-                                        <form method="POST" style="display:inline;" 
-                                              onsubmit="return confirm('Are you sure you want to archive this user?');">
-                                                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                            <input type="hidden" name="action" value="archive">
-                                            <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
-                                            <input type="hidden" name="type" value="users">
-                                            <button type="submit" class="btn btn-sm btn-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <?php if ((int)($user['is_active'] ?? 0) === 1): ?>
+                                            <form method="POST" style="display:inline;" 
+                                                  onsubmit="return confirm('Are you sure you want to archive this user?');">
+                                                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                <input type="hidden" name="action" value="archive">
+                                                <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
+                                                <input type="hidden" name="type" value="users">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Archive User">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <form method="POST" style="display:inline;" 
+                                                  onsubmit="return confirm('Reactivate this user account?');">
+                                                                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                                <input type="hidden" name="action" value="reactivate">
+                                                <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
+                                                <input type="hidden" name="type" value="users">
+                                                <button type="submit" class="btn btn-sm btn-success" title="Reactivate User">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
