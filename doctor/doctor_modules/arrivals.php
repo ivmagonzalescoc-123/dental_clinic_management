@@ -33,6 +33,13 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 </div>
 
 <script>
+function notifyDoctorArrival(message, type) {
+    if (typeof window.showAppToast === 'function') {
+        window.showAppToast(String(message || ''), type || 'info');
+        return;
+    }
+    alert(String(message || ''));
+}
 const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 const DOC_TODAY    = <?= json_encode($today) ?>;
 const DOC_TOMORROW = <?= json_encode($tomorrow) ?>;
@@ -150,9 +157,9 @@ async function doStartSession(appointmentId) {
             if (data.schedule_id) url += '&schedule_id=' + data.schedule_id;
             window.location.href = url;
         } else {
-            alert(data.message || 'Failed to start session');
+            notifyDoctorArrival(data.message || 'Failed to start session', 'danger');
         }
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { notifyDoctorArrival('Error: ' + e.message, 'danger'); }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -21,6 +21,21 @@
         return raw;
     }
 
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function highlightDateTimes(value) {
+        const escaped = escapeHtml(value);
+        const dateTimeRegex = /(\b\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b)/g;
+        return escaped.replace(dateTimeRegex, '<span class="notification-datetime">$1</span>');
+    }
+
     async function markRead(notificationId) {
         if (!notificationId) return;
         try {
@@ -43,8 +58,6 @@
 
         emptyEl.style.display = 'none';
         rows.forEach(function(n) {
-            const notificationId = n.notification_id || '';
-            const href = resolveHref(n.link);
             const item = document.createElement('div');
             item.className = 'list-group-item py-3';
 
@@ -54,25 +67,14 @@
 
             const body = document.createElement('div');
             body.className = 'small text-muted mt-1';
-            body.textContent = n.body || '';
+            body.innerHTML = highlightDateTimes(n.body || '');
 
             const meta = document.createElement('div');
             meta.className = 'd-flex justify-content-between align-items-center mt-2';
             const dateEl = document.createElement('small');
-            dateEl.className = 'text-muted';
+            dateEl.className = 'notification-time';
             dateEl.textContent = n.created_at ? new Date(n.created_at).toLocaleString() : '';
             meta.appendChild(dateEl);
-
-            if (href) {
-                const openBtn = document.createElement('a');
-                openBtn.className = 'btn btn-sm btn-primary';
-                openBtn.href = href;
-                openBtn.textContent = 'Open';
-                openBtn.addEventListener('click', function() {
-                    markRead(notificationId);
-                });
-                meta.appendChild(openBtn);
-            }
 
             item.appendChild(title);
             item.appendChild(body);

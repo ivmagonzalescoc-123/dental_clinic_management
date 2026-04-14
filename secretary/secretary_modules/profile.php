@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const submitBtn = document.getElementById('saveProfileBtn');
 
     function showAlert(message, type) {
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(String(message || ''), type || 'info');
+        }
         alertBox.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
     }
 

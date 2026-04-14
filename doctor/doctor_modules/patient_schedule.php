@@ -127,6 +127,13 @@ document.addEventListener('DOMContentLoaded', function(){
     const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const modalEl = document.getElementById('createScheduleModal');
     const bsModal = new bootstrap.Modal(modalEl);
+    function notifyDoctorSchedule(message, type) {
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(String(message || ''), type || 'info');
+            return;
+        }
+        alert(String(message || ''));
+    }
     document.getElementById('btnOpenCreateSchedule').addEventListener('click', ()=>bsModal.show());
 
     document.getElementById('btnSuggestSlots').addEventListener('click', async function(){
@@ -137,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
         const wrap = document.getElementById('suggestionsWrap'); wrap.innerHTML = '';
-        if (!j.success) return alert(j.message || 'No suggestions');
+        if (!j.success) return notifyDoctorSchedule(j.message || 'No suggestions', 'warning');
         (j.slots || []).slice(0,10).forEach(slot => {
             const a = document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action';
             a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
@@ -150,23 +157,23 @@ document.addEventListener('DOMContentLoaded', function(){
         const appt = document.getElementById('createScheduleAppointment').value || '';
         const start = document.getElementById('createScheduleStart').value.replace('T',' ');
         const end = (document.getElementById('createScheduleEnd').value || '').replace('T',' ');
-        if (!start) return alert('Select start time');
+        if (!start) return notifyDoctorSchedule('Select start time', 'warning');
         const fd = new FormData(); fd.append('appointment_id', appt); fd.append('user_id', <?php echo (int)$doctor_id; ?>); fd.append('book_start', start); if (end) fd.append('book_end', end);
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
-        if (!j.success) return alert(j.message || 'Failed to create schedule');
-        alert('Scheduled');
+        if (!j.success) return notifyDoctorSchedule(j.message || 'Failed to create schedule', 'danger');
+        notifyDoctorSchedule('Scheduled', 'success');
         location.reload();
     });
 
     document.getElementById('btnAutoSchedule').addEventListener('click', async function(){
         const appt = document.getElementById('createScheduleAppointment').value || '';
-        if (!appt) return alert('Select an appointment to auto-schedule');
+        if (!appt) return notifyDoctorSchedule('Select an appointment to auto-schedule', 'warning');
         const fd = new FormData(); fd.append('appointment_id', appt); fd.append('user_id', <?php echo (int)$doctor_id; ?>); fd.append('days_ahead', 14); fd.append('duration', 30);
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
-        if (!j.success) return alert(j.message || 'Auto-schedule failed');
-        if (!j.slots || j.slots.length === 0) return alert('No suggested slots');
+        if (!j.success) return notifyDoctorSchedule(j.message || 'Auto-schedule failed', 'danger');
+        if (!j.slots || j.slots.length === 0) return notifyDoctorSchedule('No suggested slots', 'warning');
         // auto book first slot that is not today
         const todayDate = new Date().toISOString().slice(0,10);
         let slot = null;
@@ -180,8 +187,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const fd2 = new FormData(); fd2.append('appointment_id', appt); fd2.append('user_id', <?php echo (int)$doctor_id; ?>); fd2.append('book_start', slot.start); fd2.append('book_end', slot.end || '');
         const res2 = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd2 });
         const j2 = await res2.json();
-        if (!j2.success) return alert(j2.message || 'Failed to book slot');
-        alert('Auto-scheduled successfully'); location.reload();
+        if (!j2.success) return notifyDoctorSchedule(j2.message || 'Failed to book slot', 'danger');
+        notifyDoctorSchedule('Auto-scheduled successfully', 'success'); location.reload();
     });
 
     // Reschedule / cancel handlers
@@ -189,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const sid = this.getAttribute('data-sid');
         const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
         const j = await g.json();
-        if (!j.success) return alert(j.message || 'Could not load schedule');
+        if (!j.success) return notifyDoctorSchedule(j.message || 'Could not load schedule', 'danger');
         const sch = j.schedule;
         // open modal prefilled
         document.getElementById('createScheduleAppointment').value = sch.appointment_id || '';
@@ -204,8 +211,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
-        if (!j.success) return alert(j.message || 'Cancel failed');
-        alert('Cancelled'); location.reload();
+        if (!j.success) return notifyDoctorSchedule(j.message || 'Cancel failed', 'danger');
+        notifyDoctorSchedule('Cancelled', 'success'); location.reload();
     }));
 
 });

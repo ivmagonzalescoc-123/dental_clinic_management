@@ -40,6 +40,8 @@ if (!function_exists('build_reminder_template')) {
     function build_reminder_template($template, $appointmentId, $scheduledStart, $patientName, $doctorName)
     {
         $t = strtolower((string)$template);
+        $patientDisplay = trim((string)$patientName) !== '' ? trim((string)$patientName) : 'Patient';
+        $doctorDisplay = trim((string)$doctorName) !== '' ? ('Dr. ' . trim((string)$doctorName)) : 'your doctor';
 
         switch ($t) {
             case 'appt_24h':
@@ -57,7 +59,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'Patient appointment tomorrow',
-                    'body' => "Appointment #{$appointmentId} is tomorrow at {$scheduledStart}."
+                    'body' => "{$patientDisplay} is scheduled with {$doctorDisplay} tomorrow at {$scheduledStart}."
                 ];
 
             case 'appt_24h_patient':
@@ -66,7 +68,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'Appointment tomorrow',
-                    'body' => "Your appointment #{$appointmentId} is tomorrow at {$scheduledStart}."
+                    'body' => "Your appointment with {$doctorDisplay} is tomorrow at {$scheduledStart}."
                 ];
 
             case 'appt_1h':
@@ -84,7 +86,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'Appointment in 1 hour',
-                    'body' => "Appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart})."
+                    'body' => "{$patientDisplay} with {$doctorDisplay} starts in about 1 hour ({$scheduledStart})."
                 ];
 
             case 'appt_1h_patient':
@@ -93,7 +95,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'Appointment in 1 hour',
-                    'body' => "Your appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart})."
+                    'body' => "Your appointment with {$doctorDisplay} starts in about 1 hour ({$scheduledStart})."
                 ];
 
             case 'appt_missed_patient':
@@ -102,7 +104,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => "Hello {$patientName},\n\nOur records show that your appointment time ({$scheduledStart}) may have been missed.\nAppointment ID: #{$appointmentId}\n\nPlease contact the clinic immediately so our secretary can help reschedule or confirm cancellation.\n\nAzucena's Dental Clinic",
                     'sms' => "Alert: It looks like you missed appointment #{$appointmentId} at {$scheduledStart}. Please contact the clinic to reschedule.",
                     'title' => 'Possible missed appointment',
-                    'body' => "Appointment #{$appointmentId} appears missed. Secretary follow-up may be needed."
+                    'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} appears missed. Secretary follow-up may be needed."
                 ];
 
             case 'appt_missed_staff':
@@ -111,7 +113,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'Possible missed appointment',
-                    'body' => "Appointment #{$appointmentId} appears missed. Please contact patient and reschedule/cancel if needed."
+                    'body' => "{$patientDisplay} with {$doctorDisplay} appears missed at {$scheduledStart}. Please contact the patient and reschedule/cancel if needed."
                 ];
 
             case 'appt_no_show_patient':
@@ -120,7 +122,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => "Hello {$patientName},\n\nBy end of day, appointment #{$appointmentId} has been marked as no-show.\nPlease contact the clinic so the secretary can help with next steps.\n\nAzucena's Dental Clinic",
                     'sms' => "Update: Appointment #{$appointmentId} is now marked as no-show. Please contact the clinic for next steps.",
                     'title' => 'Appointment marked no-show',
-                    'body' => "Appointment #{$appointmentId} was marked no-show."
+                    'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} was marked no-show."
                 ];
 
             case 'appt_no_show_staff':
@@ -129,7 +131,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => '',
                     'sms' => '',
                     'title' => 'No-show recorded',
-                    'body' => "Appointment #{$appointmentId} was marked no-show. Continue secretary follow-up workflow."
+                    'body' => "{$patientDisplay} with {$doctorDisplay} was marked no-show at {$scheduledStart}. Continue secretary follow-up workflow."
                 ];
 
             default:

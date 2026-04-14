@@ -32,7 +32,7 @@ if ($svcRes) {
 			<?php else: foreach ($services as $s): ?>
 				<div class="service-card card p-3 shadow-sm" data-service-id="<?php echo htmlspecialchars($s['service_id']); ?>">
 					<div class="service-name fw-bold mb-2"><?php echo htmlspecialchars($s['service_name']); ?></div>
-					<div class="service-price text-muted mb-2">Starting Price ₱<?php echo htmlspecialchars(number_format((float)$s['initial_price'],2)); ?></div>
+					<div class="service-price mb-2">Starting Price ₱<?php echo htmlspecialchars(number_format((float)$s['initial_price'],2)); ?></div>
 					<div class="service-time text-muted small mb-2">
 						Average Time:
 						<?php if (!empty($s['avg_service_minutes'])): ?>
@@ -51,5 +51,9 @@ if ($svcRes) {
 <style>
 	.service-card { border-radius:8px; }
 	.service-card:hover { transform: translateY(-4px); }
+	.service-price {
+		color: #0d6efd;
+		font-weight: 700;
+	}
 </style>
 

@@ -139,6 +139,13 @@ if ($stmt) {
 
         <script>
         const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+        function notifyDoctorRecord(message, type) {
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), type || 'info');
+                return;
+            }
+            alert(String(message || ''));
+        }
         // Service map lookup (load names)
         const serviceMapRec = {
             <?php
@@ -164,10 +171,10 @@ if ($stmt) {
             try {
                 const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?record_id=' + encodeURIComponent(recordId));
                 const j = await res.json();
-                if (!j.success) { alert('Could not load record'); return; }
+                if (!j.success) { notifyDoctorRecord('Could not load record', 'danger'); return; }
                 const rec = j.record;
                 const schedules = j.schedules || [];
-                if (!rec) { alert('No record found'); return; }
+                if (!rec) { notifyDoctorRecord('No record found', 'warning'); return; }
 
                 document.getElementById('histPatientNameRec').textContent = rec._patient_name || '';
                 document.getElementById('histSubmittedAtRec').textContent = rec.submitted_at || rec._appointment_date || '';
@@ -287,8 +294,8 @@ if ($stmt) {
                                         const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd });
                                         const j = await r.json();
                                         if (j.success) { btn.textContent = 'Arrived'; btn.classList.remove('btn-success'); btn.classList.add('btn-secondary'); }
-                                        else alert(j.message || 'Failed');
-                                    } catch(e){ alert('Error'); }
+                                        else notifyDoctorRecord(j.message || 'Failed', 'danger');
+                                    } catch(e){ notifyDoctorRecord('Error', 'danger'); }
                                     btn.disabled = false;
                                 } else if (act === 'cancel') {
                                     if (!confirm('Cancel this schedule?')) return;
@@ -298,8 +305,8 @@ if ($stmt) {
                                         const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
                                         const j = await r.json();
                                         if (j.success) { header.querySelector('strong').textContent = 'CANCELLED'; }
-                                        else alert(j.message || 'Failed');
-                                    } catch(e){ alert('Error'); }
+                                        else notifyDoctorRecord(j.message || 'Failed', 'danger');
+                                    } catch(e){ notifyDoctorRecord('Error', 'danger'); }
                                     btn.disabled = false;
                                 } else if (act === 'reschedule') {
                                     openRescheduleModal(s);
@@ -314,7 +321,7 @@ if ($stmt) {
                 } catch (e) { console.warn('render schedules', e); }
 
                 bs.show();
-            } catch (e) { console.error(e); alert('Error loading record'); }
+            } catch (e) { console.error(e); notifyDoctorRecord('Error loading record', 'danger'); }
         }
         </script>
 
@@ -370,19 +377,19 @@ if ($stmt) {
         }
         document.getElementById('rescheduleSuggestRec').addEventListener('click', async function(){
             const sid = document.getElementById('rescheduleScheduleIdRec').value;
-            if (!sid) return alert('No schedule selected');
+            if (!sid) return notifyDoctorRecord('No schedule selected', 'warning');
             const btn = this; btn.disabled = true;
             try {
                 const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
                 const gs = await g.json();
-                if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+                if (!gs.success) return notifyDoctorRecord(gs.message || 'Could not resolve schedule', 'danger');
                 const user_id = gs.schedule.user_id || CURRENT_USER;
                 const duration = gs.schedule.duration || 30;
                 const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
                 const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
                 const j = await res.json();
                 const wrap = document.getElementById('rescheduleSuggestionsRec'); wrap.innerHTML = '';
-                if (!j.success) return alert(j.message || 'No suggestions');
+                if (!j.success) return notifyDoctorRecord(j.message || 'No suggestions', 'warning');
                 (j.slots || []).slice(0,10).forEach(slot => {
                     const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action';
                     a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
@@ -399,10 +406,10 @@ if ($stmt) {
                     });
                     wrap.appendChild(a);
                 });
-            } catch(e){ console.error(e); alert('Error fetching suggestions'); }
+            } catch(e){ console.error(e); notifyDoctorRecord('Error fetching suggestions', 'danger'); }
             btn.disabled = false;
         });
         document.getElementById('rescheduleSaveBtnRec').addEventListener('click', async function(){
             const sid = document.getElementById('rescheduleScheduleIdRec').value; const start = toServerFormatRec(document.getElementById('rescheduleStartRec').value); const end = toServerFormatRec(document.getElementById('rescheduleEndRec').value);
-            if (!sid || !start) return alert('Start datetime required'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); fd.append('csrf_token', doctorCsrfToken); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return alert(j.message || 'Failed to reschedule'); alert('Rescheduled'); resModalRec.hide(); location.reload(); } catch(e){ console.error(e); alert('Error'); } this.disabled = false; });
+            if (!sid || !start) return notifyDoctorRecord('Start datetime required', 'warning'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); fd.append('csrf_token', doctorCsrfToken); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return notifyDoctorRecord(j.message || 'Failed to reschedule', 'danger'); notifyDoctorRecord('Rescheduled', 'success'); resModalRec.hide(); location.reload(); } catch(e){ console.error(e); notifyDoctorRecord('Error', 'danger'); } this.disabled = false; });
         </script>

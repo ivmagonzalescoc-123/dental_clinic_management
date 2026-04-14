@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!form) return;
 
     function showAlert(message, type) {
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(String(message || ''), type || 'info');
+        }
         alertBox.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
     }
 

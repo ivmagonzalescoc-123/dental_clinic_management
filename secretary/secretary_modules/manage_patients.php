@@ -214,6 +214,13 @@ if ($res) {
 </div>
 
 <script>
+function notifySecretaryPatients(message, type) {
+	if (typeof window.showAppToast === 'function') {
+		window.showAppToast(String(message || ''), type || 'info');
+		return;
+	}
+	alert(String(message || ''));
+}
 // Open profiling modal and load patient data
 function openProfilingModal(patient) {
 	document.getElementById('profiling_patient_id').value = patient.patient_id;
@@ -270,15 +277,15 @@ document.getElementById('profilingForm').addEventListener('submit', function(e) 
 	.then(r => r.json())
 	.then(res => {
 		if (res.success) {
-			alert('Profiling saved successfully!');
+			notifySecretaryPatients('Profiling saved successfully!', 'success');
 			bootstrap.Modal.getInstance(document.getElementById('profilingModal')).hide();
 		} else {
-			alert('Error: ' + (res.message || 'Unable to save profiling'));
+			notifySecretaryPatients('Error: ' + (res.message || 'Unable to save profiling'), 'danger');
 		}
 	})
 	.catch(err => {
 		console.error(err);
-		alert('Error saving profiling');
+		notifySecretaryPatients('Error saving profiling', 'danger');
 	});
 });
 
@@ -294,16 +301,16 @@ document.getElementById('addPatientForm').addEventListener('submit', function(e)
 	}).then(r => r.json()).then(res => {
 		if (res.success) {
 			if (res.generated_password) {
-				alert('Patient created. Default password: ' + res.generated_password + ' (must change on first login).');
+				notifySecretaryPatients('Patient created. Default password: ' + res.generated_password + ' (must change on first login).', 'success');
 			}
 			// reload to show new patient (simple approach)
 			location.reload();
 		} else {
-			alert('Error: ' + (res.message || 'Unable to create patient'));
+			notifySecretaryPatients('Error: ' + (res.message || 'Unable to create patient'), 'danger');
 		}
 	}).catch(err => {
 		console.error(err);
-		alert('Error creating patient');
+		notifySecretaryPatients('Error creating patient', 'danger');
 	});
 });
 </script>

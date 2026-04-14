@@ -296,6 +296,14 @@ if ($tstmt) {
 <script>
     // Basic EHR frontend behavior: materials list, save draft / finalize, prefill
     (function () {
+        function notifyDoctorEhr(message, type) {
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), type || 'info');
+                return;
+            }
+            alert(String(message || ''));
+        }
+
         const serviceToggleBtn = document.getElementById('ehrServiceToggleBtn');
         const serviceToggleText = document.getElementById('ehrServiceToggleText');
         const serviceToggleIcon = document.getElementById('ehrServiceToggleIcon');
@@ -477,15 +485,15 @@ if ($tstmt) {
                 const resp = await fetch('../assets/api/ehr/save_clinical_record.php', { method: 'POST', body: fd });
                 const j = await resp.json();
                 if (j.success) {
-                    alert(finalize ? ('Finalized. Billing: ₱' + (j.billing_amount || 0)) : 'Saved.');
+                    notifyDoctorEhr(finalize ? ('Finalized. Billing: ₱' + (j.billing_amount || 0)) : 'Saved.', 'success');
                     if (j.schedule_id) document.getElementById('schedule_id_hidden').value = j.schedule_id;
                     if (finalize) {
                         window.location.href = 'doctor.php?page=appointments';
                     }
                 } else {
-                    alert('Error: ' + (j.message || 'unknown'));
+                    notifyDoctorEhr('Error: ' + (j.message || 'unknown'), 'danger');
                 }
-            } catch (e) { alert('Request failed'); console.error(e); }
+            } catch (e) { notifyDoctorEhr('Request failed', 'danger'); console.error(e); }
         }
 
         document.getElementById('saveDraftBtn')?.addEventListener('click', () => saveClinical(false));

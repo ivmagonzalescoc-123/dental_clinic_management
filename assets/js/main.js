@@ -531,12 +531,11 @@
   try { console.debug('appRoot computed:', appRoot); } catch(e) {}
 
   function currentPortalNotificationsUrl() {
-    const p = window.location.pathname || '';
-    const parts = p.split('/').filter(Boolean);
-    const file = parts.length ? parts[parts.length - 1].toLowerCase() : '';
-    if (['admin.php', 'doctor.php', 'secretary.php', 'patient.php'].includes(file)) {
-      return file + '?page=notifications';
-    }
+    const p = String(window.location.pathname || '').toLowerCase();
+    if (p.includes('/admin/')) return appRoot + '/admin/admin.php?page=notifications';
+    if (p.includes('/doctor/')) return appRoot + '/doctor/doctor.php?page=notifications';
+    if (p.includes('/secretary/')) return appRoot + '/secretary/secretary.php?page=notifications';
+    if (p.includes('/patient/')) return appRoot + '/patient/patient.php?page=notifications';
     return '#';
   }
 
@@ -642,6 +641,22 @@
       if (!resp.ok) return;
       const j = await resp.json();
       if (!j.success) return;
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function highlightDateTimes(value) {
+        const escaped = escapeHtml(value);
+        const dateTimeRegex = /(\b\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b)/g;
+        return escaped.replace(dateTimeRegex, '<span class="notification-datetime">$1</span>');
+      }
+
       // update badge if present
       const nb = document.getElementById('navNotificationBadge');
       if (nb) {
@@ -659,8 +674,9 @@
           const fallbackLink = currentPortalNotificationsUrl();
           const isNavigable = hasValidRawLink || fallbackLink !== '#';
 
-          let resolvedHref = '#';
-          if (hasValidRawLink) {
+          // RBAC-safe default: always stay within current role portal.
+          let resolvedHref = fallbackLink !== '#' ? fallbackLink : '#';
+          if (resolvedHref === '#' && hasValidRawLink) {
             if (/^https?:\/\//i.test(rawLink)) {
               resolvedHref = rawLink;
             } else if (rawLink.startsWith('/')) {
@@ -668,8 +684,6 @@
             } else {
               resolvedHref = rawLink;
             }
-          } else if (fallbackLink !== '#') {
-            resolvedHref = fallbackLink;
           }
 
           const a = document.createElement(isNavigable ? 'a' : 'div');
@@ -677,9 +691,11 @@
           a.className = 'dropdown-item d-flex justify-content-between align-items-start';
           a.dataset.notificationId = n.notification_id || '';
           const left = document.createElement('div');
-          left.innerHTML = '<div class="fw-bold">' + (n.title || '') + '</div><div class="small text-muted">' + (n.body || '') + '</div>';
+          const titleHtml = escapeHtml(n.title || '');
+          const bodyHtml = highlightDateTimes(n.body || '');
+          left.innerHTML = '<div class="fw-bold">' + titleHtml + '</div><div class="small notification-body">' + bodyHtml + '</div>';
           const right = document.createElement('small');
-          right.className = 'text-muted';
+          right.className = 'notification-time';
           right.textContent = new Date(n.created_at).toLocaleString();
           a.appendChild(left);
           a.appendChild(right);

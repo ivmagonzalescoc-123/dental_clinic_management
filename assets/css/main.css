@@ -1060,6 +1060,43 @@ table a:hover {
     color: #000 !important;
 }
 
+#header .dropdown-menu.notifications {
+    background: #ffffff;
+}
+
+#header .dropdown-menu.notifications #navNotificationList .dropdown-item {
+    color: #1f3347 !important;
+    background: #ffffff;
+    border-radius: 6px;
+}
+
+#header .dropdown-menu.notifications #navNotificationList .dropdown-item:hover {
+    background: #eef6ff;
+    color: #0a4f88 !important;
+}
+
+#header .dropdown-menu.notifications #navNotificationList .notification-body,
+#header .dropdown-menu.notifications #navNotificationList .notification-time,
+#header .dropdown-menu.notifications #navNotificationList .text-muted,
+#header .dropdown-menu.notifications #navNotificationList small {
+    color: #5d6f85 !important;
+}
+
+#header .dropdown-menu.notifications .notification-datetime,
+#main .notification-datetime {
+    color: #0b6fbf !important;
+    font-weight: 700;
+    background: rgba(11, 111, 191, 0.12);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+#header .dropdown-menu.notifications .notification-time,
+#main .notification-time {
+    color: #0a4f88 !important;
+    font-weight: 700;
+}
+
 .header-nav .dropdown-menu.profile .dropdown-item:hover,
 .header-nav .dropdown-menu.profile .dropdown-item:focus,
 .header-nav .dropdown-menu.profile .dropdown-footer a {

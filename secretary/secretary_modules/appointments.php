@@ -1378,7 +1378,7 @@ $appointmentsTitle = $appointmentsTitleMap[$view] ?? 'Appointments';
                         if (!hid) return;
 
                         if (!isBookDateSelectable(info.dateStr)) {
-                            alert(getBookBlockedReason(info.dateStr));
+                            showSecretaryActionFeedback(getBookBlockedReason(info.dateStr), 'warning');
                             return;
                         }
 
@@ -1530,13 +1530,13 @@ $appointmentsTitle = $appointmentsTitleMap[$view] ?? 'Appointments';
                 const userId = userSelect ? userSelect.value : '';
 
                 if (!appointmentDate || !patientId || !userId) {
-                    alert('Please select a patient, a doctor, and an appointment date.');
+                    showSecretaryActionFeedback('Please select a patient, a doctor, and an appointment date.', 'warning');
                     return;
                 }
 
                 const timeslotId = document.getElementById('bookTimeslotSelect')?.value || '';
                 if (!timeslotId) {
-                    alert('Please select a 20-minute timeslot before booking.');
+                    showSecretaryActionFeedback('Please select a 20-minute timeslot before booking.', 'warning');
                     return;
                 }
 
@@ -1569,14 +1569,14 @@ $appointmentsTitle = $appointmentsTitleMap[$view] ?? 'Appointments';
                     }
 
                     if (ajson.success) {
-                        alert('Appointment created successfully');
+                        showSecretaryActionFeedback('Appointment created successfully', 'success');
                         location.reload();
                     } else {
-                        alert('Error creating appointment: ' + (ajson.message || 'unknown'));
+                        showSecretaryActionFeedback('Error creating appointment: ' + (ajson.message || 'unknown'), 'danger');
                     }
                 } catch (err) {
                     console.error(err);
-                    alert('Error: ' + (err.message || err));
+                    showSecretaryActionFeedback('Error: ' + (err.message || err), 'danger');
                 }
             });
         }
@@ -1649,6 +1649,14 @@ function toServerFormatSec(localVal) {
         if (/^\d{4}-\d{2}-\d{2}$/.test(localVal)) return localVal + ' 00:00:00';
         return localVal;
     } catch (e) { return localVal; }
+}
+
+function notifySecretary(message, type) {
+    if (typeof window.showAppToast === 'function') {
+        window.showAppToast(String(message || ''), type || 'info');
+        return;
+    }
+    alert(String(message || ''));
 }
 
 async function loadRescheduleTimeslotsSec(preselectTimeslotId) {
@@ -1765,7 +1773,7 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
         if (sid) {
             const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
             const gs = await g.json();
-            if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+            if (!gs.success) return notifySecretary(gs.message || 'Could not resolve schedule', 'danger');
             user_id = gs.schedule.user_id || user_id;
             duration = gs.schedule.duration || duration;
         } else if (apptDoctor) {
@@ -1775,7 +1783,7 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
         const wrap = document.getElementById('rescheduleSuggestionsSec'); wrap.innerHTML = '';
-        if (!j.success) return alert(j.message || 'No suggestions');
+        if (!j.success) return notifySecretary(j.message || 'No suggestions', 'warning');
         (j.slots || []).slice(0,10).forEach(slot => {
             const a = document.createElement('a');
             a.href = '#';
@@ -1795,7 +1803,7 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
             });
             wrap.appendChild(a);
         });
-    } catch(e){ console.error(e); alert('Error fetching suggestions'); }
+    } catch(e){ console.error(e); notifySecretary('Error fetching suggestions', 'danger'); }
     btn.disabled = false;
 });
 
@@ -1805,18 +1813,18 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     const doctorId = document.getElementById('rescheduleDoctorIdSec').value || CURRENT_USER;
     const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value);
     const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
-    if (!start) { alert('Start date required'); return; }
+    if (!start) { notifySecretary('Start date required', 'warning'); return; }
     this.disabled = true;
     try {
         if (apptId) {
             const timeslotId = document.getElementById('rescheduleTimeslotSec')?.value || '';
             const dateOnly = toDateOnlySec(start);
             if (!dateOnly) {
-                alert('Please select a date.');
+                notifySecretary('Please select a date.', 'warning');
                 return;
             }
             if (!timeslotId) {
-                alert('Please select an available timeslot.');
+                notifySecretary('Please select an available timeslot.', 'warning');
                 return;
             }
             const fd = new FormData();
@@ -1828,9 +1836,9 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
             const r = await fetch('../assets/api/appointments/update_appointment.php', { method: 'POST', body: fd });
             const j = await r.json();
             if (!j.success) {
-                alert(j.message || 'Failed to update appointment');
+                notifySecretary(j.message || 'Failed to update appointment', 'danger');
             } else {
-                alert('Appointment updated');
+                notifySecretary('Appointment updated', 'success');
                 resModalSec.hide();
                 location.reload();
             }
@@ -1839,16 +1847,16 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
             const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
             const j = await r.json();
             if (!j.success) {
-                alert(j.message || 'Failed to reschedule');
+                notifySecretary(j.message || 'Failed to reschedule', 'danger');
             } else {
-                alert('Rescheduled');
+                notifySecretary('Rescheduled', 'success');
                 resModalSec.hide();
                 location.reload();
             }
         }
     } catch (e) {
         console.error(e);
-        alert('Error');
+        notifySecretary('Error', 'danger');
     } finally {
         this.disabled = false;
     }

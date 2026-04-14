@@ -1401,13 +1401,13 @@ async function openHistoryModal(appointmentId) {
             const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
             const j = await res.json();
             if (!j.success) {
-                alert('Could not load history: ' + (j.message || ''));
+                notifyDoctor('Could not load history: ' + (j.message || ''), 'danger');
                 return;
             }
             const rec = j.record;
             const schedules = j.schedules || [];
         if (!rec) {
-            alert('No clinical record found for this appointment.');
+            notifyDoctor('No clinical record found for this appointment.', 'warning');
             return;
         }
         // show patient+date
@@ -1551,8 +1551,8 @@ async function openHistoryModal(appointmentId) {
                                     btn.textContent = 'Arrived';
                                     btn.classList.remove('btn-success');
                                     btn.classList.add('btn-secondary');
-                                } else alert(j.message || 'Failed');
-                            } catch (e) { alert('Error'); }
+                                } else notifyDoctor(j.message || 'Failed', 'danger');
+                            } catch (e) { notifyDoctor('Error', 'danger'); }
                             btn.disabled = false;
                         } else if (act === 'cancel') {
                             if (!confirm('Cancel this schedule?')) return;
@@ -1565,8 +1565,8 @@ async function openHistoryModal(appointmentId) {
                                 if (j.success) {
                                     // update header status
                                     header.querySelector('strong').textContent = 'CANCELLED';
-                                } else alert(j.message || 'Failed');
-                            } catch (e) { alert('Error'); }
+                                } else notifyDoctor(j.message || 'Failed', 'danger');
+                            } catch (e) { notifyDoctor('Error', 'danger'); }
                             btn.disabled = false;
                         } else if (act === 'reschedule') {
                             openRescheduleModal(s);
@@ -1583,7 +1583,7 @@ async function openHistoryModal(appointmentId) {
         bs.show();
     } catch (e) {
         console.error(e);
-        alert('Error loading history');
+        notifyDoctor('Error loading history', 'danger');
     }
 }
 </script>
@@ -1614,6 +1614,13 @@ async function openHistoryModal(appointmentId) {
 
 <script>
 const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+function notifyDoctor(message, type) {
+    if (typeof window.showAppToast === 'function') {
+        window.showAppToast(String(message || ''), type || 'info');
+        return;
+    }
+    alert(String(message || ''));
+}
 const resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
 // initialize flatpickr on modal inputs
 let fpStart = null, fpEnd = null;
@@ -1649,7 +1656,7 @@ async function openRescheduleModal(schedule) {
 
 document.getElementById('rescheduleSuggest').addEventListener('click', async function(){
     const sid = document.getElementById('rescheduleScheduleId').value;
-    if (!sid) return alert('No schedule selected');
+    if (!sid) return notifyDoctor('No schedule selected', 'warning');
     // attempt to find schedule owner by querying schedules endpoint (we have no dedicated get-schedule api); reuse smart_schedule with user_id
     // We'll derive user_id from the DOM by searching rendered schedule item if possible
     const btn = this; btn.disabled = true;
@@ -1657,7 +1664,7 @@ document.getElementById('rescheduleSuggest').addEventListener('click', async fun
         // fetch schedule info for accurate user_id / duration
         const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
         const gs = await g.json();
-        if (!gs.success) return alert(gs.message || 'Could not resolve schedule');
+        if (!gs.success) return notifyDoctor(gs.message || 'Could not resolve schedule', 'danger');
         const user_id = gs.schedule.user_id || CURRENT_USER;
         const duration = gs.schedule.duration || 30;
         // Post to smart_schedule
@@ -1665,7 +1672,7 @@ document.getElementById('rescheduleSuggest').addEventListener('click', async fun
         const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
         const wrap = document.getElementById('rescheduleSuggestions'); wrap.innerHTML = '';
-        if (!j.success) return alert(j.message || 'No suggestions');
+        if (!j.success) return notifyDoctor(j.message || 'No suggestions', 'warning');
             (j.slots || []).slice(0,10).forEach(slot => {
             const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action';
             a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
@@ -1682,7 +1689,7 @@ document.getElementById('rescheduleSuggest').addEventListener('click', async fun
             });
             wrap.appendChild(a);
         });
-    } catch (e) { console.error(e); alert('Error fetching suggestions'); }
+    } catch (e) { console.error(e); notifyDoctor('Error fetching suggestions', 'danger'); }
     btn.disabled = false;
 });
 
@@ -1690,7 +1697,7 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
     const sid = document.getElementById('rescheduleScheduleId').value;
     const start = toServerFormat(document.getElementById('rescheduleStart').value);
     const end = toServerFormat(document.getElementById('rescheduleEnd').value);
-    if (!sid || !start) return alert('Start datetime required');
+    if (!sid || !start) return notifyDoctor('Start datetime required', 'warning');
     this.disabled = true;
     try {
         const fd = new FormData();
@@ -1700,12 +1707,12 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
         fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
         const j = await res.json();
-        if (!j.success) return alert(j.message || 'Failed to reschedule');
-        alert('Rescheduled');
+        if (!j.success) return notifyDoctor(j.message || 'Failed to reschedule', 'danger');
+        notifyDoctor('Rescheduled', 'success');
         resModal.hide();
         // reload page or update UI: simple approach reload
         location.reload();
-    } catch (e) { console.error(e); alert('Error'); }
+    } catch (e) { console.error(e); notifyDoctor('Error', 'danger'); }
     this.disabled = false;
 });
 </script>
