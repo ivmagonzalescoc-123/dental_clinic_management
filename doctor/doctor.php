@@ -109,6 +109,7 @@ switch ($role_key) {
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
+    <link href="../assets/css/appointment-services.css" rel="stylesheet">
 </head>
 
 <body>
@@ -351,6 +352,7 @@ switch ($role_key) {
     <!-- Template Main JS File -->
     <script src="../assets/js/main.js?v=20260316-2"></script>
     <script src="../assets/js/session-idle.js"></script>
+    <script src="../assets/js/appointment-service-manager.js"></script>
 
     <!-- Active Navigation Highlight -->
     <script>

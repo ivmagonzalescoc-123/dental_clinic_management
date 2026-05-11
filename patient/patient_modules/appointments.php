@@ -272,6 +272,15 @@ if ($patient_id) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-hospital"></i> Select Services
+                            </label>
+                            <div id="serviceSelector" class="service-selector">
+                                <small class="text-muted">Loading services...</small>
+                            </div>
+                        </div>
 
                         <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
                             <label class="form-label">Choose Time Slot</label>

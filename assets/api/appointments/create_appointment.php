@@ -46,6 +46,8 @@ try {
     $timeslot_id           = isset($_POST['timeslot_id'])           ? (int)$_POST['timeslot_id']           : 0;
     // Backward-compatible: some older clients may still post service_id.
     $service_id            = isset($_POST['service_id'])            ? (int)$_POST['service_id']            : 0;
+    // New: support multiple selected services
+    $selected_service_ids  = isset($_POST['selected_service_ids'])  ? $_POST['selected_service_ids']       : [];
     $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
 
     $requester_role = $_SESSION['role'] ?? '';
@@ -223,6 +225,24 @@ try {
             }
             $ssStmt->close();
         }
+    }
+    
+    // Save multiple selected services (new format)
+    if (is_array($selected_service_ids) && count($selected_service_ids) > 0) {
+        $ssStmt = $conn->prepare('INSERT INTO selected_services (appointment_id, service_id) VALUES (?, ?)');
+        if (!$ssStmt) throw new Exception('Prepare failed: ' . $conn->error);
+        
+        foreach ($selected_service_ids as $sid) {
+            $sid = (int)$sid;
+            if ($sid > 0) {
+                $ssStmt->bind_param('ii', $appointment_id, $sid);
+                if (!$ssStmt->execute()) {
+                    $ssStmt->close();
+                    throw new Exception('Failed to save selected service: ' . $conn->error);
+                }
+            }
+        }
+        $ssStmt->close();
     }
 
     // Mark the timeslot as booked
