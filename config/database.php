@@ -3,14 +3,19 @@
  * Database Connection Configuration
  * Database: capstone_dental
  * Server: MariaDB 10.4.32
+ * 
+ * Configuration is loaded from .env file
  */
 
+// Load environment variables
+require_once __DIR__ . '/env.php';
+
 // Database configuration (define only if not already defined)
-if (!defined('DB_HOST')) define('DB_HOST', 'localhost');
-if (!defined('DB_USER')) define('DB_USER', 'root');
-if (!defined('DB_PASS')) define('DB_PASS', '');
-if (!defined('DB_NAME')) define('DB_NAME', 'capstone_dental');
-if (!defined('DB_PORT')) define('DB_PORT', 3306);
+if (!defined('DB_HOST')) define('DB_HOST', env('DB_HOST', 'localhost'));
+if (!defined('DB_USER')) define('DB_USER', env('DB_USER', 'root'));
+if (!defined('DB_PASS')) define('DB_PASS', env('DB_PASS', ''));
+if (!defined('DB_NAME')) define('DB_NAME', env('DB_NAME', 'capstone_dental'));
+if (!defined('DB_PORT')) define('DB_PORT', env('DB_PORT', 3306));
 
 // Create connection
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
@@ -26,9 +31,8 @@ if (!$conn->set_charset("utf8mb4")) {
     error_log("Error loading character set utf8mb4: " . $conn->error);
 }
 
-// Set timezone (adjust to your clinic's timezone)
-// Change 'Asia/Manila' to your local zone if different
-date_default_timezone_set('Asia/Manila');
+// Set timezone from environment (default: Asia/Manila)
+date_default_timezone_set(env('APP_TIMEZONE', 'Asia/Manila'));
 
 // Disable mysqli throwing exceptions by default here (we will use explicit checks)
 if (function_exists('mysqli_report')) {

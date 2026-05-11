@@ -1,5 +1,10 @@
 <?php
 
+// Load environment variables
+if (!function_exists('env')) {
+    require_once __DIR__ . '/env.php';
+}
+
 if (!function_exists('security_start_session')) {
     function security_start_session()
     {
@@ -7,12 +12,12 @@ if (!function_exists('security_start_session')) {
             return;
         }
 
-        $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        $secure = env('SECURE_COOKIES', false) || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
         $params = session_get_cookie_params();
         session_set_cookie_params([
-            'lifetime' => $params['lifetime'] ?? 0,
-            'path' => $params['path'] ?? '/',
-            'domain' => $params['domain'] ?? '',
+            'lifetime' => (int)env('SESSION_LIFETIME', 1800),
+            'path' => env('SESSION_PATH', '/'),
+            'domain' => env('SESSION_DOMAIN', ''),
             'secure' => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
