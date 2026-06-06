@@ -1,6 +1,7 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
@@ -59,13 +60,28 @@ if ($record && isset($record['patient_id']) && $record['patient_id']) {
         $pstmt->close();
         if ($prow && isset($prow['profiling']) && $prow['profiling'] !== null) {
             $decoded = json_decode($prow['profiling'], true);
-            if ($decoded !== null) $record['patient_profiling'] = $decoded;
+            if (is_array($decoded)) {
+                $record['patient_profiling'] = filter_background_profiling_data($decoded);
+            }
         }
     }
 }
 
 // Hide odontogram for secretary
 if ($record && $role === 'secretary') unset($record['odontogram']);
+
+// Fetch prescriptions
+$prescriptions = [];
+$p_stmt = $conn->prepare('SELECT * FROM prescriptions WHERE appointment_id = ?');
+if ($p_stmt) {
+    $p_stmt->bind_param('i', $appointment_id);
+    $p_stmt->execute();
+    $p_res = $p_stmt->get_result();
+    while ($p_row = $p_res->fetch_assoc()) {
+        $prescriptions[] = $p_row;
+    }
+    $p_stmt->close();
+}
 
 $toDecode = ['recommended_services','treatment_plan','materials_used','odontogram','images','profiling'];
 foreach ($toDecode as $f) {
@@ -75,9 +91,14 @@ foreach ($toDecode as $f) {
     }
 }
 
+if ($record && isset($record['profiling']) && is_array($record['profiling'])) {
+    $record['visit_clinical'] = filter_visit_clinical_data($record['profiling']);
+    $record['profiling'] = $record['visit_clinical'];
+}
+
 if (!isset($record['radiographs_notes'])) $record['radiographs_notes'] = null;
 if (!isset($record['tooth_image'])) $record['tooth_image'] = null;
 
-echo json_encode(['success'=>true,'record'=>$record,'schedules'=>$schedules]);
+echo json_encode(['success'=>true,'record'=>$record,'schedules'=>$schedules,'prescriptions'=>$prescriptions]);
 
 ?>

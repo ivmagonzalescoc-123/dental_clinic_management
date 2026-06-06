@@ -324,11 +324,14 @@ if ($view === 'user_logs') {
         </div>
 
         <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
-            <form class="d-flex align-items-center gap-2" method="GET" action="admin.php" style="flex-wrap: nowrap;">
+            <form class="module-search-toolbar" method="GET" action="admin.php" style="margin:0;">
                 <input type="hidden" name="page" value="system_logs">
                 <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
 
-                <input type="text" class="form-control form-control-sm" name="search" placeholder="Search name, email, or IP..." value="<?php echo htmlspecialchars($search); ?>" style="width: 260px;">
+                <div class="unified-table-search-wrap module-search-inline">
+                    <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                    <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or IP..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search system logs">
+                </div>
 
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -385,7 +388,7 @@ if ($view === 'user_logs') {
             <div class="alert alert-info mb-0">No logs found for the current filters.</div>
         <?php else: ?>
             <div class="table-responsive">
-                <table class="table table-hover datatable align-middle">
+                <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                     <thead>
                         <?php if ($view === 'user_logs'): ?>
                             <tr>

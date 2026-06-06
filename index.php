@@ -1,33 +1,11 @@
 <?php
 require_once 'config/security.php';
 security_start_session();
-require_once 'config/database.php';
-$csrf_token = security_generate_csrf_token();
-
-function build_login_captcha_question(): string
-{
-    $left = random_int(2, 12);
-    $right = random_int(1, 9);
-    $useSubtraction = (bool)random_int(0, 1);
-    if ($useSubtraction && $right > $left) {
-        $tmp = $left;
-        $left = $right;
-        $right = $tmp;
-    }
-
-    $operator = $useSubtraction ? '-' : '+';
-    $answer = $useSubtraction ? ($left - $right) : ($left + $right);
-
-    $_SESSION['login_captcha_answer'] = (string)$answer;
-    $_SESSION['login_captcha_expires_at'] = time() + 300;
-
-    return $left . ' ' . $operator . ' ' . $right;
-}
 
 // Redirect logged-in users to their respective dashboard
 if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     $role = $_SESSION['role'] ?? '';
-    
+
     if ($role === 'admin') {
         header('Location: admin/admin.php');
         exit;
@@ -43,684 +21,276 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     }
 }
 
-$login_captcha_question = build_login_captcha_question();
+$year = date('Y');
+$pageBackgroundImage = 'assets/img/landing-background.jpg';
+$pageOverlayStrength = 52;
+
+$pageBgSrc = $pageBackgroundImage;
+if (!preg_match('#^https?://#i', $pageBackgroundImage)) {
+    $localFile = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim($pageBackgroundImage, '/\\'));
+    if (!is_file($localFile)) {
+        $pageBgSrc = 'assets/img/landing-background.jpg';
+    }
+}
+$pageOverlayStrength = max(35, min(75, (int)$pageOverlayStrength));
+$pageOverlayStyle = 'background-color: rgba(255, 255, 255, ' . ($pageOverlayStrength / 100) . ');';
+
+$services = [
+    [
+        'title' => 'General Dentistry',
+        'desc' => 'Checkups and cleanings',
+        'icon' => 'building',
+    ],
+    [
+        'title' => 'Cosmetic Dentistry',
+        'desc' => 'Whitening and veneers',
+        'icon' => 'sparkles',
+    ],
+    [
+        'title' => 'Restorative Care',
+        'desc' => 'Crowns and implants',
+        'icon' => 'wrench',
+    ],
+    [
+        'title' => 'Orthodontics',
+        'desc' => 'Braces and aligners',
+        'icon' => 'scissors',
+    ],
+];
+
+$aboutPoints = [
+    'Dedicated team of 2 experienced doctors',
+    'Latest dental technology and equipment',
+    'Comfortable, modern clinic environment',
+    'Compassionate patient care',
+];
+
+$heroPoints = [
+    'Active since 2023 with proven expertise',
+    'Advanced technology and techniques',
+    'Gentle, patient-focused care',
+];
 ?>
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azucena's Dental Clinic</title>
-    <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="assets/css/landing-style.css?v=20260328-theme3" rel="stylesheet">
+    <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 2023.">
+    <title>Azucena's Dental Clinic | Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'Arial', 'sans-serif'],
+                    },
+                },
+            },
+        };
+    </script>
 </head>
+<body class="font-sans antialiased text-slate-800">
 
-<body>
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-minimal sticky-top">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="index.php">
-                <img src="assets/img/main_logo.png" alt="Azucena Dental Logo" class="navbar-logo">
-                Azucena Dental Clinic
+    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+            <a href="index.php" class="flex items-center gap-2.5">
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-500">
+                    <svg class="h-6 w-6" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                        <path d="M32 6c-8.5 0-15 6.5-15 15 0 5.5 1.8 9.2 3 13.2 1.4 4.5 2 8.5 2 12.8 0 3.2 1.5 6.2 4.5 7.8 1 .6 2.2 1 3.5 1h13c1.3 0 2.5-.4 3.5-1 3-1.6 4.5-4.6 4.5-7.8 0-4.3.6-8.3 2-12.8C45.2 30.2 47 26.5 47 21 47 12.5 40.5 6 32 6z" stroke="currentColor" stroke-width="2.5"/>
+                    </svg>
+                </span>
+                <span class="text-sm font-bold text-slate-900 sm:text-base">Azucena's Dental Clinic</span>
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#home">Home</a>
+            <nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex" aria-label="Main">
+                <a href="#hero" class="hover:text-sky-500 transition-colors">Home</a>
+                <a href="#services" class="hover:text-sky-500 transition-colors">Services</a>
+                <a href="#about" class="hover:text-sky-500 transition-colors">About</a>
+                <a href="#contact" class="hover:text-sky-500 transition-colors">Contact</a>
+            </nav>
+            <a href="login.php" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                Portal Login
+            </a>
+        </div>
+    </header>
+
+    <div class="relative">
+        <div class="absolute inset-0 z-0" aria-hidden="true">
+            <img
+                src="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>"
+                alt=""
+                class="h-full w-full object-cover object-center"
+            >
+            <div class="absolute inset-0" style="<?php echo $pageOverlayStyle; ?>"></div>
+        </div>
+
+        <section id="hero" class="relative z-10 border-b border-white/40">
+            <div class="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20 lg:py-24">
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                    Transform Your Smile!
+                </h1>
+                <p class="mt-4 text-base leading-relaxed text-slate-600 sm:text-lg">
+                    Experience compassionate, state-of-the-art dental treatment in a comfortable environment. Your oral health is our priority.
+                </p>
+                <ul class="mt-8 space-y-3 text-left sm:mx-auto sm:max-w-md">
+                    <?php foreach ($heroPoints as $point): ?>
+                    <li class="flex items-start gap-3 text-sm text-slate-700 sm:text-base">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        </span>
+                        <?php echo htmlspecialchars($point, ENT_QUOTES, 'UTF-8'); ?>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#services">Services</a>
+                    <?php endforeach; ?>
+                </ul>
+                <div class="mt-10 flex flex-wrap justify-center gap-3">
+                    <a href="login.php?intent=appointment" class="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                        Book Appointment
+                    </a>
+                    <a href="register.php" class="inline-flex items-center gap-2 rounded-xl border-2 border-sky-500 bg-white/90 px-5 py-3 text-sm font-semibold text-sky-600 hover:bg-white transition-colors">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z"/></svg>
+                        Create Account
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="relative z-10 py-16 sm:py-20">
+            <div class="mx-auto max-w-6xl px-4 sm:px-6">
+                <h2 class="text-center text-2xl font-bold text-slate-900 sm:text-3xl">Our Services</h2>
+                <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <?php foreach ($services as $service): ?>
+                    <article class="rounded-2xl border border-white/80 bg-white/92 p-6 text-center shadow-md backdrop-blur-[2px] transition-shadow hover:bg-white hover:shadow-lg">
+                        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center text-sky-500">
+                            <?php if ($service['icon'] === 'building'): ?>
+                            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3.75 9h.75m-.75 3h.75m-.75 3h.75"/></svg>
+                            <?php elseif ($service['icon'] === 'sparkles'): ?>
+                            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+                            <?php elseif ($service['icon'] === 'wrench'): ?>
+                            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.45m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.103-.071 2.218-.904 2.95l-1.102 1.102m-.233 5.108a2.548 2.548 0 11-3.586-3.586l5.653-4.655"/></svg>
+                            <?php else: ?>
+                            <svg class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.848 8.25l1.536 1.536M12 3v2.25m0 13.5V21M5.106 5.106l1.06 1.06M18.894 5.106l-1.06 1.06M3 12h2.25m13.5 0H21M5.106 18.894l1.06-1.06M18.894 18.894l-1.06-1.06M9 12.75a3 3 0 106 0 3 3 0 00-6 0z"/></svg>
+                            <?php endif; ?>
+                        </div>
+                        <h3 class="font-bold text-slate-900"><?php echo htmlspecialchars($service['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                        <p class="mt-2 text-sm text-slate-500"><?php echo htmlspecialchars($service['desc'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section id="about" class="border-y border-slate-100 bg-slate-50/60 py-16 sm:py-20">
+        <div class="mx-auto grid max-w-6xl items-start gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:gap-14">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-900 sm:text-3xl">About Us</h2>
+                <p class="mt-4 leading-relaxed text-slate-600">
+                    Azucena Dental Clinic has been actively serving our community since 2023. With a dedicated team of 2 experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism. Every patient deserves the best treatment possible.
+                </p>
+                <ul class="mt-8 space-y-3">
+                    <?php foreach ($aboutPoints as $point): ?>
+                    <li class="flex items-start gap-3 text-slate-700">
+                        <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-sky-500 text-sky-500">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        </span>
+                        <?php echo htmlspecialchars($point, ENT_QUOTES, 'UTF-8'); ?>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#about">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#contact">Contact</a>
-                    </li>
-                    <li class="nav-item">
-                        <button class="btn btn-sm btn-login" data-bs-toggle="modal" data-bs-target="#loginModal">
-                            Login
-                        </button>
-                    </li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
+            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
+                <iframe
+                    title="Azucena Dental Clinic location - Metz Arcade, Cagayan de Oro City"
+                    class="h-80 w-full sm:h-96"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                    src="https://maps.google.com/maps?q=Metz+Arcade,+Cagayan+de+Oro+City,+Philippines&amp;output=embed"
+                    allowfullscreen
+                ></iframe>
+                <p class="border-t border-slate-100 bg-white px-4 py-3 text-sm text-slate-600">
+                    <span class="font-semibold text-slate-800">Metz Arcade</span> - Cagayan de Oro City, Philippines
+                </p>
+            </div>
         </div>
-    </nav>
+    </section>
 
-    <!-- HERO SECTION -->
-    <section class="hero-minimal" id="home">
-        <div class="container">
-            <div class="row align-items-center g-4">
-                <!-- Left Content -->
-                <div class="col-lg-6">
-                    <h1>Transform Your Smile!</h1>
-                    <p class="lead">Experience compassionate, state-of-the-art dental treatment in a comfortable
-                        environment. Your oral health is our priority.</p>
-
-                    <!-- Trust Indicators -->
-                    <div class="trust-indicators mb-4">
-                        <div class="trust-item">
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Active since 2023 with proven expertise</span>
-                        </div>
-                        <div class="trust-item">
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Advanced technology & techniques</span>
-                        </div>
-                        <div class="trust-item">
-                            <i class="bi bi-check-circle-fill"></i>
-                            <span>Gentle, patient-focused care</span>
+    <section id="contact" class="py-16 sm:py-20">
+        <div class="mx-auto max-w-6xl px-4 sm:px-6">
+            <h2 class="text-center text-2xl font-bold text-slate-900 sm:text-3xl">Contact Us</h2>
+            <p class="mx-auto mt-3 max-w-xl text-center text-slate-600"></p>
+            <div class="mt-10 grid gap-8 lg:grid-cols-2">
+                <div class="space-y-5 rounded-2xl border border-slate-200 bg-sky-50/40 p-6 sm:p-8">
+                    <div class="flex gap-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                        </span>
+                        <div>
+                            <p class="font-semibold text-slate-900">Clinic Address</p>
+                            <p class="mt-1 text-sm text-slate-600">Metz Arcade, Cagayan de Oro City, Philippines</p>
                         </div>
                     </div>
-
-                    <div class="mt-4">
-                        <button class="btn btn-secondary-minimal" data-bs-toggle="modal"
-                            data-bs-target="#registerModal">
-                            <i class="bi bi-person-plus"></i>Create Account
+                    <div class="flex gap-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
+                        </span>
+                        <div>
+                            <p class="font-semibold text-slate-900">Phone</p>
+                            <p class="mt-1 text-sm text-slate-600">+63 (88) 000 0000</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                        </span>
+                        <div>
+                            <p class="font-semibold text-slate-900">Email</p>
+                            <p class="mt-1 text-sm text-slate-600">info@azucenadental.ph</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500 text-white">
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
+                        <div>
+                            <p class="font-semibold text-slate-900">Clinic Hours</p>
+                            <p class="mt-1 text-sm text-slate-600">Mon - Sat: 8:00 AM - 5:00 PM</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" method="post" action="#contact">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="contact-name" class="block text-sm font-medium text-slate-700">Full Name</label>
+                            <input type="text" id="contact-name" name="name" required class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
+                        </div>
+                        <div>
+                            <label for="contact-email" class="block text-sm font-medium text-slate-700">Email</label>
+                            <input type="email" id="contact-email" name="email" required class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
+                        </div>
+                        <div>
+                            <label for="contact-message" class="block text-sm font-medium text-slate-700">Message</label>
+                            <textarea id="contact-message" name="message" rows="4" required class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none resize-y" placeholder="How can we help you?"></textarea>
+                        </div>
+                        <button type="submit" class="w-full rounded-xl bg-sky-500 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                            Send Message
                         </button>
                     </div>
-                </div>
-
-                <!-- Right Carousel -->
-                <div class="col-lg-6">
-                    <div class="custom-carousel">
-                        <div class="carousel-wrapper">
-                            <div class="carousel-slide active">
-                                <img src="assets/img/tooth4.png" alt="Clinic">
-                            </div>
-                            <div class="carousel-slide">
-                                <img src="assets/img/tooth1.jpg" alt="Dental Care">
-                            </div>
-                            <div class="carousel-slide">
-                                <img src="assets/img/tooth3.png" alt="Clinic">
-                            </div>
-                        </div>
-                        <button class="carousel-btn prev" onclick="prevSlide()">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-                        <button class="carousel-btn next" onclick="nextSlide()">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-                        <div class="carousel-dots">
-                            <span class="dot active" onclick="currentSlide(0)"></span>
-                            <span class="dot" onclick="currentSlide(1)"></span>
-                            <span class="dot" onclick="currentSlide(2)"></span>
-                        </div>
-                    </div>
-                </div>
+                </form>
             </div>
         </div>
     </section>
 
-    <!-- SERVICES SECTION -->
-    <section class="services-minimal" id="services">
-        <div class="container">
-            <h2 class="text-center mb-5 reveal">Our Services</h2>
-            <div class="row g-4">
-                <div class="col-md-6 col-lg-3">
-                    <div class="service-card-minimal reveal">
-                        <i class="bi bi-hospital"></i>
-                        <h5>General Dentistry</h5>
-                        <p>Checkups & cleanings</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="service-card-minimal reveal">
-                        <i class="bi bi-brightness-high"></i>
-                        <h5>Cosmetic Dentistry</h5>
-                        <p>Whitening & veneers</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="service-card-minimal reveal">
-                        <i class="bi bi-wrench"></i>
-                        <h5>Restorative Care</h5>
-                        <p>Crowns & implants</p>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="service-card-minimal reveal">
-                        <i class="bi bi-scissors"></i>
-                        <h5>Orthodontics</h5>
-                        <p>Braces & aligners</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ABOUT SECTION -->
-    <section class="about-minimal" id="about">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-6 reveal-left">
-                    <h3>About Us</h3>
-                    <p>Azucena Dental Clinic has been actively serving our community since 2023. With a dedicated team
-                        of 2 experienced doctors and modern technology, we focus on delivering exceptional dental care
-                        with compassion and professionalism. Every patient deserves the best treatment possible.</p>
-                    <ul class="about-list">
-                        <li><i class="bi bi-check-circle"></i> Dedicated team of 2 experienced doctors</li>
-                        <li><i class="bi bi-check-circle"></i> Latest dental technology & equipment</li>
-                        <li><i class="bi bi-check-circle"></i> Comfortable, modern clinic environment</li>
-                        <li><i class="bi bi-check-circle"></i> Compassionate patient care</li>
-                    </ul>
-                </div>
-                <div class="col-lg-6 reveal-right">
-                    <div class="map-container">
-                        <iframe
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3926.018!2d124.6480!3d8.48722!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x32ffc9c9c9c9c9c9%3A0x9c9c9c9c9c9c9c9c!2sMetz%20Arcade%2C%20Capt.%20Vicente%20Roa%20St%2C%20Cagayan%20de%20Oro!5e0!3m2!1sen!2sph!4v1674123456789"
-                            width="100%" height="350" style="border:0; border-radius: 8px;" allowfullscreen=""
-                            loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CONTACT SECTION -->
-    <section class="contact-section" id="contact">
-        <div class="container">
-            <h2 class="text-center mb-5 reveal">Contact Us</h2>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="contact-card reveal">
-                        <i class="bi bi-telephone"></i>
-                        <h5>Phone</h5>
-                        <p>0917 984 3031</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="contact-card reveal">
-                        <i class="bi bi-envelope"></i>
-                        <h5>Email</h5>
-                        <p>azucena@gmail.com</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="contact-card reveal">
-                        <i class="bi bi-geo-alt"></i>
-                        <h5>Location</h5>
-                        <p>Metz Arcade, Cagayan de Oro, 9000</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- FOOTER -->
-    <footer class="footer-minimal">
-        <div class="container">
-            <p>&copy; 2026 Azucena Dental Clinic. All rights reserved.</p>
-        </div>
+    <footer class="border-t border-slate-100 bg-slate-50 py-8 text-center text-sm text-slate-500">
+        <p>&copy; <?php echo $year; ?> Azucena's Dental Clinic. All rights reserved.</p>
+        <p class="mt-2">
+            <a href="login.php" class="font-medium text-sky-500 hover:text-sky-600">Staff and Patient Portal Login</a>
+        </p>
     </footer>
 
-    <!-- LOGIN MODAL -->
-    <div class="modal fade" id="loginModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h2 class="modal-title">Login</h2>
-                </div>
-                <div class="modal-body login-body">
-                    <form id="loginForm">
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="email" class="form-control" id="loginEmail"
-                                    placeholder="Email Address" required>
-                                <label for="loginEmail">Email Address</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="password" class="form-control" id="loginPassword"
-                                    placeholder="Password" required>
-                                <label for="loginPassword">Password</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Captcha</label>
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span id="loginCaptchaQuestion" class="badge bg-light text-dark border px-3 py-2"><?php echo htmlspecialchars($login_captcha_question); ?></span>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshLoginCaptchaBtn" title="Refresh captcha">
-                                    <i class="bi bi-arrow-clockwise"></i>
-                                </button>
-                            </div>
-                            <input type="text" class="form-control" id="loginCaptchaAnswer" placeholder="Enter your answer" inputmode="numeric" pattern="-?[0-9]+" required>
-                        </div>
-                        <div class="d-flex justify-content-center">
-                            <button type="submit" class="btn btn-primary-minimal btn-compact">Login</button>
-                        </div>
-                    </form>
-                    <div class="mt-4 text-center">
-                        <p class="mb-2" style="color: #1e293b; font-size: 0.9rem;">Don't have an account?</p>
-                        <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#registerModal"
-                            style="font-weight: 700; color: #1173c1; text-decoration: none;">Create Account</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- REGISTER MODAL -->
-    <div class="modal fade" id="registerModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h2 class="modal-title">Create Account</h2>
-                </div>
-                <div class="modal-body" style="background: #f9fafb;">
-                    <form id="registerForm" style="background: white; padding: 1.5rem; border-radius: 12px;">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" id="registerFirstName"
-                                        placeholder="First Name" required>
-                                    <label for="registerFirstName">First Name</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="text" class="form-control" id="registerLastName"
-                                        placeholder="Last Name" required>
-                                    <label for="registerLastName">Last Name</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="email" class="form-control" id="registerEmail" placeholder="Email Address"
-                                    required>
-                                <label for="registerEmail">Email Address</label>
-                            </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="date" class="form-control" id="registerDOB" placeholder="Date of Birth"
-                                        required>
-                                    <label for="registerDOB">Date of Birth</label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-floating">
-                                    <select class="form-control" id="registerGender" name="gender" required>
-                                        <option value="">Select</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                    <label for="registerGender">Gender</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="tel" class="form-control" id="registerPhone" placeholder="Phone Number"
-                                    required>
-                                <label for="registerPhone">Phone Number</label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="registerAddress" placeholder="Address"
-                                    required>
-                                <label for="registerAddress">Address</label>
-                            </div>
-                        </div>
-                        <div class="alert alert-info small" role="alert">
-                            Your default password will be generated automatically using this format: <br> <strong>Lastname_Last4digitphonenumber (Example: Smith_1234)</strong>. <br>
-                            You will be required to change it on first login.
-                        </div>
-                        <div class="form-check mt-3">
-                            <input class="form-check-input border-black" type="checkbox" id="registerTerms" required>
-                            <label class="form-check-label" for="registerTerms">
-                                I agree to the
-                                <a href="#" data-bs-toggle="modal" data-bs-target="#termsModal">Terms and Conditions</a>
-                            </label>
-                        </div>
-                        <div class="d-flex justify-content-center mt-3">
-                            <button type="submit" class="btn btn-primary-minimal btn-compact">Create Account</button>
-                        </div>
-                    </form>
-                    <hr>
-                    <p class="text-center small">Already have an account? <a href="#" data-bs-dismiss="modal"
-                            data-bs-toggle="modal" data-bs-target="#loginModal">Login here</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Terms and Conditions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>By creating an account, you agree to provide truthful and updated personal and medical information for dental care services.</p>
-                    <p>You acknowledge that your appointment requests are subject to clinic approval, schedule availability, and standard clinic policies.</p>
-                    <p>You consent to the secure processing of your account and health-related data for treatment, scheduling, reminders, and billing purposes.</p>
-                    <p>You are responsible for safeguarding your account credentials and for notifying the clinic immediately of unauthorized account access.</p>
-                    <p>The clinic may update these terms to comply with legal, operational, or patient safety requirements, with updates reflected in this system.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="toast-container position-fixed top-50 start-50 translate-middle p-3" style="z-index: 2000;">
-        <div id="authCenterToast" class="toast align-items-center text-white border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body text-center w-100" id="authCenterToastBody"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script>
-        const csrfToken = <?php echo json_encode($csrf_token); ?>;
-
-        function setLoginCaptchaQuestion(question) {
-            const questionEl = document.getElementById('loginCaptchaQuestion');
-            if (questionEl) {
-                questionEl.textContent = question || 'Unavailable';
-            }
-        }
-
-        async function refreshLoginCaptcha() {
-            const answerInput = document.getElementById('loginCaptchaAnswer');
-            try {
-                const response = await fetch('assets/api/auth/get_login_captcha.php', {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                const data = await response.json();
-                if (data.success) {
-                    setLoginCaptchaQuestion(data.question || '');
-                    if (answerInput) answerInput.value = '';
-                    return;
-                }
-            } catch (error) {
-                console.error('Captcha refresh failed:', error);
-            }
-
-            setLoginCaptchaQuestion('Refresh page to generate captcha');
-            if (answerInput) answerInput.value = '';
-        }
-
-        function escapeHtml(text) {
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return String(text || '').replace(/[&<>"']/g, m => map[m]);
-        }
-
-        function showCenterToast(message, type = 'danger', delay = 2600) {
-            const toastEl = document.getElementById('authCenterToast');
-            const bodyEl = document.getElementById('authCenterToastBody');
-            if (!toastEl || !bodyEl || !window.bootstrap) {
-                alert(message);
-                return;
-            }
-
-            toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'text-dark');
-
-            if (type === 'success') {
-                toastEl.classList.add('bg-success');
-            } else if (type === 'warning') {
-                toastEl.classList.add('bg-warning', 'text-dark');
-            } else if (type === 'info') {
-                toastEl.classList.add('bg-info', 'text-dark');
-            } else {
-                toastEl.classList.add('bg-danger');
-            }
-
-            bodyEl.textContent = message;
-            const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: delay });
-            toast.show();
-        }
-
-        const registerModalEl = document.getElementById('registerModal');
-        const termsModalEl = document.getElementById('termsModal');
-        let reopenRegisterModalAfterTerms = false;
-
-        if (registerModalEl && termsModalEl && window.bootstrap) {
-            termsModalEl.addEventListener('show.bs.modal', () => {
-                reopenRegisterModalAfterTerms = registerModalEl.classList.contains('show');
-            });
-
-            termsModalEl.addEventListener('hidden.bs.modal', () => {
-                if (reopenRegisterModalAfterTerms) {
-                    bootstrap.Modal.getOrCreateInstance(registerModalEl).show();
-                }
-                reopenRegisterModalAfterTerms = false;
-            });
-        }
-
-        // Login Form Handler
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const loginToastDelay = 2000;
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const captchaAnswer = document.getElementById('loginCaptchaAnswer').value.trim();
-
-            if (!captchaAnswer) {
-                showCenterToast('Please solve the captcha before logging in.', 'warning', loginToastDelay);
-                return;
-            }
-
-            try {
-                const response = await fetch('assets/api/auth/login_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, captcha_answer: captchaAnswer, csrf_token: csrfToken })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showCenterToast('Login successful! Redirecting...', 'success', loginToastDelay);
-
-                    let redirectUrl = 'index.php';
-                    const role = data.user.role;
-                    const force = !!data.must_change_password;
-
-                    if (role === 'admin') {
-                        redirectUrl = force ? 'admin/admin.php?page=settings&force_password_change=1' : 'admin/admin.php';
-                    } else if (role === 'doctor') {
-                        redirectUrl = force ? 'doctor/doctor.php?page=settings&force_password_change=1' : 'doctor/doctor.php';
-                    } else if (role === 'secretary') {
-                        redirectUrl = force ? 'secretary/secretary.php?page=settings&force_password_change=1' : 'secretary/secretary.php';
-                    } else if (role === 'patient') {
-                        redirectUrl = force ? 'patient/patient.php?page=settings&force_password_change=1' : 'patient/patient.php';
-                    }
-
-                    setTimeout(() => {
-                        window.location.href = redirectUrl;
-                    }, loginToastDelay + 100);
-                } else {
-                    if (data.captcha && data.captcha.question) {
-                        setLoginCaptchaQuestion(data.captcha.question);
-                        const ans = document.getElementById('loginCaptchaAnswer');
-                        if (ans) ans.value = '';
-                    } else {
-                        await refreshLoginCaptcha();
-                    }
-                    showCenterToast(data.message || 'Login failed', 'danger', loginToastDelay);
-                }
-            } catch (error) {
-                await refreshLoginCaptcha();
-                showCenterToast('An error occurred. Please try again.', 'danger', loginToastDelay);
-                console.error('Error:', error);
-            }
-        });
-
-        const refreshLoginCaptchaBtn = document.getElementById('refreshLoginCaptchaBtn');
-        if (refreshLoginCaptchaBtn) {
-            refreshLoginCaptchaBtn.addEventListener('click', () => {
-                refreshLoginCaptcha();
-            });
-        }
-
-        // Register Form Handler
-        document.getElementById('registerForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const firstName = document.getElementById('registerFirstName').value;
-            const lastName = document.getElementById('registerLastName').value;
-            const email = document.getElementById('registerEmail').value;
-            const dob = document.getElementById('registerDOB').value;
-            const gender = document.getElementById('registerGender').value;
-            const phone = document.getElementById('registerPhone').value;
-            const address = document.getElementById('registerAddress').value;
-            const termsAccepted = document.getElementById('registerTerms').checked;
-            const phoneDigits = phone.replace(/\D/g, '');
-
-            if (phoneDigits.length < 4) {
-                showCenterToast('Phone number must contain at least 4 digits.', 'warning');
-                return;
-            }
-
-            if (!termsAccepted) {
-                showCenterToast('Please accept the Terms and Conditions to create an account.', 'warning');
-                return;
-            }
-
-            try {
-                const response = await fetch('assets/api/auth/register_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        first_name: firstName,
-                        last_name: lastName,
-                        email,
-                        date_of_birth: dob,
-                        gender: gender,
-                        phone_number: phone,
-                        address: address,
-                        role: 'patient',
-                        terms_accepted: termsAccepted ? 1 : 0,
-                        csrf_token: csrfToken
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    showCenterToast('Account created. Please change your default password to continue.', 'success', 2000);
-                    setTimeout(() => {
-                        window.location.href = 'patient/patient.php?page=settings&force_password_change=1';
-                    }, 1800);
-                } else {
-                    showCenterToast(data.message || 'Registration failed', 'danger');
-                }
-            } catch (error) {
-                showCenterToast('An error occurred. Please try again.', 'danger');
-                console.error('Error:', error);
-            }
-        });
-
-        // Scroll Reveal Animation using Intersection Observer (Repeatable)
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -100px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                } else {
-                    entry.target.classList.remove('active');
-                }
-            });
-        }, observerOptions);
-
-        // Observe all reveal elements
-        document.querySelectorAll('.reveal, .reveal-fade, .reveal-left, .reveal-right, .reveal-scale').forEach(element => {
-            observer.observe(element);
-        });
-
-        // Auto-navigate to home on page reload
-        window.addEventListener('load', () => {
-            window.location.hash = '#home';
-            setTimeout(() => {
-                document.getElementById('home').scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        });
-
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                if (href !== '#') {
-                    e.preventDefault();
-                    const target = document.querySelector(href);
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth' });
-                    }
-                }
-            });
-        });
-
-        // Custom Carousel Functions
-        let currentIndex = 0;
-        let carouselInterval;
-
-        function showSlide(n) {
-            const slides = document.querySelectorAll('.carousel-slide');
-            const dots = document.querySelectorAll('.dot');
-
-            if (n >= slides.length) currentIndex = 0;
-            if (n < 0) currentIndex = slides.length - 1;
-
-            slides.forEach(slide => slide.classList.remove('active'));
-            dots.forEach(dot => dot.classList.remove('active'));
-
-            slides[currentIndex].classList.add('active');
-            dots[currentIndex].classList.add('active');
-        }
-
-        function nextSlide() {
-            currentIndex++;
-            showSlide(currentIndex);
-            resetInterval();
-        }
-
-        function prevSlide() {
-            currentIndex--;
-            showSlide(currentIndex);
-            resetInterval();
-        }
-
-        function currentSlide(n) {
-            currentIndex = n;
-            showSlide(currentIndex);
-            resetInterval();
-        }
-
-        function autoSlide() {
-            currentIndex++;
-            showSlide(currentIndex);
-        }
-
-        function resetInterval() {
-            clearInterval(carouselInterval);
-            carouselInterval = setInterval(autoSlide, 2000);
-        }
-
-        // Initialize carousel
-        carouselInterval = setInterval(autoSlide, 2000);
-    </script>
 </body>
-
 </html>
-<?php
-$conn->close();
-?>

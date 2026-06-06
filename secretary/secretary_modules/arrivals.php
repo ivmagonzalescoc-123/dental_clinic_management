@@ -95,7 +95,7 @@ function renderArrTable(rows, date) {
     h += '</tr></thead><tbody>';
 
     rows.forEach(function(row) {
-        const done    = ['no_show', 'in_progress', 'served', 'completed'].includes(row.arrival_status);
+        const done    = ['arrived', 'late', 'no_show', 'in_progress', 'served', 'completed'].includes(row.arrival_status);
         const canMark = isToday && !done;
         const ready   = isToday && ['arrived', 'late'].includes(row.arrival_status);
 

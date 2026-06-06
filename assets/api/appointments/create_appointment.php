@@ -19,6 +19,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
     include __DIR__ . '/availability_guard.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
     if (!$conn) throw new Exception('Database connection failed');
 
     $csrfToken = $_POST['csrf_token'] ?? '';
@@ -132,10 +133,46 @@ try {
         exit;
     }
 
+    // Compute total duration based on selected services
+    $total_duration_minutes = 0;
+    if (is_array($selected_service_ids) && count($selected_service_ids) > 0) {
+        $service_ids_clean = array_values(array_filter(array_map('intval', $selected_service_ids)));
+        if (count($service_ids_clean) > 0) {
+            $in = implode(',', $service_ids_clean);
+            $durSql = "
+                SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS duration_minutes
+                FROM services s
+                LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+                WHERE s.service_id IN ($in)
+            ";
+            $durRes = $conn->query($durSql);
+            if ($durRes) {
+                while ($row = $durRes->fetch_assoc()) {
+                    $total_duration_minutes += (int)($row['duration_minutes'] ?? 0);
+                }
+            }
+        }
+    }
+    if ($total_duration_minutes <= 0 && $service_id > 0) {
+        $durStmt = $conn->prepare(
+            "SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS duration_minutes
+             FROM services s
+             LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+             WHERE s.service_id = ? LIMIT 1"
+        );
+        if ($durStmt) {
+            $durStmt->bind_param('i', $service_id);
+            $durStmt->execute();
+            $durRow = $durStmt->get_result()->fetch_assoc();
+            $durStmt->close();
+            $total_duration_minutes = (int)($durRow['duration_minutes'] ?? 0);
+        }
+    }
+
     // Verify selected timeslot is still available
     if ($timeslot_id > 0) {
         $ts_stmt = $conn->prepare(
-            "SELECT timeslot_id, status, doctor_id, slot_date FROM timeslot WHERE timeslot_id = ? LIMIT 1"
+            "SELECT timeslot_id, status, doctor_id, slot_date, start_time, end_time FROM timeslot WHERE timeslot_id = ? LIMIT 1"
         );
         $ts_stmt->bind_param('i', $timeslot_id);
         $ts_stmt->execute();
@@ -157,6 +194,41 @@ try {
         if ($ts['slot_date'] !== $appointment_date) {
             echo json_encode(['success' => false, 'message' => 'Timeslot date does not match selected appointment date.']);
             exit;
+        }
+
+        // Validate consecutive slots for the full duration
+        if ($total_duration_minutes > 20) {
+            $slots_stmt = $conn->prepare(
+                "SELECT timeslot_id, start_time, end_time
+                 FROM timeslot
+                 WHERE doctor_id = ? AND slot_date = ? AND status = 'available' AND start_time >= ?
+                 ORDER BY start_time ASC"
+            );
+            $slots_stmt->bind_param('iss', $user_id, $appointment_date, $ts['start_time']);
+            $slots_stmt->execute();
+            $slots_res = $slots_stmt->get_result();
+
+            $required_slots = [];
+            $acc_minutes = 0;
+            $prev_end = null;
+            while ($row = $slots_res->fetch_assoc()) {
+                if ($prev_end !== null && $row['start_time'] !== $prev_end) {
+                    break;
+                }
+                $required_slots[] = (int)$row['timeslot_id'];
+                $slot_minutes = (int)((strtotime($row['end_time']) - strtotime($row['start_time'])) / 60);
+                $acc_minutes += $slot_minutes;
+                $prev_end = $row['end_time'];
+                if ($acc_minutes >= $total_duration_minutes) {
+                    break;
+                }
+            }
+            $slots_stmt->close();
+
+            if ($acc_minutes < $total_duration_minutes) {
+                echo json_encode(['success' => false, 'message' => 'Selected start time does not have enough consecutive slots for the chosen services.']);
+                exit;
+            }
         }
     }
 
@@ -245,14 +317,50 @@ try {
         $ssStmt->close();
     }
 
-    // Mark the timeslot as booked
+    // Mark the required timeslots as booked
     if ($timeslot_id > 0) {
+        $slots_to_book = [$timeslot_id];
+        if ($total_duration_minutes > 20) {
+            $slots_stmt = $conn->prepare(
+                "SELECT timeslot_id, start_time, end_time
+                 FROM timeslot
+                 WHERE doctor_id = ? AND slot_date = ? AND status = 'available' AND start_time >= ?
+                 ORDER BY start_time ASC"
+            );
+            $slots_stmt->bind_param('iss', $user_id, $appointment_date, $ts['start_time']);
+            $slots_stmt->execute();
+            $slots_res = $slots_stmt->get_result();
+
+            $slots_to_book = [];
+            $acc_minutes = 0;
+            $prev_end = null;
+            while ($row = $slots_res->fetch_assoc()) {
+                if ($prev_end !== null && $row['start_time'] !== $prev_end) {
+                    break;
+                }
+                $slots_to_book[] = (int)$row['timeslot_id'];
+                $slot_minutes = (int)((strtotime($row['end_time']) - strtotime($row['start_time'])) / 60);
+                $acc_minutes += $slot_minutes;
+                $prev_end = $row['end_time'];
+                if ($acc_minutes >= $total_duration_minutes) {
+                    break;
+                }
+            }
+            $slots_stmt->close();
+
+            if ($acc_minutes < $total_duration_minutes) {
+                throw new Exception('Selected timeslot does not have enough consecutive availability.');
+            }
+        }
+
+        $placeholders = implode(',', array_fill(0, count($slots_to_book), '?'));
+        $types = str_repeat('i', count($slots_to_book));
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'"
+            "UPDATE timeslot SET status = 'booked' WHERE timeslot_id IN ($placeholders) AND status = 'available'"
         );
-        $tbUpd->bind_param('i', $timeslot_id);
+        $tbUpd->bind_param($types, ...$slots_to_book);
         $tbUpd->execute();
-        if ($tbUpd->affected_rows === 0) {
+        if ($tbUpd->affected_rows < count($slots_to_book)) {
             $tbUpd->close();
             throw new Exception('Selected timeslot is no longer available. Please choose another time.');
         }
@@ -273,6 +381,8 @@ try {
             isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
         );
     }
+
+    wf_notify_appointment_created($conn, $appointment_id, $patient_id, $user_id, $appointment_date, $status);
 
     $responseMsg = ($status === 'confirmed')
         ? 'Appointment created and confirmed.'

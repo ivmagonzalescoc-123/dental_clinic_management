@@ -25,13 +25,16 @@ if (!$appointment_id) {
                                 END AS arrival_status,
                                 t.start_time AS expected_time,
                                 a.status AS appointment_status,
-                                t.start_time
+                                t.start_time,
+                                cr.record_id AS record_id,
+                                cr.status AS record_status
                         FROM appointments a
                         LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+                        LEFT JOIN clinical_records cr ON cr.appointment_id = a.appointment_id
                         JOIN patients p ON a.patient_id = p.patient_id
                         WHERE COALESCE(a.user_id, t.doctor_id) = ?
                             AND COALESCE(t.slot_date, a.appointment_date) = ?
-                            AND a.status IN ('checked_in','in_progress','confirmed')
+                            AND (a.status IN ('checked_in','in_progress','confirmed') OR cr.record_id IS NOT NULL)
                         ORDER BY a.is_emergency DESC, COALESCE(t.start_time, '00:00:00') ASC";
 
     $qstmt = $conn->prepare($sql);
@@ -89,170 +92,102 @@ if ($tstmt) {
 
     <!-- Integrated Profiling Fields (top of form) -->
     <div class="mb-3">
-        <div class="row g-2">
-            <div class="mb-3" id="queueSelectorWrap">
-                <label class="form-label">Select Queue Number / Patient</label>
-                <select id="queueSelector" class="form-select">
-                    <option value="">-- Select patient --</option>
-                    <?php foreach ($queueItems as $qi): ?>
-                            <?php
-                                $display = trim($qi['first_name'] . ' ' . $qi['last_name']);
-                                // Indicate emergency in dropdown text (plain text) so it's visible to doctors
-                                if (!empty($qi['is_emergency'])) {
-                                    $display .= ' (EMERGENCY)';
-                                }
-                            ?>
-                            <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>">
-                                <?php echo htmlspecialchars($display); ?>
-                            </option>
-                        <?php endforeach; ?>
-                </select>
-                <div class="form-text">If you arrived from queue accept, the appointment will already be
-                    selected.</div>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label">Oral Exam</label>
-                <textarea id="pf_periodontal_ehr" name="pf_periodontal" class="form-control" rows="2"
-                    placeholder="Input oral exam"></textarea>
-            </div>
-
-            <div class="col-12">
-                <label class="form-label">Findings</label>
-                <textarea id="pf_dental_chart_ehr" name="pf_dental_chart" class="form-control" rows="2"
-                    placeholder="Input findings"></textarea>
-            </div>
+        <div id="queueSelectorWrap">
+            <label class="form-label">Select Patient from Queue</label>
+            <select id="queueSelector" class="form-select">
+                <option value="">-- Select patient --</option>
+                <?php foreach ($queueItems as $qi): ?>
+                                <?php
+                                    $display = trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']);
+                                    if (!empty($qi['is_emergency'])) {
+                                        $display .= ' (EMERGENCY)';
+                                    }
+                                    // Indicate if a clinical record already exists for this appointment
+                                    $hasRecord = !empty($qi['record_id']);
+                                    if ($hasRecord) {
+                                        $display .= ' — Record';
+                                    }
+                                ?>
+                                <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo $hasRecord ? '1' : '0'; ?>">
+                                    <?php echo htmlspecialchars($display); ?>
+                                </option>
+                    <?php endforeach; ?>
+            </select>
+            <div class="form-text">Select a patient to begin or continue a session.</div>
         </div>
+        <div id="apptInfo" class="alert alert-info mt-3" style="display:none;"></div>
     </div>
 
-
-    <div class="mb-3">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
-            <label class="form-label mb-0">Recommended Services and Treatments</label>
-            <button type="button" id="ehrServiceToggleBtn" class="btn btn-outline-primary btn-sm" aria-expanded="false">
-                <i id="ehrServiceToggleIcon" class="bi bi-plus-circle"></i>
-                <span id="ehrServiceToggleText">Add Services</span>
-            </button>
+    <!-- Clinical Inputs -->
+    <div class="mb-4 p-3 border rounded">
+        <h5 class="mb-3">Clinical Inputs</h5>
+        <!-- Photo Gallery Section -->
+        <div class="mb-4">
+            <h6 class="mb-3">
+                <i class="fas fa-images"></i> Appointment Photos
+                <span class="badge bg-info ms-2" id="photoCountBadge">0</span>
+            </h6>
+            <div id="photoGalleryContainer" class="row g-2">
+                <p class="text-muted small">No photos uploaded yet</p>
+            </div>
         </div>
-        <small class="text-muted d-block mb-2">Toggle this section to add services and treatments without extending the form.</small>
 
-        <div id="ehrServiceTreatmentPanel" style="display:none;">
-            <div class="row g-3">
-                <div class="col-lg-6">
-                    <div class="border rounded p-3 h-100">
-                        <label class="form-label">Recommended Services</label>
-                        <div id="ehrServicesList" style="max-height: 220px; overflow-y: auto;">
-                            <?php foreach ($services as $s): ?>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="<?php echo (int) $s['service_id']; ?>"
-                                        id="srv-<?php echo (int) $s['service_id']; ?>"
-                                        data-default-duration="<?php echo (int) $s['default_duration_minutes']; ?>">
-                                    <label class="form-check-label"
-                                        for="srv-<?php echo (int) $s['service_id']; ?>"><?php echo htmlspecialchars($s['service_name']); ?>
-                                        — ₱<?php echo number_format($s['initial_price'], 2); ?></label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
+        <!-- Upload Photo Section -->
+        <div class="mb-4 p-3 bg-light rounded">
+            <h6 class="mb-3">
+                <i class="fas fa-plus-circle"></i> Add Photos
+            </h6>
+            <div class="row g-2">
+                <div class="col-6">
+                    <input type="file" id="finishPhotoUpload" class="form-control" accept="image/*" multiple hidden>
+                    <button type="button" class="btn btn-outline-primary w-100" onclick="document.getElementById('finishPhotoUpload').click()">
+                        <i class="fas fa-upload"></i> Upload Photos
+                    </button>
                 </div>
-
-                <div class="col-lg-6">
-                    <div class="border rounded p-3 h-100">
-                        <label class="form-label">Treatment Lookup</label>
-                        <input type="text" class="form-control mb-2" id="treatmentLookupInput" placeholder="Search treatment name or type...">
-                        <div id="treatmentLookupList" class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
-                            <?php if (!empty($treatments)): ?>
-                                <?php foreach ($treatments as $t): ?>
-                                    <?php
-                                        $lookupText = strtolower(trim((string)($t['treatment_name'] ?? '') . ' ' . (string)($t['treatment_type'] ?? '')));
-                                    ?>
-                                    <div class="form-check treatment-lookup-item" data-lookup="<?php echo htmlspecialchars($lookupText); ?>">
-                                        <input class="form-check-input treatment-lookup-checkbox" type="checkbox" value="<?php echo (int)$t['treatment_id']; ?>"
-                                            id="trt-<?php echo (int)$t['treatment_id']; ?>">
-                                        <label class="form-check-label" for="trt-<?php echo (int)$t['treatment_id']; ?>">
-                                            <?php echo htmlspecialchars($t['treatment_name']); ?>
-                                            <?php if (!empty($t['treatment_type'])): ?>
-                                                <span class="text-muted">(<?php echo htmlspecialchars($t['treatment_type']); ?>)</span>
-                                            <?php endif; ?>
-                                        </label>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="text-muted small">No treatments found. Add treatments from Admin Services.</div>
-                            <?php endif; ?>
-                        </div>
-                        <small class="text-muted">Select specific treatments performed or recommended for this session.</small>
-                    </div>
+                <div class="col-6">
+                    <button type="button" class="btn btn-outline-info w-100" id="cameraButton">
+                        <i class="fas fa-camera"></i> Take Photo
+                    </button>
                 </div>
             </div>
+            <small class="text-muted d-block mt-2">Support: JPG, PNG. Max 5MB each</small>
+            <!-- Hidden video element for camera capture -->
+            <video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d6efd; border-radius: 5px;"></video>
+            <canvas id="cameraCaptureCanvas" style="display: none;"></canvas>
         </div>
-    </div>
 
-    <div class="mb-3">
-        <label class="form-label">Treatment Plan</label>
-        <textarea class="form-control" name="treatment_plan" id="treatment_plan" rows="3"></textarea>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Materials Used</label>
-        <div class="d-flex flex-wrap gap-2 mb-2" id="materialQuickPick"></div>
-        <div class="input-group input-group-sm mb-2 compact-control">
-            <input type="text" id="materialPresetInput" class="form-control" list="materialCatalogList" placeholder="Type or pick common material">
-            <button type="button" class="btn btn-outline-secondary" id="addPresetMaterialBtn">Add</button>
+        <!-- Doctor Notes Section -->
+        <div class="mb-4">
+            <h6 class="mb-2">
+                <i class="fas fa-sticky-note"></i> Clinical Notes
+            </h6>
+            <textarea id="doctor_notes" class="form-control" rows="4" placeholder="Enter clinical notes, findings, recommendations..." style="resize: vertical;"></textarea>
+            <small class="text-muted d-block mt-1">These notes will be visible to the secretary when creating records</small>
         </div>
-        <datalist id="materialCatalogList"></datalist>
-        <div id="materialsList"></div>
-        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addMaterialBtn">Add
-            Material</button>
-        <small class="text-muted d-block mt-2">Tip: use quick picks for common items, then adjust quantity and price per case.</small>
-    </div>
 
-
-    <div class="mb-3">
-        <label class="form-label">Doctor Notes</label>
-        <textarea class="form-control" name="doctor_notes" id="doctor_notes" rows="3"></textarea>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Upload X‑rays / Tooth Images</label>
-        <input type="file" id="toothImagesInput" name="tooth_images[]" accept="image/*" multiple class="form-control">
-        <small class="text-muted">Upload one or more x‑ray or tooth images (max 5MB each). These will be saved
-            to the clinical record.</small>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Radiographs / Imaging Notes</label>
-        <input id="radiographs_notes" name="radiographs_notes" class="form-control" placeholder="e.g., OPG 2025-08-01">
-        <small class="text-muted">Enter radiograph references or imaging notes.</small>
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Follow-up Date</label>
-        <input type="date" name="follow_up_date" class="form-control" id="follow_up_date">
-    </div>
-
-    <!-- Odontogram moved to be the last input section -->
-    <div class="mb-3">
-        <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
-        <div class="d-flex align-items-center mb-2 gap-2">
-            <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
-            <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
-        </div>
-        <div id="odontogramViewport" class="odontogram-viewport">
-            <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                <i class="bi bi-x-lg"></i> Close
-            </button>
-            <div id="odontogramContainer">
-                <!-- iframe will be created here on demand -->
+        <!-- Odontogram moved to be the last input section -->
+        <div class="mb-3">
+            <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
+            <div class="d-flex align-items-center mb-2 gap-2">
+                <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
+                <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
             </div>
+            <div id="odontogramViewport" class="odontogram-viewport">
+                <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                    <i class="bi bi-x-lg"></i> Close
+                </button>
+                <div id="odontogramContainer">
+                    <!-- iframe will be created here on demand -->
+                </div>
+            </div>
+            <input type="hidden" id="odontogram_data" name="odontogram">
         </div>
-        <input type="hidden" id="odontogram_data" name="odontogram">
     </div>
 
-    <div class="d-flex gap-2">
-        <button type="button" id="saveDraftBtn" class="btn btn-secondary">Save Draft</button>
-        <button type="button" id="finalizeBtn" class="btn btn-primary justify-content-center">Submit & Finalize (Create
-            Billing)</button>
+    <div class="d-flex gap-2 mt-4">
+        <button type="button" id="submitFinishAppointmentBtn" class="btn btn-primary">
+            <i class="fas fa-check"></i> Finish Appointment
+        </button>
     </div>
     </form>
     </div>
@@ -294,223 +229,10 @@ if ($tstmt) {
 </style>
 
 <script>
+    const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     // Basic EHR frontend behavior: materials list, save draft / finalize, prefill
-    (function () {
-        function notifyDoctorEhr(message, type) {
-            if (typeof window.showAppToast === 'function') {
-                window.showAppToast(String(message || ''), type || 'info');
-                return;
-            }
-            alert(String(message || ''));
-        }
-
-        const serviceToggleBtn = document.getElementById('ehrServiceToggleBtn');
-        const serviceToggleText = document.getElementById('ehrServiceToggleText');
-        const serviceToggleIcon = document.getElementById('ehrServiceToggleIcon');
-        const servicePanel = document.getElementById('ehrServiceTreatmentPanel');
-
-        function setServicePanelState(expanded) {
-            if (!servicePanel || !serviceToggleText || !serviceToggleIcon) return;
-            servicePanel.style.display = expanded ? 'block' : 'none';
-            serviceToggleText.textContent = expanded ? 'Hide Services' : 'Add Services';
-            serviceToggleIcon.className = expanded ? 'bi bi-dash-circle' : 'bi bi-plus-circle';
-            if (serviceToggleBtn) {
-                serviceToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            }
-        }
-
-        if (serviceToggleBtn && servicePanel) {
-            setServicePanelState(false);
-            serviceToggleBtn.addEventListener('click', function () {
-                const isExpanded = servicePanel.style.display !== 'none';
-                setServicePanelState(!isExpanded);
-            });
-        }
-
-        const defaultMaterialCatalog = [
-            'Local anesthesia cartridge',
-            'Topical anesthetic',
-            'Cotton rolls',
-            'Gauze',
-            'Gloves (pair)',
-            'Mask',
-            'Saliva ejector',
-            'Suction tip',
-            'Etchant gel',
-            'Bonding agent',
-            'Composite resin',
-            'Glass ionomer cement',
-            'Temporary filling material',
-            'Impression material',
-            'Prophy paste',
-            'Fluoride varnish'
-        ];
-
-        const materialsList = document.getElementById('materialsList');
-        const quickPickWrap = document.getElementById('materialQuickPick');
-        const presetInput = document.getElementById('materialPresetInput');
-        const datalistEl = document.getElementById('materialCatalogList');
-
-        function materialRowMarkup(materialName, qty, price) {
-            return '<div class="row g-2 align-items-end material-row mb-2">' +
-                '<div class="col-12 col-md-6">' +
-                '<input class="form-control form-control-sm material-name" placeholder="Material name" list="materialCatalogList" value="' + materialName + '">' +
-                '</div>' +
-                '<div class="col-6 col-md-2">' +
-                '<input class="form-control form-control-sm material-qty" type="number" min="0" step="0.01" placeholder="Qty" value="' + qty + '">' +
-                '</div>' +
-                '<div class="col-6 col-md-2">' +
-                '<input class="form-control form-control-sm material-price" type="number" min="0" step="0.01" placeholder="Price" value="' + price + '">' +
-                '</div>' +
-                '<div class="col-12 col-md-2">' +
-                '<button type="button" class="btn btn-sm btn-outline-danger w-100 material-remove">Remove</button>' +
-                '</div>' +
-                '</div>';
-        }
-
-        function addMaterialRow(material = {}) {
-            if (!materialsList) return;
-            const name = String(material.name || '').replace(/"/g, '&quot;');
-            const qty = (material.qty !== undefined && material.qty !== null) ? String(material.qty).replace(/"/g, '&quot;') : '';
-            const price = (material.price !== undefined && material.price !== null) ? String(material.price).replace(/"/g, '&quot;') : '';
-
-            const wrap = document.createElement('div');
-            wrap.innerHTML = materialRowMarkup(name, qty, price);
-            const row = wrap.firstChild;
-            row.querySelector('.material-remove')?.addEventListener('click', function () {
-                row.remove();
-            });
-            materialsList.appendChild(row);
-            return row;
-        }
-
-        function setupMaterialCatalog() {
-            if (datalistEl) {
-                datalistEl.innerHTML = '';
-                defaultMaterialCatalog.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item;
-                    datalistEl.appendChild(opt);
-                });
-            }
-
-            if (quickPickWrap) {
-                quickPickWrap.innerHTML = '';
-                defaultMaterialCatalog.slice(0, 8).forEach(item => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'btn btn-sm btn-outline-secondary rounded-pill';
-                    btn.textContent = item;
-                    btn.addEventListener('click', function () {
-                        const row = addMaterialRow({ name: item, qty: 1, price: '' });
-                        const qtyInput = row?.querySelector('.material-qty');
-                        if (qtyInput) qtyInput.focus();
-                    });
-                    quickPickWrap.appendChild(btn);
-                });
-            }
-        }
-
-        setupMaterialCatalog();
-
-        document.getElementById('addPresetMaterialBtn')?.addEventListener('click', function () {
-            const value = (presetInput?.value || '').trim();
-            if (!value) return;
-            addMaterialRow({ name: value, qty: 1, price: '' });
-            presetInput.value = '';
-        });
-
-        presetInput?.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                document.getElementById('addPresetMaterialBtn')?.click();
-            }
-        });
-
-        // Add manual material row
-        document.getElementById('addMaterialBtn')?.addEventListener('click', function () {
-            addMaterialRow();
-        });
-
-        if (materialsList && materialsList.children.length === 0) {
-            addMaterialRow();
-        }
-
-        async function saveClinical(finalize) {
-            const appointment_id = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
-            const schedule_id = parseInt(document.getElementById('schedule_id_hidden').value || '0', 10) || null;
-            const recommended = [...document.querySelectorAll('input[type=checkbox][id^="srv-"]:checked')].map(cb => parseInt(cb.value, 10));
-            const selectedTreatments = [...document.querySelectorAll('.treatment-lookup-checkbox:checked')]
-                .map(cb => parseInt(cb.value, 10))
-                .filter(v => Number.isInteger(v) && v > 0);
-            const treatment_plan = document.getElementById('treatment_plan').value || '';
-            const materials = [...document.querySelectorAll('#materialsList .material-row')].map(row => ({
-                name: (row.querySelector('.material-name')?.value || '').trim(),
-                qty: parseFloat(row.querySelector('.material-qty')?.value || '') || 0,
-                price: parseFloat(row.querySelector('.material-price')?.value || '') || 0
-            })).filter(item => item.name !== '');
-            const odontogram = document.getElementById('odontogram_data')?.value || '';
-            const doctor_notes = document.getElementById('doctor_notes')?.value || '';
-            const follow_up_date = document.getElementById('follow_up_date')?.value || '';
-
-            const radiographs_notes = document.getElementById('radiographs_notes')?.value || '';
-            const profiling = {
-                periodontal: document.getElementById('pf_periodontal_ehr')?.value || '',
-                dental_chart: document.getElementById('pf_dental_chart_ehr')?.value || ''
-            };
-
-            const fd = new FormData();
-            fd.append('appointment_id', appointment_id);
-            if (schedule_id) fd.append('schedule_id', schedule_id);
-            fd.append('recommended_services', JSON.stringify(recommended));
-            fd.append('selected_treatments', JSON.stringify(selectedTreatments));
-            fd.append('treatment_plan', treatment_plan);
-            fd.append('materials_used', JSON.stringify(materials));
-            fd.append('odontogram', odontogram);
-            fd.append('doctor_notes', doctor_notes);
-            if (follow_up_date) fd.append('follow_up_date', follow_up_date);
-            fd.append('finalize', finalize ? '1' : '0');
-
-            // attach profiling + imaging notes
-            fd.append('profiling', JSON.stringify(profiling));
-            fd.append('radiographs_notes', radiographs_notes);
-
-            // attach tooth image files (if any)
-            const toothInput = document.getElementById('toothImagesInput');
-            if (toothInput && toothInput.files && toothInput.files.length) {
-                for (let i = 0; i < toothInput.files.length; i++) fd.append('tooth_images[]', toothInput.files[i]);
-            }
-
-            try {
-                const resp = await fetch('../assets/api/ehr/save_clinical_record.php', { method: 'POST', body: fd });
-                const j = await resp.json();
-                if (j.success) {
-                    notifyDoctorEhr(finalize ? ('Finalized. Billing: ₱' + (j.billing_amount || 0)) : 'Saved.', 'success');
-                    if (j.schedule_id) document.getElementById('schedule_id_hidden').value = j.schedule_id;
-                    if (finalize) {
-                        window.location.href = 'doctor.php?page=appointments';
-                    }
-                } else {
-                    notifyDoctorEhr('Error: ' + (j.message || 'unknown'), 'danger');
-                }
-            } catch (e) { notifyDoctorEhr('Request failed', 'danger'); console.error(e); }
-        }
-
-        document.getElementById('saveDraftBtn')?.addEventListener('click', () => saveClinical(false));
-        document.getElementById('finalizeBtn')?.addEventListener('click', () => { if (confirm('Finalize and create billing?')) saveClinical(true); });
-
-        function applyTreatmentLookupFilter() {
-            const q = (document.getElementById('treatmentLookupInput')?.value || '').trim().toLowerCase();
-            document.querySelectorAll('.treatment-lookup-item').forEach(item => {
-                const hay = (item.getAttribute('data-lookup') || '').toLowerCase();
-                item.style.display = (q === '' || hay.includes(q)) ? '' : 'none';
-            });
-        }
-
-        document.getElementById('treatmentLookupInput')?.addEventListener('input', applyTreatmentLookupFilter);
-        applyTreatmentLookupFilter();
-
-        // Scheduling modal and automatic suggestions were removed per UX decision.
+    (function() {
+        let uploadedPhotos = [];
 
         // Prefill clinical record for an appointment
         async function prefillClinicalRecord(appointmentId) {
@@ -521,106 +243,10 @@ if ($tstmt) {
                 if (!data || !data.record) return;
                 const rec = data.record;
 
-                document.querySelectorAll('input[type=checkbox][id^="srv-"]').forEach(cb => { cb.checked = false; });
-                document.querySelectorAll('.treatment-lookup-checkbox').forEach(cb => { cb.checked = false; });
-
-                if (rec.recommended_services && Array.isArray(rec.recommended_services)) {
-                    rec.recommended_services.forEach(item => {
-                        const sid = (item && typeof item === 'object') ? parseInt(item.service_id, 10) : parseInt(item, 10);
-                        if (!Number.isInteger(sid) || sid <= 0) return;
-                        const cb = document.getElementById('srv-' + sid);
-                        if (cb) cb.checked = true;
-                    });
-                }
-
-                if (rec.treatment_plan !== undefined && rec.treatment_plan !== null) {
-                    const tp = rec.treatment_plan;
-                    let notesValue = '';
-                    let selectedTreatmentIds = [];
-
-                    if (typeof tp === 'string') {
-                        notesValue = tp;
-                    } else if (Array.isArray(tp)) {
-                        notesValue = JSON.stringify(tp, null, 2);
-                        if (Array.isArray(tp._selected_treatment_ids)) {
-                            selectedTreatmentIds = tp._selected_treatment_ids;
-                        }
-                    } else if (tp && typeof tp === 'object') {
-                        if (Array.isArray(tp._selected_treatment_ids)) {
-                            selectedTreatmentIds = tp._selected_treatment_ids;
-                        } else if (Array.isArray(tp.selected_treatment_ids)) {
-                            selectedTreatmentIds = tp.selected_treatment_ids;
-                        }
-
-                        if (typeof tp.notes === 'string') {
-                            notesValue = tp.notes;
-                        } else if (Array.isArray(tp.items)) {
-                            notesValue = JSON.stringify(tp.items, null, 2);
-                        } else {
-                            const clone = Object.assign({}, tp);
-                            delete clone._selected_treatment_ids;
-                            delete clone.selected_treatment_ids;
-                            if (Object.keys(clone).length > 0) {
-                                notesValue = JSON.stringify(clone, null, 2);
-                            }
-                        }
-                    }
-
-                    document.getElementById('treatment_plan').value = notesValue;
-                    selectedTreatmentIds
-                        .map(v => parseInt(v, 10))
-                        .filter(v => Number.isInteger(v) && v > 0)
-                        .forEach(tid => {
-                            const tcb = document.getElementById('trt-' + tid);
-                            if (tcb) tcb.checked = true;
-                        });
-                } else {
-                    document.getElementById('treatment_plan').value = '';
-                }
-
-                if (rec.materials_used && Array.isArray(rec.materials_used)) {
-                    const wrap = document.getElementById('materialsList');
-                    if (wrap) {
-                        wrap.innerHTML = '';
-                        rec.materials_used.forEach(m => addMaterialRow(m || {}));
-                    }
-                } else if (materialsList && materialsList.children.length === 0) {
-                    addMaterialRow();
-                }
                 if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
                 if (rec.follow_up_date) document.getElementById('follow_up_date').value = rec.follow_up_date;
-                // prefill profiling if present
-                try {
-                    const pf = rec.profiling || rec.patient_profiling || null;
-                    if (pf) {
-                        const p = (typeof pf === 'string') ? JSON.parse(pf) : pf;
-                        document.getElementById('pf_periodontal_ehr').value = p.periodontal || '';
-                        document.getElementById('pf_dental_chart_ehr').value = p.dental_chart || '';
-                    }
-                } catch (e) { console.warn('prefill profiling', e); }
 
                 if (rec.odontogram) { document.getElementById('odontogram_data').value = JSON.stringify(rec.odontogram); }
-                if (rec.radiographs_notes) { document.getElementById('radiographs_notes').value = rec.radiographs_notes || ''; }
-                // show existing images / tooth image thumbnails
-                try {
-                    const wrap = document.getElementById('existingImages');
-                    if (wrap) {
-                        wrap.innerHTML = '';
-                        if (rec.images && Array.isArray(rec.images)) {
-                            rec.images.forEach(src => {
-                                const a = document.createElement('a'); a.href = src; a.target = '_blank';
-                                const img = document.createElement('img'); img.src = src; img.className = 'img-thumbnail'; img.style.maxWidth = '120px'; img.style.maxHeight = '90px';
-                                a.appendChild(img); wrap.appendChild(a);
-                            });
-                        }
-                        if (rec.tooth_image) {
-                            const src = rec.tooth_image;
-                            const a = document.createElement('a'); a.href = src; a.target = '_blank';
-                            const img = document.createElement('img'); img.src = src; img.className = 'img-thumbnail border-primary'; img.style.maxWidth = '120px'; img.style.maxHeight = '90px';
-                            a.appendChild(img); wrap.appendChild(a);
-                        }
-                    }
-                } catch (e) { console.warn('show existing images', e); }
             } catch (e) { console.warn('prefill failed', e); }
         }
 
@@ -628,8 +254,16 @@ if ($tstmt) {
         document.getElementById('queueSelector')?.addEventListener('change', function () {
             const apptId = parseInt(this.value || '0', 10);
             document.getElementById('appointment_id_hidden').value = apptId;
-            const label = this.options[this.selectedIndex]?.text || '';
-            document.getElementById('apptInfo').textContent = apptId ? label : 'Not selected';
+            const apptInfoDiv = document.getElementById('apptInfo');
+            if (apptInfoDiv) {
+                if (apptId) {
+                    const label = this.options[this.selectedIndex]?.text || 'Selected';
+                    apptInfoDiv.innerHTML = `<strong>Selected Patient:</strong> ${label}`;
+                    apptInfoDiv.style.display = 'block';
+                } else {
+                    apptInfoDiv.style.display = 'none';
+                }
+            }
             if (apptId) prefillClinicalRecord(apptId);
         });
 
@@ -639,8 +273,12 @@ if ($tstmt) {
             if (initialAppt) {
                 const sel = document.getElementById('queueSelector');
                 if (sel) for (let i = 0; i < sel.options.length; i++) if (parseInt(sel.options[i].value || '0', 10) === initialAppt) { sel.selectedIndex = i; break; }
-                const chosenText = sel ? (sel.options[sel.selectedIndex]?.text || initialAppt) : initialAppt;
-                document.getElementById('apptInfo').textContent = chosenText;
+                const apptInfoDiv = document.getElementById('apptInfo');
+                if (apptInfoDiv) {
+                    const chosenText = sel ? (sel.options[sel.selectedIndex]?.text || initialAppt) : initialAppt;
+                    apptInfoDiv.innerHTML = `<strong>Selected Patient:</strong> ${chosenText}`;
+                    apptInfoDiv.style.display = 'block';
+                }
                 prefillClinicalRecord(initialAppt);
             }
             // Auto-load odontogram iframe if data exists
@@ -796,6 +434,201 @@ if ($tstmt) {
 
         syncOdontogramFullscreenUI();
 
-        // cleanup: removed extra controls; toggle button handles show/hide and reload
+        // Photo Upload Handler
+        document.getElementById('finishPhotoUpload').addEventListener('change', async function(e) {
+            const files = Array.from(e.target.files);
+            if (!files.length) return;
+            
+            for (const file of files) {
+                if (!file.type.startsWith('image/')) {
+                    notifyDoctor('Only image files allowed', 'warning');
+                    continue;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    notifyDoctor(`File ${file.name} exceeds 5MB limit`, 'warning');
+                    continue;
+                }
+                uploadedPhotos.push(file);
+            }
+            
+            updatePhotoGalleryPreview();
+        });
+
+        // Camera Capture Handler
+        document.getElementById('cameraButton').addEventListener('click', async function() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                const video = document.getElementById('cameraPreviewVideo');
+                video.srcObject = stream;
+                video.style.display = 'block';
+                video.play();
+                
+                let captureBtn = document.getElementById('photoCaptureBtn');
+                if (!captureBtn) {
+                    captureBtn = document.createElement('button');
+                    captureBtn.id = 'photoCaptureBtn';
+                    captureBtn.type = 'button';
+                    captureBtn.className = 'btn btn-sm btn-success mt-2';
+                    captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture';
+                    captureBtn.addEventListener('click', () => capturePhoto(stream));
+                    video.parentNode.insertBefore(captureBtn, video.nextSibling);
+                }
+                
+                let stopBtn = document.getElementById('photoStopBtn');
+                if (!stopBtn) {
+                    stopBtn = document.createElement('button');
+                    stopBtn.id = 'photoStopBtn';
+                    stopBtn.type = 'button';
+                    stopBtn.className = 'btn btn-sm btn-secondary mt-2 ms-2';
+                    stopBtn.innerHTML = '<i class="fas fa-times"></i> Stop';
+                    stopBtn.addEventListener('click', () => {
+                        stream.getTracks().forEach(track => track.stop());
+                        video.style.display = 'none';
+                        captureBtn.remove();
+                        stopBtn.remove();
+                        document.getElementById('cameraButton').disabled = false;
+                    });
+                    captureBtn.parentNode.insertBefore(stopBtn, captureBtn.nextSibling);
+                }
+                
+                this.disabled = true;
+            } catch (err) {
+                notifyDoctor('Camera access denied or unavailable', 'danger');
+                console.error('Camera error:', err);
+            }
+        });
+
+        function capturePhoto(stream) {
+            const video = document.getElementById('cameraPreviewVideo');
+            const canvas = document.getElementById('cameraCaptureCanvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            canvas.toBlob((blob) => {
+                const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                uploadedPhotos.push(file);
+                updatePhotoGalleryPreview();
+                notifyDoctor('Photo captured', 'success');
+            }, 'image/jpeg', 0.9);
+        }
+
+        function updatePhotoGalleryPreview() {
+            const container = document.getElementById('photoGalleryContainer');
+            document.getElementById('photoCountBadge').textContent = uploadedPhotos.length;
+            
+            if (uploadedPhotos.length === 0) {
+                container.innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            uploadedPhotos.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const col = document.createElement('div');
+                    col.className = 'col-sm-6 col-md-4 position-relative';
+                    col.innerHTML = `
+                        <div style="position: relative; overflow: hidden; border-radius: 8px; background: #f0f0f0; aspect-ratio: 3/2;">
+                            <img src="${e.target.result}" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeUploadedPhoto(${idx})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        window.removeUploadedPhoto = function(idx) {
+            uploadedPhotos.splice(idx, 1);
+            updatePhotoGalleryPreview();
+        }
+
+        let ehrFinishSubmitting = false;
+        let ehrFinishIdempotencyKey = null;
+
+        // Submit Finish Appointment
+        document.getElementById('submitFinishAppointmentBtn').addEventListener('click', async function() {
+            const appointmentId = document.getElementById('appointment_id_hidden').value;
+            if (!appointmentId) {
+                notifyDoctor('Please select a patient/appointment first.', 'warning');
+                return;
+            }
+            if (ehrFinishSubmitting) return;
+            ehrFinishSubmitting = true;
+
+            if (!ehrFinishIdempotencyKey) {
+                ehrFinishIdempotencyKey = (window.Idempotency && Idempotency.newKey('finish')) || ('finish-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+            }
+            
+            this.disabled = true;
+            const btnText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            
+            try {
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                fd.append('notes', document.getElementById('doctor_notes').value);
+                fd.append('csrf_token', doctorCsrfToken);
+                fd.append('idempotency_key', ehrFinishIdempotencyKey);
+                
+                const odontogramData = document.getElementById('odontogram_data')?.value || '';
+                if (odontogramData) {
+                    fd.append('odontogram', odontogramData);
+                }
+                
+                uploadedPhotos.forEach((file) => {
+                    fd.append(`photos[]`, file);
+                });
+                
+                const res = await fetch('../assets/api/appointments/finish_appointment.php', {
+                    method: 'POST',
+                    body: fd
+                });
+                
+                let json;
+                const ct = (res.headers.get('Content-Type') || res.headers.get('content-type') || '');
+                if (ct.indexOf('application/json') !== -1) {
+                    json = await res.json();
+                } else {
+                    const txt = await res.text();
+                    console.error('finish_appointment non-JSON response:', txt);
+                    notifyDoctor('Server error: invalid response from server', 'danger');
+                    ehrFinishSubmitting = false;
+                    this.disabled = false;
+                    this.innerHTML = btnText;
+                    return;
+                }
+                if (!json.success) {
+                    notifyDoctor(json.message || 'Failed to finish appointment', 'danger');
+                    ehrFinishSubmitting = false;
+                    this.disabled = false;
+                    this.innerHTML = btnText;
+                    return;
+                }
+                
+                notifyDoctor(json.already_processed || json.idempotent_replay ? 'Appointment was already finished.' : 'Appointment finished successfully', 'success');
+                
+                setTimeout(() => window.location.href = 'doctor.php?page=appointments', 1000);
+            } catch (e) {
+                console.error(e);
+                notifyDoctor('Error saving appointment', 'danger');
+                ehrFinishSubmitting = false;
+                this.disabled = false;
+                this.innerHTML = btnText;
+            }
+        });
+
+        function notifyDoctor(message, type = 'info') {
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), type);
+                return;
+            }
+            alert(String(message || ''));
+        }
+
     })();
 </script>

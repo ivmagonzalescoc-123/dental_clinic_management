@@ -6,14 +6,42 @@
 class AppointmentServiceManager {
     constructor(options = {}) {
         this.appointmentId = options.appointmentId || 0;
-        this.mode = options.mode || 'patient'; // 'patient' or 'doctor'
+        this.mode = options.mode || 'patient'; // 'patient' or 'doctor' or 'secretary'
         this.csrfToken = options.csrfToken || '';
         this.onServicesChanged = options.onServicesChanged || null;
-        this.apiEndpoint = '../assets/api/appointments/manage_services.php';
+        
+        // Allow explicit API endpoint override
+        if (options.apiEndpoint) {
+            this.apiEndpoint = options.apiEndpoint;
+        } else {
+            // Try to detect based on script location or URL
+            const currentPath = window.location.pathname;
+            let apiPath = '../assets/api/appointments/manage_services.php';
+            
+            // If we have an explicit basePath, use it
+            if (options.apiBasePath) {
+                apiPath = options.apiBasePath + '/manage_services.php';
+            } else {
+                // Fallback to relative path detection
+                if (currentPath.includes('/secretary/') || currentPath.includes('secretary.php')) {
+                    apiPath = '../assets/api/appointments/manage_services.php';
+                } else if (currentPath.includes('/patient/') || currentPath.includes('patient.php')) {
+                    apiPath = '../assets/api/appointments/manage_services.php';
+                } else if (currentPath.includes('/doctor/') || currentPath.includes('doctor.php')) {
+                    apiPath = '../assets/api/appointments/manage_services.php';
+                } else if (currentPath.includes('/admin/')) {
+                    apiPath = '../../assets/api/appointments/manage_services.php';
+                }
+            }
+            
+            this.apiEndpoint = apiPath;
+        }
         
         this.services = [];
         this.selectedServices = [];
         this.totalDuration = 0;
+        
+        console.log(`[AppointmentServiceManager] Initialized - Mode: ${this.mode}, Path: ${window.location.pathname}, API: ${this.apiEndpoint}`);
     }
     
     /**
@@ -22,20 +50,25 @@ class AppointmentServiceManager {
     async loadServices() {
         try {
             const url = `${this.apiEndpoint}?action=services&appointment_id=${this.appointmentId}`;
+            console.log(`[AppointmentServiceManager] Loading services from: ${url}`);
+            
             const response = await fetch(url);
             const data = await response.json();
+            
+            console.log(`[AppointmentServiceManager] Services response:`, data);
             
             if (data.success) {
                 this.services = data.services;
                 this.selectedServices = data.selected_services;
                 this.totalDuration = data.total_duration_minutes;
+                console.log(`[AppointmentServiceManager] Loaded ${this.services.length} services`);
                 return true;
             } else {
-                console.error('Failed to load services:', data.message);
+                console.error('[AppointmentServiceManager] Failed to load services:', data.message);
                 return false;
             }
         } catch (error) {
-            console.error('Error loading services:', error);
+            console.error('[AppointmentServiceManager] Error loading services:', error);
             return false;
         }
     }
@@ -101,63 +134,143 @@ class AppointmentServiceManager {
         const timeslotDuration = 20; // minutes
         return Math.ceil(duration / timeslotDuration);
     }
+
+    getServiceDuration(service) {
+        return parseInt(service?.service_duration_minutes ?? service?.default_duration_minutes ?? 20, 10) || 20;
+    }
+
+    formatDuration(totalMinutes) {
+        const minutes = Math.max(0, parseInt(totalMinutes, 10) || 0);
+        const hours = Math.floor(minutes / 60);
+        const remainder = minutes % 60;
+        if (hours > 0 && remainder > 0) {
+            return `${hours} hr ${remainder} min`;
+        }
+        if (hours > 0) {
+            return `${hours} hr`;
+        }
+        return `${remainder} min`;
+    }
     
     /**
      * Render service selection UI
      */
     renderServiceSelector(containerId, mode = 'patient') {
+        console.log(`[AppointmentServiceManager] renderServiceSelector - Container: ${containerId}, Mode: ${mode}, Services: ${this.services.length}`);
+        
         const container = document.getElementById(containerId);
-        if (!container) return;
+        if (!container) {
+            console.error(`[AppointmentServiceManager] Container not found: ${containerId}`);
+            return;
+        }
+
+        const selectedIds = this.selectedServices.map(service => String(service.service_id));
+        const selectedSummary = this.selectedServices.length > 0
+            ? this.selectedServices.map(service => `
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary">${this.escapeHtml(service.service_name)}</span>
+                    <span class="text-muted small">${this.getServiceDuration(service)} min</span>
+                </div>
+            `).join('')
+            : '<span class="text-muted small">No services selected.</span>';
+
+        const selectedInputs = this.selectedServices.length > 0
+            ? this.selectedServices.map(service => `
+                <input type="hidden" name="selected_service_ids[]" value="${service.service_id}">
+            `).join('')
+            : '';
         
         const html = `
             <div class="service-selector">
-                <label class="form-label fw-bold mb-3">
-                    <i class="bi bi-hospital"></i> Select Services
-                </label>
-                
-                <div class="services-list">
-                    ${this.services.map(service => {
-                        const isSelected = this.selectedServices.some(s => s.service_id == service.service_id);
-                        return `
-                            <div class="service-item mb-2">
-                                <div class="form-check">
-                                    <input 
-                                        class="form-check-input service-checkbox" 
-                                        type="checkbox" 
-                                        id="service_${service.service_id}"
-                                        value="${service.service_id}"
-                                        ${isSelected ? 'checked' : ''}
-                                        ${mode === 'patient' ? '' : 'disabled'}
-                                    >
-                                    <label class="form-check-label" for="service_${service.service_id}">
-                                        <span class="service-name fw-500">${this.escapeHtml(service.service_name)}</span>
-                                        <span class="service-info ms-2">
-                                            <span class="badge bg-light text-dark">
-                                                ₱${parseFloat(service.initial_price).toFixed(2)}
-                                            </span>
-                                            <span class="badge bg-info ms-1">
-                                                ${service.default_duration_minutes || '20'} min
-                                            </span>
+                <!-- Service List Container (initially visible) -->
+                <div id="serviceListContainer">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <label class="form-label fw-bold mb-1">
+                                <i class="bi bi-hospital"></i> Select Services
+                            </label>
+                            <div class="text-muted small">Choose one or more services.</div>
+                        </div>
+                    </div>
+
+                    <div class="services-list-wrap" id="serviceListWrap">
+                        <div class="services-list">
+                            ${this.services.map(service => {
+                                const isSelected = selectedIds.includes(String(service.service_id));
+                                return `
+                                    <div class="service-item mb-2">
+                                        <div class="form-check">
+                                            <input 
+                                                class="form-check-input service-checkbox" 
+                                                type="checkbox" 
+                                                id="service_${service.service_id}"
+                                                value="${service.service_id}"
+                                                ${isSelected ? 'checked' : ''}
+                                                ${(mode === 'patient' || mode === 'secretary') ? '' : 'disabled'}
+                                            >
+                                            <label class="form-check-label" for="service_${service.service_id}">
+                                                <span class="service-name fw-500">${this.escapeHtml(service.service_name)}</span>
+                                                <span class="service-info ms-2">
+                                                    <span class="text-muted small">
+                                                        ₱${parseFloat(service.initial_price).toFixed(2)}
+                                                    </span>
+                                                    <span class="text-muted small ms-1">
+                                                        ${service.service_duration_minutes || service.default_duration_minutes || '20'} min
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <!-- Confirm button at bottom of list -->
+                        ${(mode === 'patient' || mode === 'secretary') ? `
+                            <div class="d-flex gap-2 mt-3 pt-3 border-top">
+                                <button type="button" class="btn btn-primary btn-sm flex-grow-1" id="confirmServiceSelectionBtn">
+                                    <i class="bi bi-check2-circle"></i> Confirm Services
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearServiceSelectionBtn">
+                                    Clear
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Selected Summary Container (hidden until confirm) -->
+                <div id="servicesSummaryContainer" class="d-none">
+                    <div class="border rounded-3 p-3 bg-light">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <div class="fw-semibold mb-1">Selected Services</div>
+                                <div id="selectedServicesList" class="mb-2">
+                                    ${selectedSummary}
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-3">
+                                    <div>
+                                        <span class="text-muted small">
+                                            <i class="bi bi-clock"></i> Estimated time: <span id="total-duration-display">${this.formatDuration(this.totalDuration)}</span>
                                         </span>
-                                    </label>
+                                    </div>
+                                    <div>
+                                        <span class="text-muted small">
+                                            <span id="timeslot-count-display">${this.getRequiredTimeslots()}</span> timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        `;
-                    }).join('')}
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="editServiceSelectionBtn">
+                                <i class="bi bi-pencil"></i> Edit
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="alert alert-info mt-3">
-                    <small>
-                        <strong>Total Duration:</strong> <span id="total-duration-display">${this.totalDuration}</span> minutes
-                        (<span id="timeslot-count-display">${this.getRequiredTimeslots()}</span> timeslots)
-                    </small>
+
+                <div id="selectedServiceInputs">
+                    ${selectedInputs}
+                    <input type="hidden" name="total_duration_minutes" value="${this.totalDuration}">
                 </div>
-                
-                ${mode === 'patient' ? `
-                    <button type="button" class="btn btn-primary btn-sm mt-2" id="update-services-btn">
-                        <i class="bi bi-check2"></i> Confirm Services
-                    </button>
-                ` : ''}
             </div>
         `;
         
@@ -175,49 +288,120 @@ class AppointmentServiceManager {
     attachServiceCheckboxListeners(containerId) {
         const container = document.getElementById(containerId);
         const checkboxes = container.querySelectorAll('.service-checkbox');
-        const updateBtn = container.querySelector('#update-services-btn');
+        const selectedListEl = container.querySelector('#selectedServicesList');
+        const hiddenInputsEl = container.querySelector('#selectedServiceInputs');
+        const listContainer = container.querySelector('#serviceListContainer');
+        const summaryContainer = container.querySelector('#servicesSummaryContainer');
+        const confirmBtn = container.querySelector('#confirmServiceSelectionBtn');
+        const clearBtn = container.querySelector('#clearServiceSelectionBtn');
+        const editBtn = container.querySelector('#editServiceSelectionBtn');
         
         const updateDurationDisplay = () => {
             const selected = Array.from(checkboxes)
                 .filter(cb => cb.checked)
                 .map(cb => parseInt(cb.value));
+            const selectedSet = new Set(selected.map(id => String(id)));
+            const selectedServices = this.services.filter(s => selectedSet.has(String(s.service_id)));
+            const total = selectedServices.reduce((sum, s) => sum + this.getServiceDuration(s), 0);
+
+            this.selectedServices = selectedServices;
+            this.totalDuration = total;
+
+            if (typeof window !== 'undefined') {
+                window.patientSelectedServiceDuration = total;
+                window.patientSelectedServiceIds = selected.slice();
+                window.dispatchEvent(new CustomEvent('patient-service-duration-changed', {
+                    detail: {
+                        totalDuration: total,
+                        selectedServiceIds: selected.slice(),
+                        selectedServices: selectedServices
+                    }
+                }));
+            }
             
-            const total = this.services
-                .filter(s => selected.includes(s.service_id))
-                .reduce((sum, s) => sum + (parseInt(s.default_duration_minutes) || 20), 0);
+            const durationDisplay = document.getElementById('total-duration-display');
+            if (durationDisplay) {
+                durationDisplay.textContent = this.formatDuration(total);
+            }
             
-            document.getElementById('total-duration-display').textContent = total;
-            document.getElementById('timeslot-count-display').textContent = this.getRequiredTimeslots(total);
+            const timeslotDisplay = document.getElementById('timeslot-count-display');
+            if (timeslotDisplay) {
+                timeslotDisplay.textContent = this.getRequiredTimeslots(total);
+            }
+
+            if (selectedListEl) {
+                selectedListEl.innerHTML = selectedServices.length > 0
+                    ? selectedServices.map(service => `
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-primary">${this.escapeHtml(service.service_name)}</span>
+                            <span class="text-muted small">${this.getServiceDuration(service)} min</span>
+                        </div>
+                    `).join('')
+                    : '<span class="text-muted small">No services selected.</span>';
+            }
+
+            if (hiddenInputsEl) {
+                const selectedInputs = selected.map(id => `
+                    <input type="hidden" name="selected_service_ids[]" value="${id}">
+                `).join('');
+                hiddenInputsEl.innerHTML = `${selectedInputs}
+                    <input type="hidden" name="total_duration_minutes" value="${total}">
+                `;
+            }
+
+            if (confirmBtn) {
+                confirmBtn.disabled = selected.length === 0;
+            }
         };
         
         checkboxes.forEach(checkbox => {
             checkbox.addEventListener('change', updateDurationDisplay);
         });
-        
-        if (updateBtn) {
-            updateBtn.addEventListener('click', async () => {
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                updateDurationDisplay();
                 const selected = Array.from(checkboxes)
                     .filter(cb => cb.checked)
                     .map(cb => parseInt(cb.value));
-                
+
                 if (selected.length === 0) {
                     alert('Please select at least one service');
                     return;
                 }
-                
-                updateBtn.disabled = true;
-                updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-                
-                const success = await this.updateServices(selected);
-                
-                updateBtn.disabled = false;
-                updateBtn.innerHTML = '<i class="bi bi-check2"></i> Confirm Services';
-                
-                if (success) {
-                    alert('Services updated successfully');
+
+                // Hide service list, show summary
+                if (listContainer && summaryContainer) {
+                    listContainer.classList.add('d-none');
+                    summaryContainer.classList.remove('d-none');
+                }
+
+                if (typeof window.showAppToast === 'function') {
+                    window.showAppToast('Services confirmed successfully.', 'success');
                 }
             });
         }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                updateDurationDisplay();
+            });
+        }
+
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                // Show service list, hide summary
+                if (listContainer && summaryContainer) {
+                    listContainer.classList.remove('d-none');
+                    summaryContainer.classList.add('d-none');
+                }
+            });
+        }
+
+        updateDurationDisplay();
     }
     
     /**

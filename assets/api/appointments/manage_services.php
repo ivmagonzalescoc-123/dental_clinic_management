@@ -31,15 +31,16 @@ try {
         
         // Get all active services
         $services_sql = "SELECT 
-            service_id, 
-            service_name, 
-            initial_price, 
-            requires_schedule, 
-            default_duration_minutes as service_duration_minutes,
-            is_active
-        FROM services 
-        WHERE is_active = 1 
-        ORDER BY service_name ASC";
+            s.service_id, 
+            s.service_name, 
+            s.initial_price, 
+            s.requires_schedule, 
+            COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS service_duration_minutes,
+            s.is_active
+        FROM services s
+        LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+        WHERE s.is_active = 1 
+        ORDER BY s.service_name ASC";
         
         $services = [];
         $result = $conn->query($services_sql);
@@ -57,9 +58,10 @@ try {
                 ss.service_id,
                 s.service_name,
                 s.initial_price,
-                s.default_duration_minutes
+                COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS service_duration_minutes
             FROM selected_services ss
             JOIN services s ON ss.service_id = s.service_id
+            LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
             WHERE ss.appointment_id = ?
             ORDER BY ss.selected_service_id ASC";
             
@@ -80,7 +82,7 @@ try {
             'services' => $services,
             'selected_services' => $selected_services,
             'total_duration_minutes' => array_reduce($selected_services, function($carry, $item) {
-                return $carry + (int)($item['default_duration_minutes'] ?? 0);
+                return $carry + (int)($item['service_duration_minutes'] ?? 0);
             }, 0)
         ]);
         exit;

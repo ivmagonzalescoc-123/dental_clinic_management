@@ -1,6 +1,7 @@
 <?php
 include '../../../config/database.php';
 include_once '../../../config/session_check.php';
+include_once '../../../config/patient_profiling_helpers.php';
 header('Content-Type: application/json');
 
 $patient_id = (int)($_GET['patient_id'] ?? 0);
@@ -18,8 +19,8 @@ try {
         $conn->query("ALTER TABLE patients ADD COLUMN profiling JSON DEFAULT NULL");
     }
 
-    // Fetch patient profiling
-    $stmt = $conn->prepare('SELECT profiling FROM patients WHERE patient_id = ?');
+    // Fetch patient profiling and details
+    $stmt = $conn->prepare('SELECT first_name, last_name, middle_name, date_of_birth, gender, phone_number, address, profiling FROM patients WHERE patient_id = ?');
     if (!$stmt) {
         throw new Exception('Prepare failed: ' . $conn->error);
     }
@@ -37,11 +38,23 @@ try {
 
     $profiling = null;
     if ($row['profiling']) {
-        $profiling = json_decode($row['profiling'], true);
+        $decoded = json_decode($row['profiling'], true);
+        if (is_array($decoded)) {
+            $profiling = filter_background_profiling_data($decoded);
+        }
     }
 
     echo json_encode([
         'success' => true,
+        'patient' => [
+            'first_name' => $row['first_name'],
+            'last_name' => $row['last_name'],
+            'middle_name' => $row['middle_name'],
+            'date_of_birth' => $row['date_of_birth'],
+            'gender' => $row['gender'],
+            'phone_number' => $row['phone_number'],
+            'address' => $row['address']
+        ],
         'profiling' => $profiling
     ]);
 

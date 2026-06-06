@@ -1,6 +1,7 @@
 <?php
 include '../../../config/database.php';
 include_once '../../../config/session_check.php';
+include_once '../../../config/patient_profiling_helpers.php';
 header('Content-Type: application/json');
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['doctor','admin','secretary'])) {
@@ -35,19 +36,10 @@ try {
         INDEX(patient_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    // Basic validation: ensure profiling is an object with allowed keys
-    $allowedKeys = ['medical_history','medications','allergies','smoking','alcohol','asa','periodontal','dental_chart','imaging','last_visit'];
     if ($profiling !== null && !is_array($profiling)) {
         throw new Exception('Profiling must be an object');
     }
-    if (is_array($profiling)) {
-        foreach ($profiling as $k => $v) {
-            if (!in_array($k, $allowedKeys)) {
-                // strip unknown keys
-                unset($profiling[$k]);
-            }
-        }
-    }
+    $profiling = filter_background_profiling_data(is_array($profiling) ? $profiling : []);
 
     $json = $profiling !== null ? json_encode($profiling, JSON_UNESCAPED_UNICODE) : null;
     $ust = $conn->prepare('UPDATE patients SET profiling = ? WHERE patient_id = ?');

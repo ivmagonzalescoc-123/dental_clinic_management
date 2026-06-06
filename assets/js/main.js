@@ -386,8 +386,19 @@
   /**
    * Initiate Datatables
    */
-  const datatables = select('.datatable', true)
+  function removeDuplicateSearchToolbarsNearDatatable() {
+    document.querySelectorAll('.datatable-wrapper').forEach((wrapper) => {
+      const host = wrapper.closest('.table-responsive') || wrapper.parentElement
+      if (!host || !host.parentElement) return
+      host.parentElement.querySelectorAll(':scope > .unified-table-search-toolbar').forEach((toolbar) => {
+        toolbar.remove()
+      })
+    })
+  }
+
+  const datatables = select('.datatable:not([data-skip-datatable])', true)
   datatables.forEach(datatable => {
+    if (datatable.dataset.skipDatatable === '1') return
     new simpleDatatables.DataTable(datatable, {
       perPageSelect: [5, 10, 15, ["All", -1]],
       columns: [{
@@ -404,12 +415,18 @@
           headerClass: "red"
         }
       ]
-    });
+    })
   })
+  removeDuplicateSearchToolbarsNearDatatable()
 
-  function ensureUnifiedTableSearch(tableEl) {
+  function ensureUnifiedTableSearch(tableEl, options = {}) {
     if (!(tableEl instanceof HTMLTableElement)) return
     if (tableEl.dataset.unifiedSearchInit === '1') return
+    if (!options.force && tableEl.dataset.skipTableSearch === '1') return
+    if (tableEl.classList.contains('datatable') || tableEl.classList.contains('datatable-table')) return
+    if (tableEl.closest('.datatable-wrapper')) return
+    if (tableEl.dataset.skipDatatable === '1') return
+    if (tableEl.closest('.modal')) return
     if (tableEl.closest('.fc')) return
     if (tableEl.getAttribute('role') === 'presentation') return
 
@@ -419,14 +436,27 @@
     const host = tableEl.closest('.table-responsive') || tableEl.parentElement
     if (!host || !host.parentElement) return
 
+    const existingToolbar = host.parentElement.querySelector(':scope > .unified-table-search-toolbar')
+    if (existingToolbar) {
+      tableEl.dataset.unifiedSearchInit = '1'
+      return existingToolbar.querySelector('.unified-table-search-input')
+    }
+
+    const toolbar = document.createElement('div')
+    toolbar.className = 'unified-table-search-toolbar'
+
     const searchWrap = document.createElement('div')
     searchWrap.className = 'unified-table-search-wrap'
+
+    const searchIcon = document.createElement('i')
+    searchIcon.className = 'bi bi-search unified-table-search-icon'
+    searchIcon.setAttribute('aria-hidden', 'true')
 
     const searchInput = document.createElement('input')
     searchInput.type = 'search'
     searchInput.className = 'form-control unified-table-search-input'
-    searchInput.placeholder = 'Search table...'
-    searchInput.setAttribute('aria-label', 'Search table')
+    searchInput.placeholder = options.placeholder || tableEl.dataset.searchPlaceholder || 'Search table...'
+    searchInput.setAttribute('aria-label', searchInput.placeholder)
 
     const clearBtn = document.createElement('button')
     clearBtn.type = 'button'
@@ -435,13 +465,21 @@
     clearBtn.innerHTML = '&times;'
     clearBtn.style.display = 'none'
 
+    searchWrap.appendChild(searchIcon)
     searchWrap.appendChild(searchInput)
     searchWrap.appendChild(clearBtn)
-
-    host.parentElement.insertBefore(searchWrap, host)
+    toolbar.appendChild(searchWrap)
+    host.parentElement.insertBefore(toolbar, host)
 
     const filterRows = () => {
       const term = String(searchInput.value || '').toLowerCase().trim()
+      clearBtn.style.display = term ? '' : 'none'
+
+      if (typeof options.onFilter === 'function') {
+        options.onFilter(term, tableEl, searchInput)
+        return
+      }
+
       const rows = Array.from(tbody.querySelectorAll(':scope > tr')).filter((row) => !row.classList.contains('unified-table-no-results'))
       let visibleCount = 0
 
@@ -451,8 +489,6 @@
         row.style.display = match ? '' : 'none'
         if (match) visibleCount++
       })
-
-      clearBtn.style.display = term ? '' : 'none'
 
       let noResultRow = tbody.querySelector(':scope > tr.unified-table-no-results')
       if (term && rows.length > 0 && visibleCount === 0) {
@@ -478,19 +514,64 @@
       filterRows()
       searchInput.focus()
     })
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchInput.value = ''
+        filterRows()
+      }
+    })
 
     tableEl.dataset.unifiedSearchInit = '1'
     filterRows()
+    return searchInput
   }
 
   function initUnifiedTableSearch(root) {
     const scope = root instanceof HTMLElement ? root : document
-    const tables = scope.querySelectorAll('#main table, #main .table-responsive table')
-    tables.forEach((table) => ensureUnifiedTableSearch(table))
+    const tables = scope.querySelectorAll('#main .table-responsive table, #main table')
+    const seen = new Set()
+    tables.forEach((table) => {
+      if (!(table instanceof HTMLTableElement) || seen.has(table)) return
+      seen.add(table)
+      ensureUnifiedTableSearch(table)
+    })
   }
 
-  window.addEventListener('load', () => initUnifiedTableSearch(document))
-  document.addEventListener('DOMContentLoaded', () => initUnifiedTableSearch(document))
+  function styleDatatableSearchInputs() {
+    document.querySelectorAll('.datatable-wrapper .datatable-input').forEach((input) => {
+      if (input.dataset.unifiedStyled === '1') return
+      input.dataset.unifiedStyled = '1'
+      input.classList.add('unified-table-search-input')
+      if (!input.placeholder || input.placeholder === 'Search...') {
+        input.placeholder = 'Search table...'
+      }
+      const parent = input.parentElement
+      if (parent && parent.classList.contains('datatable-search') && !parent.querySelector('.unified-table-search-icon')) {
+        parent.classList.add('unified-datatable-search')
+        const icon = document.createElement('i')
+        icon.className = 'bi bi-search unified-table-search-icon'
+        icon.setAttribute('aria-hidden', 'true')
+        parent.insertBefore(icon, input)
+      }
+    })
+  }
+
+  window.attachUnifiedTableSearch = ensureUnifiedTableSearch
+  window.initUnifiedTableSearch = initUnifiedTableSearch
+
+  window.addEventListener('load', () => {
+    removeDuplicateSearchToolbarsNearDatatable()
+    initUnifiedTableSearch(document)
+    styleDatatableSearchInputs()
+  })
+  document.addEventListener('DOMContentLoaded', () => {
+    removeDuplicateSearchToolbarsNearDatatable()
+    initUnifiedTableSearch(document)
+    setTimeout(() => {
+      removeDuplicateSearchToolbarsNearDatatable()
+      styleDatatableSearchInputs()
+    }, 50)
+  })
 
   /**
    * Autoresize echart charts

@@ -139,6 +139,7 @@ if (!function_exists('security_ensure_auth_columns')) {
             $conn->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0");
             $conn->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS locked_until DATETIME DEFAULT NULL");
             $conn->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS last_login_at DATETIME DEFAULT NULL");
+            $conn->query("ALTER TABLE {$table} ADD COLUMN IF NOT EXISTS profile_image VARCHAR(255) DEFAULT NULL");
         }
     }
 }

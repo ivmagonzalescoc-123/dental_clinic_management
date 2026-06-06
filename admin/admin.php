@@ -2,10 +2,13 @@
 include_once '../config/session_check.php';
 check_session(['admin']);
 include_once '../config/system_logs.php';
+include_once '../config/profile_helpers.php';
 $csrf_token = security_generate_csrf_token();
+$header_profile_image_url = profile_session_image_url($conn, '../');
 
 // Handle modules that may redirect via headers before any HTML output.
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
+$dashboardLayout = in_array($page, ['dashboard', 'reports'], true);
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 if (function_exists('log_system_event') && $_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
@@ -84,8 +87,8 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260606-profile" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
 </head>
 
 <body>
@@ -124,7 +127,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -214,12 +217,9 @@ switch ($role_key) {
         <section class="section">
             <div class="row">
                 <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-body">
+                    <?php if (!$dashboardLayout): ?><div class="card"><div class="card-body"><?php endif; ?>
                             <!-- Dynamic Content Area -->
                             <?php
-                            $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
-
                             switch ($page) {
                                 case "dashboard":
                                     include "admin_modules/dashboard.php";
@@ -267,8 +267,7 @@ switch ($role_key) {
                                     break;
                             }
                             ?>
-                        </div>
-                    </div>
+                    <?php if (!$dashboardLayout): ?></div></div><?php endif; ?>
                 </div>
             </div>
         </section>
@@ -296,7 +295,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260316-2"></script>
+    <script src="../assets/js/main.js?v=20260606-search2"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->

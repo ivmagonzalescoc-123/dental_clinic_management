@@ -727,31 +727,49 @@ a.text-info,
     color: #1e293b;
     font-weight: 500;
     font-size: 0.9rem;
-    padding: 0.35rem 0.5rem;
+    padding: 0;
     position: absolute;
-    top: 0.85rem;
+    top: -2.5rem;
     left: 0.65rem;
     transform: none;
     transition: all 0.3s ease;
     pointer-events: none;
-    background: transparent;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    display: inline-block;
+    z-index: 1;
 }
 
 .form-floating > .form-control:focus ~ label,
 .form-floating > .form-control:not(:placeholder-shown) ~ label,
 .form-floating > .form-control:-webkit-autofill ~ label {
     color: var(--primary);
-    top: -0.55rem;
+    top: -2.5rem;
     left: 0.5rem;
-    background: white;
-    padding: 0 0.35rem;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0;
     font-size: 0.8rem;
 }
 
+.form-floating > label::after {
+    content: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
 .form-floating > .form-control {
-    padding: 1.3rem 0.75rem 0.45rem;
-    min-height: 3.3rem;
+    padding: 1rem 0.75rem 0.45rem;
+    min-height: 3rem;
     line-height: 1.25;
+    position: relative;
+    z-index: 2;
 }
 
 /* Keep autofill styling consistent and ensure text stays visible below floated label */
@@ -781,6 +799,7 @@ a.text-info,
 .form-floating {
     margin-bottom: 1.2rem;
     position: relative;
+    margin-top: 2.5rem;
 }
 
 .form-control-compact {

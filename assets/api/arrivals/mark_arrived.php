@@ -11,6 +11,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -49,7 +50,7 @@ try {
 
     // Load appointment + timeslot info
     $stmt = $conn->prepare("
-        SELECT a.appointment_id, a.status, a.is_emergency,
+        SELECT a.appointment_id, a.status, a.is_emergency, a.patient_id, a.user_id AS doctor_id,
                t.timeslot_id, t.start_time, t.slot_date
         FROM appointments a
         INNER JOIN timeslot t ON t.timeslot_id = a.timeslot_id
@@ -92,6 +93,13 @@ try {
             isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
         );
     }
+
+    wf_notify_patient_arrived(
+        $conn,
+        $appointment_id,
+        (int)($appt['patient_id'] ?? 0),
+        (int)($appt['doctor_id'] ?? 0)
+    );
 
     echo json_encode([
         'success' => true,

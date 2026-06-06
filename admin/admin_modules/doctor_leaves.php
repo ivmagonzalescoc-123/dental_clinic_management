@@ -237,7 +237,7 @@ if ($filter === 'all') {
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table class="table table-hover datatable" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Doctor</th>

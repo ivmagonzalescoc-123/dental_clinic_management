@@ -1,5 +1,9 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/profile_helpers.php';
+profile_hydrate_session_image($conn);
+$profile_image_url = profile_session_image_url($conn, '..');
+$profile_reload_url = 'patient.php?page=profile';
 
 $patientId = (int)($_SESSION['patient_id'] ?? 0);
 $patient = null;
@@ -25,6 +29,7 @@ if ($patientId > 0) {
             <div class="alert alert-warning">Unable to load account details.</div>
         <?php else: ?>
             <div id="profileAlert"></div>
+            <?php include dirname(dirname(__DIR__)) . '/includes/profile_photo_upload.php'; ?>
             <form id="profileForm" class="row g-3" novalidate>
                 <div class="col-md-4">
                     <label class="form-label">First Name</label>

@@ -36,182 +36,6 @@ $today = date('Y-m-d');
 if (!defined('APPOINTMENTS_HEADER_PROCESSED')) {
     define('APPOINTMENTS_HEADER_PROCESSED', true);
     
-    // Handle COMPLETE VISIT (submit EHR and send to billing)
-    if ($action === 'complete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-        $csrf = $_POST['csrf_token'] ?? '';
-        if (!security_validate_csrf_token($csrf)) {
-            $_SESSION['message'] = 'Invalid security token. Please refresh and try again.';
-            $_SESSION['message_type'] = 'danger';
-            header('Location: doctor.php?page=appointments');
-            exit;
-        }
-
-        $appointmentId = (int)($_POST['appointment_id'] ?? 0);
-        $serviceId = (int)($_POST['service_id'] ?? 0);
-        $toothData = $_POST['tooth_data'] ?? []; // Array of tooth updates
-        $treatmentIds = $_POST['treatment_ids'] ?? []; // Array of treatment IDs
-        $notes = $_POST['notes'] ?? '';
-        $followUpDate = $_POST['follow_up_date'] ?? null;
-        $materials_used = isset($_POST['materials_used']) ? json_decode($_POST['materials_used'], true) : null;
-        $doctor_fee = isset($_POST['doctor_fee']) ? (float)$_POST['doctor_fee'] : 0.0;
-        $recommended_services = isset($_POST['recommended_services']) ? json_decode($_POST['recommended_services'], true) : null;
-        
-        if ($appointmentId <= 0 || $serviceId <= 0) {
-            $_SESSION['message'] = 'Invalid appointment or service data.';
-            $_SESSION['message_type'] = 'warning';
-            header('Location: doctor.php?page=appointments');
-            exit;
-        }
-        
-        $conn->begin_transaction();
-        try {
-            // Verify appointment exists and belongs to this doctor
-            $stmt = $conn->prepare('SELECT appointment_id, patient_id, user_id, status FROM appointments WHERE appointment_id = ? AND user_id = ?');
-            if (!$stmt) throw new Exception('Error preparing statement.');
-            $stmt->bind_param('ii', $appointmentId, $doctor_id);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $appt = $res ? $res->fetch_assoc() : null;
-            $stmt->close();
-            
-            if (!$appt) {
-                throw new Exception('Appointment not found or access denied.');
-            }
-            
-            $patientId = $appt['patient_id'];
-            $currentStatus = strtolower((string)($appt['status'] ?? ''));
-            if (!appointment_can_transition_doctor($currentStatus, 'completed')) {
-                throw new Exception('Cannot complete visit from status: ' . $currentStatus);
-            }
-            
-            // Update appointment status to completed and add notes
-            $status = 'completed';
-            $stmt = $conn->prepare('UPDATE appointments SET status = ?, notes = ? WHERE appointment_id = ?');
-            if ($stmt) {
-                $stmt->bind_param('ssi', $status, $notes, $appointmentId);
-                $stmt->execute();
-                $stmt->close();
-            }
-            
-            // Record tooth status for each tooth updated
-            foreach ($toothData as $toothId => $toothStatus) {
-                if (!empty($toothStatus)) {
-                    $stmt = $conn->prepare('
-                        INSERT INTO tooth_status (tooth_selected, status) 
-                        VALUES (?, ?)
-                        ON DUPLICATE KEY UPDATE status = VALUES(status)
-                    ');
-                    if ($stmt) {
-                        $stmt->bind_param('is', $toothId, $toothStatus);
-                        $stmt->execute();
-                        $stmt->close();
-                    }
-                }
-            }
-            
-            // Record treatments if provided
-            if (!empty($treatmentIds)) {
-                foreach ($treatmentIds as $treatmentId) {
-                    $treatmentId = (int)$treatmentId;
-                    // You can add logic to link treatments to appointments/patients here
-                }
-            }
-            
-            // Get service price
-            $stmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
-            $servicePrice = 0;
-            if ($stmt) {
-                $stmt->bind_param('i', $serviceId);
-                $stmt->execute();
-                $res = $stmt->get_result();
-                if ($res && ($row = $res->fetch_assoc())) {
-                    $servicePrice = (float)($row['initial_price'] ?? 0);
-                }
-                $stmt->close();
-            }
-
-            // Calculate billing total: service + materials + doctor fee + any recommended services
-            $billingAmount = 0.0;
-            $billingAmount += $servicePrice;
-            if ($materials_used && is_array($materials_used)) {
-                foreach ($materials_used as $m) {
-                    $qty = isset($m['qty']) ? (float)$m['qty'] : 0;
-                    $price = isset($m['price']) ? (float)$m['price'] : 0;
-                    $billingAmount += $qty * $price;
-                }
-            }
-            if ($recommended_services && is_array($recommended_services)) {
-                foreach ($recommended_services as $sid) {
-                    $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
-                    $sstmt->bind_param('i', $sid);
-                    $sstmt->execute();
-                    $sres = $sstmt->get_result();
-                    if ($sres && ($srow = $sres->fetch_assoc())) $billingAmount += (float)$srow['initial_price'];
-                    $sstmt->close();
-                }
-            }
-            if ($doctor_fee > 0) $billingAmount += $doctor_fee;
-
-            $billingStatus = 'unpaid';
-            $existingBillingId = 0;
-            $chk = $conn->prepare('SELECT billing_id FROM billing WHERE appointment_id = ? LIMIT 1');
-            if ($chk) {
-                $chk->bind_param('i', $appointmentId);
-                $chk->execute();
-                $cres = $chk->get_result();
-                $crow = $cres ? $cres->fetch_assoc() : null;
-                $existingBillingId = (int)($crow['billing_id'] ?? 0);
-                $chk->close();
-            }
-
-            if ($existingBillingId > 0) {
-                $stmt = $conn->prepare('UPDATE billing SET user_id = ?, total_amount = ?, status = ?, created_at = NOW() WHERE billing_id = ?');
-                if ($stmt) {
-                    $stmt->bind_param('idsi', $patientId, $billingAmount, $billingStatus, $existingBillingId);
-                    $stmt->execute();
-                    $stmt->close();
-                }
-            } else {
-                $stmt = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, status, created_at) VALUES (?, ?, ?, ?, NOW())');
-                if ($stmt) {
-                    $stmt->bind_param('iids', $appointmentId, $patientId, $billingAmount, $billingStatus);
-                    $stmt->execute();
-                    $stmt->close();
-                }
-            }
-            
-            // Handle follow-up appointment if requested
-            if (!empty($followUpDate)) {
-                $followUpDate = date('Y-m-d', strtotime($followUpDate));
-                // You can add logic to create follow-up appointment here
-                // For now, we'll just store it in notes
-            }
-            
-            $conn->commit();
-
-            if (function_exists('log_system_event')) {
-                log_system_event(
-                    $conn,
-                    'appointment.complete_visit',
-                    'appointments',
-                    $appointmentId,
-                    'Completed visit and generated/updated billing.',
-                    (int)$doctor_id
-                );
-            }
-            
-            $_SESSION['message'] = 'Visit completed successfully. Patient sent to secretary for billing.';
-            $_SESSION['message_type'] = 'success';
-        } catch (Throwable $e) {
-            $conn->rollback();
-            $_SESSION['message'] = 'Error completing visit: ' . $e->getMessage();
-            $_SESSION['message_type'] = 'danger';
-        }
-        
-        header('Location: doctor.php?page=appointments');
-        exit;
-    }
-    
     // Handle ACCEPT patient (start visit) - set arrival status in_progress and appointment status
     if ($action === 'accept' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $csrf = $_POST['csrf_token'] ?? '';
@@ -490,23 +314,19 @@ if ($stmt) {
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<ul class="nav nav-tabs doctor-appointments-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link <?php echo $appointmentsTab === 'recent' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=recent">
-            <i class="bi bi-clock-history me-1"></i> Recent Appointments
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?php echo $appointmentsTab === 'general' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=general">
-            <i class="bi bi-calendar3 me-1"></i> Appointments Calendar & List
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?php echo $appointmentsTab === 'followup' ? 'active' : ''; ?>" href="doctor.php?page=appointments&tab=followup">
-            <i class="bi bi-calendar-range me-1"></i> Follow-up Appointments
-        </a>
-    </li>
-</ul>
+<div class="mb-3">
+	<div class="btn-group" role="group">
+		<a class="btn btn-sm <?php echo $appointmentsTab === 'recent' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=recent" title="Recent appointments">
+			<i class="bi bi-clock-history me-1"></i> Recent
+		</a>
+		<a class="btn btn-sm <?php echo $appointmentsTab === 'general' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=general" title="Appointments calendar and list">
+			<i class="bi bi-calendar3 me-1"></i> Calendar & List
+		</a>
+		<a class="btn btn-sm <?php echo $appointmentsTab === 'followup' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=followup" title="Follow-up appointments">
+			<i class="bi bi-calendar-range me-1"></i> Follow-up
+		</a>
+	</div>
+</div>
 
 <?php if ($appointmentsTab === 'recent'): ?>
     <div class="row">
@@ -518,13 +338,8 @@ if ($stmt) {
                     </h2>
                 </div>
                 <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                        <input type="text" id="doctorRecentSearchInput" class="form-control form-control-sm" placeholder="Search recent appointments" style="max-width: 280px;">
-                        <button type="button" id="doctorRecentSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
-                        <button type="button" id="doctorRecentSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
-                    </div>
                     <div class="table-responsive">
-                        <table class="table table-sm align-middle doctor-recent-appointments-table" id="doctorRecentAppointmentsTable">
+                        <table class="table table-sm align-middle doctor-recent-appointments-table" id="doctorRecentAppointmentsTable" data-search-placeholder="Search patients, dates, or status...">
                             <thead>
                                 <tr>
                                     <th>Patient</th>
@@ -589,19 +404,19 @@ if ($stmt) {
     <div class="card border-0">
         <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h2 class="card-title mb-0"><i class="bi bi-list-check"></i> Appointments and Follow-up List</h2>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
                 <span id="appointmentsFilterBadge" class="small fw-semibold text-muted" style="display:none;"></span>
                 <button id="clearAppointmentsDateFilter" type="button" class="btn btn-sm btn-outline-secondary" style="display:none;">Show All</button>
+                <div class="unified-table-search-wrap module-search-inline">
+                    <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                    <input type="search" id="doctorGeneralSearchInput" class="form-control unified-table-search-input" placeholder="Search patients, dates, or status..." aria-label="Search appointments">
+                    <button type="button" class="unified-table-search-clear" id="doctorGeneralSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+                </div>
             </div>
         </div>
         <div class="card-body">
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <input type="text" id="doctorGeneralSearchInput" class="form-control form-control-sm" placeholder="Search appointments list" style="max-width: 280px;">
-                <button type="button" id="doctorGeneralSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
-                <button type="button" id="doctorGeneralSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
-            </div>
             <div class="table-responsive">
-                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorGeneralAppointmentsTable">
+                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorGeneralAppointmentsTable" data-skip-table-search="1" data-search-placeholder="Search patients, dates, or status...">
                     <thead>
                         <tr>
                             <th>Type</th>
@@ -609,11 +424,12 @@ if ($stmt) {
                             <th>Date</th>
                             <th>Time</th>
                             <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($appointmentEntries)): ?>
-                            <tr><td colspan="5" class="text-center text-muted">No appointments found.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">No appointments found.</td></tr>
                         <?php else: ?>
                             <?php foreach ($appointmentEntries as $appt): ?>
                                 <?php
@@ -627,6 +443,8 @@ if ($stmt) {
                                             $timeLabel .= ' - ' . substr($endTime, 0, 5);
                                         }
                                     }
+                                    $apptStatus = (string)($appt['status'] ?? 'scheduled');
+                                    $apptId = (int)($appt['appointment_id'] ?? 0);
                                 ?>
                                 <tr data-event-date="<?php echo htmlspecialchars($eventDate); ?>">
                                     <td>
@@ -638,13 +456,24 @@ if ($stmt) {
                                     <td><?php echo htmlspecialchars($eventDate); ?></td>
                                     <td><?php echo htmlspecialchars($timeLabel); ?></td>
                                     <td>
-                                        <span class="badge bg-<?php echo ($appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning text-dark')); ?>">
-                                            <?php echo htmlspecialchars(ucfirst((string)$appt['status'])); ?>
+                                        <span class="badge bg-<?php echo ($apptStatus === 'completed' ? 'success' : ($apptStatus === 'cancelled' ? 'danger' : ($apptStatus === 'in_progress' ? 'info' : 'warning text-dark'))); ?>">
+                                            <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', (string)$apptStatus))); ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($apptStatus === 'in_progress'): ?>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="openFinishAppointmentModal(<?php echo $apptId; ?>)" title="Finish appointment and upload photos/notes">
+                                                <i class="fas fa-check"></i> Finish
+                                            </button>
+                                        <?php elseif ($apptStatus === 'completed' || $apptStatus === 'completed_by_doctor' || $apptStatus === 'awaiting_secretary_records' || $apptStatus === 'records_complete'): ?>
+                                            <span class="text-muted small">Done</span>
+                                        <?php else: ?>
+                                            <span class="text-muted small">-</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
-                            <tr id="doctorGeneralNoMatchRow" style="display:none;"><td colspan="5" class="text-center text-muted">No records for selected date.</td></tr>
+                            <tr id="doctorGeneralNoMatchRow" style="display:none;"><td colspan="6" class="text-center text-muted">No records for selected date.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -658,13 +487,8 @@ if ($stmt) {
             <div class="small text-muted">All scheduled follow-up entries assigned to you.</div>
         </div>
         <div class="card-body">
-            <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                <input type="text" id="doctorFollowupSearchInput" class="form-control form-control-sm" placeholder="Search follow-up appointments" style="max-width: 280px;">
-                <button type="button" id="doctorFollowupSearchBtn" class="btn btn-sm btn-outline-primary">Search</button>
-                <button type="button" id="doctorFollowupSearchClearBtn" class="btn btn-sm btn-outline-secondary">Clear</button>
-            </div>
             <div class="table-responsive">
-                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorFollowupAppointmentsTable">
+                <table class="table table-sm align-middle doctor-general-appointments-table" id="doctorFollowupAppointmentsTable" data-search-placeholder="Search follow-up patients or dates...">
                     <thead>
                         <tr>
                             <th>Patient</th>
@@ -734,25 +558,39 @@ if ($stmt) {
                                 <div class="mb-3"><strong>Patient:</strong> <span id="histPatientName"></span></div>
                                 <div class="mb-3"><strong>Appointment Date:</strong> <span id="histApptDate"></span></div>
 
-                                <div class="mb-3" id="histProfilingWrap">
-                                    <h6>Profiling / EHR Overview</h6>
-                                    <div class="row">
-                                        <div class="col-md-6"><strong>Medical History:</strong> <div id="histMedicalHistory" class="small text-muted"></div></div>
-                                        <div class="col-md-6"><strong>Medications:</strong> <div id="histMedications" class="small text-muted"></div></div>
-                                        <div class="col-md-4"><strong>Allergies:</strong> <div id="histAllergies" class="small text-muted"></div></div>
-                                        <div class="col-md-4"><strong>Smoking:</strong> <div id="histSmoking" class="small text-muted"></div></div>
-                                        <div class="col-md-4"><strong>Alcohol:</strong> <div id="histAlcohol" class="small text-muted"></div></div>
-                                        <div class="col-md-4"><strong>ASA:</strong> <div id="histASA" class="small text-muted"></div></div>
-                                        <div class="col-md-4"><strong>Last Visit:</strong> <div id="histLastVisit" class="small text-muted"></div></div>
-                                        <div class="col-12"><strong>Periodontal / Oral Exam:</strong> <div id="histPeriodontal" class="small text-muted"></div></div>
-                                        <div class="col-12"><strong>Dental Chart / Findings:</strong> <div id="histDentalChart" class="small text-muted"></div></div>
-                                        <div class="col-12"><strong>Radiographs / Imaging Notes:</strong> <div id="histRadiographs" class="small text-muted"></div></div>
-                                    </div>
+                                <div class="mb-3" id="histBackgroundWrap">
+                                    <h6>Patient Background (Profiling)</h6>
+                                    <div id="histBackgroundContent" class="small"></div>
+                                </div>
+
+                                <div class="mb-3" id="histVisitClinicalWrap">
+                                    <h6>Visit Clinical Exam (This Appointment)</h6>
+                                    <div id="histVisitClinicalContent" class="small"></div>
                                 </div>
 
                                 <div class="mb-3"><strong>Clinical Notes:</strong>
                                     <pre id="histNotes" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
                                 </div>
+                                <div class="mb-3"><strong>Clinical Summary:</strong>
+                                    <pre id="histSummary" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
+                                </div>
+                                <div class="mb-3"><strong>Prescriptions:</strong>
+                                    <div id="histPrescriptions" class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Medicine Name</th>
+                                                    <th>Brand</th>
+                                                    <th>Dosage</th>
+                                                    <th>Duration</th>
+                                                    <th>Notes</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="mb-3"><strong>Follow-up Date:</strong> <span id="histFollowUpDate" class="badge bg-info text-dark"></span></div>
                                 <div class="mb-3"><strong>Recommended Services:</strong>
                                     <ul id="histServices"></ul>
                                 </div>
@@ -783,139 +621,6 @@ if ($stmt) {
                     </div>
                 </div>
             </div>
-
-<!-- EHR Modal -->
-<div class="modal fade" id="ehrModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="bi bi-file-earmark-medical"></i> Patient EHR & Clinical Notes
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="doctor.php?page=appointments&action=complete">
-                <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token ?? ''); ?>">
-                    <input type="hidden" name="appointment_id" id="modalAppointmentId">
-                    <input type="hidden" name="patient_id" id="modalPatientId">
-                    
-                    <!-- Patient Info -->
-                    <div class="mb-3 p-3 bg-light rounded">
-                        <h6 class="mb-2"><i class="bi bi-person"></i> Patient Information</h6>
-                        <p class="mb-0"><strong id="modalPatientName"></strong></p>
-                        <p class="mb-0 small text-muted"><span id="modalPatientPhone"></span> | <span id="modalPatientEmail"></span></p>
-                    </div>
-                    
-                    <!-- Odontogram -->
-                    <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-tooth"></i> <strong>Odontogram (Tooth Chart)</strong></label>
-                        <div class="card p-3">
-                            <div class="row mb-2">
-                                <div class="col-12">
-                                    <strong>Upper Teeth</strong>
-                                    <div class="d-flex flex-wrap gap-2 mb-3">
-                                        <?php foreach ($teeth as $tooth): 
-                                            if ($tooth['upper_lower'] == 1): // Upper teeth
-                                        ?>
-                                            <div class="tooth-selector">
-                                                <select class="form-select form-select-sm tooth-status-select" 
-                                                        data-tooth-id="<?php echo $tooth['tooth_id']; ?>"
-                                                        name="tooth_data[<?php echo $tooth['tooth_id']; ?>]">
-                                                    <option value="">Tooth <?php echo htmlspecialchars($tooth['tooth_number']); ?></option>
-                                                    <option value="healthy">Healthy</option>
-                                                    <option value="decayed">Decayed</option>
-                                                    <option value="filled">Filled</option>
-                                                    <option value="crowned">Crowned</option>
-                                                    <option value="root_canal">Root Canal</option>
-                                                    <option value="missing">Missing</option>
-                                                </select>
-                                            </div>
-                                        <?php endif; endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-12">
-                                    <strong>Lower Teeth</strong>
-                                    <div class="d-flex flex-wrap gap-2">
-                                        <?php foreach ($teeth as $tooth): 
-                                            if ($tooth['upper_lower'] == 0): // Lower teeth
-                                        ?>
-                                            <div class="tooth-selector">
-                                                <select class="form-select form-select-sm tooth-status-select" 
-                                                        data-tooth-id="<?php echo $tooth['tooth_id']; ?>"
-                                                        name="tooth_data[<?php echo $tooth['tooth_id']; ?>]">
-                                                    <option value="">Tooth <?php echo htmlspecialchars($tooth['tooth_number']); ?></option>
-                                                    <option value="healthy">Healthy</option>
-                                                    <option value="decayed">Decayed</option>
-                                                    <option value="filled">Filled</option>
-                                                    <option value="crowned">Crowned</option>
-                                                    <option value="root_canal">Root Canal</option>
-                                                    <option value="missing">Missing</option>
-                                                </select>
-                                            </div>
-                                        <?php endif; endforeach; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Treatments -->
-                    <div class="mb-3">
-                        <label class="form-label"><i class="bi bi-bandaid"></i> <strong>Treatments Recommended</strong></label>
-                        <div class="card p-3">
-                            <?php foreach ($treatments as $treatment): ?>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input treatment-checkbox" 
-                                           id="treatment_<?php echo $treatment['treatment_id']; ?>"
-                                           name="treatment_ids[]" value="<?php echo $treatment['treatment_id']; ?>">
-                                    <label class="form-check-label" for="treatment_<?php echo $treatment['treatment_id']; ?>">
-                                        <?php echo htmlspecialchars($treatment['treatment_name']); ?>
-                                    </label>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Service for Consultation -->
-                    <div class="mb-3">
-                        <label for="serviceSelect" class="form-label"><i class="bi bi-cash-coin"></i> <strong>Service/Consultation Type</strong></label>
-                        <select class="form-select" id="serviceSelect" name="service_id" required>
-                            <option value="">-- Select Service --</option>
-                            <?php foreach ($services as $service): ?>
-                                <option value="<?php echo $service['service_id']; ?>">
-                                    <?php echo htmlspecialchars($service['service_name']); ?> (₱<?php echo number_format($service['initial_price'], 2); ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small class="text-muted">This will be the consultation fee. Additional treatment charges can be added later in billing.</small>
-                    </div>
-                    
-                    <!-- Clinical Notes -->
-                    <div class="mb-3">
-                        <label for="clinicalNotes" class="form-label"><i class="bi bi-file-text"></i> <strong>Clinical Notes</strong></label>
-                        <textarea class="form-control" id="clinicalNotes" name="notes" rows="4" placeholder="Enter clinical observations, findings, recommendations, etc."></textarea>
-                    </div>
-                    
-                    <!-- Follow-up Appointment -->
-                    <div class="mb-3">
-                        <label for="followUpDate" class="form-label"><i class="bi bi-calendar-plus"></i> <strong>Schedule Follow-up Appointment (Optional)</strong></label>
-                        <input type="date" class="form-control" id="followUpDate" name="follow_up_date">
-                        <small class="text-muted">Patient can confirm this during billing phase.</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-circle"></i> Complete Visit & Send to Billing
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
@@ -1049,21 +754,6 @@ if ($stmt) {
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
-function loadPatientEHR(patient) {
-    document.getElementById('modalAppointmentId').value = patient.appointment_id;
-    document.getElementById('modalPatientId').value = patient.patient_id;
-    document.getElementById('modalPatientName').textContent = patient.first_name + ' ' + patient.last_name;
-    document.getElementById('modalPatientPhone').textContent = patient.phone_number;
-    document.getElementById('modalPatientEmail').textContent = patient.email;
-    
-    // Clear previous selections
-    document.querySelectorAll('.tooth-status-select').forEach(select => select.value = '');
-    document.querySelectorAll('.treatment-checkbox').forEach(check => check.checked = false);
-    document.getElementById('serviceSelect').value = '';
-    document.getElementById('clinicalNotes').value = '';
-    document.getElementById('followUpDate').value = '';
-}
-
 // Service map for resolving service IDs to names
 const serviceMap = {
     <?php foreach ($services as $s): ?>
@@ -1079,49 +769,6 @@ const doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, J
 let generalDateFilter = '';
 let generalMonthFilter = '';
 let generalSearchTerm = '';
-
-function initSimpleTableSearch(config) {
-    const table = document.getElementById(config.tableId);
-    const input = document.getElementById(config.inputId);
-    const searchBtn = document.getElementById(config.searchBtnId);
-    const clearBtn = document.getElementById(config.clearBtnId);
-    if (!table || !input || !searchBtn || !clearBtn) return;
-
-    const noMatchRowId = config.noMatchRowId || '';
-
-    const apply = function () {
-        const query = input.value.trim().toLowerCase();
-        const rows = table.querySelectorAll('tbody tr');
-        let visibleCount = 0;
-
-        rows.forEach(function (row) {
-            if (noMatchRowId && row.id === noMatchRowId) return;
-            const text = (row.textContent || '').toLowerCase();
-            const match = query === '' || text.indexOf(query) !== -1;
-            row.style.display = match ? '' : 'none';
-            if (match) visibleCount++;
-        });
-
-        if (noMatchRowId) {
-            const noMatchRow = document.getElementById(noMatchRowId);
-            if (noMatchRow) {
-                noMatchRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
-            }
-        }
-    };
-
-    searchBtn.addEventListener('click', apply);
-    clearBtn.addEventListener('click', function () {
-        input.value = '';
-        apply();
-    });
-    input.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            apply();
-        }
-    });
-}
 
 function applyGeneralTableFilters(shouldScroll) {
     const table = document.getElementById('doctorGeneralAppointmentsTable');
@@ -1265,47 +912,38 @@ function initDoctorAppointmentsCalendar() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    initDoctorAppointmentsCalendar();
+function initDoctorGeneralTableSearch() {
+    const searchInput = document.getElementById('doctorGeneralSearchInput');
+    const clearBtn = document.getElementById('doctorGeneralSearchClear');
+    if (!searchInput) return;
 
-    initSimpleTableSearch({
-        tableId: 'doctorRecentAppointmentsTable',
-        inputId: 'doctorRecentSearchInput',
-        searchBtnId: 'doctorRecentSearchBtn',
-        clearBtnId: 'doctorRecentSearchClearBtn'
+    const applySearch = () => {
+        generalSearchTerm = String(searchInput.value || '').trim().toLowerCase();
+        if (clearBtn) {
+            clearBtn.style.display = generalSearchTerm ? '' : 'none';
+        }
+        applyGeneralTableFilters(false);
+    };
+
+    searchInput.addEventListener('input', applySearch);
+    searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            applySearch();
+        }
     });
-
-    initSimpleTableSearch({
-        tableId: 'doctorFollowupAppointmentsTable',
-        inputId: 'doctorFollowupSearchInput',
-        searchBtnId: 'doctorFollowupSearchBtn',
-        clearBtnId: 'doctorFollowupSearchClearBtn'
-    });
-
-    const generalInput = document.getElementById('doctorGeneralSearchInput');
-    const generalSearchBtn = document.getElementById('doctorGeneralSearchBtn');
-    const generalClearBtn = document.getElementById('doctorGeneralSearchClearBtn');
-
-    if (generalInput && generalSearchBtn && generalClearBtn) {
-        generalSearchBtn.addEventListener('click', function () {
-            generalSearchTerm = generalInput.value.trim().toLowerCase();
-            applyGeneralTableFilters(false);
-        });
-
-        generalClearBtn.addEventListener('click', function () {
-            generalInput.value = '';
-            generalSearchTerm = '';
-            applyGeneralTableFilters(false);
-        });
-
-        generalInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                generalSearchTerm = generalInput.value.trim().toLowerCase();
-                applyGeneralTableFilters(false);
-            }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            searchInput.value = '';
+            applySearch();
+            searchInput.focus();
         });
     }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    initDoctorAppointmentsCalendar();
+    initDoctorGeneralTableSearch();
 });
 
 function tryParseJson(value) {
@@ -1386,6 +1024,10 @@ document.addEventListener('DOMContentLoaded', function(){
 <?php endif; ?>
 
 // Open history modal and fetch clinical record (read-only)
+function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
 async function openHistoryModal(appointmentId) {
     const modalEl = document.getElementById('historyModal');
     const bs = new bootstrap.Modal(modalEl);
@@ -1416,28 +1058,42 @@ async function openHistoryModal(appointmentId) {
         document.getElementById('histApptDate').textContent = rec._appointment_date || rec.follow_up_date || (rec.submitted_at ?? '');
         document.getElementById('histNotes').textContent = rec.doctor_notes || '';
 
-        // profiling: prefer clinical-record-level `profiling` then patient-level `patient_profiling`
-        const pf = rec.profiling || rec.patient_profiling || null;
-        if (pf) {
-            try {
-                const p = (typeof pf === 'string') ? JSON.parse(pf) : pf;
-                document.getElementById('histMedicalHistory').textContent = p.medical_history || '';
-                document.getElementById('histMedications').textContent = p.medications || '';
-                document.getElementById('histAllergies').textContent = p.allergies || '';
-                document.getElementById('histSmoking').textContent = p.smoking || '';
-                document.getElementById('histAlcohol').textContent = p.alcohol || '';
-                document.getElementById('histASA').textContent = p.asa || '';
-                document.getElementById('histLastVisit').textContent = p.last_visit || '';
-                document.getElementById('histPeriodontal').textContent = p.periodontal || '';
-                document.getElementById('histDentalChart').textContent = p.dental_chart || '';
-            } catch (e) { console.warn('parse profiling', e); }
-        } else {
-            // clear
-            ['histMedicalHistory','histMedications','histAllergies','histSmoking','histAlcohol','histASA','histLastVisit','histPeriodontal','histDentalChart'].forEach(id => document.getElementById(id).textContent = '');
+        const backgroundEl = document.getElementById('histBackgroundContent');
+        const visitClinicalEl = document.getElementById('histVisitClinicalContent');
+        const backgroundData = rec.patient_profiling || null;
+        const visitClinicalData = rec.visit_clinical || rec.profiling || null;
+
+        if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
+            backgroundEl.innerHTML = renderBackgroundProfilingFields(backgroundData);
+        }
+        if (visitClinicalEl && typeof renderVisitClinicalFields === 'function') {
+            visitClinicalEl.innerHTML = renderVisitClinicalFields(visitClinicalData);
         }
 
-        // radiographs notes
-        document.getElementById('histRadiographs').textContent = rec.radiographs_notes || '';
+        // populate clinical summary
+        document.getElementById('histSummary').textContent = rec.summary || 'No summary provided.';
+
+        // populate prescriptions
+        const presBody = document.querySelector('#histPrescriptions tbody');
+        presBody.innerHTML = '';
+        if (Array.isArray(j.prescriptions) && j.prescriptions.length > 0) {
+            j.prescriptions.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${escapeHtml(p.medicine_name || '')}</td>
+                    <td>${escapeHtml(p.medicine_brand || '')}</td>
+                    <td>${escapeHtml(p.dosage || '')}</td>
+                    <td>${escapeHtml(p.duration || '')}</td>
+                    <td>${escapeHtml(p.notes || '')}</td>
+                `;
+                presBody.appendChild(tr);
+            });
+        } else {
+            presBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No prescriptions</td></tr>';
+        }
+
+        // populate follow-up date
+        document.getElementById('histFollowUpDate').textContent = rec.follow_up_date || 'None';
 
         // services
         const ul = document.getElementById('histServices');
@@ -1714,5 +1370,292 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
         location.reload();
     } catch (e) { console.error(e); notifyDoctor('Error', 'danger'); }
     this.disabled = false;
+});
+</script>
+
+<!-- Finish Appointment Modal with Photo Upload & Notes -->
+<div class="modal fade" id="finishAppointmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Finish Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Photo Gallery Section -->
+                <div class="mb-4">
+                    <h6 class="mb-3">
+                        <i class="fas fa-images"></i> Appointment Photos
+                        <span class="badge bg-info ms-2" id="photoCountBadge">0</span>
+                    </h6>
+                    <div id="photoGalleryContainer" class="row g-2">
+                        <p class="text-muted small">No photos uploaded yet</p>
+                    </div>
+                </div>
+
+                <!-- Upload Photo Section -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h6 class="mb-3">
+                        <i class="fas fa-plus-circle"></i> Add Photos
+                    </h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="file" id="finishPhotoUpload" class="form-control" accept="image/*" multiple hidden>
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="document.getElementById('finishPhotoUpload').click()">
+                                <i class="fas fa-upload"></i> Upload Photos
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-info w-100" id="cameraButton">
+                                <i class="fas fa-camera"></i> Take Photo
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">Support: JPG, PNG. Max 5MB each</small>
+                </div>
+
+                <!-- Doctor Notes Section -->
+                <div class="mb-4">
+                    <h6 class="mb-2">
+                        <i class="fas fa-sticky-note"></i> Clinical Notes
+                    </h6>
+                    <textarea id="finishAppointmentNotes" class="form-control" rows="4" placeholder="Enter clinical notes, findings, recommendations..." style="resize: vertical;"></textarea>
+                    <small class="text-muted d-block mt-1">These notes will be visible to the secretary when creating records</small>
+                </div>
+
+                <!-- Additional Charges Section -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h6 class="mb-3">
+                        <i class="fas fa-dollar-sign"></i> Additional Charges (Optional)
+                    </h6>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <input type="number" id="finishAdditionalCharge" class="form-control" placeholder="Amount (e.g., 500)">
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" id="finishChargeReason" class="form-control" placeholder="Reason (e.g., Overtime fee)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Section -->
+                <div class="alert alert-info small" role="alert">
+                    <i class="fas fa-info-circle"></i> Once submitted, the appointment will be marked as completed and the secretary will be notified to create records.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="submitFinishAppointmentBtn">
+                    <i class="fas fa-check"></i> Finish Appointment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden video element for camera capture -->
+<video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d6efd; border-radius: 5px;"></video>
+<canvas id="cameraCaptureCanvas" style="display: none;"></canvas>
+
+<script>
+// Finish Appointment Modal Logic
+let finishingAppointmentId = null;
+let uploadedPhotos = [];
+
+function openFinishAppointmentModal(appointmentId) {
+    finishingAppointmentId = appointmentId;
+    uploadedPhotos = [];
+    document.getElementById('photoGalleryContainer').innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';
+    document.getElementById('photoCountBadge').textContent = '0';
+    document.getElementById('finishAppointmentNotes').value = '';
+    document.getElementById('finishPhotoUpload').value = '';
+    document.getElementById('finishAdditionalCharge').value = '';
+    document.getElementById('finishChargeReason').value = '';
+    const modal = new bootstrap.Modal(document.getElementById('finishAppointmentModal'));
+    modal.show();
+}
+
+// Photo Upload Handler
+document.getElementById('finishPhotoUpload').addEventListener('change', async function(e) {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+            notifyDoctor('Only image files allowed', 'warning');
+            continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            notifyDoctor(`File ${file.name} exceeds 5MB limit`, 'warning');
+            continue;
+        }
+        uploadedPhotos.push(file);
+    }
+    
+    updatePhotoGalleryPreview();
+});
+
+// Camera Capture Handler
+document.getElementById('cameraButton').addEventListener('click', async function() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const video = document.getElementById('cameraPreviewVideo');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        video.play();
+        
+        // Add capture button
+        const container = document.querySelector('.modal-body');
+        let captureBtn = document.getElementById('photoCaptureBtn');
+        if (!captureBtn) {
+            captureBtn = document.createElement('button');
+            captureBtn.id = 'photoCaptureBtn';
+            captureBtn.type = 'button';
+            captureBtn.className = 'btn btn-sm btn-success mt-2';
+            captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture';
+            captureBtn.addEventListener('click', () => capturePhoto(stream));
+            video.parentNode.insertBefore(captureBtn, video.nextSibling);
+        }
+        
+        // Add stop button
+        let stopBtn = document.getElementById('photoStopBtn');
+        if (!stopBtn) {
+            stopBtn = document.createElement('button');
+            stopBtn.id = 'photoStopBtn';
+            stopBtn.type = 'button';
+            stopBtn.className = 'btn btn-sm btn-secondary mt-2 ms-2';
+            stopBtn.innerHTML = '<i class="fas fa-times"></i> Stop';
+            stopBtn.addEventListener('click', () => {
+                stream.getTracks().forEach(track => track.stop());
+                video.style.display = 'none';
+                captureBtn.remove();
+                stopBtn.remove();
+            });
+            captureBtn.parentNode.insertBefore(stopBtn, captureBtn.nextSibling);
+        }
+        
+        this.disabled = true;
+    } catch (err) {
+        notifyDoctor('Camera access denied or unavailable', 'danger');
+        console.error('Camera error:', err);
+    }
+});
+
+function capturePhoto(stream) {
+    const video = document.getElementById('cameraPreviewVideo');
+    const canvas = document.getElementById('cameraCaptureCanvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    canvas.toBlob((blob) => {
+        const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        uploadedPhotos.push(file);
+        updatePhotoGalleryPreview();
+        notifyDoctor('Photo captured', 'success');
+    }, 'image/jpeg', 0.9);
+}
+
+function updatePhotoGalleryPreview() {
+    const container = document.getElementById('photoGalleryContainer');
+    document.getElementById('photoCountBadge').textContent = uploadedPhotos.length;
+    
+    if (uploadedPhotos.length === 0) {
+        container.innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    uploadedPhotos.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const col = document.createElement('div');
+            col.className = 'col-sm-6 col-md-4 position-relative';
+            col.innerHTML = `
+                <div style="position: relative; overflow: hidden; border-radius: 8px; background: #f0f0f0; aspect-ratio: 3/2;">
+                    <img src="${e.target.result}" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+                    <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeUploadedPhoto(${idx})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(col);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function removeUploadedPhoto(idx) {
+    uploadedPhotos.splice(idx, 1);
+    updatePhotoGalleryPreview();
+}
+
+// Submit Finish Appointment
+let finishAppointmentSubmitting = false;
+let finishAppointmentIdempotencyKey = null;
+
+document.getElementById('submitFinishAppointmentBtn').addEventListener('click', async function() {
+    if (!finishingAppointmentId) return;
+    if (finishAppointmentSubmitting) return;
+    finishAppointmentSubmitting = true;
+
+    if (!finishAppointmentIdempotencyKey) {
+        finishAppointmentIdempotencyKey = (window.Idempotency && Idempotency.newKey('finish')) || ('finish-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+    }
+    
+    this.disabled = true;
+    const btnText = this.innerHTML;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    try {
+        const fd = new FormData();
+        fd.append('appointment_id', finishingAppointmentId);
+        fd.append('notes', document.getElementById('finishAppointmentNotes').value);
+        fd.append('csrf_token', doctorCsrfToken);
+        fd.append('idempotency_key', finishAppointmentIdempotencyKey);
+        fd.append('additional_charge', document.getElementById('finishAdditionalCharge').value);
+        fd.append('charge_reason', document.getElementById('finishChargeReason').value);
+        
+        // Add photo files
+        uploadedPhotos.forEach((file, idx) => {
+            fd.append(`photos[]`, file);
+        });
+        
+        const res = await fetch('../assets/api/appointments/finish_appointment.php', {
+            method: 'POST',
+            body: fd
+        });
+
+        let json;
+        const ct = (res.headers.get('Content-Type') || res.headers.get('content-type') || '');
+        if (ct.indexOf('application/json') !== -1) {
+            json = await res.json();
+        } else {
+            const txt = await res.text();
+            console.error('finish_appointment non-JSON response:', txt);
+            notifyDoctor('Server error: invalid response from server', 'danger');
+            this.disabled = false;
+            this.innerHTML = btnText;
+            return;
+        }
+        if (!json.success) {
+            notifyDoctor(json.message || 'Failed to finish appointment', 'danger');
+            finishAppointmentSubmitting = false;
+            this.disabled = false;
+            this.innerHTML = btnText;
+            return;
+        }
+        
+        notifyDoctor(json.already_processed || json.idempotent_replay ? 'Appointment was already finished.' : 'Appointment finished successfully', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('finishAppointmentModal')).hide();
+        
+        // Reload or update UI
+        setTimeout(() => location.reload(), 1000);
+    } catch (e) {
+        console.error(e);
+        notifyDoctor('Error saving appointment', 'danger');
+        this.disabled = false;
+        this.innerHTML = btnText;
+    }
 });
 </script>

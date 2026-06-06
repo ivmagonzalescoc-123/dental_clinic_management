@@ -106,21 +106,86 @@ if ($action === 'reactivate' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     manage_users_redirect('users');
 }
 
-// Handle RESET PASSWORD action (admin only for system users)
+// Handle RESET PASSWORD action (system users and patients)
 if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
+    $resetType = ($_POST['type'] ?? 'users') === 'patients' ? 'patients' : 'users';
+    capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=' . $resetType);
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
         $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
         $_SESSION['message_type'] = 'danger';
-        manage_users_redirect('users');
+        manage_users_redirect($resetType);
     }
 
     $id = (int)($_POST['id'] ?? 0);
     if ($id <= 0) {
-        $_SESSION['message'] = 'Invalid user selected for password reset.';
+        $_SESSION['message'] = $resetType === 'patients'
+            ? 'Invalid patient selected for password reset.'
+            : 'Invalid user selected for password reset.';
         $_SESSION['message_type'] = 'danger';
-        manage_users_redirect('users');
+        manage_users_redirect($resetType);
+    }
+
+    if ($resetType === 'patients') {
+        $findSql = 'SELECT patient_id, first_name, last_name, email
+                    FROM patients
+                    WHERE patient_id = ?
+                    LIMIT 1';
+        $findStmt = $conn->prepare($findSql);
+        if (!$findStmt) {
+            $_SESSION['message'] = 'Database error while preparing reset.';
+            $_SESSION['message_type'] = 'danger';
+            manage_users_redirect('patients');
+        }
+        $findStmt->bind_param('i', $id);
+        $findStmt->execute();
+        $found = $findStmt->get_result();
+        $targetPatient = $found ? $found->fetch_assoc() : null;
+        $findStmt->close();
+
+        if (!$targetPatient) {
+            $_SESSION['message'] = 'Patient account not found.';
+            $_SESSION['message_type'] = 'danger';
+            manage_users_redirect('patients');
+        }
+
+        $patientEmail = trim((string)($targetPatient['email'] ?? ''));
+        if ($patientEmail === '') {
+            $_SESSION['message'] = 'This patient has no email on file. Add an email before generating a login password.';
+            $_SESSION['message_type'] = 'warning';
+            manage_users_redirect('patients');
+        }
+
+        $temporaryPassword = security_generate_default_password();
+        $temporaryHash = security_hash_password($temporaryPassword);
+
+        $updSql = 'UPDATE patients
+                   SET password_hash = ?,
+                       must_change_password = 1,
+                       password_updated_at = NOW(),
+                       failed_login_attempts = 0,
+                       locked_until = NULL
+                   WHERE patient_id = ?';
+        $updStmt = $conn->prepare($updSql);
+        if (!$updStmt) {
+            $_SESSION['message'] = 'Database error while saving new password.';
+            $_SESSION['message_type'] = 'danger';
+            manage_users_redirect('patients');
+        }
+        $updStmt->bind_param('si', $temporaryHash, $id);
+        $ok = $updStmt->execute();
+        $updStmt->close();
+
+        if ($ok) {
+            $displayName = trim((string)($targetPatient['first_name'] ?? '') . ' ' . (string)($targetPatient['last_name'] ?? ''));
+            $_SESSION['message'] = 'Temporary password generated for patient ' . $displayName . ': ' . $temporaryPassword . '. Share this securely. Patient must change password on next login.';
+            $_SESSION['message_type'] = 'success';
+        } else {
+            $_SESSION['message'] = 'Failed to reset patient password.';
+            $_SESSION['message_type'] = 'danger';
+        }
+
+        manage_users_redirect('patients');
     }
 
     $findSql = "SELECT u.user_id, u.first_name, u.last_name, u.email, r.role_name
@@ -315,7 +380,7 @@ foreach ($roles as $roleRow) {
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover datatable">
+                    <table class="table table-hover datatable" data-skip-table-search="1">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -417,18 +482,16 @@ foreach ($roles as $roleRow) {
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap">
                 <h5 class="card-title mb-0">Patient Settings </h5>
-                <div class="d-flex gap-2 flex-wrap">
-                    <form method="GET" class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    <form method="GET" class="module-search-toolbar" style="margin:0;">
                         <input type="hidden" name="page" value="manage_users">
                         <input type="hidden" name="type" value="patients">
-                        <input type="text" class="form-control form-control-sm" name="search" placeholder="Search by name, email, or phone..." value="<?php echo htmlspecialchars($search); ?>">
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            <i class="bi bi-search"></i> Search
-                        </button>
+                        <div class="unified-table-search-wrap module-search-inline">
+                            <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                            <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or phone..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search patients">
+                        </div>
                         <?php if (!empty($search)): ?>
-                            <a href="admin.php?page=manage_users&type=patients" class="btn btn-secondary btn-sm">
-                                <i class="bi bi-x"></i> Clear
-                            </a>
+                            <a href="admin.php?page=manage_users&type=patients" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
                         <?php endif; ?>
                     </form>
                     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
@@ -438,7 +501,7 @@ foreach ($roles as $roleRow) {
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-hover datatable">
+                    <table class="table table-hover datatable" data-skip-table-search="1">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -464,6 +527,15 @@ foreach ($roles as $roleRow) {
                                                 data-bs-target="#editPatientModal" onclick="editPatient(<?php echo htmlspecialchars(json_encode($patient)); ?>)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Generate a new temporary password for this patient?');">
+                                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                            <input type="hidden" name="action" value="reset_password">
+                                            <input type="hidden" name="type" value="patients">
+                                            <input type="hidden" name="id" value="<?php echo (int)$patient['patient_id']; ?>">
+                                            <button type="submit" class="btn btn-sm btn-warning" title="Generate Temporary Password">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+                                        </form>
                                         <form method="POST" style="display:inline;" 
                                               onsubmit="return confirm('Are you sure you want to archive this patient?');">
                                                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">

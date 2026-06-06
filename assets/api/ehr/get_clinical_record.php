@@ -1,6 +1,7 @@
 <?php
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
@@ -92,7 +93,9 @@ if (isset($rec['patient_id']) && $rec['patient_id']) {
         $pstmt->close();
         if ($prow && isset($prow['profiling']) && $prow['profiling'] !== null) {
             $decoded = json_decode($prow['profiling'], true);
-            if ($decoded !== null) $rec['patient_profiling'] = $decoded;
+            if (is_array($decoded)) {
+                $rec['patient_profiling'] = filter_background_profiling_data($decoded);
+            }
         }
     }
 }
@@ -104,6 +107,11 @@ foreach ($toDecode as $f) {
         $decoded = json_decode($rec[$f], true);
         $rec[$f] = ($decoded !== null) ? $decoded : $rec[$f];
     }
+}
+
+if (isset($rec['profiling']) && is_array($rec['profiling'])) {
+    $rec['visit_clinical'] = filter_visit_clinical_data($rec['profiling']);
+    $rec['profiling'] = $rec['visit_clinical'];
 }
 
 // If recommended_services is an array of IDs, fetch service details and replace with objects

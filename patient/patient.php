@@ -1,7 +1,11 @@
 <?php
 include_once '../config/session_check.php';
 check_session(['patient']);
+include_once '../config/profile_helpers.php';
 $csrf_token = security_generate_csrf_token();
+$header_profile_image_url = profile_session_image_url($conn, '../');
+$page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
+$dashboardLayout = ($page === 'dashboard');
 
 $header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
 if ($header_display_name === '') {
@@ -58,8 +62,8 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260328-theme7" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260328-ux4" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260606-profile" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
 </head>
 
@@ -111,7 +115,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="../assets/img/profile.png" alt="Profile" class="rounded-circle">
+                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -188,12 +192,9 @@ switch ($role_key) {
         <section class="section">
             <div class="row">
                 <div class="col-lg-12">
-                    <div class="card">
-                        <div class="card-body">
+                    <?php if (!$dashboardLayout): ?><div class="card"><div class="card-body"><?php endif; ?>
                             <!-- Dynamic Content Area -->
                             <?php
-                            $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
-
                             switch ($page) {
                                 case "dashboard":
                                     include "patient_modules/dashboard.php";
@@ -225,8 +226,7 @@ switch ($role_key) {
                                     break;
                             }
                             ?>
-                        </div>
-                    </div>
+                    <?php if (!$dashboardLayout): ?></div></div><?php endif; ?>
                 </div>
             </div>
         </section>
@@ -256,8 +256,8 @@ switch ($role_key) {
     <!-- Template Main JS File -->
     <script src="../assets/js/main.js?v=20260316-2"></script>
     <script src="../assets/js/session-idle.js"></script>
-    <script src="../assets/js/appointment-service-manager.js"></script>
-    <script src="../assets/js/patient-appointments-services.js"></script>
+    <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
+    <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
 
     <!-- Active Navigation Highlight -->
     <script>

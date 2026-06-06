@@ -1,31 +1,9 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Mar 28, 2026 at 11:38 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
-
---
--- Database: `capstone_dental`
---
-
--- --------------------------------------------------------
-
---
--- Table structure for table `appointments`
---
 
 CREATE TABLE `appointments` (
   `appointment_id` int(11) NOT NULL,
@@ -34,34 +12,18 @@ CREATE TABLE `appointments` (
   `reason` varchar(255) DEFAULT NULL,
   `is_online_appointment` tinyint(1) DEFAULT 0,
   `notes` text DEFAULT NULL,
-  `status` enum('scheduled','confirmed','checked_in','in_progress','completed','cancelled','no_show','rescheduled') DEFAULT 'scheduled',
+  `status` enum('scheduled','confirmed','checked_in','in_progress','completed_by_doctor','awaiting_secretary_records','records_complete','completed','cancelled','no_show','rescheduled') DEFAULT 'scheduled',
   `created_at` datetime DEFAULT current_timestamp(),
   `user_id` int(11) DEFAULT NULL,
   `rescheduled_from` int(11) DEFAULT NULL,
   `patient_id` int(11) NOT NULL,
-  `is_emergency` tinyint(1) DEFAULT 0
+  `is_emergency` tinyint(1) DEFAULT 0,
+  `completed_by_doctor_at` datetime DEFAULT NULL,
+  `secretary_records_completed_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `appointments`
---
 
-INSERT INTO `appointments` (`appointment_id`, `appointment_date`, `timeslot_id`, `reason`, `is_online_appointment`, `notes`, `status`, `created_at`, `user_id`, `rescheduled_from`, `patient_id`, `is_emergency`) VALUES
-(20, '2026-02-25', NULL, 'Tooth Ache', 1, 'no show', 'cancelled', '2026-02-25 20:11:28', 2, NULL, 1, 0),
-(22, '2026-02-25', NULL, 'Test appointment for reminders', 0, 'sig balikbalik', 'cancelled', '2026-02-25 20:59:34', 2, NULL, 1, 0),
-(23, '2026-02-25', NULL, 'Ouch', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:41:18', 2, NULL, 1, 0),
-(24, '2026-02-25', NULL, 'Sakit akong ngipon doc help', 1, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-25 21:56:23', 2, NULL, 3, 0),
-(28, '2026-02-27', NULL, '', 0, '0', 'scheduled', '2026-02-26 07:55:15', 2, NULL, 3, 1),
-(29, '2026-02-26', NULL, 'asdasd', 0, '\n[Clinical record submitted by doctor 2]', 'completed', '2026-02-26 08:01:10', 2, NULL, 2, 1),
-(30, '2026-03-06', NULL, 'general yearly consultation', 0, '', 'in_progress', '2026-03-06 09:01:29', 2, NULL, 1, 0),
-(31, '2026-03-06', NULL, 'test', 0, '', 'in_progress', '2026-03-06 09:14:26', 2, NULL, 3, 0),
-(32, '2026-03-06', NULL, 'asdasd', 0, '', 'in_progress', '2026-03-06 09:18:01', 2, NULL, 2, 0);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `appointment_reschedule_requests`
---
 
 CREATE TABLE `appointment_reschedule_requests` (
   `request_id` int(11) NOT NULL,
@@ -78,11 +40,30 @@ CREATE TABLE `appointment_reschedule_requests` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `backup`
---
+CREATE TABLE `appointment_media` (
+  `media_id` int(11) NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_type` enum('photo','xray','document') DEFAULT 'photo',
+  `file_size` int(11) DEFAULT NULL,
+  `media_order` int(11) DEFAULT 0,
+  `tooth_number` int(11) DEFAULT NULL,
+  `uploaded_by` int(11) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `uploaded_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `appointment_doctor_notes` (
+  `note_id` int(11) NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `doctor_id` int(11) NOT NULL,
+  `note_text` text DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 
 CREATE TABLE `backup` (
   `backup_id` int(11) NOT NULL,
@@ -93,36 +74,87 @@ CREATE TABLE `backup` (
   `file_size` decimal(12,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `billing`
---
 
 CREATE TABLE `billing` (
   `billing_id` int(11) NOT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `amount_paid` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `balance` decimal(12,2) NOT NULL DEFAULT 0.00,
   `created_at` datetime DEFAULT current_timestamp(),
   `status` enum('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
   `processed_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `billing`
---
 
-INSERT INTO `billing` (`billing_id`, `appointment_id`, `user_id`, `total_amount`, `created_at`, `status`, `processed_by`) VALUES
-(7, 23, 1, 1000.00, '2026-02-25 21:45:12', 'paid', 3),
-(8, 24, 3, 1100.00, '2026-02-25 22:02:36', 'paid', 3),
-(9, 29, 2, 0.00, '2026-02-26 08:09:28', 'unpaid', NULL);
+CREATE TABLE `billing_line_items` (
+  `item_id` int(11) NOT NULL,
+  `billing_id` int(11) DEFAULT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `service_id` int(11) DEFAULT NULL,
+  `description` varchar(255) NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `item_type` enum('service','extra') NOT NULL DEFAULT 'service',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `clinical_records`
---
+CREATE TABLE `billing_installments` (
+  `installment_id` int(11) NOT NULL,
+  `billing_id` int(11) NOT NULL,
+  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `down_payment_percent` decimal(5,2) NOT NULL DEFAULT 50.00,
+  `down_payment_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `num_terms` int(11) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE `billing_installment_terms` (
+  `term_id` int(11) NOT NULL,
+  `installment_id` int(11) NOT NULL,
+  `term_number` int(11) NOT NULL,
+  `due_date` date NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `status` enum('pending','paid') NOT NULL DEFAULT 'pending',
+  `paid_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE `payments` (
+  `payment_id` int(11) NOT NULL,
+  `billing_id` int(11) NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `payment_method` varchar(50) DEFAULT 'cash',
+  `notes` varchar(500) DEFAULT NULL,
+  `recorded_by` int(11) DEFAULT NULL,
+  `paid_at` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE `invoices` (
+  `invoice_id` int(11) NOT NULL,
+  `billing_id` int(11) NOT NULL,
+  `invoice_number` varchar(30) NOT NULL,
+  `issued_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `issued_by` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE `patient_notifications` (
+  `patient_notification_id` int(11) NOT NULL,
+  `patient_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `body` text NOT NULL,
+  `link` varchar(255) DEFAULT NULL,
+  `is_read` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
 
 CREATE TABLE `clinical_records` (
   `record_id` int(11) NOT NULL,
@@ -140,23 +172,11 @@ CREATE TABLE `clinical_records` (
   `submitted_by` int(11) DEFAULT NULL,
   `submitted_at` datetime DEFAULT NULL,
   `images` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`images`)),
-  `tooth_image` varchar(255) DEFAULT NULL
+  `tooth_image` varchar(255) DEFAULT NULL,
+  `profiling` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`profiling`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `clinical_records`
---
 
-INSERT INTO `clinical_records` (`record_id`, `appointment_id`, `doctor_id`, `patient_id`, `summary`, `recommended_services`, `treatment_plan`, `materials_used`, `odontogram`, `doctor_notes`, `follow_up_date`, `status`, `submitted_by`, `submitted_at`, `images`, `tooth_image`) VALUES
-(7, 23, 2, 1, NULL, '[1]', NULL, '[{\"name\":\"gloves and surgical masks\",\"qty\":1,\"price\":500}]', NULL, 'No more issues', NULL, 'submitted', 2, '2026-02-25 21:45:12', '[\"assets\\/uploads\\/clinical_images\\/23\\/1772027112_731870fc66c6.jpeg\"]', 'assets/uploads/clinical_images/23/1772027112_731870fc66c6.jpeg'),
-(8, 24, 2, 3, NULL, '[1]', NULL, '[{\"name\":\"Gloves\",\"qty\":2,\"price\":50},{\"name\":\"SteelBrush\",\"qty\":1,\"price\":500}]', NULL, 'None', '2026-02-27', 'submitted', 2, '2026-02-25 22:02:36', '[\"assets\\/uploads\\/clinical_images\\/24\\/1772028156_f3600203914d.jpeg\"]', 'assets/uploads/clinical_images/24/1772028156_f3600203914d.jpeg'),
-(9, 29, 2, 2, NULL, NULL, NULL, NULL, '{\"1\":[],\"2\":[],\"3\":[],\"4\":[],\"5\":[],\"6\":[],\"7\":[],\"8\":[],\"9\":[],\"10\":[],\"11\":[],\"12\":[],\"13\":[],\"14\":[],\"15\":[],\"16\":[],\"17\":[],\"18\":[],\"19\":[\"missing\"],\"20\":[],\"21\":[],\"22\":[],\"23\":[],\"24\":[],\"25\":[],\"26\":[],\"27\":[],\"28\":[],\"29\":[],\"30\":[],\"31\":[],\"32\":[]}', '', NULL, 'submitted', 2, '2026-02-26 08:09:28', NULL, NULL);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `dentist_specialization`
---
 
 CREATE TABLE `dentist_specialization` (
   `doctor_specialized_id` int(11) NOT NULL,
@@ -164,33 +184,23 @@ CREATE TABLE `dentist_specialization` (
   `specialization_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `dentist_specialization`
---
 
 INSERT INTO `dentist_specialization` (`doctor_specialized_id`, `user_id`, `specialization_id`) VALUES
 (1, 2, 2),
 (2, 5, 2);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `doctor_availability`
---
 
 CREATE TABLE `doctor_availability` (
   `availability_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `weekday` tinyint(4) NOT NULL COMMENT '0=Sun..6=Sat',
+  `weekday` tinyint(4) NOT NULL,
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `status` enum('active','inactive','suspended') NOT NULL DEFAULT 'active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `doctor_availability`
---
+
 
 INSERT INTO `doctor_availability` (`availability_id`, `user_id`, `weekday`, `start_time`, `end_time`, `status`, `created_at`) VALUES
 (31, 2, 1, '08:00:00', '17:00:00', 'active', '2026-03-28 10:06:41'),
@@ -202,12 +212,6 @@ INSERT INTO `doctor_availability` (`availability_id`, `user_id`, `weekday`, `sta
 (37, 5, 4, '08:00:00', '17:00:00', 'active', '2026-03-28 10:19:31'),
 (38, 5, 5, '08:00:00', '17:00:00', 'active', '2026-03-28 10:19:31');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `doctor_leaves`
---
-
 CREATE TABLE `doctor_leaves` (
   `leave_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -217,21 +221,6 @@ CREATE TABLE `doctor_leaves` (
   `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'approved',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `doctor_leaves`
---
-
-INSERT INTO `doctor_leaves` (`leave_id`, `user_id`, `leave_start_date`, `leave_end_date`, `reason`, `status`, `created_at`) VALUES
-(1, 2, '2026-03-12', '2026-03-13', 'family reunion', 'approved', '2026-03-12 13:00:32'),
-(2, 2, '2026-03-29', '2026-03-30', 'test', 'approved', '2026-03-28 03:18:42'),
-(3, 5, '2026-04-01', '2026-04-03', '[Filed by Secretary #3] Emergency', 'approved', '2026-03-28 10:21:11');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `notifications`
---
 
 CREATE TABLE `notifications` (
   `notification_id` int(11) NOT NULL,
@@ -243,20 +232,7 @@ CREATE TABLE `notifications` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `notifications`
---
 
-INSERT INTO `notifications` (`notification_id`, `user_id`, `title`, `body`, `link`, `is_read`, `created_at`) VALUES
-(1, 1, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22'),
-(2, 2, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 1, '2026-02-25 21:01:22'),
-(3, 3, 'Upcoming appointment reminder', 'Appointment #22 is scheduled at 2026-02-25 21:59:34. Please be prepared.', '/patient/patient.php?page=appointments&appointment_id=22', 0, '2026-02-25 21:01:22');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `patients`
---
 
 CREATE TABLE `patients` (
   `patient_id` int(11) NOT NULL,
@@ -276,23 +252,12 @@ CREATE TABLE `patients` (
   `failed_login_attempts` int(11) NOT NULL DEFAULT 0,
   `locked_until` datetime DEFAULT NULL,
   `last_login_at` datetime DEFAULT NULL,
+  `profile_image` varchar(255) DEFAULT NULL,
   `profiling` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`profiling`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `patients`
---
 
-INSERT INTO `patients` (`patient_id`, `first_name`, `last_name`, `middle_name`, `password_hash`, `date_of_birth`, `gender`, `phone_number`, `email`, `address`, `created_at`, `added_by`, `must_change_password`, `password_updated_at`, `failed_login_attempts`, `locked_until`, `last_login_at`, `profiling`) VALUES
-(1, 'Paul', 'Gonzales', 'Gomez', '$2y$10$UAYsvpNGkf9KjYAjLyC/juzYtX3SLiUzrH/7DaFxLpklQi0GM/RkK', '1990-01-01', 'Unspecified', '0927562616', 'patient1@example.com', 'Brgy 7 CDO', '2026-01-23 15:50:00', NULL, 0, '2026-03-12 21:02:11', 0, NULL, NULL, '{\"medical_history\":\"Highblood\",\"medications\":\"Penicilin\",\"allergies\":\"No\",\"smoking\":\"current\",\"alcohol\":\"social\",\"asa\":\"II\",\"last_visit\":\"\"}'),
-(2, 'Harry', 'Tan', 'Richard', '$2y$10$t6wRZXTV2Z2XaT2eUKPRw.KMirGeOcgOxY..gPLIJTkN1QvHaI.g2', '1985-02-02', 'Unspecified', '0920912616', 'patient2@example.com', 'Gusa CDO', '2026-01-23 15:50:00', NULL, 0, '2026-03-12 21:02:11', 0, NULL, NULL, NULL),
-(3, 'Ivan Louiz', 'Gonzales', '', '$2y$10$KlbloUvtx9.ixRCKq5qQGea0ZYURHhepWZ0UfrPNYIGFTzlG3yBoO', '1559-11-09', 'Male', '09123456789', 'ivan@gmail.com', 'Unahan Agusan CDO', '2026-02-25 21:55:55', NULL, 0, '2026-03-12 21:02:11', 0, NULL, '2026-03-28 15:21:48', NULL);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `patient_logs`
---
 
 CREATE TABLE `patient_logs` (
   `patient_log_id` int(11) NOT NULL,
@@ -303,18 +268,7 @@ CREATE TABLE `patient_logs` (
   `ip_address` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `patient_logs`
---
 
-INSERT INTO `patient_logs` (`patient_log_id`, `patient_id`, `login_time`, `last_activity`, `logout_time`, `ip_address`) VALUES
-(1, 3, '2026-03-28 15:21:48', '2026-03-28 15:42:15', '2026-03-28 15:42:22', '::1');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `patient_profiling_audit`
---
 
 CREATE TABLE `patient_profiling_audit` (
   `audit_id` int(11) NOT NULL,
@@ -324,23 +278,25 @@ CREATE TABLE `patient_profiling_audit` (
   `changed_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `patient_profiling_audit`
---
 
-INSERT INTO `patient_profiling_audit` (`audit_id`, `patient_id`, `profiling`, `changed_by`, `changed_at`) VALUES
-(1, 1, '{\"medical_history\":\"Highblood\",\"medications\":\"Penicilin\",\"allergies\":\"No\",\"smoking\":\"current\",\"alcohol\":\"social\",\"asa\":\"II\",\"last_visit\":\"\"}', 3, '2026-03-06 09:02:22');
+CREATE TABLE `password_resets` (
+  `reset_id` int(11) NOT NULL,
+  `user_type` enum('user','patient') NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `otp_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `created_at` datetime NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `patient_schedules`
---
 
 CREATE TABLE `patient_schedules` (
   `schedule_id` int(11) NOT NULL,
   `appointment_id` int(11) NOT NULL,
-  `user_id` int(11) DEFAULT NULL COMMENT 'doctor assigned',
+  `user_id` int(11) DEFAULT NULL,
   `scheduled_start` datetime NOT NULL,
   `scheduled_end` datetime DEFAULT NULL,
   `status` enum('scheduled','rescheduled','cancelled','completed') DEFAULT 'scheduled',
@@ -349,25 +305,8 @@ CREATE TABLE `patient_schedules` (
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `patient_schedules`
---
 
-INSERT INTO `patient_schedules` (`schedule_id`, `appointment_id`, `user_id`, `scheduled_start`, `scheduled_end`, `status`, `priority`, `created_at`, `updated_at`) VALUES
-(14, 22, 2, '2026-02-25 21:59:34', '2026-02-25 22:29:34', 'scheduled', 1, '2026-02-25 12:59:34', NULL),
-(15, 23, 2, '2026-02-25 13:42:20', NULL, '', 1, '2026-02-25 13:42:20', NULL),
-(16, 24, 2, '2026-02-25 13:58:16', NULL, '', 1, '2026-02-25 13:58:16', NULL),
-(17, 24, 2, '2026-02-27 09:00:00', '2026-02-27 09:30:00', 'scheduled', 1, '2026-02-25 14:02:36', NULL),
-(18, 28, 2, '2026-02-26 08:07:53', NULL, '', 1, '2026-02-26 00:07:53', NULL),
-(19, 30, 2, '2026-03-06 09:02:43', NULL, '', 1, '2026-03-06 01:02:43', NULL),
-(20, 31, 2, '2026-03-06 09:14:39', NULL, '', 1, '2026-03-06 01:14:39', NULL),
-(21, 32, 2, '2026-03-06 09:18:15', NULL, '', 1, '2026-03-06 01:18:15', NULL);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `prescriptions`
---
 
 CREATE TABLE `prescriptions` (
   `prescription_id` int(11) NOT NULL,
@@ -381,11 +320,7 @@ CREATE TABLE `prescriptions` (
   `notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `role`
---
 
 CREATE TABLE `role` (
   `role_id` int(11) NOT NULL,
@@ -393,9 +328,7 @@ CREATE TABLE `role` (
   `description` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `role`
---
+
 
 INSERT INTO `role` (`role_id`, `role_name`, `description`) VALUES
 (1, 'admin', 'Administrator with full system access'),
@@ -403,11 +336,7 @@ INSERT INTO `role` (`role_id`, `role_name`, `description`) VALUES
 (3, 'secretary', 'Secretary/Receptionist - Can schedule appointments and manage front desk'),
 (4, 'patient', 'Patient - Can view appointments and medical records');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `schedule_reminders`
---
 
 CREATE TABLE `schedule_reminders` (
   `reminder_id` int(11) NOT NULL,
@@ -418,19 +347,8 @@ CREATE TABLE `schedule_reminders` (
   `payload` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `schedule_reminders`
---
 
-INSERT INTO `schedule_reminders` (`reminder_id`, `patient_schedule_id`, `remind_at`, `channel`, `sent_at`, `payload`) VALUES
-(6, 14, '2026-02-25 20:59:34', 'email', '2026-02-25 21:01:22', '{\"test\": \"true\"}'),
-(7, 17, '2026-02-26 09:00:00', '', NULL, '{\"appointment_id\":24,\"patient_schedule_id\":17}');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `selected_services`
---
 
 CREATE TABLE `selected_services` (
   `selected_service_id` int(11) NOT NULL,
@@ -440,11 +358,7 @@ CREATE TABLE `selected_services` (
   `service_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `selected_treatments`
---
 
 CREATE TABLE `selected_treatments` (
   `selected_treatment_id` int(11) NOT NULL,
@@ -455,11 +369,7 @@ CREATE TABLE `selected_treatments` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `services`
---
 
 CREATE TABLE `services` (
   `service_id` int(11) NOT NULL,
@@ -473,9 +383,6 @@ CREATE TABLE `services` (
   `default_duration_minutes` int(11) NOT NULL DEFAULT 30
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `services`
---
 
 INSERT INTO `services` (`service_id`, `service_name`, `initial_price`, `description`, `created_at`, `added_by`, `is_active`, `requires_schedule`, `default_duration_minutes`) VALUES
 (1, 'Teeth Cleaning', 500.00, 'Professional teeth cleaning and scaling', '2026-01-23 15:54:14', 1, 1, 1, 30),
@@ -489,11 +396,6 @@ INSERT INTO `services` (`service_id`, `service_name`, `initial_price`, `descript
 (9, 'Implant Consultation', 2000.00, 'Dental implant consultation and planning', '2026-01-23 15:54:14', 1, 1, 1, 120),
 (10, 'Periodic Checkup', 300.00, 'Regular dental examination', '2026-01-23 15:54:14', 1, 1, 0, 30);
 
--- --------------------------------------------------------
-
---
--- Table structure for table `specialization`
---
 
 CREATE TABLE `specialization` (
   `specialization_id` int(11) NOT NULL,
@@ -501,9 +403,6 @@ CREATE TABLE `specialization` (
   `description` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `specialization`
---
 
 INSERT INTO `specialization` (`specialization_id`, `specialization_name`, `description`) VALUES
 (1, 'General Dentistry', 'General dental care and treatments'),
@@ -515,11 +414,6 @@ INSERT INTO `specialization` (`specialization_id`, `specialization_name`, `descr
 (7, 'Oral Surgery', 'Extraction and surgical procedures'),
 (8, 'Cosmetic Dentistry', 'Whitening and aesthetic procedures');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `system_logs`
---
 
 CREATE TABLE `system_logs` (
   `system_log_id` int(11) NOT NULL,
@@ -533,55 +427,9 @@ CREATE TABLE `system_logs` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `system_logs`
---
 
-INSERT INTO `system_logs` (`system_log_id`, `user_id`, `action`, `entity_type`, `entity_id`, `details`, `ip_address`, `user_agent`, `created_at`) VALUES
-(1, 1, 'auth.logout', 'users', 1, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 08:29:03'),
-(2, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 08:29:13'),
-(3, 3, 'auth.logout', 'users', 3, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 09:03:51'),
-(4, 2, 'auth.login', 'users', 2, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 09:04:04'),
-(5, 2, 'auth.logout', 'users', 2, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:47:46'),
-(6, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:48:39'),
-(7, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:50:13'),
-(8, 1, 'admin.page.view', 'admin_module', NULL, 'Admin portal access page=system_logs', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:54:56'),
-(9, 1, 'admin.page.view', 'admin_module', NULL, 'Admin portal access page=system_logs', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:55:40'),
-(10, 1, 'admin.page.view', 'admin_module', NULL, 'Admin portal access page=system_logs', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:55:41'),
-(11, 1, 'admin.page.view', 'admin_module', NULL, 'Admin portal access page=system_logs', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 10:55:42'),
-(12, 1, 'auth.logout', 'users', 1, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:01:53'),
-(13, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:05:19'),
-(14, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0', '2026-03-28 11:15:13'),
-(15, 3, 'auth.logout', 'users', 3, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:16:03'),
-(16, 2, 'auth.login', 'users', 2, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:16:12'),
-(17, 2, 'doctor.change.request_leave', 'schedule', NULL, 'Doctor data change action executed: page=schedule, action=request_leave', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:18:42'),
-(18, 2, 'auth.logout', 'users', 2, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:18:48'),
-(19, 1, 'admin.change.approve', 'doctor_management', NULL, 'Admin data change action executed: page=doctor_management, action=approve', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0', '2026-03-28 11:19:03'),
-(20, 2, 'auth.login', 'users', 2, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 11:19:18'),
-(21, 2, 'auth.logout', 'users', 2, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 13:41:42'),
-(22, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 13:42:01'),
-(23, 3, 'auth.logout', 'users', 3, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 14:43:54'),
-(24, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 14:49:55'),
-(25, 3, 'auth.logout', 'users', 3, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 14:55:12'),
-(26, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 14:55:20'),
-(27, 1, 'auth.logout', 'users', 1, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 15:05:01'),
-(28, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 15:05:10'),
-(29, 3, 'auth.logout', 'users', 3, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 15:18:21'),
-(30, NULL, 'auth.login', 'patients', 3, 'Patient login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 15:21:48'),
-(31, NULL, 'auth.logout', 'patients', 3, 'Patient logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 15:42:22'),
-(32, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 17:33:09'),
-(33, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0', '2026-03-28 17:37:22'),
-(34, 1, 'auth.login', 'users', 1, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 18:03:24'),
-(35, 1, 'auth.logout', 'users', 1, 'User logout successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 18:13:40'),
-(36, 3, 'auth.login', 'users', 3, 'User login successful', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 18:13:54'),
-(37, 3, 'secretary.change.request_leave_for_doctor', 'doctor_schedule', NULL, 'Secretary data change action executed: page=doctor_schedule, action=request_leave_for_doctor', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-03-28 18:21:11'),
-(38, 1, 'admin.change.approve', 'doctor_management', NULL, 'Admin data change action executed: page=doctor_management, action=approve', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0', '2026-03-28 18:21:37');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `timeslot`
---
 
 CREATE TABLE `timeslot` (
   `timeslot_id` int(11) NOT NULL,
@@ -593,9 +441,6 @@ CREATE TABLE `timeslot` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `timeslot`
---
 
 INSERT INTO `timeslot` (`timeslot_id`, `doctor_id`, `slot_date`, `start_time`, `end_time`, `status`, `created_at`) VALUES
 (1, 2, '2026-03-12', '09:00:00', '12:00:00', 'available', '2026-03-12 12:24:10'),
@@ -8031,11 +7876,7 @@ INSERT INTO `timeslot` (`timeslot_id`, `doctor_id`, `slot_date`, `start_time`, `
 (7702, 5, '2026-08-24', '16:20:00', '16:40:00', 'available', '2026-03-28 10:22:48'),
 (7703, 5, '2026-08-24', '16:40:00', '17:00:00', 'available', '2026-03-28 10:22:48');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `timeslot_service`
---
 
 CREATE TABLE `timeslot_service` (
   `id` int(11) NOT NULL,
@@ -8046,9 +7887,6 @@ CREATE TABLE `timeslot_service` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `timeslot_service`
---
 
 INSERT INTO `timeslot_service` (`id`, `service_id`, `duration_minutes`, `buffer_minutes`, `slots_per_day_limit`, `created_at`) VALUES
 (1, 1, 30, 5, NULL, '2026-03-10 02:22:02'),
@@ -8056,11 +7894,7 @@ INSERT INTO `timeslot_service` (`id`, `service_id`, `duration_minutes`, `buffer_
 (3, 3, 90, 10, NULL, '2026-03-10 02:22:02'),
 (4, 4, 45, 5, NULL, '2026-03-10 02:22:02');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `tooth`
---
 
 CREATE TABLE `tooth` (
   `tooth_id` int(11) NOT NULL,
@@ -8068,9 +7902,6 @@ CREATE TABLE `tooth` (
   `upper_lower` tinyint(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `tooth`
---
 
 INSERT INTO `tooth` (`tooth_id`, `tooth_number`, `upper_lower`) VALUES
 (1, '11', 1),
@@ -8106,11 +7937,7 @@ INSERT INTO `tooth` (`tooth_id`, `tooth_number`, `upper_lower`) VALUES
 (31, '47', 0),
 (32, '48', 0);
 
--- --------------------------------------------------------
 
---
--- Table structure for table `tooth_images`
---
 
 CREATE TABLE `tooth_images` (
   `image_id` int(11) NOT NULL,
@@ -8121,11 +7948,7 @@ CREATE TABLE `tooth_images` (
   `selected_treatment_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `tooth_status`
---
 
 CREATE TABLE `tooth_status` (
   `tooth_status_id` int(11) NOT NULL,
@@ -8136,11 +7959,7 @@ CREATE TABLE `tooth_status` (
   `selected_treatment_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `tooth_status_type`
---
 
 CREATE TABLE `tooth_status_type` (
   `status_type_id` int(11) NOT NULL,
@@ -8149,9 +7968,6 @@ CREATE TABLE `tooth_status_type` (
   `code` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `tooth_status_type`
---
 
 INSERT INTO `tooth_status_type` (`status_type_id`, `tooth_id`, `category`, `code`) VALUES
 (1, 1, 'decay', 'DCY'),
@@ -8163,11 +7979,7 @@ INSERT INTO `tooth_status_type` (`status_type_id`, `tooth_id`, `category`, `code
 (7, 2, 'missing', 'MIS'),
 (8, 2, 'other', 'OTH');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `treatments`
---
 
 CREATE TABLE `treatments` (
   `treatment_id` int(11) NOT NULL,
@@ -8177,9 +7989,6 @@ CREATE TABLE `treatments` (
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `treatments`
---
 
 INSERT INTO `treatments` (`treatment_id`, `treatment_name`, `treatment_type`, `description`, `created_at`) VALUES
 (1, 'Scaling and Polishing', 'Cleaning', 'Professional cleaning and polishing of teeth', '2026-01-23 15:54:14'),
@@ -8193,11 +8002,7 @@ INSERT INTO `treatments` (`treatment_id`, `treatment_name`, `treatment_type`, `d
 (9, 'Bracket Installation', 'Orthodontics', 'Installation of orthodontic brackets', '2026-01-23 15:54:14'),
 (10, 'Provisional Restoration', 'Temporary', 'Temporary restoration while permanent treatment is pending', '2026-01-23 15:54:14');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `users`
---
 
 CREATE TABLE `users` (
   `user_id` int(11) NOT NULL,
@@ -8219,12 +8024,10 @@ CREATE TABLE `users` (
   `failed_login_attempts` int(11) NOT NULL DEFAULT 0,
   `locked_until` datetime DEFAULT NULL,
   `last_login_at` datetime DEFAULT NULL,
+  `profile_image` varchar(255) DEFAULT NULL,
   `work_type` enum('regular','part_time') NOT NULL DEFAULT 'regular'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `users`
---
 
 INSERT INTO `users` (`user_id`, `first_name`, `last_name`, `middle_name`, `password_hash`, `date_of_birth`, `gender`, `phone_number`, `email`, `address`, `is_active`, `created_at`, `role_id`, `added_by`, `must_change_password`, `password_updated_at`, `failed_login_attempts`, `locked_until`, `last_login_at`, `work_type`) VALUES
 (1, 'Admin', 'User', 'Admin', '$2y$10$jxi94smqf8APzJhrmp5nguVWrMDxlY.p0GZOhAVSl9Jhrn5/m4phS', '1980-01-15', 'Male', '1234567890', 'admin@dentalclinic.com', '123 Admin Street', 1, '2026-01-20 22:57:04', 1, NULL, 0, '2026-03-12 20:37:18', 0, NULL, '2026-03-28 18:03:24', 'regular'),
@@ -8233,11 +8036,7 @@ INSERT INTO `users` (`user_id`, `first_name`, `last_name`, `middle_name`, `passw
 (4, 'Hanz', 'Tan', NULL, '$2y$10$9IZkUO7.4CJobHU3YTt3I.sJLuDADpfWTqckZrR3c/khjUtAFVpV2', '1111-11-11', 'Male', '+63 9275269342', 'tan@gmail.com', 'Zone 5 Gusa', 1, '2026-03-12 21:26:09', 2, NULL, 1, '2026-03-12 21:26:09', 0, NULL, '2026-03-12 21:26:43', 'regular'),
 (5, 'Justine', 'Gaamil', NULL, '$2y$10$K09tcM1R.bS90VhNS6rdEueHSzZdfSRuvbxjpRd.8zgHQRixGa9Ni', '2021-01-12', 'Male', '+09232323232', 'Gaamil@dentalclinic.com', 'Brgy 15 CDO', 1, '2026-03-28 18:18:39', 2, NULL, 1, '2026-03-28 18:18:39', 0, NULL, NULL, 'part_time');
 
--- --------------------------------------------------------
 
---
--- Table structure for table `user_logs`
---
 
 CREATE TABLE `user_logs` (
   `user_log_id` int(11) NOT NULL,
@@ -8248,9 +8047,6 @@ CREATE TABLE `user_logs` (
   `ip_address` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `user_logs`
---
 
 INSERT INTO `user_logs` (`user_log_id`, `user_id`, `login_time`, `last_activity`, `logout_time`, `ip_address`) VALUES
 (1, 3, '2026-03-28 08:29:13', '2026-03-28 09:03:50', '2026-03-28 09:03:51', '::1'),
@@ -8270,13 +8066,7 @@ INSERT INTO `user_logs` (`user_log_id`, `user_id`, `login_time`, `last_activity`
 (15, 1, '2026-03-28 18:03:24', '2026-03-28 18:13:17', '2026-03-28 18:13:40', '::1'),
 (16, 3, '2026-03-28 18:13:54', '2026-03-28 18:37:50', NULL, '::1');
 
---
--- Indexes for dumped tables
---
 
---
--- Indexes for table `appointments`
---
 ALTER TABLE `appointments`
   ADD PRIMARY KEY (`appointment_id`),
   ADD KEY `fk_appointments_user` (`user_id`),
@@ -8284,34 +8074,72 @@ ALTER TABLE `appointments`
   ADD KEY `fk_appointments_patient` (`patient_id`),
   ADD KEY `timeslot_id` (`timeslot_id`);
 
---
--- Indexes for table `appointment_reschedule_requests`
---
+
+ALTER TABLE `appointment_media`
+  ADD PRIMARY KEY (`media_id`),
+  ADD KEY `idx_appointment` (`appointment_id`);
+
+
+
 ALTER TABLE `appointment_reschedule_requests`
   ADD PRIMARY KEY (`request_id`),
   ADD KEY `idx_arr_status_created` (`status`,`created_at`),
   ADD KEY `idx_arr_appointment_status` (`appointment_id`,`status`),
   ADD KEY `idx_arr_patient_status` (`patient_id`,`status`);
 
---
--- Indexes for table `backup`
---
+
+ALTER TABLE `appointment_doctor_notes`
+  ADD PRIMARY KEY (`note_id`),
+  ADD KEY `idx_appointment` (`appointment_id`);
+
+
+
 ALTER TABLE `backup`
   ADD PRIMARY KEY (`backup_id`),
   ADD KEY `fk_backup_user` (`user_id`);
 
---
--- Indexes for table `billing`
---
+
 ALTER TABLE `billing`
   ADD PRIMARY KEY (`billing_id`),
   ADD UNIQUE KEY `appointment_id` (`appointment_id`),
   ADD KEY `fk_billing_user` (`user_id`),
   ADD KEY `fk_billing_processed_by` (`processed_by`);
 
---
--- Indexes for table `clinical_records`
---
+
+ALTER TABLE `billing_line_items`
+  ADD PRIMARY KEY (`item_id`),
+  ADD KEY `idx_bli_appointment` (`appointment_id`),
+  ADD KEY `idx_bli_billing` (`billing_id`);
+
+
+ALTER TABLE `billing_installments`
+  ADD PRIMARY KEY (`installment_id`),
+  ADD UNIQUE KEY `uq_installment_billing` (`billing_id`);
+
+
+ALTER TABLE `billing_installment_terms`
+  ADD PRIMARY KEY (`term_id`),
+  ADD KEY `idx_bit_installment` (`installment_id`),
+  ADD KEY `idx_bit_due` (`due_date`);
+
+
+ALTER TABLE `payments`
+  ADD PRIMARY KEY (`payment_id`),
+  ADD KEY `idx_payments_billing` (`billing_id`);
+
+
+ALTER TABLE `invoices`
+  ADD PRIMARY KEY (`invoice_id`),
+  ADD UNIQUE KEY `uq_invoice_billing` (`billing_id`),
+  ADD UNIQUE KEY `uq_invoice_number` (`invoice_number`);
+
+
+ALTER TABLE `patient_notifications`
+  ADD PRIMARY KEY (`patient_notification_id`),
+  ADD KEY `idx_patient_notifications_patient` (`patient_id`),
+  ADD KEY `idx_patient_notifications_read` (`is_read`);
+
+
 ALTER TABLE `clinical_records`
   ADD PRIMARY KEY (`record_id`),
   ADD KEY `appointment_id` (`appointment_id`),
@@ -8319,548 +8147,419 @@ ALTER TABLE `clinical_records`
   ADD KEY `patient_id` (`patient_id`),
   ADD KEY `submitted_by` (`submitted_by`);
 
---
--- Indexes for table `dentist_specialization`
---
+
 ALTER TABLE `dentist_specialization`
   ADD PRIMARY KEY (`doctor_specialized_id`),
   ADD UNIQUE KEY `uq_dentist_specialization_user_spec` (`user_id`,`specialization_id`),
   ADD KEY `idx_dentist_specialization_specialization` (`specialization_id`);
 
---
--- Indexes for table `doctor_availability`
---
+
 ALTER TABLE `doctor_availability`
   ADD PRIMARY KEY (`availability_id`),
   ADD KEY `user_id` (`user_id`);
 
---
--- Indexes for table `doctor_leaves`
---
+
 ALTER TABLE `doctor_leaves`
   ADD PRIMARY KEY (`leave_id`),
   ADD KEY `idx_doctor_leave_dates` (`user_id`,`leave_start_date`,`leave_end_date`),
   ADD KEY `idx_doctor_leave_status` (`status`);
 
---
--- Indexes for table `notifications`
---
+
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`notification_id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `idx_notifications_user` (`user_id`),
   ADD KEY `idx_notifications_is_read` (`is_read`);
 
---
--- Indexes for table `patients`
---
+
 ALTER TABLE `patients`
   ADD PRIMARY KEY (`patient_id`),
   ADD KEY `fk_patients_added_by` (`added_by`);
 
---
--- Indexes for table `patient_logs`
---
+
 ALTER TABLE `patient_logs`
   ADD PRIMARY KEY (`patient_log_id`),
   ADD KEY `fk_patient_logs_patient` (`patient_id`),
   ADD KEY `idx_patient_logs_login` (`login_time`),
   ADD KEY `idx_patient_logs_last_activity` (`last_activity`);
 
---
--- Indexes for table `patient_profiling_audit`
---
+
 ALTER TABLE `patient_profiling_audit`
   ADD PRIMARY KEY (`audit_id`),
   ADD KEY `patient_id` (`patient_id`);
 
---
--- Indexes for table `patient_schedules`
---
+
+ALTER TABLE `password_resets`
+  ADD PRIMARY KEY (`reset_id`),
+  ADD KEY `idx_resets_email` (`email`),
+  ADD KEY `idx_resets_token` (`token_hash`),
+  ADD KEY `idx_resets_expires` (`expires_at`);
+
+
 ALTER TABLE `patient_schedules`
   ADD PRIMARY KEY (`schedule_id`),
   ADD KEY `appointment_id` (`appointment_id`),
   ADD KEY `user_id` (`user_id`);
 
---
--- Indexes for table `prescriptions`
---
+
 ALTER TABLE `prescriptions`
   ADD PRIMARY KEY (`prescription_id`),
   ADD KEY `fk_prescriptions_appointment` (`appointment_id`),
   ADD KEY `fk_prescriptions_treatment` (`selected_treatment_id`);
 
---
--- Indexes for table `role`
---
+
 ALTER TABLE `role`
   ADD PRIMARY KEY (`role_id`);
 
---
--- Indexes for table `schedule_reminders`
---
+
 ALTER TABLE `schedule_reminders`
   ADD PRIMARY KEY (`reminder_id`),
   ADD KEY `patient_schedule_id` (`patient_schedule_id`);
 
---
--- Indexes for table `selected_services`
---
+
 ALTER TABLE `selected_services`
   ADD PRIMARY KEY (`selected_service_id`),
   ADD KEY `fk_selected_services_appointment` (`appointment_id`),
   ADD KEY `fk_selected_services_service` (`service_id`);
 
---
--- Indexes for table `selected_treatments`
---
+
 ALTER TABLE `selected_treatments`
   ADD PRIMARY KEY (`selected_treatment_id`),
   ADD KEY `fk_selected_treatments_treatment` (`treatment_id`),
   ADD KEY `fk_selected_treatments_service` (`selected_service_id`);
 
---
--- Indexes for table `services`
---
+
 ALTER TABLE `services`
   ADD PRIMARY KEY (`service_id`),
   ADD KEY `fk_services_added_by` (`added_by`);
 
---
--- Indexes for table `specialization`
---
 ALTER TABLE `specialization`
   ADD PRIMARY KEY (`specialization_id`);
 
---
--- Indexes for table `system_logs`
---
+
 ALTER TABLE `system_logs`
   ADD PRIMARY KEY (`system_log_id`),
   ADD KEY `fk_system_logs_user` (`user_id`),
   ADD KEY `idx_system_logs_action_created` (`action`,`created_at`);
 
---
--- Indexes for table `timeslot`
---
+
 ALTER TABLE `timeslot`
   ADD PRIMARY KEY (`timeslot_id`),
   ADD UNIQUE KEY `uq_doctor_slot` (`doctor_id`,`slot_date`,`start_time`),
   ADD KEY `idx_timeslot_doc_date_status` (`doctor_id`,`slot_date`,`status`);
 
---
--- Indexes for table `timeslot_service`
---
+
 ALTER TABLE `timeslot_service`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uq_service` (`service_id`);
 
---
--- Indexes for table `tooth`
---
+
 ALTER TABLE `tooth`
   ADD PRIMARY KEY (`tooth_id`);
 
---
--- Indexes for table `tooth_images`
---
+
 ALTER TABLE `tooth_images`
   ADD PRIMARY KEY (`image_id`),
   ADD KEY `fk_tooth_images_treatment` (`selected_treatment_id`);
 
---
--- Indexes for table `tooth_status`
---
 ALTER TABLE `tooth_status`
   ADD PRIMARY KEY (`tooth_status_id`),
   ADD KEY `fk_tooth_status_tooth` (`tooth_selected`),
   ADD KEY `fk_tooth_status_type` (`status_type_id`),
   ADD KEY `fk_tooth_status_selected_treatment` (`selected_treatment_id`);
 
---
--- Indexes for table `tooth_status_type`
---
+
 ALTER TABLE `tooth_status_type`
   ADD PRIMARY KEY (`status_type_id`),
   ADD KEY `fk_tst_tooth` (`tooth_id`);
 
---
--- Indexes for table `treatments`
---
+
 ALTER TABLE `treatments`
   ADD PRIMARY KEY (`treatment_id`);
 
---
--- Indexes for table `users`
---
+
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `email` (`email`),
   ADD KEY `fk_users_role` (`role_id`),
   ADD KEY `fk_users_added_by` (`added_by`);
 
---
--- Indexes for table `user_logs`
---
+
 ALTER TABLE `user_logs`
   ADD PRIMARY KEY (`user_log_id`),
   ADD KEY `fk_user_logs_user` (`user_id`);
 
---
--- AUTO_INCREMENT for dumped tables
---
 
---
--- AUTO_INCREMENT for table `appointments`
---
 ALTER TABLE `appointments`
   MODIFY `appointment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
---
--- AUTO_INCREMENT for table `appointment_reschedule_requests`
---
+
 ALTER TABLE `appointment_reschedule_requests`
   MODIFY `request_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `backup`
---
+ALTER TABLE `appointment_media`
+  MODIFY `media_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+
+
+ALTER TABLE `appointment_doctor_notes`
+  MODIFY `note_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+
+
 ALTER TABLE `backup`
   MODIFY `backup_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `billing`
---
+
 ALTER TABLE `billing`
-  MODIFY `billing_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `billing_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `clinical_records`
---
+
+ALTER TABLE `billing_line_items`
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `billing_installments`
+  MODIFY `installment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `billing_installment_terms`
+  MODIFY `term_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `payments`
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `invoices`
+  MODIFY `invoice_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
+ALTER TABLE `patient_notifications`
+  MODIFY `patient_notification_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
 ALTER TABLE `clinical_records`
-  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 
---
--- AUTO_INCREMENT for table `dentist_specialization`
---
+
 ALTER TABLE `dentist_specialization`
   MODIFY `doctor_specialized_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
---
--- AUTO_INCREMENT for table `doctor_availability`
---
+
 ALTER TABLE `doctor_availability`
   MODIFY `availability_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
---
--- AUTO_INCREMENT for table `doctor_leaves`
---
+
 ALTER TABLE `doctor_leaves`
   MODIFY `leave_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
---
--- AUTO_INCREMENT for table `notifications`
---
+
 ALTER TABLE `notifications`
   MODIFY `notification_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
---
--- AUTO_INCREMENT for table `patients`
---
-ALTER TABLE `patients`
-  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
---
--- AUTO_INCREMENT for table `patient_logs`
---
+ALTER TABLE `patients`
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
 ALTER TABLE `patient_logs`
   MODIFY `patient_log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT for table `patient_profiling_audit`
---
+
 ALTER TABLE `patient_profiling_audit`
   MODIFY `audit_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT for table `patient_schedules`
---
+
+ALTER TABLE `password_resets`
+  MODIFY `reset_id` int(11) NOT NULL AUTO_INCREMENT;
+
+
 ALTER TABLE `patient_schedules`
   MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
---
--- AUTO_INCREMENT for table `prescriptions`
---
 ALTER TABLE `prescriptions`
   MODIFY `prescription_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `role`
---
+
 ALTER TABLE `role`
   MODIFY `role_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
---
--- AUTO_INCREMENT for table `schedule_reminders`
---
+
 ALTER TABLE `schedule_reminders`
   MODIFY `reminder_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
---
--- AUTO_INCREMENT for table `selected_services`
---
+
 ALTER TABLE `selected_services`
   MODIFY `selected_service_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `selected_treatments`
---
+
 ALTER TABLE `selected_treatments`
   MODIFY `selected_treatment_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `services`
---
+
 ALTER TABLE `services`
   MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
---
--- AUTO_INCREMENT for table `specialization`
---
+
 ALTER TABLE `specialization`
   MODIFY `specialization_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
---
--- AUTO_INCREMENT for table `system_logs`
---
+
 ALTER TABLE `system_logs`
   MODIFY `system_log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
---
--- AUTO_INCREMENT for table `timeslot`
---
+
 ALTER TABLE `timeslot`
   MODIFY `timeslot_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7704;
 
---
--- AUTO_INCREMENT for table `timeslot_service`
---
+
 ALTER TABLE `timeslot_service`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
---
--- AUTO_INCREMENT for table `tooth`
---
+
 ALTER TABLE `tooth`
   MODIFY `tooth_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
---
--- AUTO_INCREMENT for table `tooth_images`
---
 ALTER TABLE `tooth_images`
   MODIFY `image_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `tooth_status`
---
+
 ALTER TABLE `tooth_status`
   MODIFY `tooth_status_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `tooth_status_type`
---
+
 ALTER TABLE `tooth_status_type`
   MODIFY `status_type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
---
--- AUTO_INCREMENT for table `treatments`
---
 ALTER TABLE `treatments`
   MODIFY `treatment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
---
--- AUTO_INCREMENT for table `users`
---
+
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
---
--- AUTO_INCREMENT for table `user_logs`
---
+
 ALTER TABLE `user_logs`
-  MODIFY `user_log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `user_log_id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- Constraints for dumped tables
---
 
---
--- Constraints for table `appointments`
---
 ALTER TABLE `appointments`
   ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`timeslot_id`) REFERENCES `timeslot` (`timeslot_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_appointments_rescheduled_from` FOREIGN KEY (`rescheduled_from`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `backup`
---
+
+ALTER TABLE `appointment_media`
+  ADD CONSTRAINT `appointment_media_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE;
+
+
+ALTER TABLE `appointment_doctor_notes`
+  ADD CONSTRAINT `appointment_doctor_notes_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE;
+
+
 ALTER TABLE `backup`
   ADD CONSTRAINT `fk_backup_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `billing`
---
 ALTER TABLE `billing`
   ADD CONSTRAINT `fk_billing_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_billing_processed_by` FOREIGN KEY (`processed_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_billing_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `clinical_records`
---
+
+
+
 ALTER TABLE `clinical_records`
   ADD CONSTRAINT `fk_clinrec_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_clinrec_doctor` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_clinrec_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_clinrec_submitted_by` FOREIGN KEY (`submitted_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `dentist_specialization`
---
+
 ALTER TABLE `dentist_specialization`
   ADD CONSTRAINT `fk_dentist_specialization_specialization` FOREIGN KEY (`specialization_id`) REFERENCES `specialization` (`specialization_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_dentist_specialization_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `doctor_availability`
---
 ALTER TABLE `doctor_availability`
   ADD CONSTRAINT `fk_avail_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `doctor_leaves`
---
+
 ALTER TABLE `doctor_leaves`
   ADD CONSTRAINT `fk_doctor_leaves_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `notifications`
---
+
 ALTER TABLE `notifications`
   ADD CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `patients`
---
+
 ALTER TABLE `patients`
   ADD CONSTRAINT `fk_patients_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `patient_logs`
---
+
 ALTER TABLE `patient_logs`
   ADD CONSTRAINT `fk_patient_logs_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `patient_profiling_audit`
---
+
 ALTER TABLE `patient_profiling_audit`
   ADD CONSTRAINT `fk_patient_profiling_audit_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `patient_schedules`
---
+
 ALTER TABLE `patient_schedules`
   ADD CONSTRAINT `fk_patient_schedules_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_patient_schedules_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `prescriptions`
---
+
 ALTER TABLE `prescriptions`
   ADD CONSTRAINT `fk_prescriptions_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_prescriptions_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `schedule_reminders`
---
+
 ALTER TABLE `schedule_reminders`
   ADD CONSTRAINT `fk_schedule_reminder` FOREIGN KEY (`patient_schedule_id`) REFERENCES `patient_schedules` (`schedule_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `selected_services`
---
+
 ALTER TABLE `selected_services`
   ADD CONSTRAINT `fk_selected_services_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_selected_services_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
 
---
--- Constraints for table `selected_treatments`
---
+
 ALTER TABLE `selected_treatments`
   ADD CONSTRAINT `fk_selected_treatments_service` FOREIGN KEY (`selected_service_id`) REFERENCES `selected_services` (`selected_service_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_selected_treatments_treatment` FOREIGN KEY (`treatment_id`) REFERENCES `treatments` (`treatment_id`);
 
---
--- Constraints for table `services`
---
+
 ALTER TABLE `services`
   ADD CONSTRAINT `fk_services_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `system_logs`
---
+
 ALTER TABLE `system_logs`
   ADD CONSTRAINT `fk_system_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `timeslot`
---
+
 ALTER TABLE `timeslot`
   ADD CONSTRAINT `timeslot_ibfk_1` FOREIGN KEY (`doctor_id`) REFERENCES `users` (`user_id`);
 
---
--- Constraints for table `timeslot_service`
---
+
 ALTER TABLE `timeslot_service`
   ADD CONSTRAINT `timeslot_service_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
 
---
--- Constraints for table `tooth_images`
---
+
 ALTER TABLE `tooth_images`
   ADD CONSTRAINT `fk_tooth_images_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `tooth_status`
---
 ALTER TABLE `tooth_status`
   ADD CONSTRAINT `fk_tooth_status_selected_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_tooth_status_tooth` FOREIGN KEY (`tooth_selected`) REFERENCES `tooth` (`tooth_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tooth_status_type` FOREIGN KEY (`status_type_id`) REFERENCES `tooth_status_type` (`status_type_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `tooth_status_type`
---
+
 ALTER TABLE `tooth_status_type`
   ADD CONSTRAINT `fk_tst_tooth` FOREIGN KEY (`tooth_id`) REFERENCES `tooth` (`tooth_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `users`
---
+
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_added_by` FOREIGN KEY (`added_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `role` (`role_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `user_logs`
---
 ALTER TABLE `user_logs`
   ADD CONSTRAINT `fk_user_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

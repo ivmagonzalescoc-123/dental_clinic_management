@@ -33,7 +33,7 @@ if ($stmt) {
         <p class="text-muted">List of clinical records you created or are assigned to.</p>
 
         <div class="table-responsive">
-            <table class="table table-hover datatable">
+            <table class="table table-hover datatable" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Record #</th>
@@ -87,20 +87,14 @@ if ($stmt) {
                             <div class="mb-3"><strong>Patient:</strong> <span id="histPatientNameRec"></span></div>
                             <div class="mb-3"><strong>Submitted At:</strong> <span id="histSubmittedAtRec"></span></div>
 
-                            <div class="mb-3" id="histProfilingRecWrap">
-                                <h6>Profiling / EHR Overview</h6>
-                                <div class="row">
-                                    <div class="col-md-6"><strong>Medical History:</strong> <div id="histMedicalHistoryRec" class="small text-muted"></div></div>
-                                    <div class="col-md-6"><strong>Medications:</strong> <div id="histMedicationsRec" class="small text-muted"></div></div>
-                                    <div class="col-md-4"><strong>Allergies:</strong> <div id="histAllergiesRec" class="small text-muted"></div></div>
-                                    <div class="col-md-4"><strong>Smoking:</strong> <div id="histSmokingRec" class="small text-muted"></div></div>
-                                    <div class="col-md-4"><strong>Alcohol:</strong> <div id="histAlcoholRec" class="small text-muted"></div></div>
-                                    <div class="col-md-4"><strong>ASA:</strong> <div id="histASARec" class="small text-muted"></div></div>
-                                    <div class="col-md-4"><strong>Last Visit:</strong> <div id="histLastVisitRec" class="small text-muted"></div></div>
-                                    <div class="col-12"><strong>Periodontal / Oral Exam:</strong> <div id="histPeriodontalRec" class="small text-muted"></div></div>
-                                    <div class="col-12"><strong>Dental Chart / Findings:</strong> <div id="histDentalChartRec" class="small text-muted"></div></div>
-                                    <div class="col-12"><strong>Radiographs / Imaging Notes:</strong> <div id="histRadiographsRec" class="small text-muted"></div></div>
-                                </div>
+                            <div class="mb-3" id="histBackgroundRecWrap">
+                                <h6>Patient Background (Profiling)</h6>
+                                <div id="histBackgroundRecContent" class="small"></div>
+                            </div>
+
+                            <div class="mb-3" id="histVisitClinicalRecWrap">
+                                <h6>Visit Clinical Exam (This Appointment)</h6>
+                                <div id="histVisitClinicalRecContent" class="small"></div>
                             </div>
 
                             <div class="mb-3"><strong>Clinical Notes:</strong>
@@ -180,27 +174,14 @@ if ($stmt) {
                 document.getElementById('histSubmittedAtRec').textContent = rec.submitted_at || rec._appointment_date || '';
                 document.getElementById('histNotesRec').textContent = rec.doctor_notes || '';
 
-                // profiling
-                const pf = rec.profiling || rec.patient_profiling || null;
-                if (pf) {
-                    try {
-                        const p = (typeof pf === 'string') ? JSON.parse(pf) : pf;
-                        document.getElementById('histMedicalHistoryRec').textContent = p.medical_history || '';
-                        document.getElementById('histMedicationsRec').textContent = p.medications || '';
-                        document.getElementById('histAllergiesRec').textContent = p.allergies || '';
-                        document.getElementById('histSmokingRec').textContent = p.smoking || '';
-                        document.getElementById('histAlcoholRec').textContent = p.alcohol || '';
-                        document.getElementById('histASARec').textContent = p.asa || '';
-                        document.getElementById('histLastVisitRec').textContent = p.last_visit || '';
-                        document.getElementById('histPeriodontalRec').textContent = p.periodontal || '';
-                        document.getElementById('histDentalChartRec').textContent = p.dental_chart || '';
-                    } catch (e) { console.warn('parse profiling', e); }
-                } else {
-                    ['histMedicalHistoryRec','histMedicationsRec','histAllergiesRec','histSmokingRec','histAlcoholRec','histASARec','histLastVisitRec','histPeriodontalRec','histDentalChartRec'].forEach(id => document.getElementById(id).textContent = '');
+                const backgroundEl = document.getElementById('histBackgroundRecContent');
+                const visitClinicalEl = document.getElementById('histVisitClinicalRecContent');
+                if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
+                    backgroundEl.innerHTML = renderBackgroundProfilingFields(rec.patient_profiling || null);
                 }
-
-                // radiographs notes
-                document.getElementById('histRadiographsRec').textContent = rec.radiographs_notes || '';
+                if (visitClinicalEl && typeof renderVisitClinicalFields === 'function') {
+                    visitClinicalEl.innerHTML = renderVisitClinicalFields(rec.visit_clinical || rec.profiling || null);
+                }
 
                 if (Array.isArray(rec.recommended_services)) {
                     const ul = document.getElementById('histServicesRec');

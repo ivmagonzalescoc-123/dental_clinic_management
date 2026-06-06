@@ -5,7 +5,7 @@ security_ensure_work_type_column($conn);
 
 // Fetch doctors for dropdown
 $doctors_list = [];
-$doctors_sql = "SELECT user_id, first_name, last_name, COALESCE(work_type, 'regular') AS work_type FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY first_name ASC";
+$doctors_sql = "SELECT user_id, first_name, last_name FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY first_name ASC";
 $doctors_result = $conn->query($doctors_sql);
 if ($doctors_result) {
     while ($row = $doctors_result->fetch_assoc()) {
@@ -154,19 +154,15 @@ if ($patient_id) {
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.02em;
-    background: #e2e8f0;
     color: #334155;
 }
 .patient-appt-card #appointmentCalendar .appt-day-badge.state-open {
-    background: #dcfce7;
     color: #166534;
 }
 .patient-appt-card #appointmentCalendar .appt-day-badge.state-busy {
-    background: #fef3c7;
     color: #92400e;
 }
 .patient-appt-card #appointmentCalendar .appt-day-badge.state-closed {
-    background: #fee2e2;
     color: #991b1b;
 }
 .patient-appt-card .appt-tab-nav .nav-link {
@@ -230,18 +226,6 @@ if ($patient_id) {
         </div>
     </div>
     <div class="card-body">
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <ul class="nav nav-pills appt-tab-nav" id="apptTabNav" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" type="button" id="apptTabBook">Create Appointment</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" type="button" id="apptTabHistory">Appointment History</button>
-                </li>
-            </ul>
-            <small class="text-muted">Track your appointment request status in history.</small>
-        </div>
-
         <div id="apptBookPane">
             <div id="apptAlert"></div>
             <form id="createApptForm">
@@ -267,8 +251,7 @@ if ($patient_id) {
                             <select class="form-select" id="user_id" name="user_id" required>
                                 <option value="">-- Select Doctor --</option>
                                 <?php foreach ($doctors_list as $d): ?>
-                                    <?php $doctorType = ((string)($d['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular'; ?>
-                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name'] . ' (' . $doctorType . ')'); ?></option>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -283,11 +266,11 @@ if ($patient_id) {
                         </div>
 
                         <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
-                            <label class="form-label">Choose Time Slot</label>
+                            <label class="form-label">Choose Start Time (range shown)</label>
                             <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
-                                <option value="">-- Select a 20-minute slot --</option>
+                                <option value="">-- Select a start time slot --</option>
                             </select>
-                            <div class="form-text">20-minute slots only: 8:00-12:00 and 1:00-5:00.</div>
+                            <div class="form-text" id="patientTimeslotHint">Select services to see the required appointment duration.</div>
                         </div>
 
                         <div class="mb-3">
@@ -306,7 +289,14 @@ if ($patient_id) {
             </form>
         </div>
 
-        <div id="apptHistoryPane" class="d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-3">
+            <div>
+                <h6 class="mb-1">Appointment History</h6>
+                <small class="text-muted">Track your appointment request status below the booking form.</small>
+            </div>
+        </div>
+
+        <div id="apptHistoryPane">
             <div class="history-table-wrap table-responsive">
                 <table class="table table-hover align-middle">
                     <thead>
@@ -457,9 +447,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const doctorSelect = document.getElementById('user_id');
     const timeslotWrap = document.getElementById('patientTimeslotWrap');
     const timeslotSelect = document.getElementById('timeslot_id');
+    const timeslotHint = document.getElementById('patientTimeslotHint');
     const selectedDateLabel = document.getElementById('selectedDateLabel');
-    const bookTabBtn = document.getElementById('apptTabBook');
-    const historyTabBtn = document.getElementById('apptTabHistory');
     const bookPane = document.getElementById('apptBookPane');
     const historyPane = document.getElementById('apptHistoryPane');
     const historyBody = document.getElementById('patientApptHistoryBody');
@@ -505,22 +494,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         showAlert(message, type === 'success' ? 'success' : 'danger');
-    }
-
-    function switchAppointmentsTab(tabName) {
-        const showHistory = tabName === 'history';
-        if (bookTabBtn) {
-            bookTabBtn.classList.toggle('active', !showHistory);
-        }
-        if (historyTabBtn) {
-            historyTabBtn.classList.toggle('active', showHistory);
-        }
-        if (bookPane) {
-            bookPane.classList.toggle('d-none', showHistory);
-        }
-        if (historyPane) {
-            historyPane.classList.toggle('d-none', !showHistory);
-        }
     }
 
     function statusBadgeClass(status) {
@@ -809,6 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadTimeslots() {
         const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
         const apptDate = dateSelect ? String(dateSelect.value || '').trim() : '';
+        const selectedDuration = Number(window.patientSelectedServiceDuration || 0);
         if (!timeslotWrap || !timeslotSelect) return;
 
         timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
@@ -823,12 +797,23 @@ document.addEventListener('DOMContentLoaded', function() {
         timeslotSelect.innerHTML = '<option value="">Loading time slots...</option>';
 
         try {
-            const r = await fetch('../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(apptDate));
+            let url = '../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(apptDate);
+            if (selectedDuration > 0) {
+                url += '&duration=' + encodeURIComponent(String(selectedDuration));
+            }
+            const r = await fetch(url);
             const data = await r.json();
             timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
 
             if (!data.success || !Array.isArray(data.slots) || data.slots.length === 0) {
                 timeslotSelect.innerHTML = '<option value="">No available timeslots for this date</option>';
+                if (timeslotHint) {
+                    if (selectedDuration > 0) {
+                        timeslotHint.textContent = `No available time range can fit ${selectedDuration} minutes on this date.`;
+                    } else {
+                        timeslotHint.textContent = 'No available timeslots for this date.';
+                    }
+                }
                 return;
             }
 
@@ -836,8 +821,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const opt = document.createElement('option');
                 opt.value = String(slot.timeslot_id);
                 opt.textContent = String(slot.label || 'Slot');
+                if (slot.end_time) {
+                    opt.dataset.endTime = String(slot.end_time);
+                }
                 timeslotSelect.appendChild(opt);
             });
+            if (timeslotHint) {
+                timeslotHint.textContent = 'Select a start time. The option shows the full time range for your services.';
+            }
         } catch (err) {
             console.error(err);
             timeslotSelect.innerHTML = '<option value="">Unable to load timeslots</option>';
@@ -883,25 +874,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadDates();
 
-    const initialTab = new URLSearchParams(window.location.search).get('appt_tab') === 'history' ? 'history' : 'book';
-    switchAppointmentsTab(initialTab);
-
-    if (bookTabBtn) {
-        bookTabBtn.addEventListener('click', function() {
-            switchAppointmentsTab('book');
-        });
-    }
-    if (historyTabBtn) {
-        historyTabBtn.addEventListener('click', function() {
-            switchAppointmentsTab('history');
-        });
-    }
-
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
             loadDates();
+            loadTimeslots();
         });
     }
+
+    if (timeslotSelect) {
+        timeslotSelect.addEventListener('change', function() {
+            const selectedOption = timeslotSelect.options[timeslotSelect.selectedIndex];
+            const endTime = selectedOption?.dataset?.endTime || '';
+            const label = String(selectedOption?.textContent || '').trim();
+            if (timeslotHint) {
+                if (endTime && label) {
+                    timeslotHint.textContent = `Selected time: ${label}`;
+                } else {
+                    timeslotHint.textContent = 'Select services to see the required appointment duration.';
+                }
+            }
+        });
+    }
+
+    window.addEventListener('patient-service-duration-changed', function() {
+        loadTimeslots();
+    });
 
     if (typeof bootstrap !== 'undefined' && patientRescheduleModalEl) {
         patientRescheduleModal = bootstrap.Modal.getOrCreateInstance(patientRescheduleModalEl);
@@ -1032,13 +1029,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         reason: selectedReason,
                         status: resp.status || 'scheduled'
                     });
-                    showAlert(resp.message || 'Appointment created successfully.', 'success');
                     showBookingToast(resp.message || 'Appointment created successfully.', 'success');
 
                     form.reset();
                     clearSelectedDate();
                     loadDates();
-                    switchAppointmentsTab('history');
                 } else {
                     const failType = resp.warning ? 'warning' : 'danger';
                     showAlert(resp.message || 'Failed to create appointment.', 'warning');

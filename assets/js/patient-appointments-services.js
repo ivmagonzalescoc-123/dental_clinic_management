@@ -15,6 +15,7 @@ async function initializePatientServiceSelector() {
     const doctorSelect = document.getElementById('user_id');
     const serviceSelector = document.getElementById('serviceSelector');
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+    const timeslotHint = document.getElementById('patientTimeslotHint');
     
     // Create a temporary appointment ID (0 for new appointment)
     let currentAppointmentId = 0;
@@ -58,37 +59,6 @@ async function initializePatientServiceSelector() {
         });
     }
     
-    // Update form submission to include services
-    if (form) {
-        const originalSubmit = form.onsubmit;
-        form.onsubmit = async function(e) {
-            e.preventDefault();
-            
-            // Get selected services
-            const selectedServices = [];
-            document.querySelectorAll('.service-checkbox:checked').forEach(checkbox => {
-                selectedServices.push(parseInt(checkbox.value));
-            });
-            
-            if (selectedServices.length === 0) {
-                alert('Please select at least one service');
-                return false;
-            }
-            
-            // Add services to form data before submission
-            form.setAttribute('data-selected-services', JSON.stringify(selectedServices));
-            form.setAttribute('data-service-duration', serviceManager?.totalDuration || 0);
-            
-            // Continue with original submission
-            if (typeof originalFormSubmitHandler === 'function') {
-                originalFormSubmitHandler(e);
-            } else {
-                // Fallback: submit normally
-                form.submit();
-            }
-        };
-    }
-    
     /**
      * Update timeslot requirements based on service duration
      */
@@ -99,11 +69,17 @@ async function initializePatientServiceSelector() {
         // You can use this to show message or adjust UI
         console.log(`Required timeslots: ${requiredSlots} (${totalDuration} minutes)`);
         
-        // Update timeslot selection UI if needed
-        const timeslotInput = document.getElementById('timeslot_id');
-        if (timeslotInput) {
-            // Store the required duration in a data attribute
-            timeslotInput.setAttribute('data-required-duration', totalDuration);
+        if (timeslotHint) {
+            if (totalDuration > 0) {
+                timeslotHint.textContent = `Selected services require ${totalDuration} minutes (${requiredSlots} time slot${requiredSlots === 1 ? '' : 's'}).`;
+            } else {
+                timeslotHint.textContent = 'Select services to see the required appointment duration.';
+            }
         }
     }
+
+    window.addEventListener('patient-service-duration-changed', function(event) {
+        const totalDuration = Number(event?.detail?.totalDuration || 0);
+        updateTimeslotRequirements(totalDuration);
+    });
 }

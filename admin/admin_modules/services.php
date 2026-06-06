@@ -456,7 +456,7 @@ if ($tRes) {
         <?php endif; ?>
 
         <div class="table-responsive">
-            <table class="table table-hover datatable align-middle">
+            <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Service</th>
@@ -502,7 +502,7 @@ if ($tRes) {
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover datatable align-middle">
+            <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Service</th>
@@ -556,7 +556,7 @@ if ($tRes) {
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover datatable align-middle">
+            <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Treatment</th>

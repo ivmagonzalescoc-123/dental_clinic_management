@@ -185,7 +185,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 // 1) Authenticate system users
 $sql = "SELECT user_id, first_name, last_name, password_hash, email, role_id, is_active,
-               failed_login_attempts, locked_until, must_change_password
+               failed_login_attempts, locked_until, must_change_password, profile_image
         FROM users
         WHERE email = ?
         LIMIT 1";
@@ -248,6 +248,7 @@ if ($stmt) {
         $_SESSION['role'] = $roleName;
         $_SESSION['user_type'] = 'user';
         $_SESSION['must_change_password'] = (int)($user['must_change_password'] ?? 0) === 1;
+        $_SESSION['profile_image'] = $user['profile_image'] ?? null;
         $_SESSION['last_activity'] = time();
 
         $userLogId = auth_record_user_login($conn, (int)$user['user_id']);
@@ -274,7 +275,7 @@ if ($stmt) {
 
 // 2) Authenticate patients
 $psql = "SELECT patient_id, first_name, last_name, password_hash, email,
-                failed_login_attempts, locked_until, must_change_password
+                failed_login_attempts, locked_until, must_change_password, profile_image
          FROM patients
          WHERE email = ?
          LIMIT 1";
@@ -327,6 +328,7 @@ $_SESSION['last_name'] = $patient['last_name'];
 $_SESSION['role'] = 'patient';
 $_SESSION['user_type'] = 'patient';
 $_SESSION['must_change_password'] = (int)($patient['must_change_password'] ?? 0) === 1;
+$_SESSION['profile_image'] = $patient['profile_image'] ?? null;
 $_SESSION['last_activity'] = time();
 
 $patientLogId = auth_record_patient_login($conn, (int)$patient['patient_id']);

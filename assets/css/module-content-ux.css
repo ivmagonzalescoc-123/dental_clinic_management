@@ -410,9 +410,9 @@
   align-items: center;
   margin-bottom: 10px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid #d5e8fb;
-  background: #1173c1;
+  border-radius: 12px;
+  border: 1px solid #d8e7f5;
+  background: #f3f8ff;
 }
 
 #main .dental-dashboard-hero h4,
@@ -420,12 +420,12 @@
 #main .dental-dashboard-hero .small,
 #main .dental-dashboard-hero .badge,
 #main .dental-dashboard-hero strong {
-  color: #fff !important;
+  color: #1f3347 !important;
 }
 
 #main .dental-dashboard-hero p {
   margin: 0;
-  opacity: 0.92;
+  color: #5a6f82 !important;
 }
 
 #main .dental-kpi-card {
@@ -478,6 +478,57 @@
   color: #214a70;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+#main .clinic-reports-filter {
+  border: 1px solid #dce9f6;
+  background: #fff;
+}
+
+#main .clinic-report-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+#main .clinic-report-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #edf4fb;
+  overflow: hidden;
+}
+
+#main .clinic-report-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #1173c1;
+}
+
+#main .clinic-report-bar-fill.is-service {
+  background: #3d8bfd;
+}
+
+#main .clinic-simple-chart {
+  min-height: 240px;
+}
+
+@media print {
+  .clinic-report-no-print,
+  #sidebar,
+  #header,
+  .back-to-top,
+  .clinic-reports-filter {
+    display: none !important;
+  }
+
+  #main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .clinic-reports-shell {
+    padding: 0;
+  }
 }
 
 #main .dental-chart-frame {

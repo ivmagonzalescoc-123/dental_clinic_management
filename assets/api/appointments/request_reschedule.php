@@ -18,6 +18,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
     include __DIR__ . '/availability_guard.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 
     if (!$conn) {
         throw new Exception('Database connection failed');
@@ -168,6 +169,8 @@ try {
             null
         );
     }
+
+    wf_notify_reschedule_requested($conn, $appointmentId, $sessionPatientId, $requestedDoctorId, $requestedDate);
 
     echo json_encode([
         'success' => true,

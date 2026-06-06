@@ -3,111 +3,14 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 include dirname(dirname(__DIR__)) . '/config/capabilities.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
+include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
+
+billing_ensure_tables($conn);
+billing_sync_all($conn);
 
 $action = $_GET['action'] ?? '';
 $today = date('Y-m-d');
 $csrf_token = security_generate_csrf_token();
-
-function billing_can_transition(string $from, string $to): bool
-{
-    $matrix = [
-        'unpaid' => ['partial', 'paid'],
-        'partial' => ['unpaid', 'paid'],
-        'paid' => [],
-    ];
-
-    if ($from === $to) {
-        return true;
-    }
-
-    return in_array($to, $matrix[$from] ?? [], true);
-}
-
-if ($action === 'record_payment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $csrf = $_POST['csrf_token'] ?? '';
-    if (!security_validate_csrf_token($csrf)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
-        exit;
-    }
-
-    if (!capabilities_can('billing.record')) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Access denied: missing billing update permission.']);
-        exit;
-    }
-
-    $billingId = (int)($_POST['billing_id'] ?? 0);
-    if ($billingId <= 0) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Invalid billing ID.']);
-        exit;
-    }
-
-    $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
-
-    $curStmt = $conn->prepare('SELECT status FROM billing WHERE billing_id = ? LIMIT 1');
-    if (!$curStmt) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Unable to validate billing status.']);
-        exit;
-    }
-    $curStmt->bind_param('i', $billingId);
-    $curStmt->execute();
-    $cur = $curStmt->get_result()->fetch_assoc();
-    $curStmt->close();
-
-    if (!$cur) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Billing record not found.']);
-        exit;
-    }
-
-    $currentStatus = (string)($cur['status'] ?? 'unpaid');
-    if ($currentStatus === 'paid') {
-        echo json_encode(['success' => true, 'message' => 'Billing record is already paid.', 'billing_id' => $billingId, 'status' => 'paid']);
-        exit;
-    }
-
-    $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = ? WHERE billing_id = ?');
-    if (!$stmt) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Unable to prepare payment update.']);
-        exit;
-    }
-
-    $paidStatus = 'paid';
-    $stmt->bind_param('sii', $paidStatus, $currentUserId, $billingId);
-    $ok = $stmt->execute();
-    $affected = (int)$stmt->affected_rows;
-    $stmt->close();
-
-    if (!$ok) {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Failed to record payment.']);
-        exit;
-    }
-
-    if ($affected === 0) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'message' => 'Billing record not found or already paid.']);
-        exit;
-    }
-
-    if (function_exists('log_system_event')) {
-        log_system_event(
-            $conn,
-            'billing.record_payment',
-            'billing',
-            $billingId,
-            'Recorded payment and set status=paid',
-            $currentUserId
-        );
-    }
-
-    echo json_encode(['success' => true, 'message' => 'Payment recorded successfully.', 'billing_id' => $billingId, 'status' => 'paid']);
-    exit;
-}
 
 // detect or create status column
 $hasStatus = false;
@@ -124,137 +27,6 @@ if ($colRes && $colRes->num_rows > 0) {
     }
 }
 
-// Handle secretary marking billing status
-if ($action === 'mark_status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $csrf = $_POST['csrf_token'] ?? '';
-    if (!security_validate_csrf_token($csrf)) {
-        $_SESSION['message'] = 'Invalid security token. Please try again.';
-        $_SESSION['message_type'] = 'danger';
-        if (!headers_sent()) {
-            header('Location: secretary.php?page=billing');
-            exit;
-        } else {
-            echo "<script>window.location.href='secretary.php?page=billing';</script>";
-            exit;
-        }
-    }
-
-    $billingId = (int) ($_POST['billing_id'] ?? 0);
-    $newStatus = ($_POST['status'] ?? '');
-    $allowed = ['unpaid', 'partial', 'paid'];
-    $currentRole = $_SESSION['role'] ?? '';
-    $currentUserId = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
-
-    // Only secretary may change billing status
-    if ($currentRole !== 'secretary') {
-        $_SESSION['message'] = 'Access denied: only secretary can change billing status.';
-        $_SESSION['message_type'] = 'danger';
-        if (!headers_sent()) {
-            header('Location: secretary.php?page=billing');
-            exit;
-        } else {
-            echo "<script>window.location.href='secretary.php?page=billing';</script>";
-            exit;
-        }
-    }
-
-    if (!capabilities_can('billing.record')) {
-        $_SESSION['message'] = 'Access denied: missing billing update permission.';
-        $_SESSION['message_type'] = 'danger';
-        if (!headers_sent()) {
-            header('Location: secretary.php?page=billing');
-            exit;
-        } else {
-            echo "<script>window.location.href='secretary.php?page=billing';</script>";
-            exit;
-        }
-    }
-
-    if ($billingId > 0 && in_array($newStatus, $allowed, true) && $hasStatus) {
-        $curStmt = $conn->prepare('SELECT status FROM billing WHERE billing_id = ? LIMIT 1');
-        if ($curStmt) {
-            $curStmt->bind_param('i', $billingId);
-            $curStmt->execute();
-            $cur = $curStmt->get_result()->fetch_assoc();
-            $curStmt->close();
-        } else {
-            $cur = null;
-        }
-
-        if (!$cur) {
-            $_SESSION['message'] = 'Billing record not found.';
-            $_SESSION['message_type'] = 'warning';
-            if (!headers_sent()) {
-                header('Location: secretary.php?page=billing');
-                exit;
-            } else {
-                echo "<script>window.location.href='secretary.php?page=billing';</script>";
-                exit;
-            }
-        }
-
-        $currentStatus = (string)($cur['status'] ?? 'unpaid');
-        if (!billing_can_transition($currentStatus, $newStatus)) {
-            $_SESSION['message'] = 'Invalid billing status transition: ' . $currentStatus . ' -> ' . $newStatus . '.';
-            $_SESSION['message_type'] = 'warning';
-            if (!headers_sent()) {
-                header('Location: secretary.php?page=billing');
-                exit;
-            } else {
-                echo "<script>window.location.href='secretary.php?page=billing';</script>";
-                exit;
-            }
-        }
-
-        if ($newStatus === 'paid') {
-            $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = ? WHERE billing_id = ?');
-            if ($stmt) {
-                $stmt->bind_param('sii', $newStatus, $currentUserId, $billingId);
-            }
-        } else {
-            // mark unpaid/partial -> clear processed_by
-            $stmt = $conn->prepare('UPDATE billing SET status = ?, processed_by = NULL WHERE billing_id = ?');
-            if ($stmt) {
-                $stmt->bind_param('si', $newStatus, $billingId);
-            }
-        }
-
-        if (isset($stmt) && $stmt) {
-            if ($stmt->execute()) {
-                $_SESSION['message'] = 'Billing status updated.';
-                $_SESSION['message_type'] = 'success';
-                if (function_exists('log_system_event')) {
-                    log_system_event(
-                        $conn,
-                        'billing.status_update',
-                        'billing',
-                        $billingId,
-                        'Updated billing status: ' . $currentStatus . ' -> ' . $newStatus,
-                        $currentUserId
-                    );
-                }
-            } else {
-                $_SESSION['message'] = 'Error updating status: ' . $stmt->error;
-                $_SESSION['message_type'] = 'danger';
-            }
-            $stmt->close();
-        } else {
-            $_SESSION['message'] = 'Error preparing update statement.';
-            $_SESSION['message_type'] = 'danger';
-        }
-    } else {
-        $_SESSION['message'] = 'Invalid request or status feature not available.';
-        $_SESSION['message_type'] = 'warning';
-    }
-    if (!headers_sent()) {
-        header('Location: secretary.php?page=billing');
-        exit;
-    } else {
-        echo "<script>window.location.href='secretary.php?page=billing';</script>";
-        exit;
-    }
-}
-
 // Fetch all billing records for completed appointments
 $billings = [];
 
@@ -266,6 +38,8 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         b.billing_id,
         b.appointment_id,
         b.total_amount,
+        b.amount_paid,
+        b.balance,
         b.created_at,
         " . ($hasStatus ? 'b.status,' : "'unpaid' AS status,") . "
         a.appointment_date,
@@ -360,34 +134,33 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     </div>
     <div class="card-body">
         <!-- Filters -->
-        <div class="row mb-3 align-items-center">
-            <div class="col-md-3">
-                <select id="billingFilterStatus" class="form-select">
-                    <option value="all">All Statuses</option>
-                    <option value="unpaid">Outstanding</option>
-                    <option value="partial">Partial</option>
-                    <option value="paid">Paid</option>
-                </select>
+        <div class="module-search-toolbar mb-3">
+            <select id="billingFilterStatus" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
+                <option value="all">All Statuses</option>
+                <option value="unpaid">Outstanding</option>
+                <option value="partial">Partial</option>
+                <option value="paid">Paid</option>
+            </select>
+            <div class="unified-table-search-wrap">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input id="billingSearch" type="search" class="form-control unified-table-search-input"
+                    placeholder="Search patient, doctor, or invoice #" aria-label="Search billing records">
+                <button type="button" class="unified-table-search-clear" id="billingSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
             </div>
-            <div class="col-md-5">
-                <input id="billingSearch" type="text" class="form-control"
-                    placeholder="Search by patient name or invoice #">
-            </div>
-            <div class="col-md-4 text-end">
-                <small class="text-muted">Showing <span id="billingCount"><?php echo count($billings); ?></span>
-                    records</small>
-            </div>
+            <small class="text-muted">Showing <span id="billingCount"><?php echo count($billings); ?></span> records</small>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover datatable" id="billingTable">
+            <table class="table table-hover" id="billingTable" data-skip-table-search="1" data-skip-datatable="1">
                 <thead>
                     <tr>
                         <th>Invoice #</th>
                         <th>Patient</th>
                         <th>Doctor</th>
                         <th>Service Date</th>
-                        <th>Amount</th>
+                        <th>Total</th>
+                        <th>Paid</th>
+                        <th>Balance</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -395,7 +168,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 <tbody>
                     <?php if (empty($billings)): ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 No billing records yet.
                             </td>
                         </tr>
@@ -404,8 +177,16 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                             <?php
                             // each row includes data attributes for client-side filtering
                             ?>
-                            <tr data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>" data-patient="<?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?>"
-                                data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>">
+                            <tr class="billing-data-row" data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>"
+                                data-patient="<?php echo htmlspecialchars(strtolower($billing['first_name'] . ' ' . $billing['last_name'])); ?>"
+                                data-doctor="<?php echo htmlspecialchars(strtolower(trim(($billing['doctor_first_name'] ?? '') . ' ' . ($billing['doctor_last_name'] ?? '')))); ?>"
+                                data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>"
+                                data-search="<?php echo htmlspecialchars(strtolower(
+                                    $billing['first_name'] . ' ' . $billing['last_name'] . ' ' .
+                                    ($billing['doctor_first_name'] ?? '') . ' ' . ($billing['doctor_last_name'] ?? '') . ' ' .
+                                    str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT) . ' ' .
+                                    $billing['billing_id']
+                                )); ?>">
                                 <td><strong>#<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?></strong>
                                 </td>
                                 <td><?php echo htmlspecialchars($billing['first_name'] . ' ' . $billing['last_name']); ?></td>
@@ -413,8 +194,15 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                                 </td>
                                 <td><?php echo htmlspecialchars($billing['appointment_date']); ?></td>
                                 <td>₱<?php echo number_format((float) $billing['total_amount'], 2); ?></td>
-                                <?php $st = strtolower($billing['status'] ?? 'unpaid');
-                                $badgeClass = $st === 'paid' ? 'success' : ($st === 'partial' ? 'warning' : 'danger'); ?>
+                                <td class="text-success">₱<?php echo number_format((float) ($billing['amount_paid'] ?? 0), 2); ?></td>
+                                <?php
+                                $balance = (float)($billing['balance'] ?? max(0, (float)$billing['total_amount'] - (float)($billing['amount_paid'] ?? 0)));
+                                $st = strtolower($billing['status'] ?? 'unpaid');
+                                $badgeClass = $st === 'paid' ? 'success' : ($st === 'partial' ? 'warning' : 'danger');
+                                ?>
+                                <td class="<?php echo $balance > 0 ? 'text-danger' : 'text-success'; ?>">
+                                    <strong>₱<?php echo number_format($balance, 2); ?></strong>
+                                </td>
                                 <td><span class="badge bg-<?php echo $badgeClass; ?>"><?php echo htmlspecialchars(ucfirst($st)); ?></span></td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
@@ -423,18 +211,11 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                                         <i class="bi bi-file-pdf"></i> Invoice
                                     </button>
 
-                                    <?php if ($hasStatus && (($_SESSION['role'] ?? '') === 'secretary')): ?>
-                                        <?php if (($billing['status'] ?? '') !== 'paid'): ?>
-                                            <form method="POST" action="secretary.php?page=billing&action=mark_status"
-                                                style="display:inline-block; margin-left:6px;">
-                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                                                <input type="hidden" name="billing_id"
-                                                    value="<?php echo htmlspecialchars($billing['billing_id']); ?>">
-                                                <input type="hidden" name="status" value="paid">
-                                                <button type="submit" class="btn btn-sm btn-success"
-                                                    onclick="return confirm('Mark invoice as PAID?');">Mark Paid</button>
-                                            </form>
-                                        <?php endif; ?>
+                                    <?php if ($hasStatus && (($_SESSION['role'] ?? '') === 'secretary') && $st !== 'paid' && $balance > 0): ?>
+                                        <button type="button" class="btn btn-sm btn-success ms-1"
+                                            onclick="openPaymentModal(<?php echo (int)$billing['billing_id']; ?>, <?php echo $balance; ?>)">
+                                            Record Payment
+                                        </button>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -469,47 +250,120 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     </div>
 </div>
 
-<!-- Payments are out-of-scope: payment and receipt UI removed (invoices only) -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="paymentBillingId">
+                <p class="text-muted small mb-2" id="paymentBalanceHint">Remaining balance: ₱0.00</p>
+                <div class="mb-3">
+                    <label class="form-label">Payment Amount (PHP)</label>
+                    <input type="number" step="0.01" min="0.01" class="form-control" id="paymentAmount">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Payment Method</label>
+                    <select class="form-select" id="paymentMethod">
+                        <option value="cash">Cash</option>
+                        <option value="gcash">GCash</option>
+                        <option value="card">Card</option>
+                        <option value="bank">Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <input type="text" class="form-control" id="paymentNotes" placeholder="Optional">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="savePaymentBtn">Save Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-<!-- Initialize DataTable -->
 <script>
+    const BILLING_CSRF = '<?php echo htmlspecialchars($csrf_token); ?>';
+
+    function openPaymentModal(billingId, remainingBalance) {
+        document.getElementById('paymentBillingId').value = billingId;
+        const balance = Number(remainingBalance || 0);
+        const amountInput = document.getElementById('paymentAmount');
+        amountInput.value = balance.toFixed(2);
+        amountInput.max = balance.toFixed(2);
+        document.getElementById('paymentBalanceHint').textContent = 'Remaining balance: ₱' + balance.toFixed(2);
+        new bootstrap.Modal(document.getElementById('paymentModal')).show();
+    }
+
+    let paymentSubmitting = false;
+    document.getElementById('savePaymentBtn')?.addEventListener('click', async function() {
+        if (paymentSubmitting) return;
+        paymentSubmitting = true;
+
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Saving...';
+
+        const idempotencyKey = (window.Idempotency && Idempotency.newKey('pay')) || ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+
+        try {
+            const fd = new FormData();
+            fd.append('csrf_token', BILLING_CSRF);
+            fd.append('billing_id', document.getElementById('paymentBillingId').value);
+            fd.append('amount', document.getElementById('paymentAmount').value);
+            fd.append('payment_method', document.getElementById('paymentMethod').value);
+            fd.append('notes', document.getElementById('paymentNotes').value);
+            fd.append('idempotency_key', idempotencyKey);
+            const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
+            const res = await fetch(appRoot + '/assets/api/billing/record_payment.php', { method: 'POST', body: fd });
+            const j = await res.json();
+            if (!j.success) {
+                alert(j.message || 'Payment failed');
+                paymentSubmitting = false;
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                return;
+            }
+            alert(j.duplicate_replay || j.idempotent_replay ? 'Payment already recorded.' : 'Payment recorded successfully');
+            location.reload();
+        } catch (err) {
+            console.error(err);
+            alert('Payment failed. Please try again.');
+            paymentSubmitting = false;
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    });
+
     function viewInvoice(billing) {
-        // fetch clinical record for this appointment to include in invoice (secretary view)
         const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
-        fetch(appRoot + '/assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(billing.appointment_id))
-            .then(r => r.json()).then(data => {
-                const rec = (data && data.record) ? data.record : null;
-                // Prepare recommended services (may be array of objects from API)
-                let servicesArr = [];
-                if (rec && rec.recommended_services) {
-                    if (Array.isArray(rec.recommended_services)) servicesArr = rec.recommended_services;
-                    else if (typeof rec.recommended_services === 'object') servicesArr = Object.values(rec.recommended_services);
-                }
-                let servicesRows = '';
-                let servicesTotal = 0.0;
-                servicesArr.forEach(s => {
-                    const price = parseFloat(s.initial_price || s.price) || 0;
-                    servicesTotal += price;
-                    servicesRows += `<tr><td>${(s.service_name || s.name || 'Service')}</td><td class="text-end">₱${price.toFixed(2)}</td></tr>`;
+        fetch(appRoot + '/assets/api/billing/get_billing_details.php?billing_id=' + encodeURIComponent(billing.billing_id))
+            .then(r => r.json()).then(details => {
+                if (!details.success) return;
+                const lineItems = details.line_items || [];
+                let itemRows = '';
+                lineItems.forEach(item => {
+                    const amt = parseFloat(item.amount) || 0;
+                    itemRows += `<tr><td>${item.description}</td><td class="text-end">₱${amt.toFixed(2)}</td></tr>`;
                 });
-                // Normalize materials into an array (handle array or object-shaped JSON)
-                let matArr = [];
-                if (rec && rec.materials_used) {
-                    if (Array.isArray(rec.materials_used)) matArr = rec.materials_used;
-                    else if (typeof rec.materials_used === 'object') matArr = Object.values(rec.materials_used);
-                }
-                // Build itemized rows for invoice table
-                let materialsRows = '';
-                let materialsTotal = 0.0;
-                matArr.forEach(m => {
-                    const qty = parseFloat(m.qty) || 0;
-                    const price = parseFloat(m.price) || 0;
-                    const line = qty * price;
-                    materialsTotal += line;
-                    materialsRows += `<tr><td>${(m.name || 'Material')} (x${qty})</td><td class="text-end">₱${line.toFixed(2)}</td></tr>`;
+                let payRows = '';
+                (details.payments || []).forEach(p => {
+                    payRows += `<tr><td>${p.payment_method} — ${p.paid_at}</td><td class="text-end">₱${(parseFloat(p.amount)||0).toFixed(2)}</td></tr>`;
                 });
+                let instRows = '';
+                if (details.installment) {
+                    instRows += `<p class="small mb-1"><strong>Installment Plan:</strong> 50% down (₱${parseFloat(details.installment.down_payment_amount).toFixed(2)}) + ${details.installment.num_terms} terms</p>`;
+                    (details.installment_terms || []).forEach(t => {
+                        instRows += `<tr><td>Term ${t.term_number} — due ${t.due_date} (${t.status})</td><td class="text-end">₱${(parseFloat(t.amount)||0).toFixed(2)}</td></tr>`;
+                    });
+                }
                 const billingTotal = parseFloat(billing.total_amount) || 0;
-                const consultationFee = Math.max(0, billingTotal - materialsTotal - servicesTotal);
+                const invoiceNum = details.invoice ? details.invoice.invoice_number : String(billing.billing_id).padStart(6, '0');
                 const invoiceHtml = `
             <div class="container mt-4">
                 <div class="text-center mb-4">
@@ -521,7 +375,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 <div class="row mb-4">
                     <div class="col-6">
                         <h6>Invoice Details:</h6>
-                        <p class="mb-1"><strong>Invoice #:</strong> ${String(billing.billing_id).padStart(6, '0')}</p>
+                        <p class="mb-1"><strong>Invoice #:</strong> ${invoiceNum}</p>
                         <p class="mb-1"><strong>Date:</strong> ${billing.created_at.split(' ')[0]}</p>
                         <p class="mb-1"><strong>Service Date:</strong> ${billing.appointment_date}</p>
                         <p class="mb-1"><strong>Status:</strong> ${ (billing.status || 'unpaid').toUpperCase() }</p>
@@ -536,7 +390,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 
                 <hr>
                 
-                    <table class="table table-bordered">
+                    <table class="table table-bordered invoice-summary-table" data-skip-table-search="1">
                     <thead class="table-light">
                         <tr>
                             <th>Description</th>
@@ -544,28 +398,26 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                         </tr>
                     </thead>
                     <tbody>
-                        ${consultationFee > 0 ? `<tr><td>Consultation & Treatment Fee</td><td class="text-end">₱${consultationFee.toFixed(2)}</td></tr>` : ''}
-                        ${servicesRows}
-                        ${materialsRows}
+                        ${itemRows}
                         <tr class="table-light">
                             <td><strong>Total Amount Due:</strong></td>
                             <td class="text-end"><strong>₱${billingTotal.toFixed(2)}</strong></td>
                         </tr>
+                        <tr><td>Paid to Date</td><td class="text-end">₱${(parseFloat(details.paid_total)||0).toFixed(2)}</td></tr>
+                        <tr><td>Balance</td><td class="text-end"><strong>₱${(parseFloat(details.balance)||0).toFixed(2)}</strong></td></tr>
                     </tbody>
                 </table>
-                
-                <!-- Payments removed: invoices only -->
+                ${instRows ? `<h6 class="mt-3">Installment Schedule</h6><table class="table table-sm table-bordered invoice-detail-table" data-skip-table-search="1"><tbody>${instRows}</tbody></table>` : ''}
+                ${payRows ? `<h6 class="mt-3">Payments</h6><table class="table table-sm table-bordered invoice-detail-table" data-skip-table-search="1"><tbody>${payRows}</tbody></table>` : ''}
                 <hr>
                 <p class="text-center text-muted small">Thank you for choosing Azucena's Dental Clinic!</p>
             </div>
         `;
                 document.getElementById('invoiceContent').innerHTML = invoiceHtml;
             }).catch(err => {
-                console.error('Could not load clinical record', err);
+                console.error('Could not load billing details', err);
             });
     }
-
-    // Payments are out-of-scope: payment JS removed
 
     function printInvoice() {
         const invoiceContent = document.getElementById('invoiceContent').innerHTML;
@@ -589,49 +441,78 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         printWindow.document.close();
     }
 
-    // Client-side filtering for billing table
     function filterBillingTable() {
-        const status = document.getElementById('billingFilterStatus').value;
-        const q = (document.getElementById('billingSearch').value || '').toLowerCase().trim();
+        const status = (document.getElementById('billingFilterStatus')?.value || 'all').toLowerCase();
+        const rawQ = (document.getElementById('billingSearch')?.value || '').toLowerCase().trim();
+        const q = rawQ.replace(/^#/, '');
         const tbody = document.querySelector('#billingTable tbody');
         if (!tbody) return;
+
         let visible = 0;
-        Array.from(tbody.querySelectorAll('tr')).forEach(row => {
+        let noResultsRow = tbody.querySelector('tr.billing-no-results');
+
+        Array.from(tbody.querySelectorAll('tr.billing-data-row')).forEach(row => {
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
-            const patient = (row.getAttribute('data-patient') || '').toLowerCase();
-            const invoice = (row.getAttribute('data-invoice') || '').toLowerCase();
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
             let match = true;
-            if (status !== 'all' && rowStatus !== status) match = false;
-            if (q) {
-                if (!(patient.includes(q) || invoice.includes(q))) match = false;
+
+            if (status !== 'all' && rowStatus !== status) {
+                match = false;
             }
+            if (q && !searchBlob.includes(q)) {
+                match = false;
+            }
+
             row.style.display = match ? '' : 'none';
             if (match) visible++;
         });
-        document.getElementById('billingCount').textContent = visible;
+
+        const countEl = document.getElementById('billingCount');
+        if (countEl) countEl.textContent = visible;
+
+        const dataRows = tbody.querySelectorAll('tr.billing-data-row');
+        if (dataRows.length > 0 && visible === 0) {
+            if (!noResultsRow) {
+                noResultsRow = document.createElement('tr');
+                noResultsRow.className = 'billing-no-results';
+                noResultsRow.innerHTML = '<td colspan="9" class="text-center text-muted py-4">No billing records match your filters.</td>';
+                tbody.appendChild(noResultsRow);
+            }
+            noResultsRow.style.display = '';
+        } else if (noResultsRow) {
+            noResultsRow.style.display = 'none';
+        }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Attach filter handlers
         const statusEl = document.getElementById('billingFilterStatus');
         const searchEl = document.getElementById('billingSearch');
-        if (statusEl) statusEl.addEventListener('change', filterBillingTable);
-        if (searchEl) searchEl.addEventListener('input', function () {
-            // debounce simple
-            clearTimeout(searchEl._timer);
-            searchEl._timer = setTimeout(filterBillingTable, 200);
-        });
 
-        // Initialize table helper if available (non-blocking)
-        if (window.SimpleDataTable) {
-            try {
-                new SimpleDataTable({
-                    element: document.querySelector('.datatable'),
-                    searchable: true,
-                    sortable: true,
-                    rowsPerPage: 10
-                });
-            } catch (e) { console.warn('SimpleDataTable init failed', e); }
+        if (statusEl) statusEl.addEventListener('change', filterBillingTable);
+        const clearEl = document.getElementById('billingSearchClear');
+        if (searchEl) {
+            searchEl.addEventListener('input', function () {
+                if (clearEl) clearEl.style.display = searchEl.value ? '' : 'none';
+                clearTimeout(searchEl._timer);
+                searchEl._timer = setTimeout(filterBillingTable, 150);
+            });
+            searchEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    searchEl.value = '';
+                    if (clearEl) clearEl.style.display = 'none';
+                    filterBillingTable();
+                }
+            });
         }
+        if (clearEl && searchEl) {
+            clearEl.addEventListener('click', function () {
+                searchEl.value = '';
+                clearEl.style.display = 'none';
+                filterBillingTable();
+                searchEl.focus();
+            });
+        }
+
+        filterBillingTable();
     });
 </script>

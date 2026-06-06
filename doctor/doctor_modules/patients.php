@@ -266,12 +266,12 @@ $basePatientParams = [
             <h2 class="card-title mb-0 text-truncate">My Patients</h2>
         </div>
 
-        <form class="d-flex flex-nowrap align-items-center gap-2" method="GET" action="doctor.php">
+        <form class="module-search-toolbar" method="GET" action="doctor.php" style="margin:0;">
             <input type="hidden" name="page" value="patients">
 
-            <div class="input-group input-group-sm" style="width: 240px;">
-                <input type="text" class="form-control" name="q" value="<?php echo htmlspecialchars($q); ?>" placeholder="Search...">
-                <button class="btn btn-primary" type="submit" title="Search"><i class="bi bi-search"></i></button>
+            <div class="unified-table-search-wrap module-search-inline">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input type="search" class="form-control unified-table-search-input" name="q" value="<?php echo htmlspecialchars($q); ?>" placeholder="Search patients..." aria-label="Search patients">
             </div>
 
             <div class="dropdown" data-bs-auto-close="outside">
@@ -335,7 +335,7 @@ $basePatientParams = [
             <div class="row g-3 align-items-start">
                 <div class="col-12 col-xl-7">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0" data-skip-table-search="1">
                             <thead class="table-light">
                                 <tr>
                                     <th>Patient</th>
@@ -403,9 +403,7 @@ $basePatientParams = [
                                         <div class="small text-muted"><?php echo htmlspecialchars((string)($selectedPatient['email'] ?? '')); ?></div>
                                         <div class="small text-muted"><?php echo htmlspecialchars((string)($selectedPatient['phone_number'] ?? '')); ?></div>
                                     </div>
-                                    <?php if ($selectedLatest): ?>
-                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="openPatientProfileModal(<?php echo (int)$selectedLatest['appointment_id']; ?>, '<?php echo htmlspecialchars(format_patient_name($selectedPatient), ENT_QUOTES); ?>')">Profile</button>
-                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-outline-info btn-sm" onclick="openPatientProfileModal(<?php echo (int)$selectedPatient['patient_id']; ?>, '<?php echo htmlspecialchars(format_patient_name($selectedPatient), ENT_QUOTES); ?>')">Profile</button>
                                 </div>
 
                                 <div class="d-flex gap-2 flex-wrap mb-3">
@@ -482,18 +480,8 @@ $basePatientParams = [
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="mb-2"><strong>Patient:</strong> <span id="profilePatientName">-</span></div>
-                <div class="row g-2">
-                    <div class="col-md-6"><strong>Medical History:</strong><div class="small text-muted" id="profileMedicalHistory">-</div></div>
-                    <div class="col-md-6"><strong>Medications:</strong><div class="small text-muted" id="profileMedications">-</div></div>
-                    <div class="col-md-4"><strong>Allergies:</strong><div class="small text-muted" id="profileAllergies">-</div></div>
-                    <div class="col-md-4"><strong>Smoking:</strong><div class="small text-muted" id="profileSmoking">-</div></div>
-                    <div class="col-md-4"><strong>Alcohol:</strong><div class="small text-muted" id="profileAlcohol">-</div></div>
-                    <div class="col-md-4"><strong>ASA:</strong><div class="small text-muted" id="profileASA">-</div></div>
-                    <div class="col-md-8"><strong>Last Visit:</strong><div class="small text-muted" id="profileLastVisit">-</div></div>
-                    <div class="col-12"><strong>Periodontal / Oral Exam:</strong><div class="small text-muted" id="profilePeriodontal">-</div></div>
-                    <div class="col-12"><strong>Dental Chart / Findings:</strong><div class="small text-muted" id="profileDentalChart">-</div></div>
-                </div>
+                <div class="mb-2" id="profilePatientName">-</div>
+                <div id="profileBackgroundContent" class="small"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -503,59 +491,55 @@ $basePatientParams = [
 </div>
 
 <script>
-function setProfileText(id, value) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const v = (value === null || value === undefined || String(value).trim() === '') ? '-' : String(value);
-    el.textContent = v;
-}
-
-function clearProfileModal() {
-    setProfileText('profileMedicalHistory', '-');
-    setProfileText('profileMedications', '-');
-    setProfileText('profileAllergies', '-');
-    setProfileText('profileSmoking', '-');
-    setProfileText('profileAlcohol', '-');
-    setProfileText('profileASA', '-');
-    setProfileText('profileLastVisit', '-');
-    setProfileText('profilePeriodontal', '-');
-    setProfileText('profileDentalChart', '-');
-}
-
-async function openPatientProfileModal(appointmentId, patientName) {
+async function openPatientProfileModal(patientId, patientName) {
     const modalEl = document.getElementById('patientProfileModal');
     if (!modalEl) return;
     const modal = new bootstrap.Modal(modalEl);
 
-    setProfileText('profilePatientName', patientName || '-');
-    clearProfileModal();
+    document.getElementById('profilePatientName').innerHTML = '<strong>Patient:</strong> ' + (patientName || '-');
+    const contentEl = document.getElementById('profileBackgroundContent');
+    if (contentEl) {
+        contentEl.innerHTML = '<div class="text-muted">Loading...</div>';
+    }
     modal.show();
 
     try {
-        const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
+        const res = await fetch('../assets/api/patients/get_profiling.php?patient_id=' + encodeURIComponent(patientId));
         const data = await res.json();
-        if (!data || !data.success || !data.record) {
+        if (!data || !data.success) {
+            if (contentEl) {
+                contentEl.innerHTML = '<div class="text-muted">Unable to load patient background.</div>';
+            }
             return;
         }
 
-        const rec = data.record;
-        const pfRaw = rec.profiling || rec.patient_profiling || null;
-        if (!pfRaw) {
-            return;
+        if (data.patient) {
+            let ageText = 'N/A';
+            if (data.patient.date_of_birth) {
+                const dob = new Date(data.patient.date_of_birth);
+                if (!isNaN(dob.getTime())) {
+                    const ageDate = new Date(Date.now() - dob.getTime());
+                    ageText = Math.abs(ageDate.getUTCFullYear() - 1970);
+                }
+            }
+            document.getElementById('profilePatientName').innerHTML =
+                `<strong>Patient:</strong> ${data.patient.first_name} ${data.patient.middle_name ? data.patient.middle_name + ' ' : ''}${data.patient.last_name}<br>
+                 <small class="text-muted">
+                    <strong>DOB:</strong> ${data.patient.date_of_birth || 'N/A'} (Age: ${ageText}) &nbsp;|&nbsp;
+                    <strong>Gender:</strong> ${data.patient.gender || 'N/A'}<br>
+                    <strong>Phone:</strong> ${data.patient.phone_number || 'N/A'} &nbsp;|&nbsp;
+                    <strong>Address:</strong> ${data.patient.address || 'N/A'}
+                 </small>`;
         }
 
-        const pf = (typeof pfRaw === 'string') ? JSON.parse(pfRaw) : pfRaw;
-        setProfileText('profileMedicalHistory', pf.medical_history || '');
-        setProfileText('profileMedications', pf.medications || '');
-        setProfileText('profileAllergies', pf.allergies || '');
-        setProfileText('profileSmoking', pf.smoking || '');
-        setProfileText('profileAlcohol', pf.alcohol || '');
-        setProfileText('profileASA', pf.asa || '');
-        setProfileText('profileLastVisit', pf.last_visit || '');
-        setProfileText('profilePeriodontal', pf.periodontal || '');
-        setProfileText('profileDentalChart', pf.dental_chart || '');
+        if (contentEl && typeof renderBackgroundProfilingFields === 'function') {
+            contentEl.innerHTML = renderBackgroundProfilingFields(data.profiling || null);
+        }
     } catch (err) {
         console.warn('Failed to load patient profiling', err);
+        if (contentEl) {
+            contentEl.innerHTML = '<div class="text-muted">Error loading patient background.</div>';
+        }
     }
 }
 </script>

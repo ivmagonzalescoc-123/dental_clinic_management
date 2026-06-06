@@ -22,9 +22,9 @@ const STATUSES = [
   "implant",
 ];
 
-// Store status per tooth number (1..32)
+// Store status + comment per tooth number (1..32)
 const toothState = {};
-for (let i = 1; i <= 32; i++) toothState[i] = { statuses: new Set() };
+for (let i = 1; i <= 32; i++) toothState[i] = { statuses: new Set(), comment: "" };
 
 let selectedTooth = null;
 let readonlyMode = false;
@@ -37,6 +37,7 @@ const selectedToothEl = document.getElementById("selectedTooth");
 const statusSummaryEl = document.getElementById("statusSummary");
 const clearStatusBtn = document.getElementById("clearStatus");
 const resetViewBtn = document.getElementById("resetView");
+const toothCommentEl = document.getElementById("toothComment");
 
 const statusButtons = [...document.querySelectorAll(".btn[data-status]")];
 const toothButtons = new Map();
@@ -70,27 +71,62 @@ function updateStatusUI() {
     selectedToothEl.textContent = "—";
     statusSummaryEl.textContent = "—";
     for (const b of statusButtons) b.classList.remove("is-on");
+    if (toothCommentEl) {
+      toothCommentEl.value = "";
+      toothCommentEl.disabled = true;
+    }
     return;
   }
 
   selectedToothEl.textContent = String(selectedTooth);
 
   const st = [...toothState[selectedTooth].statuses];
-  statusSummaryEl.textContent = st.length ? st.join(", ") : "healthy";
+  const comment = toothState[selectedTooth].comment || "";
+  statusSummaryEl.textContent = st.length ? st.join(", ") : (comment ? "noted" : "healthy");
 
   for (const b of statusButtons) {
     const key = b.dataset.status;
     b.classList.toggle("is-on", toothState[selectedTooth].statuses.has(key));
+  }
+
+  if (toothCommentEl) {
+    toothCommentEl.disabled = readonlyMode;
+    toothCommentEl.value = comment;
+  }
+}
+
+function normalizeIncomingToothState(ts) {
+  if (!ts || typeof ts !== "object") return;
+  for (let i = 1; i <= 32; i++) {
+    const val = ts[i] ?? ts[String(i)];
+    if (Array.isArray(val)) {
+      toothState[i].statuses = new Set(val);
+      toothState[i].comment = "";
+    } else if (val && typeof val === "object") {
+      toothState[i].statuses = new Set(Array.isArray(val.statuses) ? val.statuses : []);
+      toothState[i].comment = String(val.comment || "");
+    } else {
+      toothState[i].statuses = new Set();
+      toothState[i].comment = "";
+    }
+    applyVisualStatus(i);
   }
 }
 
 function serializeToothState() {
   const out = {};
   for (let i = 1; i <= 32; i++) {
-    out[i] = [...toothState[i].statuses];
+    out[i] = {
+      statuses: [...toothState[i].statuses],
+      comment: toothState[i].comment || "",
+    };
   }
   return out;
 }
+
+window.getOdontogramData = function () {
+  return serializeToothState();
+};
 
 function sendStateToParent() {
   try {
@@ -121,10 +157,19 @@ clearStatusBtn.addEventListener("click", () => {
   if (readonlyMode) return;
   if (!selectedTooth) return;
   toothState[selectedTooth].statuses.clear();
+  toothState[selectedTooth].comment = "";
   applyVisualStatus(selectedTooth);
   updateStatusUI();
   sendStateToParent();
 });
+
+if (toothCommentEl) {
+  toothCommentEl.addEventListener("input", () => {
+    if (readonlyMode || !selectedTooth) return;
+    toothState[selectedTooth].comment = toothCommentEl.value || "";
+    sendStateToParent();
+  });
+}
 
 // --------------------
 // Three.js Scene
@@ -506,18 +551,14 @@ window.addEventListener('message', (ev)=>{
   try {
     if (!ev.data) return;
     if (ev.data.type === 'load_odontogram' && ev.data.toothState) {
-      const ts = ev.data.toothState;
       readonlyMode = !!ev.data.readonly;
-      for (let i = 1; i <= 32; i++) {
-        toothState[i].statuses = new Set(Array.isArray(ts[i]) ? ts[i] : []);
-        applyVisualStatus(i);
-      }
-      // disable/hide status buttons when readonly
+      normalizeIncomingToothState(ev.data.toothState);
       for (const b of statusButtons) {
         b.disabled = readonlyMode;
         b.classList.toggle('disabled', readonlyMode);
       }
       clearStatusBtn.disabled = readonlyMode;
+      if (toothCommentEl) toothCommentEl.disabled = readonlyMode || !selectedTooth;
       updateStatusUI();
       sendStateToParent();
     }
