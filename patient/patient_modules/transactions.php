@@ -8,10 +8,20 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     fetch('../get_transactions.php')
-        .then(response => response.json())
+        .then(async (response) => {
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data) {
+                throw new Error('Invalid server response');
+            }
+            return data;
+        })
         .then(data => {
             const accordion = document.getElementById('transactionAccordion');
-            if (data.success && data.transactions.length > 0) {
+            if (!data.success) {
+                accordion.innerHTML = '<div class="alert alert-warning">' + escapeHtml(data.message || 'Unable to load transactions.') + '</div>';
+                return;
+            }
+            if (data.transactions.length > 0) {
                 data.transactions.forEach(appt => {
                     const card = document.createElement('div');
                     card.className = 'card shadow mb-3';
@@ -102,7 +112,8 @@ function escapeHtml(str) {
 }
 
 function formatCurrency(amount) {
-    if (typeof amount !== 'number') return '0.00';
-    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    const value = Number(amount);
+    if (!Number.isFinite(value)) return '0.00';
+    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
 }
 </script>
