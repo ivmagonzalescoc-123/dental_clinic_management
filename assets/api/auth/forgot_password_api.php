@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/env.php';
+include '../../../config/reminders.php';
 
 security_start_session();
 
@@ -123,67 +124,36 @@ if (!$stmt->execute()) {
 }
 $stmt->close();
 
-$brevoApiKey = (string)env('BREVO_API_KEY');
-if ($brevoApiKey === '') {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Brevo API key is missing. Please configure BREVO_API_KEY.']);
-    exit;
-}
-
-$fromEmail = (string)env('SMTP_FROM_EMAIL', 'noreply@azucenadental.ph');
-$fromName = (string)env('SMTP_FROM_NAME', 'Azucena Dental');
-
-$payload = [
-    'sender' => [
-        'name' => $fromName,
-        'email' => $fromEmail,
-    ],
-    'to' => [
-        ['email' => $email],
-    ],
-    'subject' => 'Password Reset Request - Azucena Dental Clinic',
-    'htmlContent' => '<p>You requested a password reset. Use the OTP code below to reset your password.</p>'
-        . '<p><strong>OTP:</strong> ' . htmlspecialchars($otp, ENT_QUOTES, 'UTF-8') . '</p>'
-        . '<p>This OTP expires in 15 minutes.</p>',
-    'textContent' => 'Password reset request. OTP: ' . $otp . '\nThis OTP expires in 15 minutes.',
-];
-
-$ch = curl_init('https://api.brevo.com/v3/smtp/email');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json',
-    'api-key: ' . $brevoApiKey,
-]);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-
-$responseBody = curl_exec($ch);
-$curlError = curl_error($ch);
-$statusCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($curlError !== '') {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Unable to send reset email. ' . $curlError]);
-    exit;
-}
-
-if ($statusCode < 200 || $statusCode >= 300) {
-    $responseData = json_decode((string)$responseBody, true);
-    $brevoMessage = is_array($responseData) ? ($responseData['message'] ?? '') : '';
-    $brevoCode = is_array($responseData) ? ($responseData['code'] ?? '') : '';
-
-    if ($brevoCode === 'unauthorized' && stripos($brevoMessage, 'unrecognised IP address') !== false) {
+$emailMode = app_email_mode();
+if ($emailMode === 'smtp') {
+    $smtpHost = trim((string)env('SMTP_HOST', ''));
+    $smtpUser = trim((string)env('SMTP_USER', ''));
+    $smtpPass = (string)env('SMTP_PASS', '');
+    if ($smtpHost === '' || $smtpUser === '' || $smtpPass === '') {
         http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Brevo blocked this server IP. Add it in Brevo Authorized IPs, then retry.'
-        ]);
+        echo json_encode(['success' => false, 'message' => 'SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in .env.']);
         exit;
     }
+} elseif ($emailMode === 'brevo') {
+    if (trim((string)env('BREVO_API_KEY', '')) === '') {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Brevo API key is missing. Set BREVO_API_KEY or switch EMAIL_MODE to smtp.']);
+        exit;
+    }
+}
 
+$subject = 'Password Reset Request - Azucena Dental Clinic';
+$message = "You requested a password reset.\n\nOTP: {$otp}\n\nThis OTP expires in 15 minutes.";
+$sent = reminder_send_email($email, $subject, $message);
+
+if (!$sent) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Unable to send reset email. Brevo response: ' . $responseBody]);
+    echo json_encode([
+        'success' => false,
+        'message' => $emailMode === 'smtp'
+            ? 'Unable to send reset email. Check SMTP settings in .env.'
+            : 'Unable to send reset email. Check email configuration in .env.'
+    ]);
     exit;
 }
 

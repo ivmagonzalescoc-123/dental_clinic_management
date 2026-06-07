@@ -320,6 +320,17 @@ if (!function_exists('reminder_send_sms_brevo')) {
     }
 }
 
+if (!function_exists('app_email_mode')) {
+    function app_email_mode()
+    {
+        if (!function_exists('env')) {
+            return 'log';
+        }
+        $mode = strtolower(trim((string)env('EMAIL_MODE', env('REMINDER_EMAIL_MODE', 'log'))));
+        return in_array($mode, ['smtp', 'brevo', 'mail', 'log'], true) ? $mode : 'log';
+    }
+}
+
 if (!function_exists('reminder_send_email')) {
     function reminder_send_email($toEmail, $subject, $message)
     {
@@ -328,9 +339,9 @@ if (!function_exists('reminder_send_email')) {
             return false;
         }
 
-        $mode = strtolower((string)(function_exists('env') ? env('REMINDER_EMAIL_MODE', 'log') : (getenv('REMINDER_EMAIL_MODE') ?: 'log')));
-        $from = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM', 'no-reply@dental-clinic.local') : 'no-reply@dental-clinic.local'));
-        $fromName = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM_NAME', "Azucena's Dental Clinic") : "Azucena's Dental Clinic"));
+        $mode = app_email_mode();
+        $from = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM', env('SMTP_FROM_EMAIL', 'no-reply@dental-clinic.local')) : 'no-reply@dental-clinic.local'));
+        $fromName = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")) : "Azucena's Dental Clinic"));
 
         if ($mode === 'brevo') {
             return reminder_send_email_brevo($to, $subject, $message);
