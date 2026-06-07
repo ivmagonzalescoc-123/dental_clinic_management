@@ -27,6 +27,14 @@ import {
   setActiveSvgSelection,
 } from "./svg-chart.js";
 
+import {
+  layoutRealisticArch,
+  loadToothTemplates,
+} from "./teeth-3d.js";
+
+const ODONTOGRAM_BASE = new URL("./", import.meta.url);
+const TEETH_MODELS_BASE = new URL("models/teeth/", ODONTOGRAM_BASE);
+
 const toothState = {};
 for (const fdi of ALL_FDI_TEETH) toothState[fdi] = createEmptyToothEntry();
 
@@ -191,7 +199,7 @@ function applyVisualStatus(fdi) {
 
   forEachToothMesh(fdi, (m) => {
     if (!m.material) return;
-    if (!m.material.isMeshStandardMaterial) {
+    if (!m.material.isMeshStandardMaterial && !m.material.isMeshPhysicalMaterial) {
       m.material = new THREE.MeshStandardMaterial({
         color: 0xf3f5ff,
         roughness: 0.35,
@@ -278,14 +286,16 @@ if (toothCommentEl) {
 const canvas = document.getElementById("c");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b0f19);
+scene.background = new THREE.Color(0x101820);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-camera.position.set(0, 10, 26);
+camera.position.set(0, 7.5, 24);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(0, 2.5, 0);
+controls.target.set(0, 2.6, -2);
 controls.minDistance = 9;
 controls.maxDistance = 42;
 controls.minPolarAngle = 0.35;
@@ -296,11 +306,15 @@ controls.enablePan = false;
 const defaultCamPos = camera.position.clone();
 const defaultTarget = controls.target.clone();
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-const key = new THREE.DirectionalLight(0xffffff, 0.9);
-key.position.set(10, 18, 10);
+scene.add(new THREE.AmbientLight(0xffffff, 0.52));
+scene.add(new THREE.HemisphereLight(0xf0f4ff, 0x1a2438, 0.42));
+const key = new THREE.DirectionalLight(0xffffff, 1.05);
+key.position.set(8, 16, 12);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x9bbcff, 0.35);
+const fill = new THREE.DirectionalLight(0xdce8ff, 0.45);
+fill.position.set(-10, 8, 8);
+scene.add(fill);
+const rim = new THREE.DirectionalLight(0x9bbcff, 0.28);
 rim.position.set(-12, 12, -14);
 scene.add(rim);
 const floor = new THREE.Mesh(
@@ -310,49 +324,96 @@ const floor = new THREE.Mesh(
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
-function makeToothMesh() {
-  const geo = new THREE.CapsuleGeometry(0.6, 1.5, 6, 10);
-  geo.scale(1, 1.15, 0.95);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xf3f5ff,
-    roughness: 0.35,
+function getToothProfile(fdi) {
+  const digit = parseInt(String(fdi).slice(-1), 10);
+  if (digit <= 2) {
+    return { type: "incisor", crownW: 0.42, crownH: 0.52, crownD: 0.28, rootH: 0.95, rootW: 0.2 };
+  }
+  if (digit === 3) {
+    return { type: "canine", crownW: 0.48, crownH: 0.72, crownD: 0.34, rootH: 1.05, rootW: 0.24 };
+  }
+  if (digit <= 5) {
+    return { type: "premolar", crownW: 0.62, crownH: 0.46, crownD: 0.5, rootH: 0.82, rootW: 0.22 };
+  }
+  return { type: "molar", crownW: 0.82, crownH: 0.44, crownD: 0.68, rootH: 0.78, rootW: 0.26 };
+}
+
+function createEnamelMaterial() {
+  return new THREE.MeshStandardMaterial({
+    color: 0xf6f1e8,
+    roughness: 0.38,
+    metalness: 0.03,
+    transparent: true,
+    opacity: 1,
+  });
+}
+
+function createRootMaterial() {
+  return new THREE.MeshStandardMaterial({
+    color: 0xddd0bc,
+    roughness: 0.58,
     metalness: 0,
     transparent: true,
     opacity: 1,
   });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.userData.toothFdi = "";
-  return mesh;
+}
+
+function makeAnatomicalToothMesh(fdi, layout) {
+  const profile = getToothProfile(fdi);
+  const group = new THREE.Group();
+  group.userData.toothFdi = fdi;
+
+  const crownMat = createEnamelMaterial();
+  const rootMat = createRootMaterial();
+
+  let crownGeo;
+  if (profile.type === "incisor") {
+    crownGeo = new THREE.BoxGeometry(profile.crownW, profile.crownH, profile.crownD);
+  } else if (profile.type === "canine") {
+    crownGeo = new THREE.ConeGeometry(profile.crownW * 0.55, profile.crownH, 6);
+  } else if (profile.type === "premolar") {
+    crownGeo = new THREE.CylinderGeometry(profile.crownW * 0.52, profile.crownW * 0.48, profile.crownH, 6);
+  } else {
+    crownGeo = new THREE.BoxGeometry(profile.crownW, profile.crownH * 0.72, profile.crownD);
+  }
+
+  const crown = new THREE.Mesh(crownGeo, crownMat);
+  crown.name = "crown";
+
+  const root = new THREE.Mesh(
+    new THREE.ConeGeometry(profile.rootW, profile.rootH, 8),
+    rootMat
+  );
+  root.name = "root";
+  root.rotation.x = Math.PI;
+
+  const gap = 0.04;
+  if (layout.isUpper) {
+    crown.position.y = profile.crownH * 0.5;
+    root.position.y = -(profile.rootH * 0.5 + gap);
+  } else {
+    root.position.y = profile.rootH * 0.5;
+    root.rotation.x = 0;
+    crown.position.y = profile.crownH * 0.5 + profile.rootH + gap;
+  }
+
+  group.add(crown);
+  group.add(root);
+  return group;
 }
 
 const teethGroup = new THREE.Group();
 scene.add(teethGroup);
 const toothMeshes = new Map();
-let toothTemplate = null;
-let toothTemplateScale = 1;
+let toothTemplates = new Map();
 
-const ARCH = {
-  upperRadius: 7.5,
-  lowerRadius: 7.0,
-  upperStart: Math.PI * 0.15,
-  upperEnd: Math.PI * 0.85,
-  lowerStart: Math.PI * 0.15,
-  lowerEnd: Math.PI * 0.85,
-};
+function getToothLayoutForFallback(fdi) {
+  const archIndex = fdiToArchIndex(fdi);
+  return { isUpper: archIndex <= 15 };
+}
 
-function getToothLayout(archIndex) {
-  const isUpper = archIndex <= 15;
-  const idx = isUpper ? archIndex : archIndex - 16;
-  const t = idx / 15;
-  const ang =
-    (isUpper ? ARCH.upperStart : ARCH.lowerStart) +
-    t * ((isUpper ? ARCH.upperEnd : ARCH.lowerEnd) - (isUpper ? ARCH.upperStart : ARCH.lowerStart));
-  const radius = isUpper ? ARCH.upperRadius : ARCH.lowerRadius;
-  const x = Math.cos(ang) * radius - 0.2;
-  const z = Math.sin(ang) * radius;
-  const y = isUpper ? 4.5 : 2.0;
-  const sizeScale = idx < 4 || idx > 11 ? 1.05 : 0.92;
-  return { x, y, z, isUpper, sizeScale, ang };
+function createFallbackTooth(fdi) {
+  return makeAnatomicalToothMesh(fdi, getToothLayoutForFallback(fdi));
 }
 
 function tagToothObject(obj, fdi) {
@@ -372,30 +433,17 @@ function resolveToothFdi(obj) {
 }
 
 function layoutTeeth() {
-  teethGroup.clear();
-  toothMeshes.clear();
-  for (const fdi of ALL_FDI_TEETH) {
-    const archIndex = fdiToArchIndex(fdi);
-    const layout = getToothLayout(archIndex);
-    let root;
-    if (toothTemplate) {
-      root = toothTemplate.clone(true);
-      tagToothObject(root, fdi);
-      root.position.set(layout.x, layout.y, layout.z - 5);
-      root.rotation.set(layout.isUpper ? 0.1 : -0.1, -layout.ang + Math.PI / 2, 0);
-      root.scale.setScalar(toothTemplateScale * layout.sizeScale);
-    } else {
-      root = makeToothMesh();
-      root.userData.toothFdi = fdi;
-      root.position.set(layout.x, layout.y, layout.z - 5);
-      root.lookAt(0, layout.y, -5);
-      root.rotation.x += layout.isUpper ? 0.1 : -0.1;
-      root.scale.multiplyScalar(layout.sizeScale);
-    }
-    teethGroup.add(root);
-    toothMeshes.set(fdi, root);
-    applyVisualStatus(fdi);
-  }
+  const loaded = layoutRealisticArch({
+    teethGroup,
+    toothMeshes,
+    templates: toothTemplates,
+    allFdiTeeth: ALL_FDI_TEETH,
+    tagToothObject,
+    applyVisualStatus,
+    createFallbackTooth,
+  });
+  usingGlbTeeth = loaded > 0;
+  return loaded;
 }
 
 function forEachToothMesh(fdi, fn) {
@@ -419,22 +467,30 @@ function setModelStatus(text, isError = false) {
 
 async function loadPreviewModels() {
   const loader = new GLTFLoader();
-  setModelStatus("Loading 3D preview…");
+  setModelStatus("Loading realistic 3D teeth…");
+  usingGlbTeeth = false;
+  toothTemplates = new Map();
+
   try {
-    const gltf = await loader.loadAsync("./models/tooth.glb");
-    toothTemplate = gltf.scene;
-    const box = new THREE.Box3().setFromObject(toothTemplate);
-    const size = box.getSize(new THREE.Vector3());
-    toothTemplateScale = 1.35 / Math.max(size.x, size.y, size.z, 0.001);
-    toothTemplate.position.sub(box.getCenter(new THREE.Vector3()));
-    usingGlbTeeth = true;
-    layoutTeeth();
-    setModelStatus("");
+    const result = await loadToothTemplates(loader, TEETH_MODELS_BASE);
+    toothTemplates = result.templates;
+    const loaded = layoutTeeth();
+
+    if (loaded >= 28) {
+      setModelStatus("");
+      console.info("[odontogram 3d] loaded realistic teeth from", result.modelsBase);
+    } else if (loaded > 0) {
+      setModelStatus(`${loaded}/32 realistic teeth loaded — some models missing.`);
+    } else {
+      const sample = result.failures[0];
+      const hint = sample ? `${sample.file}: ${sample.message}` : "check odontogram/models/teeth/";
+      setModelStatus(`Schematic fallback — models did not load (${hint}). Hard-refresh the page.`, true);
+      console.error("[odontogram 3d] all model loads failed", result.failures);
+    }
   } catch (err) {
-    console.warn("3D model load failed", err);
-    usingGlbTeeth = false;
+    console.warn("[odontogram 3d] load failed", err);
     layoutTeeth();
-    setModelStatus("");
+    setModelStatus("Schematic fallback — tooth models could not be loaded. Hard-refresh the page.", true);
   }
 }
 

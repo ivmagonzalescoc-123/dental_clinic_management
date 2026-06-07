@@ -61,10 +61,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-mobile-search" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260607-mobile6" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
-    <link href="../assets/css/patient-mobile.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/patient-mobile.css?v=20260607-mobile-search5" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -84,13 +84,14 @@ switch ($role_key) {
             </button>
         </div>
 
+        <div class="header-actions ms-auto d-flex align-items-center flex-shrink-0">
         <?php
         $header_search_id = 'patientSearch';
         $header_search_placeholder = 'Search pages...';
         include dirname(__DIR__) . '/includes/header_search.php';
         ?>
 
-        <nav class="header-nav ms-auto">
+        <nav class="header-nav">
             <ul class="d-flex align-items-center">
                 <?php
                 $notifications_portal_url = 'patient.php?page=notifications';
@@ -134,6 +135,7 @@ switch ($role_key) {
                 </li>
             </ul>
         </nav>
+        </div>
     </header>
 
     <!-- ======= Sidebar ======= -->
@@ -259,7 +261,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260607-header-search"></script>
+    <script src="../assets/js/main.js?v=20260607-mobile-search5"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
@@ -332,7 +334,6 @@ switch ($role_key) {
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
-                    wrap.style.position = 'relative';
                     wrap.appendChild(menu);
                 }
 
@@ -384,6 +385,11 @@ switch ($role_key) {
 
                 let currentSuggestions = [];
                 const renderMenu = (term) => {
+                    const header = document.getElementById('header');
+                    if (header && !header.classList.contains('header-search-open') && window.innerWidth <= 991) {
+                        menu.style.display = 'none';
+                        return;
+                    }
                     currentSuggestions = findMatches(term);
                     if (!currentSuggestions.length) {
                         menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
@@ -410,6 +416,10 @@ switch ($role_key) {
                 });
 
                 searchInput.addEventListener('focus', function () {
+                    if (window.innerWidth <= 991) {
+                        const header = document.getElementById('header');
+                        if (header && !header.classList.contains('header-search-open')) return;
+                    }
                     renderMenu(searchInput.value || '');
                 });
 

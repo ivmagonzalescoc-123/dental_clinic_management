@@ -3,6 +3,7 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/capabilities.php';
 include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
+include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
 include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
 security_ensure_work_type_column($conn);
@@ -2523,8 +2524,8 @@ function escapeHtml(text) {
                 <div class="mb-4">
                     <h6 class="mb-3"><i class="bi bi-box"></i> Odontogram</h6>
                     <p class="text-muted small">Use the 2D chart to set status and comments. Switch to 3D preview if needed.</p>
-                    <iframe id="odontogramFrame" src="../odontogram/index.html"
-                            style="width: 100%; height: 620px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                    <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"
+                            style="width: 100%; height: <?php echo (int) odontogram_embed_height_px(); ?>px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
                 </div>
             </div>
             <div class="modal-footer">

@@ -1,9 +1,19 @@
 <?php
 $header_search_id = $header_search_id ?? 'portalSearch';
 $header_search_placeholder = $header_search_placeholder ?? 'Search pages...';
+$header_search_wrap_id = $header_search_id . 'Wrap';
 ?>
 <div class="header-search">
-    <div class="header-search-wrap unified-table-search-wrap">
+    <button
+        type="button"
+        class="header-search-toggle"
+        aria-label="Search pages"
+        aria-expanded="false"
+        aria-controls="<?php echo htmlspecialchars($header_search_wrap_id, ENT_QUOTES, 'UTF-8'); ?>"
+    >
+        <i class="bi bi-search" aria-hidden="true"></i>
+    </button>
+    <div class="header-search-wrap unified-table-search-wrap" id="<?php echo htmlspecialchars($header_search_wrap_id, ENT_QUOTES, 'UTF-8'); ?>">
         <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
         <input
             type="search"

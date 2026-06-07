@@ -2,6 +2,7 @@
 // EHR view (renamed from previous profiling implementation)
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
+include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
 check_session(['doctor']);
 
 // Allow either appointment_id via GET OR selection by queue number
@@ -168,6 +169,7 @@ if ($tstmt) {
         <!-- Odontogram moved to be the last input section -->
         <div class="mb-3">
             <label class="form-label"><i class="bi bi-tooth"></i> Odontogram</label>
+            <small class="text-muted d-block mb-2">Chart on the <strong>2D Chart</strong> tab; open <strong>3D Preview</strong> inside the panel for the realistic tooth view.</small>
             <div class="d-flex align-items-center mb-2 gap-2">
                 <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
                 <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
@@ -214,6 +216,8 @@ if ($tstmt) {
 
 <script>
     const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+    const ODONTOGRAM_IFRAME_SRC = <?php echo json_encode(odontogram_embed_src()); ?>;
+    const ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
     // Basic EHR frontend behavior: materials list, save draft / finalize, prefill
     (function() {
         let uploadedPhotos = [];
@@ -288,9 +292,9 @@ if ($tstmt) {
             if (!container) return null;
             const iframe = document.createElement('iframe');
             iframe.id = 'odontogramFrame';
-            iframe.src = '../odontogram/index.html';
+            iframe.src = ODONTOGRAM_IFRAME_SRC;
             iframe.style.width = '100%';
-            iframe.style.height = '620px';
+            iframe.style.height = ODONTOGRAM_IFRAME_HEIGHT + 'px';
             iframe.style.border = '1px solid #ddd';
             iframe.loading = 'eager';
             container.appendChild(iframe);
@@ -312,7 +316,7 @@ if ($tstmt) {
                 if (typeof odData === 'string') {
                     try { payload = JSON.parse(odData); } catch (e) { payload = odData; }
                 }
-                const msg = { type: 'load_odontogram', toothState: payload };
+                const msg = { type: 'load_odontogram', toothState: payload, readonly: false };
                 frame.contentWindow.postMessage(msg, '*');
             } catch (e) { console.warn('post odontogram', e); }
         }

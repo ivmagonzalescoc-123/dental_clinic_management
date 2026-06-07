@@ -885,6 +885,82 @@
     }
   }
 
+  function initPatientHeaderSearch() {
+    if (!document.body.classList.contains('patient-portal')) return;
+
+    const header = document.getElementById('header');
+    if (!header) return;
+
+    const toggle = header.querySelector('.header-search-toggle');
+    const wrap = header.querySelector('.header-search-wrap');
+    const input = header.querySelector('.header-search-input, .unified-table-search-input');
+    const searchHost = header.querySelector('.header-search');
+    if (!toggle || !wrap || !searchHost) return;
+
+    const syncLayout = function () {
+      if (window.innerWidth > 991) {
+        header.classList.remove('header-search-open');
+        toggle.setAttribute('aria-expanded', 'false');
+        header.style.removeProperty('--patient-search-expand-width');
+        return;
+      }
+      const headerRect = header.getBoundingClientRect();
+      const hostRect = searchHost.getBoundingClientRect();
+      const expandWidth = Math.max(140, hostRect.right - headerRect.left - 8);
+      header.style.setProperty('--patient-search-expand-width', expandWidth + 'px');
+    };
+
+    const closeSearch = function () {
+      header.classList.remove('header-search-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      if (input) input.blur();
+      const menu = wrap.querySelector('.search-suggest-menu');
+      if (menu) menu.style.display = 'none';
+    };
+
+    const openSearch = function () {
+      if (window.innerWidth > 991) return;
+      syncLayout();
+      header.classList.add('header-search-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      if (input) {
+        requestAnimationFrame(function () {
+          input.focus();
+        });
+      }
+    };
+
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (window.innerWidth > 991) return;
+      if (header.classList.contains('header-search-open')) return;
+      openSearch();
+    });
+
+    wrap.addEventListener('click', function (e) {
+      e.stopPropagation();
+    });
+
+    document.addEventListener('click', function (e) {
+      if (window.innerWidth > 991) return;
+      if (!header.classList.contains('header-search-open')) return;
+      if (e.target.closest('#header .header-search')) return;
+      closeSearch();
+    });
+
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && header.classList.contains('header-search-open')) {
+          closeSearch();
+        }
+      });
+    }
+
+    window.addEventListener('resize', syncLayout);
+    syncLayout();
+  }
+
   function initNotificationDropdown() {
     const toggle = document.getElementById('navNotificationsToggle');
     const markAllBtn = document.getElementById('navMarkAllRead');
@@ -908,7 +984,10 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', initNotificationDropdown);
+  document.addEventListener('DOMContentLoaded', function () {
+    initPatientHeaderSearch();
+    initNotificationDropdown();
+  });
   // start polling notifications every 30s
   setInterval(fetchNotifications, 30000);
   // initial

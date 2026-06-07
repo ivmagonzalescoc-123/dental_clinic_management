@@ -1,6 +1,7 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
+include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
 check_session(['doctor']);
 
 $doctor_id = $_SESSION['user_id'] ?? 0;
@@ -127,8 +128,8 @@ if ($stmt) {
                                     <button type="button" id="histOdontogramFullscreenCloseBtnRec" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
                                         <i class="bi bi-x-lg"></i> Close
                                     </button>
-                                    <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:420px;">
-                                        <iframe id="histOdontoFrameRec" src="../odontogram/index.html" style="width:100%;height:100%;border:0;"></iframe>
+                                    <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
+                                        <iframe id="histOdontoFrameRec" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
                                     </div>
                                 </div>
                             </div>
@@ -263,8 +264,8 @@ if ($stmt) {
 
         function postHistoryOdontogramRec(odontogramData) {
             const odf = document.getElementById('histOdontoFrameRec');
-            if (!odf || !odontogramData) return;
-            const payload = { type: 'load_odontogram', toothState: odontogramData, readonly: true };
+            if (!odf) return;
+            const payload = { type: 'load_odontogram', toothState: odontogramData || {}, readonly: true };
             const send = function() {
                 try {
                     if (odf.contentWindow) {
