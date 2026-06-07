@@ -1,23 +1,27 @@
 <?php
 /**
  * Database Connection Configuration
- * Database: capstone_dental
- * Server: MariaDB 10.4.32
- * 
- * Configuration is loaded from .env file
+ *
+ * All credentials are read from the project root .env file via config/env.php:
+ *   DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT
  */
 
-// Load environment variables
 require_once __DIR__ . '/env.php';
 
-// Database configuration (define only if not already defined)
-if (!defined('DB_HOST')) define('DB_HOST', env('DB_HOST', 'localhost'));
-if (!defined('DB_USER')) define('DB_USER', env('DB_USER', 'root'));
-if (!defined('DB_PASS')) define('DB_PASS', env('DB_PASS', ''));
-if (!defined('DB_NAME')) define('DB_NAME', env('DB_NAME', 'capstone_dental'));
-if (!defined('DB_PORT')) define('DB_PORT', env('DB_PORT', 3306));
+if (!function_exists('load_env')) {
+    die('Connection Error: Environment loader is unavailable.');
+}
 
-// Create connection
+// Ensure .env is loaded (no-op if already loaded by env.php)
+load_env();
+
+if (!defined('DB_HOST')) define('DB_HOST', (string)env('DB_HOST', 'localhost'));
+if (!defined('DB_USER')) define('DB_USER', (string)env('DB_USER', 'root'));
+if (!defined('DB_PASS')) define('DB_PASS', (string)env('DB_PASS', ''));
+if (!defined('DB_NAME')) define('DB_NAME', (string)env('DB_NAME', 'capstone_dental'));
+if (!defined('DB_PORT')) define('DB_PORT', (int)env('DB_PORT', 3306));
+
+// Create connection using .env credentials
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 
 // Check connection

@@ -29,7 +29,7 @@ if (!function_exists('load_env')) {
 
             list($key, $value) = explode('=', $line, 2);
             $key = trim($key);
-            $value = trim($value);
+            $value = rtrim(trim($value), "\r");
 
             // Remove quotes if present
             if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
@@ -48,8 +48,15 @@ if (!function_exists('load_env')) {
 
 if (!function_exists('env')) {
     function env($key, $default = null) {
-        $value = $_ENV[$key] ?? getenv($key) ?? $default;
-        
+        if (array_key_exists($key, $_ENV)) {
+            $value = $_ENV[$key];
+        } else {
+            $value = getenv($key);
+            if ($value === false) {
+                return $default;
+            }
+        }
+
         // Handle boolean conversions
         if ($value === 'true' || $value === '1') {
             return true;
@@ -57,7 +64,7 @@ if (!function_exists('env')) {
         if ($value === 'false' || $value === '0') {
             return false;
         }
-        
+
         return $value;
     }
 }

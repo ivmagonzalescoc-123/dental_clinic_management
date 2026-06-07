@@ -229,12 +229,22 @@ if (!function_exists('reminder_curl_apply_ssl_options')) {
     }
 }
 
+if (!function_exists('reminder_brevo_last_error')) {
+    function reminder_brevo_last_error()
+    {
+        return $GLOBALS['_reminder_brevo_last_error'] ?? '';
+    }
+}
+
 if (!function_exists('reminder_brevo_post')) {
     function reminder_brevo_post($path, array $payload, $logPrefix)
     {
+        $GLOBALS['_reminder_brevo_last_error'] = '';
+
         $apiKey = reminder_brevo_api_key();
         if ($apiKey === '' || !function_exists('curl_init')) {
-            error_log($logPrefix . ': missing BREVO_API_KEY or curl extension');
+            $GLOBALS['_reminder_brevo_last_error'] = 'missing BREVO_API_KEY or curl extension';
+            error_log($logPrefix . ': ' . $GLOBALS['_reminder_brevo_last_error']);
             return false;
         }
 
@@ -259,6 +269,7 @@ if (!function_exists('reminder_brevo_post')) {
         reminder_curl_apply_ssl_options($ch);
 
         $response = curl_exec($ch);
+        $curlError = curl_error($ch);
         $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if (PHP_VERSION_ID < 80500) {
             curl_close($ch);
@@ -268,7 +279,14 @@ if (!function_exists('reminder_brevo_post')) {
             return true;
         }
 
-        error_log($logPrefix . ': http=' . $http . ' response=' . (string)$response);
+        if ($response === false || $http === 0) {
+            $GLOBALS['_reminder_brevo_last_error'] = $curlError !== ''
+                ? $curlError
+                : 'Unable to reach Brevo API (connection or SSL error).';
+        } else {
+            $GLOBALS['_reminder_brevo_last_error'] = (string)$response;
+        }
+        error_log($logPrefix . ': http=' . $http . ' response=' . (string)$response . ' curl=' . $curlError);
         return false;
     }
 }
@@ -326,8 +344,65 @@ if (!function_exists('app_email_mode')) {
         if (!function_exists('env')) {
             return 'log';
         }
-        $mode = strtolower(trim((string)env('EMAIL_MODE', env('REMINDER_EMAIL_MODE', 'log'))));
+
+        $raw = env('EMAIL_MODE', null);
+        if ($raw === null || $raw === false || trim((string)$raw) === '') {
+            $raw = env('REMINDER_EMAIL_MODE', 'log');
+        }
+
+        $mode = strtolower(trim((string)$raw));
         return in_array($mode, ['smtp', 'brevo', 'mail', 'log'], true) ? $mode : 'log';
+    }
+}
+
+if (!function_exists('app_reminder_email_mode')) {
+    function app_reminder_email_mode()
+    {
+        if (!function_exists('env')) {
+            return 'log';
+        }
+
+        $raw = env('REMINDER_EMAIL_MODE', null);
+        if ($raw === null || $raw === false || trim((string)$raw) === '') {
+            $raw = env('EMAIL_MODE', 'log');
+        }
+
+        $mode = strtolower(trim((string)$raw));
+        return in_array($mode, ['smtp', 'brevo', 'mail', 'log'], true) ? $mode : 'log';
+    }
+}
+
+if (!function_exists('smtp_is_configured')) {
+    function smtp_is_configured()
+    {
+        if (!function_exists('env')) {
+            return false;
+        }
+        $host = trim((string)env('SMTP_HOST', ''));
+        $user = trim((string)env('SMTP_USER', ''));
+        $pass = trim((string)env('SMTP_PASS', ''));
+        return $host !== '' && $user !== '' && $pass !== '';
+    }
+}
+
+if (!function_exists('smtp_missing_message')) {
+    function smtp_missing_message()
+    {
+        $missing = [];
+        if (trim((string)env('SMTP_HOST', '')) === '') {
+            $missing[] = 'SMTP_HOST';
+        }
+        if (trim((string)env('SMTP_USER', '')) === '') {
+            $missing[] = 'SMTP_USER';
+        }
+        if (trim((string)env('SMTP_PASS', '')) === '') {
+            $missing[] = 'SMTP_PASS';
+        }
+        if ($missing === []) {
+            return 'SMTP is not configured.';
+        }
+        return 'SMTP is not configured. Missing in .env: ' . implode(', ', $missing)
+            . '. For Gmail, SMTP_PASS must be a Google App Password (save .env after editing).';
     }
 }
 
@@ -339,7 +414,7 @@ if (!function_exists('reminder_send_email')) {
             return false;
         }
 
-        $mode = app_email_mode();
+        $mode = app_reminder_email_mode();
         $from = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM', env('SMTP_FROM_EMAIL', 'no-reply@dental-clinic.local')) : 'no-reply@dental-clinic.local'));
         $fromName = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")) : "Azucena's Dental Clinic"));
 
@@ -348,6 +423,16 @@ if (!function_exists('reminder_send_email')) {
         }
 
         if ($mode === 'smtp') {
+            if (!smtp_is_configured()) {
+                $isDev = strtolower((string)(function_exists('env') ? env('APP_ENV', 'development') : 'development')) === 'development';
+                if ($isDev) {
+                    error_log('REMINDER_EMAIL(log): SMTP not configured on localhost — logging email instead. ' . smtp_missing_message());
+                    error_log('REMINDER_EMAIL(log): to=' . $to . ' subject=' . $subject . ' message=' . $message);
+                    return true;
+                }
+                error_log('REMINDER_EMAIL(smtp): ' . smtp_missing_message());
+                return false;
+            }
             return reminder_send_email_smtp($to, $subject, $message, $from, $fromName);
         }
 
@@ -386,7 +471,7 @@ if (!function_exists('reminder_send_email_smtp')) {
         $port = (int)env('SMTP_PORT', 587);
         $user = trim((string)env('SMTP_USER', ''));
         $pass = (string)env('SMTP_PASS', '');
-        $secure = strtolower(trim((string)env('SMTP_SECURE', 'tls')));
+        $secure = strtolower(trim((string)env('SMTP_SECURE', env('SMTP_ENCRYPTION', 'tls'))));
 
         if ($host === '' || $user === '' || $pass === '') {
             error_log('REMINDER_EMAIL(smtp): missing SMTP_HOST/SMTP_USER/SMTP_PASS');

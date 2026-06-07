@@ -125,15 +125,11 @@ if (!$stmt->execute()) {
 $stmt->close();
 
 $emailMode = app_email_mode();
-if ($emailMode === 'smtp') {
-    $smtpHost = trim((string)env('SMTP_HOST', ''));
-    $smtpUser = trim((string)env('SMTP_USER', ''));
-    $smtpPass = (string)env('SMTP_PASS', '');
-    if ($smtpHost === '' || $smtpUser === '' || $smtpPass === '') {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'SMTP is not configured. Set SMTP_HOST, SMTP_USER, and SMTP_PASS in .env.']);
-        exit;
-    }
+$isDev = strtolower((string)env('APP_ENV', 'development')) === 'development';
+if ($emailMode === 'smtp' && !smtp_is_configured() && !$isDev) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => smtp_missing_message()]);
+    exit;
 } elseif ($emailMode === 'brevo') {
     if (trim((string)env('BREVO_API_KEY', '')) === '') {
         http_response_code(500);
@@ -146,14 +142,36 @@ $subject = 'Password Reset Request - Azucena Dental Clinic';
 $message = "You requested a password reset.\n\nOTP: {$otp}\n\nThis OTP expires in 15 minutes.";
 $sent = reminder_send_email($email, $subject, $message);
 
+// If Brevo API fails (common on free hosts), try SMTP when credentials exist.
+if (!$sent && $emailMode === 'brevo' && function_exists('reminder_send_email_smtp')) {
+    $smtpHost = trim((string)env('SMTP_HOST', ''));
+    $smtpUser = trim((string)env('SMTP_USER', ''));
+    $smtpPass = (string)env('SMTP_PASS', '');
+    if ($smtpHost !== '' && $smtpUser !== '' && $smtpPass !== '') {
+        $from = trim((string)env('BREVO_EMAIL_FROM', env('SMTP_FROM_EMAIL', '')));
+        $fromName = trim((string)env('BREVO_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")));
+        $sent = reminder_send_email_smtp($email, $subject, $message, $from, $fromName);
+    }
+}
+
 if (!$sent) {
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => $emailMode === 'smtp'
-            ? 'Unable to send reset email. Check SMTP settings in .env.'
-            : 'Unable to send reset email. Check email configuration in .env.'
-    ]);
+    $errorMessage = 'Unable to send reset email. Check email configuration in .env.';
+    if ($emailMode === 'smtp') {
+        $errorMessage = 'Unable to send reset email. Check SMTP settings in .env.';
+    } elseif ($emailMode === 'brevo') {
+        $brevoError = function_exists('reminder_brevo_last_error') ? reminder_brevo_last_error() : '';
+        if ($brevoError !== '' && stripos($brevoError, 'unrecognised IP') !== false) {
+            $errorMessage = 'Brevo blocked this server IP. Add your InfinityFree server IP in Brevo Authorized IPs, or disable "Block unknown IPs".';
+        } elseif ($brevoError !== '' && (stripos($brevoError, 'SSL') !== false || stripos($brevoError, 'certificate') !== false)) {
+            $errorMessage = 'Brevo API SSL connection failed on this host. Set BREVO_SSL_VERIFY=false in .env, or use SMTP fallback.';
+        } elseif ($brevoError !== '') {
+            $errorMessage = 'Unable to send reset email via Brevo API. Check BREVO_API_KEY, BREVO_EMAIL_FROM, and Brevo authorized IPs.';
+        } else {
+            $errorMessage = 'Unable to send reset email via Brevo API. Verify BREVO_API_KEY and BREVO_EMAIL_FROM in .env.';
+        }
+    }
+    echo json_encode(['success' => false, 'message' => $errorMessage]);
     exit;
 }
 
@@ -161,4 +179,3 @@ echo json_encode([
     'success' => true,
     'message' => 'If that email exists, reset instructions will be sent shortly.'
 ]);
-?>
