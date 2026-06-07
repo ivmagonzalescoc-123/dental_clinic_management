@@ -115,8 +115,8 @@ if (!function_exists('check_session')) {
         exit;
     }
 
-    // Force password change for first-login/default passwords across all roles.
-    if (!empty($_SESSION['must_change_password'])) {
+    // Force password change for staff default passwords only (patients choose their own at signup).
+    if (!empty($_SESSION['must_change_password']) && $user_role !== 'patient') {
         $requested = $_GET['page'] ?? '';
         if ($requested !== 'settings') {
             if ($user_role === 'admin') {
@@ -125,8 +125,6 @@ if (!function_exists('check_session')) {
                 header('Location: doctor.php?page=settings&force_password_change=1');
             } elseif ($user_role === 'secretary') {
                 header('Location: secretary.php?page=settings&force_password_change=1');
-            } else {
-                header('Location: patient.php?page=settings&force_password_change=1');
             }
             exit;
         }

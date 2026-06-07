@@ -120,10 +120,28 @@ $loginBackground = 'assets/img/login-background.jpg';
                                 class="input-field w-full rounded-xl border border-slate-300 px-4 py-3 text-sm placeholder:text-slate-400">
                         </div>
 
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            <div>
+                                <label for="password" class="mb-1.5 block text-sm font-medium text-sky-600">Password</label>
+                                <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password"
+                                    class="input-field w-full rounded-xl border border-slate-300 px-4 py-3 text-sm placeholder:text-slate-400"
+                                    placeholder="Create a password">
+                            </div>
+                            <div>
+                                <label for="confirm_password" class="mb-1.5 block text-sm font-medium text-sky-600">Confirm Password</label>
+                                <input type="password" id="confirm_password" name="confirm_password" required minlength="8" autocomplete="new-password"
+                                    class="input-field w-full rounded-xl border border-slate-300 px-4 py-3 text-sm placeholder:text-slate-400"
+                                    placeholder="Re-enter password">
+                            </div>
+                        </div>
+
                         <div class="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-600">
-                            Your default password will be generated automatically using this format:
-                            <span class="block font-semibold text-slate-800">Lastname_Last4digitphonenumber (Example: Smith_1234)</span>
-                            You will be required to change it on first login.
+                            <p class="font-medium text-slate-800">Password must have:</p>
+                            <ul class="mt-2 list-disc space-y-1 pl-5">
+                                <li>At least 8 characters</li>
+                                <li>One uppercase and one lowercase letter</li>
+                                <li>One number and one special character (@ # $ % & * ! ?)</li>
+                            </ul>
                         </div>
 
                         <details class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
@@ -179,6 +197,15 @@ $loginBackground = 'assets/img/login-background.jpg';
             alertEl.textContent = message;
         }
 
+        function validatePasswordPolicy(password) {
+            if (password.length < 8) return 'Password must be at least 8 characters.';
+            if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
+            if (!/[a-z]/.test(password)) return 'Password must include at least one lowercase letter.';
+            if (!/\d/.test(password)) return 'Password must include at least one number.';
+            if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include at least one special character.';
+            return '';
+        }
+
         document.getElementById('register-form').addEventListener('submit', async (event) => {
             event.preventDefault();
 
@@ -189,6 +216,8 @@ $loginBackground = 'assets/img/login-background.jpg';
             const gender = document.getElementById('gender').value;
             const phone = document.getElementById('phone').value.trim();
             const address = document.getElementById('address').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
             const termsAccepted = document.getElementById('terms').checked;
             const phoneDigits = phone.replace(/\D/g, '');
 
@@ -199,6 +228,17 @@ $loginBackground = 'assets/img/login-background.jpg';
 
             if (!termsAccepted) {
                 setAlert('Please accept the Terms and Conditions to create an account.', 'warning');
+                return;
+            }
+
+            const policyError = validatePasswordPolicy(password);
+            if (policyError) {
+                setAlert(policyError, 'warning');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                setAlert('Password and confirmation do not match.', 'warning');
                 return;
             }
 
@@ -214,6 +254,8 @@ $loginBackground = 'assets/img/login-background.jpg';
                         gender: gender,
                         phone_number: phone,
                         address: address,
+                        password: password,
+                        confirm_password: confirmPassword,
                         role: 'patient',
                         terms_accepted: termsAccepted ? 1 : 0,
                         csrf_token: csrfToken
@@ -223,10 +265,10 @@ $loginBackground = 'assets/img/login-background.jpg';
                 const data = await response.json();
 
                 if (data.success) {
-                    setAlert('Account created. Please change your default password to continue.', 'success');
+                    setAlert('Account created! Taking you to your dashboard...', 'success');
                     setTimeout(() => {
-                        window.location.href = 'patient/patient.php?page=settings&force_password_change=1';
-                    }, 1600);
+                        window.location.href = 'patient/patient.php';
+                    }, 1200);
                 } else {
                     setAlert(data.message || 'Registration failed', 'error');
                 }

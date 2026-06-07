@@ -269,8 +269,6 @@ switch ($role_key) {
     <!-- Active Navigation Highlight -->
     <script>
         const patientCsrfToken = <?php echo json_encode($csrf_token); ?>;
-        const mustChangePassword = <?php echo !empty($_SESSION['must_change_password']) ? 'true' : 'false'; ?>;
-
         document.addEventListener('DOMContentLoaded', function() {
             // Get current page from URL
             const params = new URLSearchParams(window.location.search);
@@ -446,9 +444,6 @@ switch ($role_key) {
                 });
             }
 
-            if (mustChangePassword && !window.location.search.includes('page=settings')) {
-                window.location.href = 'patient.php?page=settings&force_password_change=1';
-            }
         });
 
         // Logout function

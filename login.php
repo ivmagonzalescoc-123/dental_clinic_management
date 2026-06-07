@@ -315,7 +315,7 @@ $loginBackground = 'assets/img/login-background.jpg';
                     } else if (role === 'secretary') {
                         redirectUrl = force ? 'secretary/secretary.php?page=settings&force_password_change=1' : 'secretary/secretary.php';
                     } else if (role === 'patient') {
-                        redirectUrl = force ? 'patient/patient.php?page=settings&force_password_change=1' : 'patient/patient.php';
+                        redirectUrl = 'patient/patient.php';
                     }
 
                     setTimeout(() => {

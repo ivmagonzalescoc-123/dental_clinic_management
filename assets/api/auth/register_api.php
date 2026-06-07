@@ -7,19 +7,6 @@ include '../../../config/security.php';
 security_start_session();
 security_ensure_auth_columns($conn);
 
-if (!function_exists('register_build_default_password')) {
-    function register_build_default_password($lastName, $phoneNumber)
-    {
-        $lastNameToken = preg_replace('/[^A-Za-z0-9]/', '', (string)$lastName);
-        $lastNameToken = $lastNameToken !== '' ? $lastNameToken : 'Patient';
-
-        $digits = preg_replace('/\D+/', '', (string)$phoneNumber);
-        $lastFour = strlen($digits) >= 4 ? substr($digits, -4) : $digits;
-
-        return $lastNameToken . '_' . $lastFour;
-    }
-}
-
 $response = ['success' => false, 'message' => 'Registration failed'];
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -45,6 +32,8 @@ $date_of_birth = security_clean_string($input['date_of_birth'] ?? '', 20);
 $gender = security_clean_string($input['gender'] ?? '', 20);
 $phone_number = security_clean_string($input['phone_number'] ?? '', 30);
 $address = security_clean_string($input['address'] ?? '', 500);
+$password = (string)($input['password'] ?? '');
+$confirmPassword = (string)($input['confirm_password'] ?? '');
 $termsAccepted = (int)($input['terms_accepted'] ?? 0) === 1;
 
 if ($first_name === '' || $last_name === '' || $email === '' || $phone_number === '') {
@@ -62,14 +51,29 @@ if (!$termsAccepted) {
     exit;
 }
 
+if ($password === '' || $confirmPassword === '') {
+    echo json_encode(['success' => false, 'message' => 'Password and confirmation are required']);
+    exit;
+}
+
+if (!hash_equals($password, $confirmPassword)) {
+    echo json_encode(['success' => false, 'message' => 'Password and confirmation do not match']);
+    exit;
+}
+
+$passwordErrors = security_password_policy_errors($password);
+if (!empty($passwordErrors)) {
+    echo json_encode(['success' => false, 'message' => $passwordErrors[0]]);
+    exit;
+}
+
 $phoneDigits = preg_replace('/\D+/', '', $phone_number);
 if (strlen($phoneDigits) < 4) {
     echo json_encode(['success' => false, 'message' => 'Phone number must contain at least 4 digits']);
     exit;
 }
 
-$defaultPassword = register_build_default_password($last_name, $phone_number);
-$passwordHash = security_hash_password($defaultPassword);
+$passwordHash = security_hash_password($password);
 
 $checkStmt = $conn->prepare('SELECT email, phone_number FROM patients WHERE LOWER(email) = LOWER(?) OR phone_number = ? LIMIT 10');
 if (!$checkStmt) {
@@ -110,7 +114,7 @@ if ($phoneExists) {
 
 $sql = "INSERT INTO patients
     (first_name, last_name, middle_name, password_hash, email, phone_number, gender, date_of_birth, address, created_at, must_change_password, password_updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 1, NOW())";
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, NOW())";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     http_response_code(500);
@@ -149,13 +153,13 @@ $_SESSION['first_name'] = $first_name;
 $_SESSION['last_name'] = $last_name;
 $_SESSION['role'] = 'patient';
 $_SESSION['user_type'] = 'patient';
-$_SESSION['must_change_password'] = true;
+$_SESSION['must_change_password'] = false;
 $_SESSION['last_activity'] = time();
 
 echo json_encode([
     'success' => true,
-    'message' => 'Account created successfully. Please change your default password.',
-    'must_change_password' => true,
+    'message' => 'Account created successfully. Redirecting to your dashboard...',
+    'must_change_password' => false,
     'user' => [
         'patient_id' => $patient_id,
         'email' => $email,
@@ -164,4 +168,3 @@ echo json_encode([
         'role' => 'patient',
     ],
 ]);
-?>
