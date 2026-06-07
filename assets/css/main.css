@@ -1384,25 +1384,83 @@ table a:hover {
 }
 
 /* ========== RESPONSIVE ========== */
-@media (max-width: 768px) {
+@media (max-width: 991.98px) {
     #sidebar {
-        width: 200px;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1045;
+        box-shadow: 8px 0 24px rgba(15, 35, 60, 0.12);
+    }
+
+    body.toggle-sidebar #sidebar {
+        transform: translateX(0);
+        width: 260px;
+    }
+
+    body.toggle-sidebar::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 1040;
+        pointer-events: auto;
     }
 
     #main {
-        margin-left: 200px;
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 15px;
     }
 
     .footer {
-        margin-left: 200px;
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
-    #header .logo span {
+    #header .logo span,
+    #header .logo small {
         display: none;
     }
 
     .header-search {
         display: none;
+    }
+
+    body.patient-portal .header-search {
+        display: flex;
+    }
+
+    table {
+        font-size: 12px;
+    }
+
+    table td,
+    table th {
+        padding: 10px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    #main {
+        padding: 12px;
+    }
+
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .table-responsive > table {
+        width: 100%;
+        min-width: 480px;
+    }
+
+    body.patient-portal .history-table-wrap.table-responsive > table,
+    body.patient-portal .history-table-wrap.table-responsive > table.patient-appt-history-table {
+        min-width: 0;
     }
 
     .search-bar {
@@ -1412,45 +1470,6 @@ table a:hover {
     .btn-add-new {
         float: none;
         width: 100%;
-    }
-
-    table {
-        font-size: 12px;
-    }
-
-    table td, table th {
-        padding: 10px;
-    }
-}
-
-@media (max-width: 576px) {
-    #sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 1000;
-    }
-
-    body.toggle-sidebar #sidebar {
-        transform: translateX(0);
-        width: 260px;
-    }
-
-    #main {
-        margin-left: 0;
-        padding: 15px;
-    }
-
-    .footer {
-        margin-left: 0;
-    }
-
-    .header-nav {
-        margin-left: auto;
-    }
-
-    table {
-        display: block;
-        overflow-x: auto;
     }
 
     .search-bar button {

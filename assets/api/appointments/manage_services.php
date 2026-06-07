@@ -34,11 +34,20 @@ try {
             s.service_id, 
             s.service_name, 
             s.initial_price, 
-            s.requires_schedule, 
-            COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS service_duration_minutes,
+            s.requires_schedule,
+            s.default_duration_minutes,
+            COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS service_duration_minutes,
             s.is_active
         FROM services s
-        LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+        LEFT JOIN (
+            SELECT t1.service_id, t1.duration_minutes
+            FROM timeslot_service t1
+            INNER JOIN (
+                SELECT service_id, MAX(id) AS max_id
+                FROM timeslot_service
+                GROUP BY service_id
+            ) t2 ON t1.id = t2.max_id
+        ) ts ON ts.service_id = s.service_id
         WHERE s.is_active = 1 
         ORDER BY s.service_name ASC";
         
@@ -58,10 +67,19 @@ try {
                 ss.service_id,
                 s.service_name,
                 s.initial_price,
-                COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS service_duration_minutes
+                s.default_duration_minutes,
+                COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS service_duration_minutes
             FROM selected_services ss
             JOIN services s ON ss.service_id = s.service_id
-            LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+            LEFT JOIN (
+                SELECT t1.service_id, t1.duration_minutes
+                FROM timeslot_service t1
+                INNER JOIN (
+                    SELECT service_id, MAX(id) AS max_id
+                    FROM timeslot_service
+                    GROUP BY service_id
+                ) t2 ON t1.id = t2.max_id
+            ) ts ON ts.service_id = s.service_id
             WHERE ss.appointment_id = ?
             ORDER BY ss.selected_service_id ASC";
             
@@ -151,8 +169,21 @@ try {
         foreach ($service_ids as $service_id) {
             $service_id = (int)$service_id;
             if ($service_id > 0) {
-                // Validate service exists
-                $srv_check = $conn->prepare("SELECT default_duration_minutes FROM services WHERE service_id = ? AND is_active = 1");
+                // Validate service exists and resolve duration (timeslot_service overrides default)
+                $srv_check = $conn->prepare(
+                    "SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS service_duration_minutes
+                     FROM services s
+                     LEFT JOIN (
+                         SELECT t1.service_id, t1.duration_minutes
+                         FROM timeslot_service t1
+                         INNER JOIN (
+                             SELECT service_id, MAX(id) AS max_id
+                             FROM timeslot_service
+                             GROUP BY service_id
+                         ) t2 ON t1.id = t2.max_id
+                     ) ts ON ts.service_id = s.service_id
+                     WHERE s.service_id = ? AND s.is_active = 1"
+                );
                 if (!$srv_check) throw new Exception('Database error: ' . $conn->error);
                 
                 $srv_check->bind_param('i', $service_id);
@@ -162,7 +193,7 @@ try {
                 $srv_check->close();
                 
                 if ($service) {
-                    $total_duration += (int)($service['default_duration_minutes'] ?? 0);
+                    $total_duration += (int)($service['service_duration_minutes'] ?? 0);
                     
                     $insert_sql = "INSERT INTO selected_services (appointment_id, service_id) VALUES (?, ?)";
                     $ins_stmt = $conn->prepare($insert_sql);

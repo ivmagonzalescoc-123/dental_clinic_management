@@ -130,16 +130,34 @@
    */
   if (select('.toggle-sidebar-btn')) {
     on('click', '.toggle-sidebar-btn', function(e) {
-      select('body').classList.toggle('toggle-sidebar')
+      var body = select('body')
+      if (body && body.classList.contains('patient-portal') && window.innerWidth <= 991) {
+        e.preventDefault()
+        return
+      }
+      body.classList.toggle('toggle-sidebar')
     })
   }
+
+  document.addEventListener('click', function (e) {
+    if (window.innerWidth > 991) return
+    var body = select('body')
+    if (!body || body.classList.contains('patient-portal')) return
+    if (!body.classList.contains('toggle-sidebar')) return
+    if (e.target.closest('#sidebar') || e.target.closest('.toggle-sidebar-btn')) return
+    body.classList.remove('toggle-sidebar')
+  })
 
   /**
    * Search bar toggle
    */
   if (select('.search-bar-toggle')) {
     on('click', '.search-bar-toggle', function(e) {
-      select('.search-bar').classList.toggle('search-bar-show')
+      e.preventDefault()
+      const searchEl = select('.header-search') || select('.search-bar')
+      if (searchEl) {
+        searchEl.classList.toggle('header-search-show')
+      }
     })
   }
 

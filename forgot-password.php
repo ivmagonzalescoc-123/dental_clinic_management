@@ -10,7 +10,7 @@ $loginBackground = 'assets/img/login-background.jpg';
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Forgot Password | Azucena's Dental Clinic</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,8 +27,9 @@ $loginBackground = 'assets/img/login-background.jpg';
             },
         };
     </script>
+    <link href="assets/css/auth-mobile.css?v=20260607-mobile" rel="stylesheet">
 </head>
-<body class="min-h-screen font-sans antialiased text-slate-800">
+<body class="auth-page min-h-screen font-sans antialiased text-slate-800">
 
     <div class="fixed inset-0 z-0" aria-hidden="true">
         <img src="<?php echo htmlspecialchars($loginBackground, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="absolute inset-0 h-full w-full object-cover object-center">
@@ -36,12 +37,12 @@ $loginBackground = 'assets/img/login-background.jpg';
     </div>
 
     <main class="relative z-10 flex min-h-screen items-center justify-center px-4 py-10">
-        <div class="w-full max-w-md">
-            <div class="rounded-2xl bg-white p-8 text-center shadow-xl ring-1 ring-slate-100">
+        <div class="auth-card w-full max-w-md">
+            <div class="auth-card-inner rounded-2xl bg-white p-8 text-center shadow-xl ring-1 ring-slate-100">
                 <img
                     src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                     alt="Azucena's Dental Clinic logo"
-                    class="mx-auto mb-4 h-16 w-auto object-contain"
+                    class="auth-logo mx-auto mb-4 h-16 w-auto object-contain"
                     width="120"
                     height="120"
                 >

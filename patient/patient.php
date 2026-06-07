@@ -37,7 +37,7 @@ switch ($role_key) {
 
 <head>
     <meta charset="utf-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
     <title>Azucena's Dental Clinic</title>
     <meta content="" name="description">
     <meta content="" name="keywords">
@@ -62,10 +62,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-mobile5" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260607-mobile5" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
-    <link href="../assets/css/patient-mobile.css?v=20260606-mobile" rel="stylesheet">
+    <link href="../assets/css/patient-mobile.css?v=20260607-mobile5" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -80,7 +80,7 @@ switch ($role_key) {
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
-            <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
+            <button class="toggle-sidebar-btn ms-2 d-none d-lg-flex" type="button" aria-label="Toggle sidebar">
                 <i class="bi bi-list"></i>
             </button>
         </div>
@@ -267,7 +267,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260606-notifications"></script>
+    <script src="../assets/js/main.js?v=20260607-mobile5"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
@@ -299,6 +299,14 @@ switch ($role_key) {
             document.querySelectorAll('.patient-mobile-nav-item').forEach(function (item) {
                 item.classList.toggle('active', item.getAttribute('data-page') === currentPage);
             });
+
+            function syncPatientMobileLayout() {
+                if (window.innerWidth <= 991) {
+                    document.body.classList.remove('toggle-sidebar');
+                }
+            }
+            syncPatientMobileLayout();
+            window.addEventListener('resize', syncPatientMobileLayout);
 
             const searchInput = document.getElementById('patientSearch');
             const searchIcon = document.querySelector('.header-search .search-input-icon');

@@ -15,7 +15,7 @@ $loginBackground = 'assets/img/login-background.jpg';
 <html lang="en" class="h-full scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="description" content="Secure login portal for Azucena's Dental Clinic Management Information System.">
     <meta name="robots" content="noindex, nofollow">
     <title>Login | Azucena's Dental Clinic</title>
@@ -65,8 +65,9 @@ $loginBackground = 'assets/img/login-background.jpg';
             border-radius: 0.375rem;
         }
     </style>
+    <link href="assets/css/auth-mobile.css?v=20260607-mobile" rel="stylesheet">
 </head>
-<body class="h-full min-h-screen font-sans antialiased text-slate-800">
+<body class="auth-page h-full min-h-screen font-sans antialiased text-slate-800">
 
     <div class="fixed inset-0 z-0" aria-hidden="true">
         <img
@@ -80,14 +81,14 @@ $loginBackground = 'assets/img/login-background.jpg';
     </div>
 
     <main class="relative z-10 flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-        <div class="w-full max-w-md">
+        <div class="auth-card w-full max-w-md">
             <div class="overflow-hidden rounded-2xl bg-white shadow-2xl shadow-card ring-1 ring-slate-100/80">
-                <div class="px-6 py-8 sm:px-8 sm:py-10">
+                <div class="auth-card-inner px-6 py-8 sm:px-8 sm:py-10">
                     <header class="mb-8 text-center">
                         <img
                             src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                             alt="Azucena's Dental Clinic logo"
-                            class="mx-auto mb-4 h-24 w-auto object-contain sm:h-28"
+                            class="auth-logo mx-auto mb-4 h-24 w-auto object-contain sm:h-28"
                             width="160"
                             height="160"
                         >
@@ -160,7 +161,7 @@ $loginBackground = 'assets/img/login-background.jpg';
 
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-slate-700">Captcha</label>
-                            <div class="flex items-center gap-3">
+                            <div class="auth-captcha-row flex flex-wrap items-center gap-3">
                                 <span id="loginCaptchaQuestion" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
                                 <button type="button" id="refreshLoginCaptchaBtn" class="text-sm font-semibold text-sky-500 hover:text-sky-600">Refresh</button>
                             </div>
@@ -176,7 +177,7 @@ $loginBackground = 'assets/img/login-background.jpg';
                             >
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+                        <div class="auth-links-row flex flex-wrap items-center justify-between gap-3 text-sm">
                             <span class="text-slate-600">
                                 Need help?
                                 <a href="forgot-password.php" class="font-medium text-sky-500 hover:text-sky-600 transition-colors">Forgot Password</a>

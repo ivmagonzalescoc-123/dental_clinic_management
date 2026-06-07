@@ -1,0 +1,73 @@
+/**
+ * Mobile-first fixes for login / register / password auth pages.
+ */
+.auth-page {
+    -webkit-text-size-adjust: 100%;
+}
+
+.auth-page main {
+    min-height: 100dvh;
+    min-height: 100vh;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+
+.auth-page input[type="email"],
+.auth-page input[type="password"],
+.auth-page input[type="text"],
+.auth-page input[type="tel"],
+.auth-page input[type="date"],
+.auth-page select,
+.auth-page textarea {
+    font-size: 16px !important;
+    min-height: 48px;
+}
+
+.auth-page button[type="submit"],
+.auth-page .btn-login,
+.auth-page .btn-submit {
+    min-height: 48px;
+}
+
+.auth-page .auth-card {
+    width: 100%;
+    max-width: 28rem;
+    margin: 0 auto;
+}
+
+.auth-page .auth-card-wide {
+    max-width: 42rem;
+}
+
+@media (max-width: 575.98px) {
+    .auth-page .auth-card-inner {
+        padding: 1.25rem !important;
+    }
+
+    .auth-page .auth-captcha-row {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 0.5rem;
+    }
+
+    .auth-page .auth-captcha-row #refreshLoginCaptchaBtn,
+    .auth-page .auth-captcha-row #refreshRegisterCaptchaBtn {
+        align-self: flex-start;
+    }
+
+    .auth-page .auth-links-row {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    .auth-page h1 {
+        font-size: 1.25rem !important;
+        line-height: 1.3;
+    }
+
+    .auth-page .auth-logo {
+        height: 4.5rem !important;
+    }
+}

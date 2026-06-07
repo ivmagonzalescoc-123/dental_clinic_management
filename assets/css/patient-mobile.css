@@ -10,29 +10,175 @@ body.patient-portal {
 /* ---- Layout & safe areas ---- */
 @media (max-width: 991.98px) {
     body.patient-portal #main {
-        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        margin-top: 70px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+        padding-top: 12px;
+        overflow-x: hidden;
+    }
+
+    body.patient-portal #main .section,
+    body.patient-portal #main .row,
+    body.patient-portal #main [class*="col-"],
+    body.patient-portal #main .card,
+    body.patient-portal #main .container-fluid,
+    body.patient-portal #main .dental-dashboard-shell {
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    body.patient-portal #main h1,
+    body.patient-portal #main h2,
+    body.patient-portal #main h3,
+    body.patient-portal #main h4,
+    body.patient-portal #main h5,
+    body.patient-portal #main h6,
+    body.patient-portal #main p,
+    body.patient-portal #main .card-title,
+    body.patient-portal #main .list-group-item {
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: break-word;
+    }
+
+    /* Keep normal table layout; only appointment history uses card rows on mobile */
+    body.patient-portal .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.patient-portal table:not(.patient-appt-history-table) {
+        display: table !important;
+        width: 100%;
+    }
+
+    body.patient-portal table:not(.patient-appt-history-table) thead {
+        display: table-header-group !important;
+    }
+
+    body.patient-portal table:not(.patient-appt-history-table) tbody {
+        display: table-row-group !important;
+    }
+
+    body.patient-portal table:not(.patient-appt-history-table) tr {
+        display: table-row !important;
+    }
+
+    body.patient-portal table:not(.patient-appt-history-table) th,
+    body.patient-portal table:not(.patient-appt-history-table) td {
+        display: table-cell !important;
+        white-space: normal !important;
     }
 
     body.patient-portal .footer {
-        margin-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+        margin-left: 0 !important;
+        width: 100% !important;
+        margin-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.patient-portal #header {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    body.patient-portal #header > .d-flex.align-items-center:first-child {
+        flex: 0 0 auto;
     }
 
     body.patient-portal #header .header-search {
-        display: none;
+        display: flex !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin: 0;
+        max-width: none;
+        justify-content: stretch;
+    }
+
+    body.patient-portal #header .header-search .search-input-wrap {
+        width: 100%;
+    }
+
+    body.patient-portal #header .header-search .search-input {
+        font-size: 16px;
+        min-height: 40px;
+        padding: 8px 34px 8px 10px;
+    }
+
+    body.patient-portal #header .header-nav {
+        flex: 0 0 auto;
+        margin-left: 0;
+    }
+
+    body.patient-portal #header .search-bar-toggle {
+        display: none !important;
+    }
+
+    body.patient-portal #header .header-nav .nav-link {
+        padding: 6px 8px;
+        margin: 0 2px;
+    }
+
+    body.patient-portal #header .logo img {
+        width: 38px;
+        height: 38px;
+        margin-right: 0;
+    }
+
+    body.patient-portal .section {
+        padding: 8px;
+    }
+
+    body.patient-portal .section > .row > .col-lg-12 > .card {
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+
+    body.patient-portal .section > .row > .col-lg-12 > .card > .card-body {
+        padding: 0;
     }
 }
 
 @media (max-width: 575.98px) {
     body.patient-portal #main {
-        padding: 12px;
+        padding-left: 12px;
+        padding-right: 12px;
+        padding-top: 12px;
     }
 
     body.patient-portal #header {
-        padding: 8px 12px;
+        padding: 8px 10px;
     }
 
     body.patient-portal .pagetitle {
         display: none;
+    }
+}
+
+@media (max-width: 420px) {
+    body.patient-portal #header {
+        flex-wrap: wrap;
+    }
+
+    body.patient-portal #header .header-search {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+        margin-top: 4px;
+    }
+
+    body.patient-portal #main {
+        margin-top: 108px !important;
     }
 }
 
@@ -61,6 +207,28 @@ body.patient-portal {
     }
 }
 
+/* ---- Mobile: bottom nav replaces sidebar ---- */
+@media (max-width: 991.98px) {
+    body.patient-portal .toggle-sidebar-btn {
+        display: none !important;
+    }
+
+    body.patient-portal #sidebar {
+        display: none !important;
+    }
+
+    body.patient-portal.toggle-sidebar #sidebar,
+    body.patient-portal.toggle-sidebar::before {
+        display: none !important;
+    }
+
+    body.patient-portal.toggle-sidebar #main,
+    body.patient-portal.toggle-sidebar .footer {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+}
+
 /* ---- Bottom navigation (phones / small tablets) ---- */
 .patient-mobile-nav {
     position: fixed;
@@ -68,43 +236,94 @@ body.patient-portal {
     right: 0;
     bottom: 0;
     z-index: 1040;
-    display: flex;
+    display: none;
     align-items: stretch;
     justify-content: space-around;
-    gap: 2px;
-    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 4px;
+    padding: 8px max(8px, env(safe-area-inset-left, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px));
     background: #fff;
     border-top: 1px solid #dbe4f0;
     box-shadow: 0 -4px 20px rgba(15, 35, 60, 0.08);
 }
 
+@media (max-width: 991.98px) {
+    .patient-mobile-nav {
+        display: flex;
+    }
+
+    body.patient-portal .back-to-top {
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 .patient-mobile-nav-item {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    min-height: 52px;
-    padding: 4px 6px;
-    border-radius: 10px;
+    gap: 3px;
+    min-height: 56px;
+    padding: 6px 4px;
+    border-radius: 8px;
     text-decoration: none;
     color: #5d6f85;
-    font-size: 0.68rem;
+    font-size: clamp(0.62rem, 2.8vw, 0.75rem);
     font-weight: 600;
-    line-height: 1.1;
+    line-height: 1.15;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.patient-mobile-nav-item i {
-    font-size: 1.25rem;
+.patient-mobile-nav-item span {
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.patient-mobile-nav-item.active,
+.patient-mobile-nav-item i {
+    font-size: clamp(1.15rem, 4.5vw, 1.35rem);
+    flex-shrink: 0;
+}
+
+.patient-mobile-nav-item.active {
+    color: #fff;
+    background: #1173c1;
+}
+
 .patient-mobile-nav-item:hover,
 .patient-mobile-nav-item:focus {
     color: #1173c1;
-    background: #eef5ff;
+    background: #f1f5f9;
+}
+
+.patient-mobile-nav-item.active:hover,
+.patient-mobile-nav-item.active:focus {
+    color: #fff;
+    background: #1173c1;
+}
+
+.patient-mobile-nav-item:active {
+    opacity: 0.92;
+}
+
+@media (max-width: 360px) {
+    .patient-mobile-nav {
+        gap: 2px;
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+
+    .patient-mobile-nav-item {
+        min-height: 52px;
+        padding: 4px 2px;
+        border-radius: 10px;
+    }
 }
 
 /* ---- Dashboard ---- */
@@ -203,6 +422,7 @@ body.patient-portal {
         padding: 6px 0;
         border: 0;
         text-align: right;
+        flex-wrap: wrap;
     }
 
     body.patient-portal .patient-appt-history-table tbody td::before {
@@ -213,7 +433,16 @@ body.patient-portal {
         text-transform: uppercase;
         letter-spacing: 0.03em;
         text-align: left;
-        flex-shrink: 0;
+        flex: 0 0 auto;
+        max-width: 45%;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody td > :not(.btn):not(.badge) {
+        flex: 1 1 120px;
+        min-width: 0;
+        text-align: right;
+        white-space: normal;
+        word-break: normal;
     }
 
     body.patient-portal .patient-appt-history-table tbody td[data-label="Actions"] {
@@ -233,10 +462,27 @@ body.patient-portal {
         min-height: 44px;
     }
 
+    body.patient-portal .patient-appt-history-table tbody tr#patientApptHistoryEmpty,
+    body.patient-portal .patient-appt-history-table tbody tr.history-empty-row {
+        margin-bottom: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        max-width: 100%;
+    }
+
     body.patient-portal .patient-appt-history-table tbody tr#patientApptHistoryEmpty td,
     body.patient-portal .patient-appt-history-table tbody tr.history-empty-row td {
         display: block;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         text-align: center;
+        padding: 1rem;
+        border: 1px solid #dbe7e4;
+        border-radius: 12px;
+        background: #fff;
     }
 
     body.patient-portal .patient-appt-history-table tbody tr#patientApptHistoryEmpty td::before,
@@ -247,7 +493,14 @@ body.patient-portal {
     body.patient-portal .history-table-wrap {
         border: 0;
         background: transparent;
-        overflow: visible;
+        overflow: hidden;
+        max-width: 100%;
+    }
+
+    body.patient-portal .history-table-wrap.table-responsive > table.patient-appt-history-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        max-width: 100%;
     }
 }
 

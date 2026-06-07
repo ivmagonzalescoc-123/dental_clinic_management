@@ -3,18 +3,26 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
 
-// Fetch services
+// Fetch services — same price/duration logic as manage_services.php & get_timeslots.php
 $services = [];
 $svcSql = "SELECT s.service_id,
-				  s.service_name,
-				  s.initial_price,
-				  s.description,
-				  ROUND(AVG(COALESCE(ts.duration_minutes, 0) + COALESCE(ts.buffer_minutes, 0))) AS avg_service_minutes
-		   FROM services s
-		   LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
-		   WHERE s.is_active = 1
-		   GROUP BY s.service_id, s.service_name, s.initial_price, s.description
-		   ORDER BY s.service_name ASC";
+                  s.service_name,
+                  s.initial_price,
+                  s.description,
+                  s.default_duration_minutes,
+                  COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS service_duration_minutes
+           FROM services s
+           LEFT JOIN (
+               SELECT t1.service_id, t1.duration_minutes
+               FROM timeslot_service t1
+               INNER JOIN (
+                   SELECT service_id, MAX(id) AS max_id
+                   FROM timeslot_service
+                   GROUP BY service_id
+               ) t2 ON t1.id = t2.max_id
+           ) ts ON ts.service_id = s.service_id
+           WHERE s.is_active = 1
+           ORDER BY s.service_name ASC";
 $svcRes = $conn->query($svcSql);
 if ($svcRes) {
 	while ($r = $svcRes->fetch_assoc()) $services[] = $r;
@@ -34,9 +42,9 @@ if ($svcRes) {
 					<div class="service-name fw-bold mb-2"><?php echo htmlspecialchars($s['service_name']); ?></div>
 					<div class="service-price mb-2">Starting Price ₱<?php echo htmlspecialchars(number_format((float)$s['initial_price'],2)); ?></div>
 					<div class="service-time text-muted small mb-2">
-						Average Time:
-						<?php if (!empty($s['avg_service_minutes'])): ?>
-							<?php echo htmlspecialchars((string)((int)$s['avg_service_minutes'])); ?> min
+						Estimated Time:
+						<?php if (!empty($s['service_duration_minutes'])): ?>
+							<?php echo htmlspecialchars((string)((int)$s['service_duration_minutes'])); ?> min
 						<?php else: ?>
 							TBD
 						<?php endif; ?>
