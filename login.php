@@ -202,6 +202,8 @@ $loginBackground = 'assets/img/login-background.jpg';
             </div>
 
             <p class="mt-6 text-center text-xs text-slate-500/90">
+                <a href="index.php#contact" class="text-sky-500 hover:text-sky-600 font-medium">Contact Us</a>
+                <span class="mx-2 text-slate-300">|</span>
                 <a href="index.php" class="text-sky-500 hover:text-sky-600 font-medium">Back to Home</a>
                 <span class="mx-2 text-slate-300">|</span>
                 &copy; <?php echo date('Y'); ?> Azucena's Dental Clinic. All rights reserved.

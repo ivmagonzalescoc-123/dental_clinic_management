@@ -178,6 +178,20 @@ CREATE TABLE `clinical_records` (
 
 
 
+CREATE TABLE `contact_messages` (
+  `message_id` int(11) NOT NULL,
+  `full_name` varchar(150) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `phone_number` varchar(30) DEFAULT NULL,
+  `message` text NOT NULL,
+  `status` enum('new','read','archived') NOT NULL DEFAULT 'new',
+  `read_by` int(11) DEFAULT NULL,
+  `read_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
 CREATE TABLE `dentist_specialization` (
   `doctor_specialized_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -8155,6 +8169,12 @@ ALTER TABLE `clinical_records`
   ADD KEY `submitted_by` (`submitted_by`);
 
 
+ALTER TABLE `contact_messages`
+  ADD PRIMARY KEY (`message_id`),
+  ADD KEY `idx_contact_status_created` (`status`,`created_at`),
+  ADD KEY `idx_contact_email` (`email`);
+
+
 ALTER TABLE `dentist_specialization`
   ADD PRIMARY KEY (`doctor_specialized_id`),
   ADD UNIQUE KEY `uq_dentist_specialization_user_spec` (`user_id`,`specialization_id`),
@@ -8346,6 +8366,10 @@ ALTER TABLE `patient_notifications`
 
 ALTER TABLE `clinical_records`
   MODIFY `record_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+
+
+ALTER TABLE `contact_messages`
+  MODIFY `message_id` int(11) NOT NULL AUTO_INCREMENT;
 
 
 ALTER TABLE `dentist_specialization`

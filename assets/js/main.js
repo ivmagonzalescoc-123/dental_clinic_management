@@ -149,17 +149,33 @@
   })
 
   /**
-   * Search bar toggle
+   * Header search clear buttons (all portals)
    */
-  if (select('.search-bar-toggle')) {
-    on('click', '.search-bar-toggle', function(e) {
-      e.preventDefault()
-      const searchEl = select('.header-search') || select('.search-bar')
-      if (searchEl) {
-        searchEl.classList.toggle('header-search-show')
+  document.querySelectorAll('.header-search').forEach(function(host) {
+    const input = host.querySelector('.header-search-input, .unified-table-search-input')
+    const clearBtn = host.querySelector('.header-search-clear, .unified-table-search-clear')
+    if (!input || !clearBtn) return
+
+    const syncClear = function() {
+      clearBtn.style.display = input.value ? '' : 'none'
+    }
+
+    input.addEventListener('input', syncClear)
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        input.value = ''
+        syncClear()
+        input.dispatchEvent(new Event('input', { bubbles: true }))
       }
     })
-  }
+    clearBtn.addEventListener('click', function(e) {
+      e.preventDefault()
+      input.value = ''
+      syncClear()
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.focus()
+    })
+  })
 
   /**
    * Navbar links active state on scroll

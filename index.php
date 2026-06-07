@@ -22,6 +22,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 }
 
 $year = date('Y');
+$csrf_token = security_generate_csrf_token();
 $pageBackgroundImage = 'assets/img/landing-background.jpg';
 $pageOverlayStrength = 52;
 
@@ -262,7 +263,8 @@ $heroPoints = [
                         </div>
                     </div>
                 </div>
-                <form class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" method="post" action="#contact">
+                <form id="contact-form" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8" novalidate>
+                    <div id="contact-form-alert" class="hidden mb-4 rounded-xl border px-4 py-3 text-sm" role="alert"></div>
                     <div class="space-y-4">
                         <div>
                             <label for="contact-name" class="block text-sm font-medium text-slate-700">Full Name</label>
@@ -273,10 +275,14 @@ $heroPoints = [
                             <input type="email" id="contact-email" name="email" required class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
                         </div>
                         <div>
+                            <label for="contact-phone" class="block text-sm font-medium text-slate-700">Phone Number</label>
+                            <input type="tel" id="contact-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="e.g. 0917 123 4567" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
+                        </div>
+                        <div>
                             <label for="contact-message" class="block text-sm font-medium text-slate-700">Message</label>
                             <textarea id="contact-message" name="message" rows="4" required class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none resize-y" placeholder="How can we help you?"></textarea>
                         </div>
-                        <button type="submit" class="w-full rounded-xl bg-sky-500 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                        <button type="submit" id="contact-form-submit" class="w-full rounded-xl bg-sky-500 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
                             Send Message
                         </button>
                     </div>
@@ -287,10 +293,85 @@ $heroPoints = [
 
     <footer class="border-t border-slate-100 bg-slate-50 py-8 text-center text-sm text-slate-500">
         <p>&copy; <?php echo $year; ?> Azucena's Dental Clinic. All rights reserved.</p>
-        <p class="mt-2">
-            <a href="login.php" class="font-medium text-sky-500 hover:text-sky-600">Staff and Patient Portal Login</a>
-        </p>
     </footer>
+
+    <script>
+        const contactCsrfToken = <?php echo json_encode($csrf_token); ?>;
+
+        function setContactAlert(message, type) {
+            const alertEl = document.getElementById('contact-form-alert');
+            if (!alertEl) return;
+
+            alertEl.classList.remove('hidden', 'border-red-200', 'bg-red-50', 'text-red-700', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
+
+            if (type === 'success') {
+                alertEl.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
+            } else {
+                alertEl.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
+            }
+
+            alertEl.textContent = message;
+        }
+
+        const contactForm = document.getElementById('contact-form');
+        if (contactForm) {
+            contactForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const submitBtn = document.getElementById('contact-form-submit');
+                const name = document.getElementById('contact-name').value.trim();
+                const email = document.getElementById('contact-email').value.trim();
+                const phone = document.getElementById('contact-phone').value.trim();
+                const message = document.getElementById('contact-message').value.trim();
+
+                if (!name || !email || !phone || !message) {
+                    setContactAlert('Please complete all fields before sending your message.', 'error');
+                    return;
+                }
+
+                const phoneDigits = phone.replace(/\D+/g, '');
+                if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+                    setContactAlert('Please enter a valid phone number.', 'error');
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Sending...';
+                }
+
+                try {
+                    const response = await fetch('assets/api/contact/submit_contact_message.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            message: message,
+                            csrf_token: contactCsrfToken
+                        })
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        setContactAlert(data.message || 'Unable to send your message right now.', 'error');
+                        return;
+                    }
+
+                    contactForm.reset();
+                    setContactAlert(data.message || 'Thank you! Your message has been sent.', 'success');
+                } catch (error) {
+                    setContactAlert('An error occurred while sending your message. Please try again.', 'error');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Send Message';
+                    }
+                }
+            });
+        }
+    </script>
 
 </body>
 </html>

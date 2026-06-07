@@ -4,7 +4,6 @@ check_session(['admin']);
 include_once '../config/system_logs.php';
 include_once '../config/profile_helpers.php';
 $csrf_token = security_generate_csrf_token();
-$header_profile_image_url = profile_session_image_url($conn, '../');
 
 // Handle modules that may redirect via headers before any HTML output.
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
@@ -87,7 +86,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
 </head>
 
@@ -108,21 +107,14 @@ switch ($role_key) {
             </button>
         </div>
 
-        <div class="header-search">
-            <div class="search-input-wrap">
-                <input type="text" placeholder="Search..." class="search-input" id="adminSearch" name="search">
-                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
-            </div>
-        </div>
+        <?php
+        $header_search_id = 'adminSearch';
+        $header_search_placeholder = 'Search pages...';
+        include dirname(__DIR__) . '/includes/header_search.php';
+        ?>
 
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
-                <li class="nav-item d-block d-lg-none">
-                    <a class="nav-link nav-icon search-bar-toggle" href="#">
-                        <i class="bi bi-search"></i>
-                    </a>
-                </li>
-
                 <?php
                 $notifications_portal_url = 'admin.php?page=notifications';
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
@@ -130,7 +122,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
+                        <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -298,7 +290,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260606-notifications"></script>
+    <script src="../assets/js/main.js?v=20260607-header-search"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
@@ -323,7 +315,6 @@ switch ($role_key) {
             });
 
             const searchInput = document.getElementById('adminSearch');
-            const searchIcon = document.querySelector('.header-search .search-input-icon');
 
             if (searchInput) {
                 const portalBaseFile = 'admin.php';
@@ -356,7 +347,7 @@ switch ($role_key) {
                     document.head.appendChild(style);
                 }
 
-                const wrap = searchInput.closest('.search-input-wrap');
+                const wrap = searchInput.closest('.header-search-wrap');
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
@@ -451,14 +442,6 @@ switch ($role_key) {
                         menu.style.display = 'none';
                     }
                 });
-
-                if (searchIcon) {
-                    searchIcon.style.cursor = 'pointer';
-                    searchIcon.addEventListener('click', function () {
-                        renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    });
-                }
 
                 menu.addEventListener('click', function (e) {
                     const btn = e.target.closest('.search-suggest-item');

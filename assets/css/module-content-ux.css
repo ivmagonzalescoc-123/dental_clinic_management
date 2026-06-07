@@ -376,6 +376,17 @@
 }
 
 @media (max-width: 768px) {
+  body.patient-portal #main .section {
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  body.patient-portal #main .card .card-body,
+  body.patient-portal #main .card .card-header {
+    padding: 0;
+  }
+
   #main .section {
     padding: 10px;
     border-radius: 12px;

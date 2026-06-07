@@ -209,9 +209,111 @@ if ($patient_id) {
     color: #64748b;
     font-style: italic;
 }
+.patient-appt-history-search-toolbar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    margin-bottom: 0.85rem;
+    gap: 0.5rem 0.75rem;
+}
+.patient-appt-history-search-wrap {
+    width: min(340px, 100%);
+    flex: 1 1 220px;
+}
+.patient-appt-history-search-meta {
+    font-size: 0.85rem;
+    color: #64748b;
+    flex: 1 1 100%;
+}
+@media (min-width: 576px) {
+    .patient-appt-history-search-meta {
+        flex: 0 0 auto;
+        margin-left: auto;
+    }
+}
+.patient-appt-booking-row {
+    align-items: flex-start;
+}
+.patient-appt-step {
+    border-left: 3px solid #1173c1;
+    padding-left: 14px;
+    margin-bottom: 1.35rem;
+}
+.patient-appt-step-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 0.7rem;
+}
+.patient-appt-step-num {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #1173c1;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.patient-appt-step-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+.patient-appt-step-body .form-label {
+    font-weight: 600;
+}
+.patient-calendar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 1.25rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 0.92rem;
+    text-align: center;
+}
+@media (max-width: 991.98px) {
+    .patient-appt-form-col {
+        order: 1;
+    }
+    .patient-appt-calendar-col {
+        order: 2;
+    }
+}
 @media (max-width: 767px) {
     .patient-appt-card .calendar-panel {
         padding: 10px;
+    }
+    .patient-appt-card #appointmentCalendar .appt-day-badge {
+        display: none;
+    }
+    .patient-appt-card #appointmentCalendar .fc-daygrid-day-frame {
+        min-height: 2.35rem;
+    }
+    .patient-appt-card #appointmentCalendar .fc-daygrid-day-number {
+        font-size: 0.82rem;
+        padding: 2px 4px;
+    }
+    .patient-appt-card #appointmentCalendar .fc-col-header-cell-cushion {
+        font-size: 0.68rem;
+        padding: 4px 2px;
+    }
+    .patient-appt-card #appointmentCalendar .fc-scrollgrid,
+    .patient-appt-card #appointmentCalendar .fc-scrollgrid-section > * {
+        border-color: #e2e8f0;
+    }
+    .patient-appt-card #appointmentCalendar .fc-daygrid-body-unbalanced .fc-daygrid-day-events {
+        min-height: 0;
+        margin: 0;
     }
 }
 </style>
@@ -221,7 +323,7 @@ if ($patient_id) {
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h5 class="card-title mb-1">Make an Appointment</h5>
-                <div class="sub-title">Select your preferred doctor, then choose an available date and time slot.</div>
+                <div class="sub-title">Follow the 3 steps below: choose a doctor, select services, then pick an available date and time.</div>
             </div>
         </div>
     </div>
@@ -229,39 +331,32 @@ if ($patient_id) {
         <div id="apptBookPane">
             <div id="apptAlert"></div>
             <form id="createApptForm">
-                <div class="row g-4">
-                    <div class="col-lg-7">
-                        <div class="calendar-panel">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h6 class="mb-0">Availability Calendar</h6>
-                                <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
+                <div class="row g-4 patient-appt-booking-row">
+                    <div class="col-lg-5 order-lg-2 patient-appt-form-col">
+                        <div class="patient-appt-step">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">1</span>
+                                <span class="patient-appt-step-title">Choose Doctor</span>
                             </div>
-                            <input type="hidden" id="appointment_date" name="appointment_date" required>
-                            <div id="appointmentCalendar" aria-live="polite"></div>
-                            <div class="calendar-legend">
-                                <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
-                                <span class="legend-item"><span class="legend-dot legend-busy"></span>With bookings</span>
-                                <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
+                            <div class="patient-appt-step-body">
+                                <select class="form-select" id="user_id" name="user_id" required aria-label="Choose doctor">
+                                    <option value="">-- Select Doctor --</option>
+                                    <?php foreach ($doctors_list as $d): ?>
+                                        <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-5">
-                        <div class="mb-3">
-                            <label class="form-label">Choose Doctor</label>
-                            <select class="form-select" id="user_id" name="user_id" required>
-                                <option value="">-- Select Doctor --</option>
-                                <?php foreach ($doctors_list as $d): ?>
-                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
-                                <?php endforeach; ?>
-                            </select>
                         </div>
                         
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-hospital"></i> Select Services
-                            </label>
-                            <div id="serviceSelector" class="service-selector">
-                                <small class="text-muted">Loading services...</small>
+                        <div class="patient-appt-step">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">2</span>
+                                <span class="patient-appt-step-title">Select Services</span>
+                            </div>
+                            <div class="patient-appt-step-body">
+                                <div id="serviceSelector" class="service-selector">
+                                    <small class="text-muted">Please select a doctor first</small>
+                                </div>
                             </div>
                         </div>
 
@@ -282,18 +377,59 @@ if ($patient_id) {
                         <input type="hidden" name="is_online_appointment" value="0">
 
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-calendar-check"></i> Request Appointment
+                            Request Appointment
                         </button>
+                    </div>
+                    <div class="col-lg-7 order-lg-1 patient-appt-calendar-col">
+                        <div class="calendar-panel" id="patientCalendarPanel">
+                            <div class="patient-appt-step mb-0">
+                                <div class="patient-appt-step-heading">
+                                    <span class="patient-appt-step-num" aria-hidden="true">3</span>
+                                    <span class="patient-appt-step-title">Availability Calendar</span>
+                                </div>
+                            </div>
+                            <div id="calendarLockedMessage" class="patient-calendar-placeholder">
+                                Select a doctor first to view the availability calendar.
+                            </div>
+                            <div id="calendarActiveWrap" class="d-none">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
+                                </div>
+                                <input type="hidden" id="appointment_date" name="appointment_date">
+                                <div id="appointmentCalendar" aria-live="polite"></div>
+                                <div class="calendar-legend">
+                                    <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
+                                    <span class="legend-item"><span class="legend-dot legend-busy"></span>With bookings</span>
+                                    <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </form>
         </div>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
             <div>
                 <h6 class="mb-1">Appointment History</h6>
                 <small class="text-muted">Track your appointment request status below the booking form.</small>
             </div>
+        </div>
+
+        <div class="unified-table-search-toolbar patient-appt-history-search-toolbar">
+            <div class="unified-table-search-wrap module-search-inline patient-appt-history-search-wrap">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input
+                    type="search"
+                    id="patientApptHistorySearch"
+                    class="form-control unified-table-search-input"
+                    placeholder="Search appointment #, date, doctor, time, reason, or status..."
+                    autocomplete="off"
+                    aria-label="Search appointment history"
+                >
+                <button type="button" class="unified-table-search-clear" id="patientApptHistorySearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+            </div>
+            <div id="patientApptHistorySearchMeta" class="patient-appt-history-search-meta"></div>
         </div>
 
         <div id="apptHistoryPane">
@@ -364,7 +500,7 @@ if ($patient_id) {
                                 $hasPendingResched = ((int)($history['pending_reschedule_count'] ?? 0) > 0);
                                 $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed', 'missed'], true) && !$hasPendingResched;
                                 ?>
-                                <tr>
+                                <tr class="patient-appt-history-row">
                                     <td data-label="Appointment #">#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
                                     <td data-label="Date"><?php echo !empty($history['appointment_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$history['appointment_date']))) : 'N/A'; ?></td>
                                     <td data-label="Doctor"><?php echo htmlspecialchars($doctorName); ?></td>
@@ -443,7 +579,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const DAYS_AHEAD = 150;
     const dateSelect = document.getElementById('appointment_date');
     const alertBox = document.getElementById('apptAlert');
-    const calendarEl = document.getElementById('appointmentCalendar');
+    const calendarLockedMessage = document.getElementById('calendarLockedMessage');
+    const calendarActiveWrap = document.getElementById('calendarActiveWrap');
+    const patientCalendarPanel = document.getElementById('patientCalendarPanel');
     const doctorSelect = document.getElementById('user_id');
     const timeslotWrap = document.getElementById('patientTimeslotWrap');
     const timeslotSelect = document.getElementById('timeslot_id');
@@ -453,6 +591,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const historyPane = document.getElementById('apptHistoryPane');
     const historyBody = document.getElementById('patientApptHistoryBody');
     const historyEmptyRow = document.getElementById('patientApptHistoryEmpty');
+    const apptHistorySearchInput = document.getElementById('patientApptHistorySearch');
+    const apptHistorySearchClear = document.getElementById('patientApptHistorySearchClear');
+    const apptHistorySearchMeta = document.getElementById('patientApptHistorySearchMeta');
+    let apptHistoryNoMatchRow = null;
     const patientRescheduleModalEl = document.getElementById('patientRescheduleModal');
     const patientRescheduleDateEl = document.getElementById('patientRescheduleDate');
     const patientRescheduleTimeslotEl = document.getElementById('patientRescheduleTimeslot');
@@ -465,6 +607,37 @@ document.addEventListener('DOMContentLoaded', function() {
     let appointmentCalendar = null;
     let availabilityByDate = {};
     let selectedDayEl = null;
+
+    function getCalendarEl() {
+        return document.getElementById('appointmentCalendar');
+    }
+
+    function isMobileCalendar() {
+        return window.innerWidth < 768;
+    }
+
+    function setCalendarPanelVisible(visible) {
+        if (calendarLockedMessage) {
+            calendarLockedMessage.classList.toggle('d-none', visible);
+        }
+        if (calendarActiveWrap) {
+            calendarActiveWrap.classList.toggle('d-none', !visible);
+        }
+        if (patientCalendarPanel) {
+            patientCalendarPanel.classList.toggle('calendar-panel-active', visible);
+        }
+        if (dateSelect) {
+            dateSelect.required = visible;
+        }
+    }
+
+    function destroyCalendar() {
+        if (appointmentCalendar) {
+            appointmentCalendar.destroy();
+            appointmentCalendar = null;
+        }
+        selectedDayEl = null;
+    }
 
     function toIsoDateLocal(dateObj) {
         const year = dateObj.getFullYear();
@@ -530,6 +703,74 @@ document.addEventListener('DOMContentLoaded', function() {
         return td;
     }
 
+    function getHistoryDataRows() {
+        if (!historyBody) return [];
+        return Array.from(historyBody.querySelectorAll('tr.patient-appt-history-row'));
+    }
+
+    function updateApptHistorySearchMeta(visibleCount, totalCount, query) {
+        if (!apptHistorySearchMeta) return;
+        if (totalCount === 0) {
+            apptHistorySearchMeta.textContent = '';
+            return;
+        }
+        if (!query) {
+            apptHistorySearchMeta.textContent = totalCount + ' appointment' + (totalCount === 1 ? '' : 's');
+            return;
+        }
+        apptHistorySearchMeta.textContent = 'Showing ' + visibleCount + ' of ' + totalCount;
+    }
+
+    function clearApptHistoryNoMatchRow() {
+        if (apptHistoryNoMatchRow && apptHistoryNoMatchRow.parentNode) {
+            apptHistoryNoMatchRow.parentNode.removeChild(apptHistoryNoMatchRow);
+        }
+        apptHistoryNoMatchRow = null;
+    }
+
+    function showApptHistoryNoMatchRow() {
+        if (!historyBody) return;
+        clearApptHistoryNoMatchRow();
+        apptHistoryNoMatchRow = document.createElement('tr');
+        apptHistoryNoMatchRow.className = 'patient-appt-history-no-match history-empty-row';
+        const td = document.createElement('td');
+        td.colSpan = 7;
+        td.className = 'text-center py-4 history-empty';
+        td.textContent = 'No appointments match your search.';
+        apptHistoryNoMatchRow.appendChild(td);
+        historyBody.appendChild(apptHistoryNoMatchRow);
+    }
+
+    function filterAppointmentHistory(query) {
+        const normalized = String(query || '').trim().toLowerCase();
+        const rows = getHistoryDataRows();
+        const total = rows.length;
+
+        if (apptHistorySearchClear && apptHistorySearchInput) {
+            apptHistorySearchClear.style.display = apptHistorySearchInput.value ? '' : 'none';
+        }
+
+        clearApptHistoryNoMatchRow();
+
+        if (total === 0) {
+            updateApptHistorySearchMeta(0, 0, normalized);
+            return;
+        }
+
+        let visible = 0;
+        rows.forEach(function(row) {
+            const match = !normalized || row.textContent.toLowerCase().includes(normalized);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+
+        if (normalized && visible === 0) {
+            showApptHistoryNoMatchRow();
+        }
+
+        updateApptHistorySearchMeta(visible, total, normalized);
+    }
+
     function appendHistoryRow(payload) {
         if (!historyBody || !payload) return;
         if (historyEmptyRow && historyEmptyRow.parentNode) {
@@ -537,6 +778,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const tr = document.createElement('tr');
+        tr.className = 'patient-appt-history-row';
 
         tr.appendChild(historyCell('Appointment #', '#' + String(payload.appointmentId || 0)));
         tr.appendChild(historyCell('Date', displayDateLabel(payload.date)));
@@ -562,6 +804,10 @@ document.addEventListener('DOMContentLoaded', function() {
             historyBody.insertBefore(tr, historyBody.firstChild);
         } else {
             historyBody.appendChild(tr);
+        }
+
+        if (apptHistorySearchInput) {
+            filterAppointmentHistory(apptHistorySearchInput.value);
         }
     }
 
@@ -677,13 +923,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderCalendar() {
+        const calendarEl = getCalendarEl();
         if (!calendarEl) return;
 
-        if (appointmentCalendar) {
-            appointmentCalendar.destroy();
-            appointmentCalendar = null;
-            selectedDayEl = null;
-        }
+        destroyCalendar();
 
         if (typeof FullCalendar === 'undefined') {
             calendarEl.innerHTML = '<div class="text-danger small">Calendar library failed to load.</div>';
@@ -696,11 +939,11 @@ document.addEventListener('DOMContentLoaded', function() {
             fixedWeekCount: false,
             showNonCurrentDates: false,
             height: 'auto',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: ''
-            },
+            contentHeight: isMobileCalendar() ? 'auto' : undefined,
+            aspectRatio: isMobileCalendar() ? 1.05 : 1.35,
+            headerToolbar: isMobileCalendar()
+                ? { left: 'prev,next', center: 'title', right: 'today' }
+                : { left: 'prev,next today', center: 'title', right: '' },
             validRange: {
                 start: todayIso,
                 end: addDaysIso(todayIso, DAYS_AHEAD + 1)
@@ -733,12 +976,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadDates() {
         clearSelectedDate();
+        const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
+        if (!doctorId) {
+            availabilityByDate = {};
+            destroyCalendar();
+            setCalendarPanelVisible(false);
+            return;
+        }
+
+        setCalendarPanelVisible(true);
+
         try {
-            const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
             let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(String(DAYS_AHEAD));
-            if (doctorId) {
-                url += '&user_id=' + encodeURIComponent(doctorId);
-            }
+            url += '&user_id=' + encodeURIComponent(doctorId);
 
             const r = await fetch(url);
             if (!r.ok) {
@@ -749,7 +999,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!data.success || !Array.isArray(data.dates)) {
                 availabilityByDate = {};
                 renderCalendar();
-                showAlert('Unable to load available dates.', 'warning');
+                showAlert('Unable to load available dates for this doctor.', 'warning');
                 return;
             }
 
@@ -865,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    loadDates();
+    setCalendarPanelVisible(false);
 
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
@@ -873,6 +1123,15 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTimeslots();
         });
     }
+
+    let calendarResizeTimer = null;
+    window.addEventListener('resize', function() {
+        if (!appointmentCalendar) return;
+        clearTimeout(calendarResizeTimer);
+        calendarResizeTimer = setTimeout(function() {
+            renderCalendar();
+        }, 200);
+    });
 
     if (timeslotSelect) {
         timeslotSelect.addEventListener('change', function() {
@@ -988,9 +1247,22 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
+            const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
+            const selectedDate = dateSelect ? String(dateSelect.value || '').trim() : '';
+            if (!doctorId) {
+                showAlert('Please select a doctor first.', 'warning');
+                showBookingToast('Please select a doctor first.', 'warning');
+                return;
+            }
+            if (!selectedDate) {
+                showAlert('Please select an available date on the calendar.', 'warning');
+                showBookingToast('Please select an available date on the calendar.', 'warning');
+                return;
+            }
+
             const tsId = timeslotSelect ? String(timeslotSelect.value || '').trim() : '';
             if (!tsId) {
-                showAlert('Please select a 20-minute timeslot before submitting.', 'warning');
+                showAlert('Please select a time slot before submitting.', 'warning');
                 showBookingToast('Please select a time slot before booking.', 'warning');
                 return;
             }
@@ -1002,7 +1274,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? String(timeslotSelect.selectedOptions[0].textContent || '').trim()
                 : 'TBD';
             const selectedReason = document.getElementById('reason') ? String(document.getElementById('reason').value || '').trim() : '';
-            const selectedDate = dateSelect ? String(dateSelect.value || '') : '';
 
             const formData = new FormData(form);
             formData.append('csrf_token', appointmentCsrfToken);
@@ -1026,7 +1297,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     form.reset();
                     clearSelectedDate();
-                    loadDates();
+                    setCalendarPanelVisible(false);
+                    destroyCalendar();
+                    const serviceSelectorEl = document.getElementById('serviceSelector');
+                    if (serviceSelectorEl) {
+                        serviceSelectorEl.innerHTML = '<small class="text-muted">Please select a doctor first</small>';
+                    }
                 } else {
                     const failType = resp.warning ? 'warning' : 'danger';
                     showAlert(resp.message || 'Failed to create appointment.', 'warning');
@@ -1039,5 +1315,30 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+    if (apptHistorySearchInput) {
+        apptHistorySearchInput.addEventListener('input', function() {
+            filterAppointmentHistory(this.value);
+        });
+        apptHistorySearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                apptHistorySearchInput.value = '';
+                if (apptHistorySearchClear) apptHistorySearchClear.style.display = 'none';
+                filterAppointmentHistory('');
+            }
+        });
+    }
+
+    if (apptHistorySearchClear) {
+        apptHistorySearchClear.addEventListener('click', function() {
+            if (!apptHistorySearchInput) return;
+            apptHistorySearchInput.value = '';
+            apptHistorySearchClear.style.display = 'none';
+            filterAppointmentHistory('');
+            apptHistorySearchInput.focus();
+        });
+    }
+
+    filterAppointmentHistory('');
 });
 </script>

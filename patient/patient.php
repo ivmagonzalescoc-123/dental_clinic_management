@@ -3,7 +3,6 @@ include_once '../config/session_check.php';
 check_session(['patient']);
 include_once '../config/profile_helpers.php';
 $csrf_token = security_generate_csrf_token();
-$header_profile_image_url = profile_session_image_url($conn, '../');
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
 $dashboardLayout = ($page === 'dashboard');
 
@@ -62,10 +61,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260607-mobile5" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260607-mobile5" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260607-mobile6" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
-    <link href="../assets/css/patient-mobile.css?v=20260607-mobile5" rel="stylesheet">
+    <link href="../assets/css/patient-mobile.css?v=20260607-header-search" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -85,21 +84,14 @@ switch ($role_key) {
             </button>
         </div>
 
-        <div class="header-search">
-            <div class="search-input-wrap">
-                <input type="text" placeholder="Search..." class="search-input" id="patientSearch" name="search">
-                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
-            </div>
-        </div>
+        <?php
+        $header_search_id = 'patientSearch';
+        $header_search_placeholder = 'Search pages...';
+        include dirname(__DIR__) . '/includes/header_search.php';
+        ?>
 
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
-                <li class="nav-item d-block d-lg-none">
-                    <a class="nav-link nav-icon search-bar-toggle" href="#">
-                        <i class="bi bi-search"></i>
-                    </a>
-                </li>
-
                 <?php
                 $notifications_portal_url = 'patient.php?page=notifications';
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
@@ -109,7 +101,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
+                        <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -168,7 +160,7 @@ switch ($role_key) {
             <li class="nav-item">
                 <a class="nav-link collapsed" href="patient.php?page=transactions">
                     <i class="bi bi-cart"></i>
-                    <span>Transactions</span>
+                    <span>Billing</span>
                 </a>
             </li>
 
@@ -248,7 +240,7 @@ switch ($role_key) {
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=transactions" data-page="transactions">
             <i class="bi bi-cart" aria-hidden="true"></i>
-            <span>Bills</span>
+            <span>Billing</span>
         </a>
     </nav>
 
@@ -267,7 +259,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260607-mobile5"></script>
+    <script src="../assets/js/main.js?v=20260607-header-search"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
@@ -309,7 +301,6 @@ switch ($role_key) {
             window.addEventListener('resize', syncPatientMobileLayout);
 
             const searchInput = document.getElementById('patientSearch');
-            const searchIcon = document.querySelector('.header-search .search-input-icon');
 
             if (searchInput) {
                 const portalBaseFile = 'patient.php';
@@ -337,7 +328,7 @@ switch ($role_key) {
                     document.head.appendChild(style);
                 }
 
-                const wrap = searchInput.closest('.search-input-wrap');
+                const wrap = searchInput.closest('.header-search-wrap');
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
@@ -432,14 +423,6 @@ switch ($role_key) {
                         menu.style.display = 'none';
                     }
                 });
-
-                if (searchIcon) {
-                    searchIcon.style.cursor = 'pointer';
-                    searchIcon.addEventListener('click', function () {
-                        renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    });
-                }
 
                 menu.addEventListener('click', function (e) {
                     const btn = e.target.closest('.search-suggest-item');

@@ -24,6 +24,12 @@ if (!security_validate_csrf_token($csrfToken)) {
     exit;
 }
 
+if (!profile_role_allows_custom_photo()) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Administrator accounts use the default clinic profile image and cannot upload a custom photo.']);
+    exit;
+}
+
 if (!isset($_FILES['profile_image']) || !is_array($_FILES['profile_image'])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'No image file uploaded.']);
@@ -43,7 +49,7 @@ if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
     exit;
 }
 
-$maxBytes = 2 * 1024 * 1024;
+$maxBytes = profile_photo_max_bytes();
 if ((int)($file['size'] ?? 0) > $maxBytes) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Image must be 2MB or smaller.']);
@@ -63,11 +69,7 @@ if ($finfo) {
     finfo_close($finfo);
 }
 
-$allowed = [
-    'image/jpeg' => 'jpg',
-    'image/png' => 'png',
-    'image/webp' => 'webp',
-];
+$allowed = profile_photo_allowed_mime_types();
 
 if (!isset($allowed[$mimeType])) {
     http_response_code(400);
@@ -152,5 +154,5 @@ echo json_encode([
     'success' => true,
     'message' => 'Profile photo updated successfully.',
     'profile_image' => $dbPath,
-    'profile_image_url' => profile_resolve_image_url($dbPath, '..'),
+    'profile_image_url' => profile_session_image_url($conn, '..') ?: profile_resolve_image_url($dbPath, '..'),
 ]);

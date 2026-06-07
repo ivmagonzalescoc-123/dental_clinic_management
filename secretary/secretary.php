@@ -7,7 +7,7 @@ include_once '../config/database.php';
 include_once '../config/system_logs.php';
 include_once '../config/capabilities.php';
 include_once '../config/profile_helpers.php';
-$header_profile_image_url = profile_session_image_url($conn, '../');
+include_once '../config/contact_messages_helpers.php';
 
 // Handle AJAX API requests before HTML output
 $page = isset($_GET['page']) && $_GET['page'] !== '' ? $_GET['page'] : 'dashboard';
@@ -65,6 +65,14 @@ try {
     $pendingCount = 0;
 }
 
+$newContactCount = 0;
+try {
+    $newContactCount = contact_messages_count_new($conn);
+} catch (Throwable $e) {
+    error_log('Error computing newContactCount: ' . $e->getMessage());
+    $newContactCount = 0;
+}
+
 $header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
 if ($header_display_name === '') {
     $header_display_name = (string)($_SESSION['email'] ?? 'User');
@@ -116,7 +124,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
 </head>
 
@@ -137,21 +145,14 @@ switch ($role_key) {
             </button>
         </div>
 
-        <div class="header-search">
-            <div class="search-input-wrap">
-                <input type="text" placeholder="Search..." class="search-input" id="secretarySearch" name="search">
-                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
-            </div>
-        </div>
+        <?php
+        $header_search_id = 'secretarySearch';
+        $header_search_placeholder = 'Search pages...';
+        include dirname(__DIR__) . '/includes/header_search.php';
+        ?>
 
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
-                <li class="nav-item d-block d-lg-none">
-                    <a class="nav-link nav-icon search-bar-toggle" href="#">
-                        <i class="bi bi-search"></i>
-                    </a>
-                </li>
-
                 <?php
                 $notifications_portal_url = 'secretary.php?page=notifications';
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
@@ -161,7 +162,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
+                        <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -244,6 +245,17 @@ switch ($role_key) {
                     <span>Billing</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages">
+                    <i class="bi bi-envelope"></i>
+                    <span class="ms-2">Contact Us</span>
+                    <?php if ((int)$newContactCount > 0): ?>
+                        <span class="badge bg-danger ms-auto" id="secretaryContactBadge"><?php echo (int)$newContactCount; ?></span>
+                    <?php else: ?>
+                        <span class="badge bg-danger ms-auto" id="secretaryContactBadge" style="display:none;">0</span>
+                    <?php endif; ?>
+                </a>
+            </li>
 
         </ul>
     </aside>
@@ -281,6 +293,9 @@ switch ($role_key) {
                                         break;
                                     case "billing":
                                         include "secretary_modules/billing.php";
+                                        break;
+                                    case "contact_messages":
+                                        include "secretary_modules/contact_messages.php";
                                         break;
                                     case "arrivals":
                                         include "secretary_modules/arrivals.php";
@@ -332,7 +347,7 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
-    <script src="../assets/js/main.js?v=20260606-notifications"></script>
+    <script src="../assets/js/main.js?v=20260607-header-search"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
@@ -361,7 +376,6 @@ switch ($role_key) {
             });
 
             const searchInput = document.getElementById('secretarySearch');
-            const searchIcon = document.querySelector('.header-search .search-input-icon');
 
             if (searchInput) {
                 const portalBaseFile = 'secretary.php';
@@ -372,6 +386,7 @@ switch ($role_key) {
                     doctors: ['doctor list', 'dentist', 'providers'],
                     services: ['treatments', 'procedures', 'pricing'],
                     billing: ['payments', 'transactions', 'invoice'],
+                    contact_messages: ['contact', 'inquiry', 'message', 'email'],
                     reports: ['analytics', 'charts', 'insights'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']
@@ -392,7 +407,7 @@ switch ($role_key) {
                     document.head.appendChild(style);
                 }
 
-                const wrap = searchInput.closest('.search-input-wrap');
+                const wrap = searchInput.closest('.header-search-wrap');
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
@@ -487,14 +502,6 @@ switch ($role_key) {
                         menu.style.display = 'none';
                     }
                 });
-
-                if (searchIcon) {
-                    searchIcon.style.cursor = 'pointer';
-                    searchIcon.addEventListener('click', function () {
-                        renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    });
-                }
 
                 menu.addEventListener('click', function (e) {
                     const btn = e.target.closest('.search-suggest-item');

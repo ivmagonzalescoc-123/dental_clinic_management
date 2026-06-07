@@ -2,7 +2,6 @@
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/profile_helpers.php';
 profile_hydrate_session_image($conn);
-$profile_image_url = profile_session_image_url($conn, '..');
 $profile_reload_url = 'admin.php?page=profile';
 
 $userId = (int)($_SESSION['user_id'] ?? 0);

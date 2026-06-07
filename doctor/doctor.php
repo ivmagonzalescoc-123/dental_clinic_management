@@ -7,7 +7,6 @@ include_once '../config/system_logs.php';
 // Get today's arrived (pending) patient count for this doctor (for sidebar badge)
 include_once '../config/database.php';
 include_once '../config/profile_helpers.php';
-$header_profile_image_url = profile_session_image_url($conn, '../');
 $doctor_today_count = 0;
 $doctor_id = $_SESSION['user_id'] ?? 0;
 if ($doctor_id && $conn) {
@@ -110,7 +109,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
 </head>
@@ -132,22 +131,14 @@ switch ($role_key) {
             </button>
         </div>
 
-        <div class="header-search">
-            <div class="search-input-wrap">
-                <input type="text" placeholder="Search..." class="search-input" id="doctorSearch" name="search"
-                    aria-label="Search">
-                <i class="bi bi-search search-input-icon" aria-hidden="true"></i>
-            </div>
-        </div>
+        <?php
+        $header_search_id = 'doctorSearch';
+        $header_search_placeholder = 'Search pages...';
+        include dirname(__DIR__) . '/includes/header_search.php';
+        ?>
 
         <nav class="header-nav ms-auto">
             <ul class="d-flex align-items-center">
-                <li class="nav-item d-block d-lg-none">
-                    <a class="nav-link nav-icon search-bar-toggle" href="#">
-                        <i class="bi bi-search"></i>
-                    </a>
-                </li>
-
                 <?php
                 $notifications_portal_url = 'doctor.php?page=notifications';
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
@@ -155,7 +146,7 @@ switch ($role_key) {
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <img src="<?php echo htmlspecialchars($header_profile_image_url); ?>" alt="Profile" class="rounded-circle header-profile-avatar">
+                        <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
                         <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
@@ -341,7 +332,7 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
-    <script src="../assets/js/main.js?v=20260606-notifications"></script>
+    <script src="../assets/js/main.js?v=20260607-header-search"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
@@ -370,7 +361,6 @@ switch ($role_key) {
             });
 
             const searchInput = document.getElementById('doctorSearch');
-            const searchIcon = document.querySelector('.header-search .search-input-icon');
 
             if (searchInput) {
                 const portalBaseFile = 'doctor.php';
@@ -398,7 +388,7 @@ switch ($role_key) {
                     document.head.appendChild(style);
                 }
 
-                const wrap = searchInput.closest('.search-input-wrap');
+                const wrap = searchInput.closest('.header-search-wrap');
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
@@ -493,14 +483,6 @@ switch ($role_key) {
                         menu.style.display = 'none';
                     }
                 });
-
-                if (searchIcon) {
-                    searchIcon.style.cursor = 'pointer';
-                    searchIcon.addEventListener('click', function () {
-                        renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    });
-                }
 
                 menu.addEventListener('click', function (e) {
                     const btn = e.target.closest('.search-suggest-item');

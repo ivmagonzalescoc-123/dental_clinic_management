@@ -44,11 +44,15 @@ body {
 #header {
     background: #ffffff;
     border-bottom: 1px solid #e0e0e0;
-    padding: 10px 20px;
+    padding: 10px 16px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     z-index: 100;
     width: 100%;
     top: 0;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
 }
 
 #header .logo {
@@ -102,47 +106,38 @@ body {
 .header-search {
     display: flex;
     align-items: center;
-    margin: 0 20px;
-    flex: 1 1 320px;
-    min-width: 280px;
-    max-width: 650px;
-    justify-content: flex-end;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    max-width: none;
+    justify-content: stretch;
 }
 
+.header-search-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+}
+
+.header-search .header-search-input,
+.header-search .unified-table-search-input {
+    min-height: 40px;
+}
+
+/* Legacy aliases — keep for any old markup during transition */
 .search-input-wrap {
     position: relative;
     width: 100%;
     max-width: none;
 }
 
-.search-input {
-    padding: 8px 38px 8px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 14px;
-    background-color: #f5f5f5;
+.search-input,
+.header-search-input {
     width: 100%;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .search-input-icon {
-    position: absolute;
-    right: 14px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 14px;
-    color: #5f7e95;
-    pointer-events: none;
-}
-
-.search-input::placeholder {
-    color: var(--text-muted);
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: #1173c1;
-    box-shadow: 0 2px 4px rgba(17, 115, 193, 0.1);
+    display: none;
 }
 
 .header-nav {
@@ -249,6 +244,33 @@ body {
     height: 35px;
     margin-right: 10px;
     object-fit: cover;
+}
+
+.profile-avatar-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8f2fb;
+    color: #1173c1;
+    border: 1px solid #c9deef;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.profile-avatar-icon.header-profile-avatar,
+.profile-avatar-icon.rounded-circle.header-profile-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50% !important;
+    font-size: 1.1rem;
+}
+
+.profile-avatar-icon.profile-photo-preview,
+.profile-avatar-icon.rounded-circle.profile-photo-preview {
+    width: 96px;
+    height: 96px;
+    border-radius: 50% !important;
+    font-size: 2.4rem;
 }
 
 .profile-photo-panel {
@@ -1096,6 +1118,19 @@ table a:hover {
     width: 100%;
 }
 
+.unified-table-search-input::-webkit-search-decoration,
+.unified-table-search-input::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+
+.unified-table-search-input::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
 .unified-table-search-input:focus {
     border-color: #1173c1 !important;
     box-shadow: 0 0 0 0.12rem rgba(17, 115, 193, 0.14) !important;
@@ -1423,12 +1458,35 @@ table a:hover {
         display: none;
     }
 
-    .header-search {
-        display: none;
+    #header > .d-flex.align-items-center:first-child {
+        flex: 0 0 auto;
     }
 
-    body.patient-portal .header-search {
-        display: flex;
+    #header {
+        flex-wrap: wrap;
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .header-search {
+        display: flex !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        order: 0;
+    }
+
+    .header-search-wrap {
+        max-width: none;
+        width: 100%;
+    }
+
+    .header-nav {
+        flex: 0 0 auto;
+        margin-left: auto !important;
+    }
+
+    .search-bar-toggle {
+        display: none !important;
     }
 
     table {
@@ -1444,6 +1502,25 @@ table a:hover {
 @media (max-width: 575.98px) {
     #main {
         padding: 12px;
+        margin-top: 104px;
+    }
+
+    #header .header-search {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    #header .header-search-wrap {
+        max-width: 100%;
+    }
+
+    #header .header-search-input,
+    #header .header-search .unified-table-search-input {
+        font-size: 16px;
+        min-height: 44px;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
     }
 
     .table-responsive {
