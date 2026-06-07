@@ -4,6 +4,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 include_once __DIR__ . '/../appointments/availability_guard.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 header('Content-Type: application/json');
 
 // Only doctors may save clinical records
@@ -84,6 +85,9 @@ if (!is_array($materials_used)) {
     $materials_used = null;
 }
 $odontogram = isset($_POST['odontogram']) ? json_decode($_POST['odontogram'], true) : null;
+if (is_array($odontogram)) {
+    $odontogram = odontogram_normalize_data($odontogram);
+}
 $doctor_notes = $_POST['doctor_notes'] ?? '';
 $follow_up_date = isset($_POST['follow_up_date']) ? trim($_POST['follow_up_date']) : null;
 $submit_and_finalize = isset($_POST['finalize']) && $_POST['finalize'] == '1';

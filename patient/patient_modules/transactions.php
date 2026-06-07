@@ -64,7 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div id="collapse-${appt.appointment_id}" class="collapse" aria-labelledby="heading-${appt.appointment_id}" data-bs-parent="#transactionAccordion">
                             <div class="card-body">
                                 <h6 class="mb-3">Details for Appointment on ${appt.date}</h6>
-                                <table class="table table-sm table-hover">
+                                <div class="table-responsive">
+                                <table class="table table-sm table-hover" data-skip-table-search="1">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Description</th>
@@ -91,6 +92,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </tr>
                                     </tfoot>
                                 </table>
+                                </div>
                             </div>
                         </div>
                     `;

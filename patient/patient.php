@@ -62,12 +62,13 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-profile" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
+    <link href="../assets/css/patient-mobile.css?v=20260606-mobile" rel="stylesheet">
 </head>
 
-<body>
+<body class="patient-portal">
 
     <!-- ======= Header ======= -->
     <header id="header" class="header fixed-top d-flex align-items-center">
@@ -99,17 +100,10 @@ switch ($role_key) {
                     </a>
                 </li>
 
-                <li class="nav-item dropdown">
-                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-label="Notifications">
-                        <i class="bi bi-bell"></i>
-                        <span id="navNotificationBadge" class="badge bg-danger badge-number" style="display:none;">0</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications" style="min-width: 360px;">
-                        <li class="dropdown-header">Notifications</li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li id="navNotificationList" class="notifications-list px-2"></li>
-                    </ul>
-                </li>
+                <?php
+                $notifications_portal_url = 'patient.php?page=notifications';
+                include dirname(__DIR__) . '/includes/notification_dropdown.php';
+                ?>
 
                 
 
@@ -239,6 +233,25 @@ switch ($role_key) {
         </div>
     </footer>
 
+    <nav class="patient-mobile-nav d-lg-none" aria-label="Patient navigation">
+        <a class="patient-mobile-nav-item" href="patient.php?page=dashboard" data-page="dashboard">
+            <i class="bi bi-grid" aria-hidden="true"></i>
+            <span>Home</span>
+        </a>
+        <a class="patient-mobile-nav-item" href="patient.php?page=appointments" data-page="appointments">
+            <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+            <span>Book</span>
+        </a>
+        <a class="patient-mobile-nav-item" href="patient.php?page=services" data-page="services">
+            <i class="bi bi-receipt" aria-hidden="true"></i>
+            <span>Services</span>
+        </a>
+        <a class="patient-mobile-nav-item" href="patient.php?page=transactions" data-page="transactions">
+            <i class="bi bi-cart" aria-hidden="true"></i>
+            <span>Bills</span>
+        </a>
+    </nav>
+
     <a href="#" class="back-to-top d-flex align-items-center justify-content-center">
         <i class="bi bi-arrow-up-short"></i>
     </a>
@@ -254,7 +267,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260316-2"></script>
+    <script src="../assets/js/main.js?v=20260606-notifications"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
@@ -281,6 +294,10 @@ switch ($role_key) {
                     link.classList.add('active');
                     link.classList.remove('collapsed');
                 }
+            });
+
+            document.querySelectorAll('.patient-mobile-nav-item').forEach(function (item) {
+                item.classList.toggle('active', item.getAttribute('data-page') === currentPage);
             });
 
             const searchInput = document.getElementById('patientSearch');

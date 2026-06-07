@@ -82,25 +82,17 @@ if (!function_exists('reminder_queue_default_pack')) {
         ];
 
         $queued = 0;
-        $emailAt = (clone $start)->modify('-24 hours');
-        $patientSmsAt = (clone $start)->modify('-24 hours');
-        $staffDayBeforeAt = (clone $start)->modify('-24 hours');
-        $patientDayBeforeAt = (clone $start)->modify('-24 hours');
+        $dayBeforeAt = (clone $start)->modify('-24 hours');
         $staffOneHourAt = (clone $start)->modify('-1 hour');
         $patientOneHourAt = (clone $start)->modify('-1 hour');
+        $dayBeforeStr = $dayBeforeAt->format('Y-m-d H:i:s');
 
-        if (reminder_queue_once($conn, (int)$scheduleId, $emailAt->format('Y-m-d H:i:s'), 'email', $basePayload + ['template' => 'appt_24h'])) {
+        // 24 hours before: email only (patient)
+        if (reminder_queue_once($conn, (int)$scheduleId, $dayBeforeStr, 'email', $basePayload + ['template' => 'appt_24h'])) {
             $queued++;
         }
-        if (reminder_queue_once($conn, (int)$scheduleId, $patientSmsAt->format('Y-m-d H:i:s'), 'sms', $basePayload + ['template' => 'appt_24h'])) {
-            $queued++;
-        }
-        if (reminder_queue_once($conn, (int)$scheduleId, $staffDayBeforeAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_24h_staff'])) {
-            $queued++;
-        }
-        if (reminder_queue_once($conn, (int)$scheduleId, $patientDayBeforeAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_24h_patient'])) {
-            $queued++;
-        }
+
+        // 1 hour before: in-app only (staff + patient)
         if (reminder_queue_once($conn, (int)$scheduleId, $staffOneHourAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_1h_staff'])) {
             $queued++;
         }
@@ -129,10 +121,8 @@ if (!function_exists('reminder_queue_missed_pack')) {
         $queued = 0;
         $missedAt = (clone $start)->modify('+5 minutes');
 
-        if (reminder_queue_once($conn, (int)$scheduleId, $missedAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_missed_staff'])) {
-            $queued++;
-        }
-        if (reminder_queue_once($conn, (int)$scheduleId, $missedAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_missed_patient'])) {
+        // 5 minutes after missed slot: SMS only (patient)
+        if (reminder_queue_once($conn, (int)$scheduleId, $missedAt->format('Y-m-d H:i:s'), 'sms', $basePayload + ['template' => 'appt_missed_patient'])) {
             $queued++;
         }
 
@@ -160,15 +150,173 @@ if (!function_exists('reminder_queue_no_show_followup_pack')) {
         if ($noShowAt < $now) {
             $noShowAt = (clone $now)->modify('+1 minute');
         }
+        $noShowAtStr = $noShowAt->format('Y-m-d H:i:s');
 
-        if (reminder_queue_once($conn, (int)$scheduleId, $noShowAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_no_show_staff'])) {
+        // No-show follow-up: email + SMS (patient)
+        if (reminder_queue_once($conn, (int)$scheduleId, $noShowAtStr, 'email', $basePayload + ['template' => 'appt_no_show_patient'])) {
             $queued++;
         }
-        if (reminder_queue_once($conn, (int)$scheduleId, $noShowAt->format('Y-m-d H:i:s'), 'push', $basePayload + ['template' => 'appt_no_show_patient'])) {
+        if (reminder_queue_once($conn, (int)$scheduleId, $noShowAtStr, 'sms', $basePayload + ['template' => 'appt_no_show_patient'])) {
             $queued++;
         }
 
         return $queued;
+    }
+}
+
+if (!function_exists('reminder_normalize_phone')) {
+    function reminder_normalize_phone($phoneNumber)
+    {
+        $digits = preg_replace('/\D+/', '', (string)$phoneNumber);
+        if ($digits === '') {
+            return '';
+        }
+        if (strlen($digits) === 10 && $digits[0] === '9') {
+            return '0' . $digits;
+        }
+        if (strlen($digits) === 12 && substr($digits, 0, 2) === '63') {
+            return '0' . substr($digits, 2);
+        }
+        return $digits;
+    }
+}
+
+if (!function_exists('reminder_brevo_api_key')) {
+    function reminder_brevo_api_key()
+    {
+        if (!function_exists('env')) {
+            return '';
+        }
+        return trim((string)env('BREVO_API_KEY', ''));
+    }
+}
+
+if (!function_exists('reminder_normalize_phone_brevo')) {
+    function reminder_normalize_phone_brevo($phoneNumber)
+    {
+        $digits = preg_replace('/\D+/', '', (string)$phoneNumber);
+        if ($digits === '') {
+            return '';
+        }
+        if (strlen($digits) === 11 && $digits[0] === '0') {
+            return '63' . substr($digits, 1);
+        }
+        if (strlen($digits) === 10 && $digits[0] === '9') {
+            return '63' . $digits;
+        }
+        if (strlen($digits) === 12 && substr($digits, 0, 2) === '63') {
+            return $digits;
+        }
+        return $digits;
+    }
+}
+
+if (!function_exists('reminder_curl_apply_ssl_options')) {
+    function reminder_curl_apply_ssl_options($ch)
+    {
+        $caFile = trim((string)(function_exists('env') ? env('CURL_CA_FILE', '') : ''));
+        if ($caFile !== '' && is_file($caFile)) {
+            curl_setopt($ch, CURLOPT_CAINFO, $caFile);
+            return;
+        }
+
+        $appEnv = strtolower((string)(function_exists('env') ? env('APP_ENV', '') : ''));
+        $verify = function_exists('env') ? env('BREVO_SSL_VERIFY', null) : null;
+        if ($verify === false || $verify === 'false' || $verify === '0' || $appEnv === 'development') {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        }
+    }
+}
+
+if (!function_exists('reminder_brevo_post')) {
+    function reminder_brevo_post($path, array $payload, $logPrefix)
+    {
+        $apiKey = reminder_brevo_api_key();
+        if ($apiKey === '' || !function_exists('curl_init')) {
+            error_log($logPrefix . ': missing BREVO_API_KEY or curl extension');
+            return false;
+        }
+
+        $url = 'https://api.brevo.com/v3/' . ltrim((string)$path, '/');
+        $ch = curl_init($url);
+        if (!$ch) {
+            return false;
+        }
+
+        $body = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => [
+                'accept: application/json',
+                'content-type: application/json',
+                'api-key: ' . $apiKey,
+            ],
+        ]);
+        reminder_curl_apply_ssl_options($ch);
+
+        $response = curl_exec($ch);
+        $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (PHP_VERSION_ID < 80500) {
+            curl_close($ch);
+        }
+
+        if ($http >= 200 && $http < 300) {
+            return true;
+        }
+
+        error_log($logPrefix . ': http=' . $http . ' response=' . (string)$response);
+        return false;
+    }
+}
+
+if (!function_exists('reminder_send_email_brevo')) {
+    function reminder_send_email_brevo($toEmail, $subject, $message)
+    {
+        $from = trim((string)(function_exists('env') ? env('BREVO_EMAIL_FROM', env('REMINDER_EMAIL_FROM', env('SMTP_FROM_EMAIL', ''))) : ''));
+        $fromName = trim((string)(function_exists('env') ? env('BREVO_EMAIL_FROM_NAME', env('REMINDER_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic"))) : "Azucena's Dental Clinic"));
+
+        if ($from === '' || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            error_log('REMINDER_EMAIL(brevo): invalid BREVO_EMAIL_FROM / REMINDER_EMAIL_FROM');
+            return false;
+        }
+
+        return reminder_brevo_post('smtp/email', [
+            'sender' => [
+                'name' => $fromName,
+                'email' => $from,
+            ],
+            'to' => [
+                ['email' => $toEmail],
+            ],
+            'subject' => $subject,
+            'textContent' => $message,
+        ], 'REMINDER_EMAIL(brevo)');
+    }
+}
+
+if (!function_exists('reminder_send_sms_brevo')) {
+    function reminder_send_sms_brevo($phoneNumber, $message)
+    {
+        $recipient = reminder_normalize_phone_brevo($phoneNumber);
+        if ($recipient === '') {
+            return false;
+        }
+
+        $sender = trim((string)(function_exists('env') ? env('BREVO_SMS_SENDER', 'AzucenaDental') : 'AzucenaDental'));
+        if ($sender === '') {
+            $sender = 'AzucenaDental';
+        }
+
+        return reminder_brevo_post('transactionalSMS/sms', [
+            'sender' => $sender,
+            'recipient' => $recipient,
+            'content' => $message,
+            'type' => 'transactional',
+        ], 'REMINDER_SMS(brevo)');
     }
 }
 
@@ -180,11 +328,22 @@ if (!function_exists('reminder_send_email')) {
             return false;
         }
 
-        $mode = strtolower((string)(getenv('REMINDER_EMAIL_MODE') ?: 'log'));
+        $mode = strtolower((string)(function_exists('env') ? env('REMINDER_EMAIL_MODE', 'log') : (getenv('REMINDER_EMAIL_MODE') ?: 'log')));
+        $from = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM', 'no-reply@dental-clinic.local') : 'no-reply@dental-clinic.local'));
+        $fromName = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM_NAME', "Azucena's Dental Clinic") : "Azucena's Dental Clinic"));
+
+        if ($mode === 'brevo') {
+            return reminder_send_email_brevo($to, $subject, $message);
+        }
+
+        if ($mode === 'smtp') {
+            return reminder_send_email_smtp($to, $subject, $message, $from, $fromName);
+        }
+
         if ($mode === 'mail') {
             $headers = "MIME-Version: 1.0\r\n";
             $headers .= "Content-type:text/plain;charset=UTF-8\r\n";
-            $headers .= "From: no-reply@dental-clinic.local\r\n";
+            $headers .= 'From: ' . reminder_format_mailbox($fromName, $from) . "\r\n";
             return @mail($to, $subject, $message, $headers);
         }
 
@@ -193,17 +352,154 @@ if (!function_exists('reminder_send_email')) {
     }
 }
 
+if (!function_exists('reminder_format_mailbox')) {
+    function reminder_format_mailbox($name, $email)
+    {
+        $safeName = str_replace(["\r", "\n", '"'], '', (string)$name);
+        $safeEmail = trim((string)$email);
+        if ($safeName === '') {
+            return $safeEmail;
+        }
+        return '"' . $safeName . '" <' . $safeEmail . '>';
+    }
+}
+
+if (!function_exists('reminder_send_email_smtp')) {
+    function reminder_send_email_smtp($toEmail, $subject, $message, $fromEmail, $fromName)
+    {
+        if (!function_exists('env')) {
+            return false;
+        }
+
+        $host = trim((string)env('SMTP_HOST', ''));
+        $port = (int)env('SMTP_PORT', 587);
+        $user = trim((string)env('SMTP_USER', ''));
+        $pass = (string)env('SMTP_PASS', '');
+        $secure = strtolower(trim((string)env('SMTP_SECURE', 'tls')));
+
+        if ($host === '' || $user === '' || $pass === '') {
+            error_log('REMINDER_EMAIL(smtp): missing SMTP_HOST/SMTP_USER/SMTP_PASS');
+            return false;
+        }
+
+        $remote = ($secure === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
+        $fp = @stream_socket_client($remote, $errno, $errstr, 15, STREAM_CLIENT_CONNECT);
+        if (!$fp) {
+            error_log('REMINDER_EMAIL(smtp): connect failed ' . $errstr);
+            return false;
+        }
+
+        stream_set_timeout($fp, 15);
+        $read = function () use ($fp) {
+            $data = '';
+            while ($line = fgets($fp, 515)) {
+                $data .= $line;
+                if (isset($line[3]) && $line[3] === ' ') {
+                    break;
+                }
+            }
+            return $data;
+        };
+        $write = function ($cmd) use ($fp) {
+            fwrite($fp, $cmd . "\r\n");
+        };
+
+        $read();
+        $write('EHLO localhost');
+        $ehlo = $read();
+        if ($secure === 'tls' && stripos($ehlo, 'STARTTLS') !== false) {
+            $write('STARTTLS');
+            $read();
+            stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            $write('EHLO localhost');
+            $read();
+        }
+
+        $write('AUTH LOGIN');
+        $read();
+        $write(base64_encode($user));
+        $read();
+        $write(base64_encode($pass));
+        $auth = $read();
+        if (strpos($auth, '235') === false) {
+            fclose($fp);
+            error_log('REMINDER_EMAIL(smtp): authentication failed');
+            return false;
+        }
+
+        $write('MAIL FROM:<' . $fromEmail . '>');
+        $read();
+        $write('RCPT TO:<' . $toEmail . '>');
+        $read();
+        $write('DATA');
+        $read();
+
+        $headers = 'From: ' . reminder_format_mailbox($fromName, $fromEmail) . "\r\n";
+        $headers .= 'To: <' . $toEmail . ">\r\n";
+        $headers .= 'Subject: ' . $subject . "\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $body = $headers . "\r\n" . str_replace("\n.", "\n..", $message);
+        $write($body . "\r\n.");
+        $sent = $read();
+        $write('QUIT');
+        fclose($fp);
+
+        return strpos($sent, '250') !== false;
+    }
+}
+
 if (!function_exists('reminder_send_sms')) {
     function reminder_send_sms($phoneNumber, $message)
     {
-        $to = trim((string)$phoneNumber);
+        $to = reminder_normalize_phone($phoneNumber);
         if ($to === '') {
             return false;
         }
 
-        $mode = strtolower((string)(getenv('REMINDER_SMS_MODE') ?: 'log'));
+        $mode = strtolower((string)(function_exists('env') ? env('REMINDER_SMS_MODE', 'log') : (getenv('REMINDER_SMS_MODE') ?: 'log')));
+
+        if ($mode === 'brevo') {
+            return reminder_send_sms_brevo($phoneNumber, $message);
+        }
+
+        if ($mode === 'semaphore') {
+            $apiKey = trim((string)(function_exists('env') ? env('SEMAPHORE_API_KEY', '') : ''));
+            if ($apiKey === '' || !function_exists('curl_init')) {
+                return false;
+            }
+
+            $senderName = trim((string)(function_exists('env') ? env('SEMAPHORE_SENDER_NAME', 'AzucenaDental') : 'AzucenaDental'));
+            $query = http_build_query([
+                'apikey' => $apiKey,
+                'number' => $to,
+                'message' => $message,
+                'sendername' => $senderName,
+            ]);
+            $url = 'https://api.semaphore.co/api/v4/messages?' . $query;
+
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 15,
+            ]);
+            $response = curl_exec($ch);
+            $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if (PHP_VERSION_ID < 80500) {
+                curl_close($ch);
+            }
+
+            if ($http >= 200 && $http < 300) {
+                return true;
+            }
+
+            error_log('REMINDER_SMS(semaphore): http=' . $http . ' response=' . (string)$response);
+            return false;
+        }
+
         if ($mode === 'webhook') {
-            $url = trim((string)(getenv('SMS_WEBHOOK_URL') ?: ''));
+            $url = trim((string)(function_exists('env') ? env('SMS_WEBHOOK_URL', '') : ''));
             if ($url === '' || !function_exists('curl_init')) {
                 return false;
             }

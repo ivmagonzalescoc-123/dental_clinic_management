@@ -428,6 +428,7 @@
     if (tableEl.dataset.skipDatatable === '1') return
     if (tableEl.closest('.modal')) return
     if (tableEl.closest('.fc')) return
+    if (tableEl.classList.contains('doctor-availability-calendar') || tableEl.classList.contains('calendar-table')) return
     if (tableEl.getAttribute('role') === 'presentation') return
 
     const tbody = tableEl.tBodies && tableEl.tBodies[0] ? tableEl.tBodies[0] : null
@@ -716,6 +717,38 @@
     });
   }
   
+  window.updateNotificationBadge = function (unread) {
+    const nb = document.getElementById('navNotificationBadge');
+    const subtitle = document.getElementById('navNotificationSubtitle');
+    const count = parseInt(unread, 10) || 0;
+    if (!nb) return;
+    if (count <= 0) {
+      nb.hidden = true;
+      nb.setAttribute('aria-hidden', 'true');
+      nb.textContent = '0';
+      nb.classList.remove('has-count');
+      if (subtitle) subtitle.textContent = 'You are all caught up';
+      return;
+    }
+    nb.hidden = false;
+    nb.setAttribute('aria-hidden', 'false');
+    nb.textContent = count > 9 ? '9+' : String(count);
+    nb.classList.add('has-count');
+    if (subtitle) {
+      subtitle.textContent = count === 1 ? '1 unread notification' : count + ' unread notifications';
+    }
+  };
+
+  window.markAllNotificationsRead = async function () {
+    try {
+      await fetch(appRoot + '/assets/api/notifications/mark_all_read.php', { method: 'POST' });
+    } catch (e) {
+      // silent
+    }
+    window.updateNotificationBadge(0);
+    await fetchNotifications();
+  };
+
   async function fetchNotifications() {
     try {
       const resp = await fetch(appRoot + '/assets/api/notifications/get_notifications.php', { cache: 'no-store' });
@@ -738,67 +771,110 @@
         return escaped.replace(dateTimeRegex, '<span class="notification-datetime">$1</span>');
       }
 
-      // update badge if present
-      const nb = document.getElementById('navNotificationBadge');
-      if (nb) {
-        const unread = parseInt(j.unread || 0, 10) || 0;
-        nb.textContent = unread;
-        nb.style.display = unread > 0 ? '' : 'none';
-      }
-      // optionally populate dropdown list
+      const unread = parseInt(j.unread || 0, 10) || 0;
+      window.updateNotificationBadge(unread);
+
       const list = document.getElementById('navNotificationList');
+      const emptyEl = document.getElementById('navNotificationEmpty');
       if (list) {
         list.innerHTML = '';
-        (j.notifications || []).slice(0,10).forEach(n => {
-          const rawLink = String(n.link || '').trim();
-          const hasValidRawLink = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
-          const fallbackLink = currentPortalNotificationsUrl();
-          const isNavigable = hasValidRawLink || fallbackLink !== '#';
-
-          // RBAC-safe default: always stay within current role portal.
-          let resolvedHref = fallbackLink !== '#' ? fallbackLink : '#';
-          if (resolvedHref === '#' && hasValidRawLink) {
-            if (/^https?:\/\//i.test(rawLink)) {
-              resolvedHref = rawLink;
-            } else if (rawLink.startsWith('/')) {
-              resolvedHref = rawLink.startsWith(appRoot + '/') ? rawLink : (appRoot + rawLink);
-            } else {
-              resolvedHref = rawLink;
-            }
-          }
-
-          const a = document.createElement(isNavigable ? 'a' : 'div');
-          if (isNavigable) a.href = resolvedHref;
-          a.className = 'dropdown-item d-flex justify-content-between align-items-start';
-          a.dataset.notificationId = n.notification_id || '';
-          const left = document.createElement('div');
-          const titleHtml = escapeHtml(n.title || '');
-          const bodyHtml = highlightDateTimes(n.body || '');
-          left.innerHTML = '<div class="fw-bold">' + titleHtml + '</div><div class="small notification-body">' + bodyHtml + '</div>';
-          const right = document.createElement('small');
-          right.className = 'notification-time';
-          right.textContent = new Date(n.created_at).toLocaleString();
-          a.appendChild(left);
-          a.appendChild(right);
-          if (isNavigable) {
-            a.addEventListener('click', async function(e){
-              // mark read then navigate
-              e.preventDefault();
-              const nid = this.dataset.notificationId;
-              if (nid) {
-                try { await fetch(appRoot + '/assets/api/notifications/mark_read.php', { method: 'POST', body: new URLSearchParams({ notification_id: nid }) }); } catch(e){}
+        const rows = (j.notifications || []).slice(0, 8);
+        if (!rows.length) {
+          if (emptyEl) emptyEl.hidden = false;
+        } else {
+          if (emptyEl) emptyEl.hidden = true;
+          rows.forEach((n) => {
+            const rawLink = String(n.link || '').trim();
+            const hasValidRawLink = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
+            const fallbackLink = currentPortalNotificationsUrl();
+            const isNavigable = hasValidRawLink || fallbackLink !== '#';
+            let resolvedHref = fallbackLink !== '#' ? fallbackLink : '#';
+            if (resolvedHref === '#' && hasValidRawLink) {
+              if (/^https?:\/\//i.test(rawLink)) {
+                resolvedHref = rawLink;
+              } else if (rawLink.startsWith('/')) {
+                resolvedHref = rawLink.startsWith(appRoot + '/') ? rawLink : (appRoot + rawLink);
+              } else {
+                resolvedHref = rawLink;
               }
-              const href = this.getAttribute('href') || '#';
-              if (href && href !== '#') window.location.href = href;
-            });
-          }
-          list.appendChild(a);
-        });
+            }
+
+            const isUnread = String(n.is_read) === '0' || n.is_read === 0 || n.is_read === false;
+            const item = document.createElement(isNavigable ? 'a' : 'div');
+            if (isNavigable) item.href = resolvedHref;
+            item.className = 'notification-dropdown-item' + (isUnread ? ' is-unread' : '');
+            item.dataset.notificationId = n.notification_id || '';
+
+            const dot = document.createElement('span');
+            dot.className = 'notification-dropdown-item__dot';
+            dot.setAttribute('aria-hidden', 'true');
+
+            const content = document.createElement('div');
+            content.className = 'notification-dropdown-item__content';
+            const titleHtml = escapeHtml(n.title || 'Notification');
+            const bodyHtml = highlightDateTimes(n.body || '');
+            content.innerHTML = '<div class="notification-dropdown-item__title">' + titleHtml + '</div><div class="notification-dropdown-item__body">' + bodyHtml + '</div>';
+
+            const time = document.createElement('small');
+            time.className = 'notification-time';
+            time.textContent = n.created_at ? new Date(n.created_at).toLocaleString() : '';
+
+            item.appendChild(dot);
+            item.appendChild(content);
+            item.appendChild(time);
+
+            if (isNavigable) {
+              item.addEventListener('click', async function (e) {
+                e.preventDefault();
+                const nid = this.dataset.notificationId;
+                if (nid) {
+                  try {
+                    await fetch(appRoot + '/assets/api/notifications/mark_read.php', {
+                      method: 'POST',
+                      body: new URLSearchParams({ notification_id: nid })
+                    });
+                  } catch (err) {
+                    // silent
+                  }
+                }
+                const href = this.getAttribute('href') || '#';
+                if (href && href !== '#') window.location.href = href;
+              });
+            }
+
+            list.appendChild(item);
+          });
+        }
       }
     } catch (e) {
       // silent
     }
   }
+
+  function initNotificationDropdown() {
+    const toggle = document.getElementById('navNotificationsToggle');
+    const markAllBtn = document.getElementById('navMarkAllRead');
+
+    if (toggle) {
+      toggle.addEventListener('show.bs.dropdown', function () {
+        if (typeof window.markAllNotificationsRead === 'function') {
+          window.markAllNotificationsRead();
+        }
+      });
+    }
+
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.markAllNotificationsRead === 'function') {
+          window.markAllNotificationsRead();
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initNotificationDropdown);
   // start polling notifications every 30s
   setInterval(fetchNotifications, 30000);
   // initial

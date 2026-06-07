@@ -1,0 +1,283 @@
+/**
+ * Patient portal — phone-first UX enhancements.
+ * Scoped to body.patient-portal so staff portals are unaffected.
+ */
+
+body.patient-portal {
+    -webkit-text-size-adjust: 100%;
+}
+
+/* ---- Layout & safe areas ---- */
+@media (max-width: 991.98px) {
+    body.patient-portal #main {
+        padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.patient-portal .footer {
+        margin-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.patient-portal #header .header-search {
+        display: none;
+    }
+}
+
+@media (max-width: 575.98px) {
+    body.patient-portal #main {
+        padding: 12px;
+    }
+
+    body.patient-portal #header {
+        padding: 8px 12px;
+    }
+
+    body.patient-portal .pagetitle {
+        display: none;
+    }
+}
+
+/* ---- Touch-friendly controls ---- */
+@media (max-width: 991.98px) {
+    body.patient-portal .btn:not(.btn-sm):not(.btn-link) {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    body.patient-portal .form-control,
+    body.patient-portal .form-select {
+        min-height: 44px;
+        font-size: 16px; /* prevents iOS zoom on focus */
+    }
+
+    body.patient-portal textarea.form-control {
+        min-height: 96px;
+    }
+
+    body.patient-portal .service-item .form-check-input {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+/* ---- Bottom navigation (phones / small tablets) ---- */
+.patient-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid #dbe4f0;
+    box-shadow: 0 -4px 20px rgba(15, 35, 60, 0.08);
+}
+
+.patient-mobile-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    padding: 4px 6px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #5d6f85;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.1;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.patient-mobile-nav-item i {
+    font-size: 1.25rem;
+}
+
+.patient-mobile-nav-item.active,
+.patient-mobile-nav-item:hover,
+.patient-mobile-nav-item:focus {
+    color: #1173c1;
+    background: #eef5ff;
+}
+
+/* ---- Dashboard ---- */
+@media (max-width: 575.98px) {
+    body.patient-portal .dental-kpi-card .display-6 {
+        font-size: 1.75rem;
+    }
+
+    body.patient-portal .dental-dashboard-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ---- Services grid ---- */
+@media (max-width: 575.98px) {
+    body.patient-portal .services-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ---- Appointment booking calendar ---- */
+@media (max-width: 767.98px) {
+    body.patient-portal .patient-appt-card .card-header .sub-title {
+        font-size: 0.82rem;
+    }
+
+    body.patient-portal .patient-appt-card .calendar-panel .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 8px;
+    }
+
+    body.patient-portal .patient-appt-card #appointmentCalendar .fc-header-toolbar {
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 0.75rem !important;
+    }
+
+    body.patient-portal .patient-appt-card #appointmentCalendar .fc-toolbar-chunk {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    body.patient-portal .patient-appt-card #appointmentCalendar .fc-toolbar-title {
+        font-size: 0.95rem;
+        text-align: center;
+        width: 100%;
+    }
+
+    body.patient-portal .patient-appt-card #appointmentCalendar .fc-button {
+        padding: 0.35rem 0.55rem;
+        font-size: 0.82rem;
+    }
+
+    body.patient-portal .patient-appt-card .calendar-legend {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+}
+
+/* ---- Appointment history: card layout on phone ---- */
+@media (max-width: 767.98px) {
+    body.patient-portal .patient-appt-history-table thead {
+        display: none;
+    }
+
+    body.patient-portal .patient-appt-history-table,
+    body.patient-portal .patient-appt-history-table tbody,
+    body.patient-portal .patient-appt-history-table tr,
+    body.patient-portal .patient-appt-history-table td {
+        display: block;
+        width: 100%;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody tr {
+        margin-bottom: 12px;
+        padding: 12px;
+        border: 1px solid #dbe7e4;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody tr:hover {
+        background: #fff;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 6px 0;
+        border: 0;
+        text-align: right;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        font-size: 0.78rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        text-align: left;
+        flex-shrink: 0;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody td[data-label="Actions"] {
+        flex-direction: column;
+        align-items: stretch;
+        padding-top: 10px;
+        border-top: 1px dashed #e2e8f0;
+        margin-top: 4px;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody td[data-label="Actions"]::before {
+        margin-bottom: 4px;
+    }
+
+    body.patient-portal .patient-appt-history-table .patient-resched-btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody tr#patientApptHistoryEmpty td,
+    body.patient-portal .patient-appt-history-table tbody tr.history-empty-row td {
+        display: block;
+        text-align: center;
+    }
+
+    body.patient-portal .patient-appt-history-table tbody tr#patientApptHistoryEmpty td::before,
+    body.patient-portal .patient-appt-history-table tbody tr.history-empty-row td::before {
+        display: none;
+    }
+
+    body.patient-portal .history-table-wrap {
+        border: 0;
+        background: transparent;
+        overflow: visible;
+    }
+}
+
+/* ---- Transactions accordion ---- */
+@media (max-width: 575.98px) {
+    body.patient-portal #transactionAccordion .card-header button {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 4px;
+        padding: 12px;
+        white-space: normal;
+    }
+
+    body.patient-portal #transactionAccordion .card-header button .ms-auto {
+        margin-left: 0 !important;
+    }
+
+    body.patient-portal #transactionAccordion .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ---- Modals on small screens ---- */
+@media (max-width: 575.98px) {
+    body.patient-portal .modal-dialog {
+        margin: 0.5rem;
+    }
+
+    body.patient-portal .modal-fullscreen-sm-down {
+        margin: 0;
+    }
+}

@@ -10,6 +10,7 @@ if (!isset($_SESSION['patient_id']) || !isset($_SESSION['role']) || $_SESSION['r
 
 include_once __DIR__ . '/config/database.php';
 include_once __DIR__ . '/config/billing_helpers.php';
+include_once __DIR__ . '/config/odontogram_helpers.php';
 
 billing_ensure_tables($conn);
 
@@ -40,40 +41,7 @@ if (!function_exists('transactions_format_scalar_list')) {
 if (!function_exists('transactions_parse_odontogram_findings')) {
     function transactions_parse_odontogram_findings($raw): array
     {
-        $findings = [];
-        $odontogram = json_decode((string)$raw, true);
-        if (!is_array($odontogram)) {
-            return $findings;
-        }
-
-        foreach ($odontogram as $toothNo => $entry) {
-            $remark = '';
-            if (is_array($entry)) {
-                if (isset($entry['statuses']) || isset($entry['comment'])) {
-                    $parts = [];
-                    if (!empty($entry['statuses'])) {
-                        $parts[] = transactions_format_scalar_list($entry['statuses']);
-                    }
-                    if (!empty($entry['comment'])) {
-                        $parts[] = trim((string)$entry['comment']);
-                    }
-                    $remark = trim(implode(' — ', array_filter($parts, static fn($p) => $p !== '')));
-                } else {
-                    $remark = transactions_format_scalar_list($entry);
-                }
-            } else {
-                $remark = trim((string)$entry);
-            }
-
-            if ($remark !== '') {
-                $findings[] = [
-                    'tooth_no' => (string)$toothNo,
-                    'remark' => $remark,
-                ];
-            }
-        }
-
-        return $findings;
+        return odontogram_format_findings($raw);
     }
 }
 

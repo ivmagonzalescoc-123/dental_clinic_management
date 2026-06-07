@@ -167,7 +167,7 @@ if ($tstmt) {
 
         <!-- Odontogram moved to be the last input section -->
         <div class="mb-3">
-            <label class="form-label"><i class="bi bi-tooth"></i> Odontogram (3D)</label>
+            <label class="form-label"><i class="bi bi-tooth"></i> Odontogram</label>
             <div class="d-flex align-items-center mb-2 gap-2">
                 <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
                 <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
@@ -209,22 +209,6 @@ if ($tstmt) {
     top: 10px;
     right: 10px;
     z-index: 30;
-}
-
-.odontogram-viewport:fullscreen {
-    background: #ffffff;
-    padding: 10px;
-}
-
-.odontogram-viewport:fullscreen #odontogramContainer,
-.odontogram-viewport:-webkit-full-screen #odontogramContainer {
-    height: calc(100vh - 20px);
-}
-
-.odontogram-viewport:fullscreen #odontogramFrame,
-.odontogram-viewport:-webkit-full-screen #odontogramFrame {
-    height: calc(100vh - 20px) !important;
-    border: 0 !important;
 }
 </style>
 
@@ -306,7 +290,7 @@ if ($tstmt) {
             iframe.id = 'odontogramFrame';
             iframe.src = '../odontogram/index.html';
             iframe.style.width = '100%';
-            iframe.style.height = '480px';
+            iframe.style.height = '620px';
             iframe.style.border = '1px solid #ddd';
             iframe.loading = 'eager';
             container.appendChild(iframe);
@@ -516,6 +500,14 @@ if ($tstmt) {
         function updatePhotoGalleryPreview() {
             const container = document.getElementById('photoGalleryContainer');
             document.getElementById('photoCountBadge').textContent = uploadedPhotos.length;
+
+            if (typeof renderLocalMediaGallery === 'function') {
+                renderLocalMediaGallery(container, uploadedPhotos, function (idx) {
+                    uploadedPhotos.splice(idx, 1);
+                    updatePhotoGalleryPreview();
+                });
+                return;
+            }
             
             if (uploadedPhotos.length === 0) {
                 container.innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';

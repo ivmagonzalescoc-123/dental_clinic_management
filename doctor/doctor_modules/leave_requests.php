@@ -292,7 +292,7 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
         </div>
 
         <div class="table-responsive">
-            <table class="table table-bordered doctor-availability-calendar mb-0">
+            <table class="table table-bordered doctor-availability-calendar mb-0" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Sun</th>

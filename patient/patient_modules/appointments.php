@@ -298,7 +298,7 @@ if ($patient_id) {
 
         <div id="apptHistoryPane">
             <div class="history-table-wrap table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle patient-appt-history-table" data-skip-table-search="1">
                     <thead>
                         <tr>
                             <th>Appointment #</th>
@@ -365,13 +365,13 @@ if ($patient_id) {
                                 $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed', 'missed'], true) && !$hasPendingResched;
                                 ?>
                                 <tr>
-                                    <td>#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
-                                    <td><?php echo !empty($history['appointment_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$history['appointment_date']))) : 'N/A'; ?></td>
-                                    <td><?php echo htmlspecialchars($doctorName); ?></td>
-                                    <td><?php echo htmlspecialchars($slotLabel); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
-                                    <td><span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
-                                    <td>
+                                    <td data-label="Appointment #">#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
+                                    <td data-label="Date"><?php echo !empty($history['appointment_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$history['appointment_date']))) : 'N/A'; ?></td>
+                                    <td data-label="Doctor"><?php echo htmlspecialchars($doctorName); ?></td>
+                                    <td data-label="Time Slot"><?php echo htmlspecialchars($slotLabel); ?></td>
+                                    <td data-label="Reason"><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
+                                    <td data-label="Status"><span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
+                                    <td data-label="Actions">
                                         <?php if ($canRequestReschedule): ?>
                                             <button
                                                 type="button"
@@ -397,7 +397,7 @@ if ($patient_id) {
         </div>
 
         <div class="modal fade" id="patientRescheduleModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-fullscreen-sm-down">
                 <div class="modal-content">
                     <div class="modal-header bg-warning text-dark">
                         <h5 class="modal-title"><i class="bi bi-calendar2-week"></i> Request Appointment Reschedule</h5>
@@ -519,6 +519,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
     }
 
+    function historyCell(label, content) {
+        const td = document.createElement('td');
+        td.setAttribute('data-label', label);
+        if (content instanceof Node) {
+            td.appendChild(content);
+        } else {
+            td.textContent = String(content ?? '');
+        }
+        return td;
+    }
+
     function appendHistoryRow(payload) {
         if (!historyBody || !payload) return;
         if (historyEmptyRow && historyEmptyRow.parentNode) {
@@ -527,34 +538,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const tr = document.createElement('tr');
 
-        const idCell = document.createElement('td');
-        idCell.textContent = '#' + String(payload.appointmentId || 0);
-        tr.appendChild(idCell);
+        tr.appendChild(historyCell('Appointment #', '#' + String(payload.appointmentId || 0)));
+        tr.appendChild(historyCell('Date', displayDateLabel(payload.date)));
+        tr.appendChild(historyCell('Doctor', String(payload.doctor || 'To be assigned')));
+        tr.appendChild(historyCell('Time Slot', String(payload.slot || 'TBD')));
+        tr.appendChild(historyCell('Reason', String(payload.reason || '')));
 
-        const dateCell = document.createElement('td');
-        dateCell.textContent = displayDateLabel(payload.date);
-        tr.appendChild(dateCell);
-
-        const doctorCell = document.createElement('td');
-        doctorCell.textContent = String(payload.doctor || 'To be assigned');
-        tr.appendChild(doctorCell);
-
-        const slotCell = document.createElement('td');
-        slotCell.textContent = String(payload.slot || 'TBD');
-        tr.appendChild(slotCell);
-
-        const reasonCell = document.createElement('td');
-        reasonCell.textContent = String(payload.reason || '');
-        tr.appendChild(reasonCell);
-
-        const statusCell = document.createElement('td');
         const badge = document.createElement('span');
         badge.className = 'badge bg-' + statusBadgeClass(payload.status);
         badge.textContent = statusLabel(payload.status);
-        statusCell.appendChild(badge);
-        tr.appendChild(statusCell);
+        tr.appendChild(historyCell('Status', badge));
 
-        const actionCell = document.createElement('td');
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'btn btn-sm btn-outline-warning patient-resched-btn';
@@ -562,8 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.setAttribute('data-doctor-id', String(payload.doctorId || ''));
         btn.setAttribute('data-current-date', String(payload.date || ''));
         btn.innerHTML = '<i class="bi bi-calendar2-week"></i> Request Reschedule';
-        actionCell.appendChild(btn);
-        tr.appendChild(actionCell);
+        tr.appendChild(historyCell('Actions', btn));
 
         if (historyBody.firstChild) {
             historyBody.insertBefore(tr, historyBody.firstChild);

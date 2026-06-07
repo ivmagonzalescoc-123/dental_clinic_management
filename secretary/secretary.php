@@ -116,7 +116,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-profile" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
 </head>
 
@@ -152,17 +152,10 @@ switch ($role_key) {
                     </a>
                 </li>
 
-                <li class="nav-item dropdown">
-                    <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" aria-label="Notifications">
-                        <i class="bi bi-bell"></i>
-                        <span id="navNotificationBadge" class="badge bg-danger badge-number" style="display:none;">0</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications" style="min-width: 360px;">
-                        <li class="dropdown-header">Notifications</li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li id="navNotificationList" class="notifications-list px-2"></li>
-                    </ul>
-                </li>
+                <?php
+                $notifications_portal_url = 'secretary.php?page=notifications';
+                include dirname(__DIR__) . '/includes/notification_dropdown.php';
+                ?>
 
                 
 
@@ -339,8 +332,10 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
-    <script src="../assets/js/main.js?v=20260606-search2"></script>
+    <script src="../assets/js/main.js?v=20260606-notifications"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
+    <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
+    <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js"></script>
 

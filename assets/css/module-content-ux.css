@@ -232,8 +232,11 @@
 }
 
 #main .modal-content {
-  border: 1px solid var(--ux-border);
+  border: none;
   border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(15, 35, 60, 0.12), 0 0 0 1px var(--ux-border);
+  background: #fff;
 }
 
 #main .modal-header,
@@ -241,8 +244,15 @@
   border-color: var(--ux-border-soft);
 }
 
+#main .modal-header {
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border-bottom: 1px solid var(--ux-border-soft);
+}
+
 #main .modal-header[class*="bg-"] {
   color: #fff;
+  border-bottom: 0;
 }
 
 #main .modal-header[class*="bg-"] .modal-title,

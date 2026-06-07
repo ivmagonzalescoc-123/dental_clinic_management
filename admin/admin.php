@@ -87,7 +87,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260606-profile" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260606-notifications" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
 </head>
 
@@ -123,7 +123,10 @@ switch ($role_key) {
                     </a>
                 </li>
 
-                
+                <?php
+                $notifications_portal_url = 'admin.php?page=notifications';
+                include dirname(__DIR__) . '/includes/notification_dropdown.php';
+                ?>
 
                 <li class="nav-item dropdown pe-3">
                     <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
@@ -295,7 +298,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260606-search2"></script>
+    <script src="../assets/js/main.js?v=20260606-notifications"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->

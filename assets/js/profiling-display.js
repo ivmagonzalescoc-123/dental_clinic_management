@@ -1,5 +1,12 @@
 (function (global) {
     const VISIT_CLINICAL_LABELS = {
+        case_history: 'Case History',
+        chief_complaint: 'Chief Complaint',
+        gingiva_consistency: 'Consistency Gingiva',
+        oral_hygiene: 'Oral Hygiene',
+        gingival_color: 'Gingival Color',
+        lymph_nodes: 'Lymph Nodes',
+        tongue: 'Tongue',
         occlusion: 'Occlusion',
         cl_i_type: 'Cl. I Type',
         cl_ii_division: 'Cl. II Division',
@@ -86,7 +93,7 @@
                 return;
             }
             hasData = true;
-            const col = (key === 'medical_history' || key === 'medications' || key === 'previous_dental_treatment' || key === 'background_notes' || key === 'radiographic_interpretation') ? 12 : 6;
+            const col = (key === 'case_history' || key === 'chief_complaint' || key === 'medical_history' || key === 'medications' || key === 'previous_dental_treatment' || key === 'background_notes' || key === 'radiographic_interpretation') ? 12 : 6;
             html += `<div class="col-md-${col} mb-2">
                 <strong>${escapeHtml(labels[key])}:</strong>
                 <div class="small text-muted">${escapeHtml(formatProfilingValue(data[key]))}</div>

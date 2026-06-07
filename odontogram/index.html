@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>3D Odontogram (Clickable Teeth)</title>
+    <title>Odontogram</title>
     <link rel="stylesheet" href="./style.css" />
     <script type="importmap">
 {
@@ -13,66 +13,67 @@
   }
 }
 </script>
-
   </head>
   <body>
     <div class="app">
       <aside class="panel">
         <header class="panel__header">
-          <h1>3D Odontogram</h1>
-          <p>Click a tooth number to focus in 3D and update its status.</p>
+          <h1>Odontogram</h1>
+          <p>Click a tooth surface on the chart, then apply a legend code.</p>
         </header>
 
-        <section class="section">
-          <h2>Teeth</h2>
-          <div id="odontogram" class="odontogram"></div>
-        </section>
-
-        <section class="section">
-          <h2>Selected Tooth</h2>
+        <section class="section section--flat">
+          <h2>Selection</h2>
           <div class="selected">
             <div class="selected__row">
-              <span class="label">Tooth #</span>
+              <span class="label">Tooth (FDI)</span>
               <strong id="selectedTooth">—</strong>
             </div>
             <div class="selected__row">
-              <span class="label">Status</span>
+              <span class="label">Surface</span>
+              <strong id="selectedSurface">—</strong>
+            </div>
+            <div class="selected__row">
+              <span class="label">Applied code</span>
               <span id="statusSummary" class="pill">—</span>
             </div>
           </div>
 
-          <div class="statusControls">
-            <button class="btn" data-status="missing">Missing</button>
-            <button class="btn" data-status="rootMissing">Root Missing</button>
-            <button class="btn" data-status="caries">Caries</button>
-            <button class="btn" data-status="filled">Filled</button>
-            <button class="btn" data-status="crown">Crown</button>
-            <button class="btn" data-status="implant">Implant</button>
-            <button class="btn btn--ghost" id="clearStatus">Clear</button>
+          <h2 class="legend-heading">Chart legend</h2>
+          <div id="legendGrid" class="legend-grid"></div>
+
+          <div class="action-row">
+            <button class="btn btn--ghost" id="clearSurface" type="button">Clear surface</button>
+            <button class="btn btn--ghost" id="clearTooth" type="button">Clear tooth</button>
           </div>
 
-          <label class="label" for="toothComment" style="display:block;margin-top:12px;">Tooth Comment</label>
-          <textarea id="toothComment" class="toothComment" rows="3" placeholder="Add notes for the selected tooth..."></textarea>
+          <label class="label" for="toothComment" style="display:block;margin-top:12px;">Tooth comment</label>
+          <textarea id="toothComment" class="toothComment" rows="3" placeholder="Notes for the selected tooth..."></textarea>
 
-          <button class="btn btn--reset" id="resetView" type="button">Reset View</button>
-
-          <div class="hint">
-            Tip: If a tooth is marked <b>Missing</b>, it becomes semi-transparent in 3D.
-          </div>
+          <button class="btn btn--reset" id="resetView" type="button" style="display:none;">Reset 3D View</button>
         </section>
 
         <footer class="panel__footer">
-          <small>
-            Controls: drag to orbit • scroll to zoom • right-drag to pan
-          </small>
+          <small id="viewHint">Click a surface on the 2D chart (e.g. tooth 18 — buccal).</small>
         </footer>
       </aside>
 
-      <main class="viewport">
-        <canvas id="c"></canvas>
-      </main>
+      <section class="workspace">
+        <div class="view-tabs" role="tablist" aria-label="Chart view">
+          <button type="button" id="viewTabChart" class="view-tab is-active" role="tab" aria-selected="true">2D Chart</button>
+          <button type="button" id="viewTab3d" class="view-tab" role="tab" aria-selected="false">3D Preview</button>
+        </div>
+        <div class="workspace__body">
+          <div id="chartPane" class="chart-pane" role="tabpanel">
+            <div id="odontogram" class="odontogram"></div>
+          </div>
+          <div id="viewport3d" class="viewport-3d is-hidden" role="tabpanel">
+            <div id="modelStatus" class="model-status is-hidden"></div>
+            <canvas id="c"></canvas>
+          </div>
+        </div>
+      </section>
     </div>
-
     <script type="module" src="./main.js"></script>
   </body>
 </html>

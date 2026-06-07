@@ -2,3 +2,11 @@
 [16-Mar-2026 02:49:02 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7
 [16-Mar-2026 02:58:36 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\mark_arrived.php on line 7
 [16-Mar-2026 02:58:36 Europe/Berlin] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7
+[07-Jun-2026 08:21:48 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\mark_arrived.php on line 7
+[07-Jun-2026 08:21:49 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7
+[07-Jun-2026 08:22:05 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\mark_arrived.php on line 7
+[07-Jun-2026 08:22:05 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7
+[07-Jun-2026 08:22:12 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\mark_arrived.php on line 7
+[07-Jun-2026 08:22:12 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7
+[07-Jun-2026 08:22:24 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\mark_arrived.php on line 7
+[07-Jun-2026 08:22:24 Asia/Manila] PHP Notice:  session_start(): Ignoring session_start() because a session is already active in C:\xampp\htdocs\capstone_dental\assets\api\arrivals\start_session.php on line 7

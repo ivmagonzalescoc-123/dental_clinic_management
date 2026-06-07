@@ -7963,21 +7963,28 @@ CREATE TABLE `tooth_status` (
 
 CREATE TABLE `tooth_status_type` (
   `status_type_id` int(11) NOT NULL,
-  `tooth_id` int(11) NOT NULL,
+  `label` varchar(120) NOT NULL,
   `category` enum('decay','restoration','missing','other') DEFAULT 'other',
-  `code` varchar(50) DEFAULT NULL
+  `code` varchar(50) NOT NULL,
+  `description` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
-INSERT INTO `tooth_status_type` (`status_type_id`, `tooth_id`, `category`, `code`) VALUES
-(1, 1, 'decay', 'DCY'),
-(2, 1, 'restoration', 'RST'),
-(3, 1, 'missing', 'MIS'),
-(4, 1, 'other', 'OTH'),
-(5, 2, 'decay', 'DCY'),
-(6, 2, 'restoration', 'RST'),
-(7, 2, 'missing', 'MIS'),
-(8, 2, 'other', 'OTH');
+INSERT INTO `tooth_status_type` (`status_type_id`, `label`, `category`, `code`, `description`) VALUES
+(1, 'Dental Caries', 'decay', 'C', 'Dental Caries'),
+(2, 'Caries — Vital Pulp Expose', 'decay', 'C1', 'Dental Caries with Vital Pulp Expose'),
+(3, 'Caries — Non-vital Pulp Expose', 'decay', 'C2', 'Dental Caries with Non-vital Pulp Expose'),
+(4, 'Indicated for Extraction', 'other', 'X', 'Indicated for Extraction'),
+(5, 'Retained Root Fragment', 'missing', 'RF', 'Retained Root Fragment'),
+(6, 'Amalgam Filling', 'restoration', 'Am', 'Amalgam Filling'),
+(7, 'Silicate Filling', 'restoration', 'S', 'Silicate Filling'),
+(8, 'Gold Crown', 'restoration', 'GC', 'Gold Crown'),
+(9, 'Bridge Abutment', 'restoration', 'Ab1', 'Bridge Abutment'),
+(10, 'Pontic', 'restoration', 'P', 'Pontic'),
+(11, 'Gold Clasp', 'restoration', 'GCI', 'Gold Clasp'),
+(12, 'Gold Inlays', 'restoration', 'GI', 'Gold Inlays'),
+(13, 'Missing (Extraction)', 'missing', 'M', 'Missing due to Extraction'),
+(14, 'Unerupted', 'other', 'Un', 'Unerupted');
 
 
 
@@ -8271,7 +8278,7 @@ ALTER TABLE `tooth_status`
 
 ALTER TABLE `tooth_status_type`
   ADD PRIMARY KEY (`status_type_id`),
-  ADD KEY `fk_tst_tooth` (`tooth_id`);
+  ADD UNIQUE KEY `uk_chart_legend_code` (`code`);
 
 
 ALTER TABLE `treatments`
@@ -8428,7 +8435,7 @@ ALTER TABLE `tooth_status`
 
 
 ALTER TABLE `tooth_status_type`
-  MODIFY `status_type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `status_type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 ALTER TABLE `treatments`
   MODIFY `treatment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
@@ -8551,9 +8558,6 @@ ALTER TABLE `tooth_status`
   ADD CONSTRAINT `fk_tooth_status_tooth` FOREIGN KEY (`tooth_selected`) REFERENCES `tooth` (`tooth_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tooth_status_type` FOREIGN KEY (`status_type_id`) REFERENCES `tooth_status_type` (`status_type_id`) ON DELETE SET NULL;
 
-
-ALTER TABLE `tooth_status_type`
-  ADD CONSTRAINT `fk_tst_tooth` FOREIGN KEY (`tooth_id`) REFERENCES `tooth` (`tooth_id`) ON DELETE CASCADE;
 
 
 ALTER TABLE `users`

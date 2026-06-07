@@ -50,7 +50,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is tomorrow at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
                     'sms' => "Reminder: You have a dental appointment tomorrow at {$scheduledStart} (ID #{$appointmentId}).",
                     'title' => 'Appointment reminder (24h)',
-                    'body' => "Appointment #{$appointmentId} is tomorrow at {$scheduledStart}."
+                    'body' => "{$patientDisplay} has an appointment tomorrow at {$scheduledStart}."
                 ];
 
             case 'appt_24h_staff':
@@ -77,7 +77,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => "Hello {$patientName},\n\nYour appointment starts in about 1 hour at {$scheduledStart}.\nAppointment ID: #{$appointmentId}\n\nIf you cannot attend, please contact the clinic as soon as possible.\n\nAzucena's Dental Clinic",
                     'sms' => "Reminder: Appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart}).",
                     'title' => 'Appointment in 1 hour',
-                    'body' => "Appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart})."
+                    'body' => "{$patientDisplay} has an appointment in about 1 hour ({$scheduledStart})."
                 ];
 
             case 'appt_1h_staff':
@@ -140,7 +140,7 @@ if (!function_exists('build_reminder_template')) {
                     'email' => "Hello {$patientName},\n\nThis is a reminder for your appointment at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
                     'sms' => "Reminder: Appointment #{$appointmentId} at {$scheduledStart}.",
                     'title' => 'Upcoming appointment reminder',
-                    'body' => "Appointment #{$appointmentId} is scheduled at {$scheduledStart}. Please be prepared."
+                    'body' => "{$patientDisplay} has an appointment at {$scheduledStart}. Please be prepared."
                 ];
         }
     }

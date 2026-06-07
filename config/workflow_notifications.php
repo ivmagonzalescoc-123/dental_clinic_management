@@ -47,7 +47,7 @@ if (!function_exists('wf_notify_appointment_created')) {
     {
         $patientName = wf_lookup_patient_name($conn, $patientId);
         $title = 'New appointment request';
-        $body = $patientName . ' booked an appointment on ' . $appointmentDate . ' (#' . $appointmentId . ').';
+        $body = $patientName . ' booked an appointment on ' . $appointmentDate . '.';
         $link = 'secretary.php?page=appointments&view=scheduled';
 
         if ($status === 'scheduled') {
@@ -62,10 +62,12 @@ if (!function_exists('wf_notify_appointment_created')) {
 if (!function_exists('wf_notify_appointment_approved')) {
     function wf_notify_appointment_approved($conn, $appointmentId, $patientId, $doctorId, $appointmentDate)
     {
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Appointment confirmed';
-        $body = 'Appointment #' . $appointmentId . ' on ' . $appointmentDate . ' has been approved.';
-        wf_notify_patient($conn, $patientId, $title, $body, 'patient.php?page=appointments');
-        wf_notify_user($conn, $doctorId, $title, $body, 'doctor.php?page=appointments');
+        $bodyPatient = 'Your appointment on ' . $appointmentDate . ' has been approved.';
+        $bodyStaff = $ref . ' on ' . $appointmentDate . ' has been approved.';
+        wf_notify_patient($conn, $patientId, $title, $bodyPatient, 'patient.php?page=appointments');
+        wf_notify_user($conn, $doctorId, $title, $bodyStaff, 'doctor.php?page=appointments');
     }
 }
 
@@ -73,8 +75,9 @@ if (!function_exists('wf_notify_reschedule_requested')) {
     function wf_notify_reschedule_requested($conn, $appointmentId, $patientId, $doctorId, $requestedDate)
     {
         $patientName = wf_lookup_patient_name($conn, $patientId);
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Reschedule request';
-        $body = $patientName . ' requested to reschedule appointment #' . $appointmentId . ' to ' . $requestedDate . '.';
+        $body = $patientName . ' requested to reschedule to ' . $requestedDate . '.';
         $link = 'secretary.php?page=appointments&view=scheduled';
         wf_notify_secretaries($conn, $title, $body, $link);
         wf_notify_user($conn, $doctorId, $title, $body, 'doctor.php?page=appointments');
@@ -85,15 +88,18 @@ if (!function_exists('wf_notify_reschedule_requested')) {
 if (!function_exists('wf_notify_reschedule_decision')) {
     function wf_notify_reschedule_decision($conn, $appointmentId, $patientId, $doctorId, $approved, $newDate = null)
     {
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         if ($approved) {
             $title = 'Reschedule approved';
-            $body = 'Appointment #' . $appointmentId . ' has been rescheduled to ' . ($newDate ?: 'the new date') . '.';
+            $bodyPatient = 'Your appointment has been rescheduled to ' . ($newDate ?: 'the new date') . '.';
+            $bodyStaff = $ref . ' has been rescheduled to ' . ($newDate ?: 'the new date') . '.';
         } else {
             $title = 'Reschedule rejected';
-            $body = 'Your reschedule request for appointment #' . $appointmentId . ' was not approved.';
+            $bodyPatient = 'Your reschedule request was not approved.';
+            $bodyStaff = $ref . ' — reschedule request was not approved.';
         }
-        wf_notify_patient($conn, $patientId, $title, $body, 'patient.php?page=appointments');
-        wf_notify_user($conn, $doctorId, $title, $body, 'doctor.php?page=appointments');
+        wf_notify_patient($conn, $patientId, $title, $bodyPatient, 'patient.php?page=appointments');
+        wf_notify_user($conn, $doctorId, $title, $bodyStaff, 'doctor.php?page=appointments');
     }
 }
 
@@ -101,7 +107,7 @@ if (!function_exists('wf_notify_patient_arrived')) {
     function wf_notify_patient_arrived($conn, $appointmentId, $patientId, $doctorId)
     {
         $patientName = wf_lookup_patient_name($conn, $patientId);
-        wf_notify_user($conn, $doctorId, 'Patient arrived', $patientName . ' has checked in for appointment #' . $appointmentId . '.', 'doctor.php?page=arrivals');
+        wf_notify_user($conn, $doctorId, 'Patient arrived', $patientName . ' has checked in and is ready to be seen.', 'doctor.php?page=arrivals');
         wf_notify_patient($conn, $patientId, 'Checked in', 'You have been marked as arrived. Please wait for the doctor.', 'patient.php?page=appointments');
     }
 }
@@ -109,9 +115,9 @@ if (!function_exists('wf_notify_patient_arrived')) {
 if (!function_exists('wf_notify_doctor_finished')) {
     function wf_notify_doctor_finished($conn, $appointmentId, $patientId)
     {
-        $patientName = wf_lookup_patient_name($conn, $patientId);
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Records needed';
-        $body = $patientName . ' — appointment #' . $appointmentId . ' is ready for clinical record submission.';
+        $body = $ref . ' is ready for clinical record submission.';
         wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=appointments&view=records_queue');
     }
 }
@@ -119,8 +125,9 @@ if (!function_exists('wf_notify_doctor_finished')) {
 if (!function_exists('wf_notify_record_submitted')) {
     function wf_notify_record_submitted($conn, $appointmentId, $patientId, $doctorId, $billingId, $totalAmount)
     {
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Clinical record complete';
-        $body = 'Appointment #' . $appointmentId . ' record submitted. Bill #' . $billingId . ' — ₱' . number_format($totalAmount, 2) . '.';
+        $body = $ref . ' — record submitted. Bill #' . $billingId . ' — ₱' . number_format($totalAmount, 2) . '.';
         wf_notify_patient($conn, $patientId, 'Bill ready', 'Your bill of ₱' . number_format($totalAmount, 2) . ' is ready. View it in Transactions.', 'patient.php?page=transactions');
         wf_notify_user($conn, $doctorId, $title, $body, 'doctor.php?page=records');
         wf_notify_secretaries($conn, 'Billing generated', $body, 'secretary.php?page=billing');
@@ -142,5 +149,14 @@ if (!function_exists('wf_lookup_patient_name')) {
             }
         }
         return $name !== '' ? $name : 'Patient';
+    }
+}
+
+if (!function_exists('wf_format_patient_appointment')) {
+    function wf_format_patient_appointment($conn, $patientId, $appointmentId)
+    {
+        $name = wf_lookup_patient_name($conn, $patientId);
+        $id = (int)$appointmentId;
+        return $id > 0 ? ($name . ' (Appt #' . $id . ')') : $name;
     }
 }

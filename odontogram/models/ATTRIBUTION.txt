@@ -1,0 +1,15 @@
+3D tooth preview model
+----------------------
+File: tooth.glb
+Source: dentist-dream demo (Igor-Vuk)
+URL: https://github.com/Igor-Vuk/dentist-dream
+Original file: public/models/tooth-final.glb
+
+Used for the optional 3D preview panel in the odontogram (Option A).
+Replace with your own GLB jaw or per-tooth models if needed:
+  - jaw.glb          full arch (optional, loads instead of instanced teeth)
+  - teeth/NN.glb     per-tooth models (optional, NN = 01..32)
+
+Recommended upgrades (download manually from Sketchfab, CC BY):
+  - Free Teeth Base Mesh
+  - Tooth bank – Dental Anatomy 2025 collection

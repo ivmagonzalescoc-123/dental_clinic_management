@@ -4,11 +4,12 @@ $lines = file($path, FILE_IGNORE_NEW_LINES);
 $out = [];
 
 foreach ($lines as $line) {
-    if (preg_match('/^\s*--/', $line)) {
+    if (preg_match('/^\s*(--|#)/', $line)) {
         continue;
     }
+    $line = preg_replace('/\/\*.*?\*\//', '', $line);
     $line = preg_replace("/\s+COMMENT\s+'(?:[^'\\\\]|\\\\.)*'/i", '', $line);
-    $out[] = $line;
+    $out[] = rtrim($line);
 }
 
 file_put_contents($path, implode(PHP_EOL, $out) . PHP_EOL);

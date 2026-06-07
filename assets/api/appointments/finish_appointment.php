@@ -20,6 +20,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 set_error_handler(function($severity, $message, $file, $line) {
     // convert warnings/notices to ErrorException so they get caught
     throw new ErrorException($message, 0, $severity, $file, $line);
@@ -83,6 +84,12 @@ if (!security_validate_csrf_token($csrf)) {
 $appointmentId = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
 $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
 $odontogram = isset($_POST['odontogram']) && $_POST['odontogram'] !== '' ? $_POST['odontogram'] : null;
+if ($odontogram !== null) {
+    $decodedOdonto = json_decode($odontogram, true);
+    if (is_array($decodedOdonto)) {
+        $odontogram = json_encode(odontogram_normalize_data($decodedOdonto), JSON_UNESCAPED_UNICODE);
+    }
+}
 $doctorId = $_SESSION['user_id'];
 $idempotencyKey = $_POST['idempotency_key'] ?? '';
 

@@ -295,7 +295,7 @@ $monthLabel = date('F Y', strtotime($monthStart));
             </div>
             <div class="card-body p-2">
                 <div class="table-responsive">
-                    <table class="table table-bordered calendar-table mb-0">
+                    <table class="table table-bordered calendar-table mb-0" data-skip-table-search="1">
                         <thead>
                             <tr>
                                 <th>Sun</th>

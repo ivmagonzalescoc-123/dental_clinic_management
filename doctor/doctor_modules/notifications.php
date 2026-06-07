@@ -102,10 +102,14 @@
 
     if (markAllBtn) {
         markAllBtn.addEventListener('click', async function() {
-            for (const n of loadedNotifications) {
-                if (n && n.notification_id) {
-                    await markRead(n.notification_id);
-                }
+            try {
+                await fetch('../assets/api/notifications/mark_all_read.php', { method: 'POST' });
+            } catch (e) {
+                // no-op
+            }
+            if (typeof window.markAllNotificationsRead === 'function') {
+                window.markAllNotificationsRead();
+                return;
             }
             await loadNotifications();
         });

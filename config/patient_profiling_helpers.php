@@ -10,6 +10,8 @@ if (!function_exists('visit_clinical_field_keys')) {
     function visit_clinical_field_keys(): array
     {
         return [
+            'case_history', 'chief_complaint',
+            'gingiva_consistency', 'oral_hygiene', 'gingival_color', 'lymph_nodes', 'tongue',
             'occlusion', 'cl_i_type', 'cl_ii_division', 'cl_ii_subdivision', 'cl_ii_type',
             'cl_iii_division', 'cl_iii_subdivision', 'cl_iii_extra', 'operation_if_any',
             'blood_sugar', 'blood_sugar_normal', 'blood_sugar_high_low', 'blood_sugar_low',
@@ -36,6 +38,13 @@ if (!function_exists('visit_clinical_field_labels')) {
     function visit_clinical_field_labels(): array
     {
         return [
+            'case_history' => 'Case History',
+            'chief_complaint' => 'Chief Complaint',
+            'gingiva_consistency' => 'Consistency Gingiva',
+            'oral_hygiene' => 'Oral Hygiene',
+            'gingival_color' => 'Gingival Color',
+            'lymph_nodes' => 'Lymph Nodes',
+            'tongue' => 'Tongue',
             'occlusion' => 'Occlusion',
             'cl_i_type' => 'Cl. I Type',
             'cl_ii_division' => 'Cl. II Division',

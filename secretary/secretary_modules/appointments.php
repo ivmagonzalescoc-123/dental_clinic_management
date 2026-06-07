@@ -2262,7 +2262,10 @@ function escapeHtml(text) {
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Create Clinical Record from Doctor Upload</h5>
+                <div class="me-auto pe-3">
+                    <h5 class="modal-title mb-0">Create Clinical Record from Doctor Session</h5>
+                    <div id="secretaryRecordPatientName" class="mt-2 mb-0 fw-bold text-white secretary-record-patient-name"></div>
+                </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
@@ -2384,6 +2387,49 @@ function escapeHtml(text) {
                     <p class="text-muted small">Exam findings for this visit go on the patient history record, not background profiling.</p>
                     <form id="secretaryProfilingForm">
                         <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Case History</label>
+                                <textarea class="form-control visit-clinical-field" name="case_history" rows="2" placeholder="Patient case history for this visit"></textarea>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Chief Complaint</label>
+                                <textarea class="form-control visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit"></textarea>
+                            </div>
+                        </div>
+
+                        <h6 class="small text-uppercase text-muted mb-2">Clinical Assessment <span class="text-lowercase fw-normal">(click option again to unselect)</span></h6>
+                        <div class="row mb-3">
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <label class="form-label d-block">Consistency Gingiva</label>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_firm" value="Firm"><label class="form-check-label" for="gingiva_firm">Firm</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_hyper" value="Hyper plastic"><label class="form-check-label" for="gingiva_hyper">Hyper plastic</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_smooth" value="Smooth"><label class="form-check-label" for="gingiva_smooth">Smooth</label></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <label class="form-label d-block">Oral Hygiene</label>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_good" value="Good"><label class="form-check-label" for="oral_good">Good</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_fair" value="Fair"><label class="form-check-label" for="oral_fair">Fair</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_bad" value="Bad"><label class="form-check-label" for="oral_bad">Bad</label></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <label class="form-label d-block">Gingival Color</label>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" id="color_pink" value="Pink"><label class="form-check-label" for="color_pink">Pink</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" id="color_red" value="Bright red"><label class="form-check-label" for="color_red">Bright red</label></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <label class="form-label d-block">Lymph Nodes</label>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" id="lymph_not" value="Not palpable"><label class="form-check-label" for="lymph_not">Not palpable</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" id="lymph_pal" value="Palpable"><label class="form-check-label" for="lymph_pal">Palpable</label></div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <label class="form-label d-block">Tongue</label>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" id="tongue_normal" value="Normal"><label class="form-check-label" for="tongue_normal">Normal</label></div>
+                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" id="tongue_coated" value="Coated"><label class="form-check-label" for="tongue_coated">Coated</label></div>
+                            </div>
+                        </div>
+
+                        <h6 class="small text-uppercase text-muted mb-2">Additional Clinical Findings</h6>
+                        <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Occlusion</label>
                                 <input type="text" class="form-control visit-clinical-field" name="occlusion" placeholder="e.g., Angle Class I">
@@ -2475,10 +2521,10 @@ function escapeHtml(text) {
 
                 <!-- Odontogram Section (3D) -->
                 <div class="mb-4">
-                    <h6 class="mb-3"><i class="bi bi-box"></i> 3D Tooth Chart (Odontogram)</h6>
-                    <p class="text-muted small">Click each tooth to set status and add a comment. You can edit the doctor's chart.</p>
+                    <h6 class="mb-3"><i class="bi bi-box"></i> Odontogram</h6>
+                    <p class="text-muted small">Use the 2D chart to set status and comments. Switch to 3D preview if needed.</p>
                     <iframe id="odontogramFrame" src="../odontogram/index.html"
-                            style="width: 100%; height: 520px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                            style="width: 100%; height: 620px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2490,6 +2536,15 @@ function escapeHtml(text) {
         </div>
     </div>
 </div>
+
+<style>
+#secretaryRecordModal .secretary-record-patient-name {
+    font-size: 1.2rem;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+</style>
 
 <script>
 let currentRecordAppointmentId = null;
@@ -2546,6 +2601,11 @@ function resolveMediaUrl(filePath) {
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
+
+    const patientNameEl = document.getElementById('secretaryRecordPatientName');
+    if (patientNameEl) {
+        patientNameEl.textContent = 'Loading patient...';
+    }
     
     try {
         // Fetch doctor media and notes
@@ -2553,21 +2613,25 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         const data = await res.json();
         
         if (!data.success) {
+            if (patientNameEl) {
+                patientNameEl.textContent = '';
+            }
             alert('Error loading appointment data: ' + (data.message || ''));
             return;
+        }
+
+        if (patientNameEl) {
+            const patientName = String(data.appointment?.patient_name || '').trim();
+            patientNameEl.textContent = patientName ? 'Patient: ' + patientName : '';
         }
         
         // Display photos
         const photoContainer = document.getElementById('doctorPhotoGallery');
-        photoContainer.innerHTML = '';
-        if (data.photos && data.photos.length > 0) {
-            data.photos.forEach((photo, idx) => {
-                const col = document.createElement('div');
-                col.className = 'col-md-3';
-                col.innerHTML = '<img src="' + resolveMediaUrl(photo.file_path) + '" alt="Photo" class="img-fluid rounded" style="object-fit: cover; height: 150px; width: 100%;">';
-                photoContainer.appendChild(col);
+        if (typeof renderMediaGallery === 'function') {
+            renderMediaGallery(photoContainer, data.photos || [], function (photo) {
+                return resolveMediaUrl(photo.file_path);
             });
-        } else {
+        } else if (photoContainer) {
             photoContainer.innerHTML = '<p class="text-muted">No photos uploaded</p>';
         }
         
@@ -2628,15 +2692,23 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Pre-fill visit clinical exam from this appointment's clinical record
         const visitClinical = data.existing_visit_clinical || data.existing_profiling || {};
         Object.keys(visitClinical).forEach(key => {
-            const field = document.querySelector('#secretaryProfilingForm [name="' + key + '"]');
-            if (field) {
-                if (field.type === 'checkbox') {
-                    field.checked = visitClinical[key] === true || visitClinical[key] === 1;
-                } else {
-                    field.value = visitClinical[key] || '';
-                }
+            const fields = document.querySelectorAll('#secretaryProfilingForm [name="' + key + '"]');
+            if (!fields.length) return;
+            const field = fields[0];
+            if (field.type === 'radio') {
+                fields.forEach(function(radio) {
+                    radio.checked = visitClinical[key] === radio.value;
+                });
+            } else if (field.type === 'checkbox') {
+                field.checked = visitClinical[key] === true || visitClinical[key] === 1;
+            } else {
+                field.value = visitClinical[key] || '';
             }
         });
+
+        if (typeof initToggleableClinicalRadios === 'function') {
+            initToggleableClinicalRadios(document.getElementById('secretaryProfilingForm'));
+        }
         
         const modal = new bootstrap.Modal(document.getElementById('secretaryRecordModal'));
         modal.show();
@@ -2775,14 +2847,22 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
     
     try {
         // Collect visit clinical exam data for this appointment record
-        const visitClinicalData = {};
-        document.querySelectorAll('#secretaryProfilingForm .visit-clinical-field').forEach(field => {
-            if (field.type === 'checkbox') {
-                visitClinicalData[field.name] = field.checked;
-            } else {
-                visitClinicalData[field.name] = field.value || '';
-            }
-        });
+        const visitClinicalData = typeof collectVisitClinicalData === 'function'
+            ? collectVisitClinicalData('#secretaryProfilingForm')
+            : {};
+        if (typeof collectVisitClinicalData !== 'function') {
+            document.querySelectorAll('#secretaryProfilingForm .visit-clinical-field').forEach(field => {
+                if (field.type === 'checkbox') {
+                    visitClinicalData[field.name] = field.checked;
+                } else if (field.type === 'radio') {
+                    if (field.checked) {
+                        visitClinicalData[field.name] = field.value;
+                    }
+                } else {
+                    visitClinicalData[field.name] = field.value || '';
+                }
+            });
+        }
         
         let odontogramData = secretaryOdontogramData || {};
         try {

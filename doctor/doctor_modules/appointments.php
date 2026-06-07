@@ -591,26 +591,36 @@ if ($stmt) {
                                     </div>
                                 </div>
                                 <div class="mb-3"><strong>Follow-up Date:</strong> <span id="histFollowUpDate" class="badge bg-info text-dark"></span></div>
-                                <div class="mb-3"><strong>Recommended Services:</strong>
+                                <div class="mb-3"><strong>Services Availed:</strong>
                                     <ul id="histServices"></ul>
                                 </div>
-                                <div class="mb-3"><strong>Treatment Plan:</strong>
+                                <div class="mb-3" id="histTreatmentWrap" style="display:none;"><strong>Treatment Plan:</strong>
                                     <pre id="histTreatment" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
                                 </div>
-                                <div class="mb-3"><strong>Materials Used:</strong>
+                                <div class="mb-3" id="histMaterialsWrap" style="display:none;"><strong>Materials Used:</strong>
                                     <pre id="histMaterials" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
                                 </div>
                                 <div class="mb-3"><strong>Images:</strong>
-                                    <div id="histImages" class="d-flex flex-wrap gap-2"></div>
+                                    <div id="histImages" class="row g-2"></div>
                                 </div>
 
                                 <div class="mb-3"><strong>Related Schedules</strong>
                                     <div id="histSchedules" class="list-group small"></div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label"><strong>Odontogram (read-only)</strong></label>
-                                    <div id="histOdontogramWrap" style="border:1px solid #ddd; height:420px;">
-                                        <iframe id="histOdontoFrame" src="../odontogram/index.html" style="width:100%;height:100%;border:0;" ></iframe>
+                                    <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
+                                        <label class="form-label mb-0"><strong>Odontogram (read-only)</strong></label>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" id="histOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                                        </div>
+                                    </div>
+                                    <div id="histOdontogramViewport" class="odontogram-viewport">
+                                        <button type="button" id="histOdontogramFullscreenCloseBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                                            <i class="bi bi-x-lg"></i> Close
+                                        </button>
+                                        <div id="histOdontogramWrap" style="border:1px solid #ddd; height:420px;">
+                                            <iframe id="histOdontoFrame" src="../odontogram/index.html" style="width:100%;height:100%;border:0;"></iframe>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -748,6 +758,17 @@ if ($stmt) {
 
 .tooth-selector select {
     font-size: 0.85rem;
+}
+
+.odontogram-viewport {
+    position: relative;
+}
+
+.odontogram-fs-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
 }
 
 </style>
@@ -1016,6 +1037,137 @@ function formatMaterialsDisplay(materials) {
     return String(parsed);
 }
 
+function isClinicalFieldEmpty(value) {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed === '' || trimmed === '{}' || trimmed === '[]';
+    }
+    if (Array.isArray(value)) return value.length === 0;
+    if (typeof value === 'object') return Object.keys(value).length === 0;
+    return false;
+}
+
+function formatTreatmentPlanDisplay(plan) {
+    if (isClinicalFieldEmpty(plan)) return '';
+    if (typeof plan === 'string') return plan.trim();
+    if (typeof plan === 'object' && plan !== null) {
+        const months = plan.follow_up_interval_months;
+        const visits = plan.follow_up_total_visits;
+        const parts = [];
+        if (months !== undefined && months !== null && String(months).trim() !== '' && Number(months) > 0) {
+            parts.push('Follow-up interval: every ' + months + ' month(s)');
+        }
+        if (visits !== undefined && visits !== null && String(visits).trim() !== '' && Number(visits) > 0) {
+            parts.push('Total follow-up visits: ' + visits);
+        }
+        if (parts.length) return parts.join('\n');
+        return JSON.stringify(plan, null, 2);
+    }
+    return String(plan);
+}
+
+function populateServicesAvailedList(listEl, services) {
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    if (!Array.isArray(services) || !services.length) {
+        const li = document.createElement('li');
+        li.className = 'text-muted';
+        li.textContent = 'No services recorded for this appointment.';
+        listEl.appendChild(li);
+        return;
+    }
+    services.forEach(function(item) {
+        const li = document.createElement('li');
+        let label = '';
+        if (item && typeof item === 'object') {
+            label = String(item.description || item.service_name || '').trim();
+            if (!label && item.service_id && (item.service_id in serviceMap)) {
+                label = serviceMap[item.service_id];
+            }
+            if (!label && item.service_id) {
+                label = 'Service';
+            }
+            const amount = item.amount !== undefined && item.amount !== null ? Number(item.amount) : null;
+            if (amount !== null && !Number.isNaN(amount) && amount > 0) {
+                label += ' (PHP ' + amount.toFixed(2) + ')';
+            }
+        } else {
+            const sid = parseInt(item, 10);
+            label = (sid in serviceMap) ? serviceMap[sid] : 'Service';
+        }
+        li.textContent = label;
+        listEl.appendChild(li);
+    });
+}
+
+function postHistoryOdontogram(odontogramData) {
+    const odf = document.getElementById('histOdontoFrame');
+    if (!odf || !odontogramData) return;
+    const payload = { type: 'load_odontogram', toothState: odontogramData, readonly: true };
+    const send = function() {
+        try {
+            if (odf.contentWindow) {
+                odf.contentWindow.postMessage(payload, '*');
+            }
+        } catch (e) {}
+    };
+    if (odf.dataset.historyLoaded === '1') {
+        send();
+        return;
+    }
+    odf.onload = function() {
+        odf.dataset.historyLoaded = '1';
+        send();
+    };
+    if (odf.contentDocument && odf.contentDocument.readyState === 'complete') {
+        odf.dataset.historyLoaded = '1';
+        send();
+    }
+}
+
+function getHistoryOdontogramFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+}
+
+function isHistoryOdontogramFullscreen() {
+    const viewport = document.getElementById('histOdontogramViewport');
+    return !!viewport && getHistoryOdontogramFullscreenElement() === viewport;
+}
+
+function requestHistoryOdontogramFullscreen() {
+    const viewport = document.getElementById('histOdontogramViewport');
+    if (!viewport) return;
+    const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
+    if (requestFn) requestFn.call(viewport);
+}
+
+function exitHistoryOdontogramFullscreen() {
+    const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (exitFn) exitFn.call(document);
+}
+
+function syncHistoryOdontogramFullscreenUI() {
+    const closeBtn = document.getElementById('histOdontogramFullscreenCloseBtn');
+    const openBtn = document.getElementById('histOdontogramFullscreenBtn');
+    const active = isHistoryOdontogramFullscreen();
+    if (closeBtn) closeBtn.style.display = active ? '' : 'none';
+    if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+}
+
+document.getElementById('histOdontogramFullscreenBtn')?.addEventListener('click', function() {
+    if (isHistoryOdontogramFullscreen()) {
+        exitHistoryOdontogramFullscreen();
+        return;
+    }
+    requestHistoryOdontogramFullscreen();
+});
+document.getElementById('histOdontogramFullscreenCloseBtn')?.addEventListener('click', exitHistoryOdontogramFullscreen);
+document.addEventListener('fullscreenchange', syncHistoryOdontogramFullscreenUI);
+document.addEventListener('webkitfullscreenchange', syncHistoryOdontogramFullscreenUI);
+document.getElementById('historyModal')?.addEventListener('hidden.bs.modal', exitHistoryOdontogramFullscreen);
+syncHistoryOdontogramFullscreenUI();
+
 // If page requested to show history on load, trigger modal
 <?php if (!empty($_GET['show_history']) && !empty($_GET['appointment_id'])): ?>
 document.addEventListener('DOMContentLoaded', function(){
@@ -1038,6 +1190,9 @@ async function openHistoryModal(appointmentId) {
     document.getElementById('histServices').innerHTML = '';
     document.getElementById('histTreatment').textContent = '';
     document.getElementById('histMaterials').textContent = '';
+    document.getElementById('histTreatmentWrap').style.display = 'none';
+    document.getElementById('histMaterialsWrap').style.display = 'none';
+    exitHistoryOdontogramFullscreen();
 
         try {
             const res = await fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(appointmentId));
@@ -1053,9 +1208,8 @@ async function openHistoryModal(appointmentId) {
             return;
         }
         // show patient+date
-        // fetch patient name from DOM or server: we'll try to pull patient via appointment list row
-        document.getElementById('histPatientName').textContent = rec._patient_name || ('Patient ID: ' + (rec.patient_id || ''));
-        document.getElementById('histApptDate').textContent = rec._appointment_date || rec.follow_up_date || (rec.submitted_at ?? '');
+        document.getElementById('histPatientName').textContent = rec._patient_name || 'Unknown patient';
+        document.getElementById('histApptDate').textContent = rec._appointment_date || rec.submitted_at || '';
         document.getElementById('histNotes').textContent = rec.doctor_notes || '';
 
         const backgroundEl = document.getElementById('histBackgroundContent');
@@ -1095,46 +1249,62 @@ async function openHistoryModal(appointmentId) {
         // populate follow-up date
         document.getElementById('histFollowUpDate').textContent = rec.follow_up_date || 'None';
 
-        // services
-        const ul = document.getElementById('histServices');
-        if (Array.isArray(rec.recommended_services)) {
-            rec.recommended_services.forEach(sid => {
-                const li = document.createElement('li');
-                const name = (sid in serviceMap) ? serviceMap[sid] : ('Service ID: ' + sid);
-                li.textContent = name;
-                ul.appendChild(li);
-            });
+        // services availed for this appointment
+        populateServicesAvailedList(document.getElementById('histServices'), j.services_availed || []);
+
+        // treatment plan and materials (only when recorded)
+        const treatmentWrap = document.getElementById('histTreatmentWrap');
+        const materialsWrap = document.getElementById('histMaterialsWrap');
+        const treatmentText = formatTreatmentPlanDisplay(rec.treatment_plan);
+        const materialsText = formatMaterialsDisplay(rec.materials_used);
+        const materialsEmpty = isClinicalFieldEmpty(rec.materials_used) || materialsText === 'No materials recorded.';
+
+        if (!isClinicalFieldEmpty(rec.treatment_plan) && treatmentText !== '') {
+            document.getElementById('histTreatment').textContent = treatmentText;
+            treatmentWrap.style.display = '';
+        } else {
+            document.getElementById('histTreatment').textContent = '';
+            treatmentWrap.style.display = 'none';
         }
 
-        // treatment plan and materials
-        document.getElementById('histTreatment').textContent = JSON.stringify(rec.treatment_plan || {}, null, 2);
-        document.getElementById('histMaterials').textContent = formatMaterialsDisplay(rec.materials_used);
+        if (!materialsEmpty) {
+            document.getElementById('histMaterials').textContent = materialsText;
+            materialsWrap.style.display = '';
+        } else {
+            document.getElementById('histMaterials').textContent = '';
+            materialsWrap.style.display = 'none';
+        }
 
         // images
         const imgWrap = document.getElementById('histImages');
-        imgWrap.innerHTML = '';
-        if (Array.isArray(rec.images) && rec.images.length) {
-            rec.images.forEach(src => {
-                const a = document.createElement('a');
-                a.href = src;
-                a.target = '_blank';
-                const img = document.createElement('img');
-                img.src = src;
-                img.style.maxWidth = '150px';
-                img.style.maxHeight = '120px';
-                img.className = 'img-thumbnail';
-                a.appendChild(img);
-                imgWrap.appendChild(a);
+        if (typeof renderMediaGallery === 'function') {
+            renderMediaGallery(imgWrap, (rec.images || []).map(function (src, idx) {
+                return { file_path: src, file_name: 'appointment-photo-' + (idx + 1) + '.jpg' };
+            }), function (item) {
+                return typeof resolveMediaPath === 'function'
+                    ? resolveMediaPath(item.file_path, '../')
+                    : item.file_path;
             });
+        } else if (imgWrap) {
+            imgWrap.innerHTML = '';
+            if (Array.isArray(rec.images) && rec.images.length) {
+                rec.images.forEach(src => {
+                    const a = document.createElement('a');
+                    a.href = src;
+                    a.target = '_blank';
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.style.maxWidth = '150px';
+                    img.style.maxHeight = '120px';
+                    img.className = 'img-thumbnail';
+                    a.appendChild(img);
+                    imgWrap.appendChild(a);
+                });
+            }
         }
 
-        // odontogram: send to iframe via postMessage if present
-        try {
-            const odf = document.getElementById('histOdontoFrame');
-            if (rec.odontogram && odf && odf.contentWindow) {
-                odf.contentWindow.postMessage({ type: 'load_odontogram', toothState: rec.odontogram, readonly: true }, '*');
-            }
-        } catch (e) {}
+        // odontogram: send to iframe via postMessage if present (read-only)
+        postHistoryOdontogram(rec.odontogram || null);
 
         // schedules: list all related schedules with expand/collapse and actions
         try {
@@ -1559,7 +1729,12 @@ function capturePhoto(stream) {
 function updatePhotoGalleryPreview() {
     const container = document.getElementById('photoGalleryContainer');
     document.getElementById('photoCountBadge').textContent = uploadedPhotos.length;
-    
+
+    if (typeof renderLocalMediaGallery === 'function') {
+        renderLocalMediaGallery(container, uploadedPhotos, removeUploadedPhoto);
+        return;
+    }
+
     if (uploadedPhotos.length === 0) {
         container.innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';
         return;

@@ -12,9 +12,10 @@ include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
-include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -65,6 +66,7 @@ $visitClinicalData = filter_visit_clinical_data($visitClinicalData);
 if (!is_array($odontogramData)) {
     $odontogramData = [];
 }
+$odontogramData = odontogram_normalize_data($odontogramData);
 if (!is_array($billingItems)) {
     $billingItems = [];
 }
