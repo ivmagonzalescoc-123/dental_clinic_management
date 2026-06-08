@@ -1,15 +1,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
-import { HorizontalTiltShiftShader } from "three/addons/shaders/HorizontalTiltShiftShader.js";
-import { VerticalTiltShiftShader } from "three/addons/shaders/VerticalTiltShiftShader.js";
-
 import {
   ALL_FDI_TEETH,
   CHART_LEGEND,
+  LEGEND_BY_CODE,
+  SURFACE_KEYS,
   SURFACE_LABELS,
   colorForLabels,
   createEmptyToothEntry,
@@ -32,6 +28,11 @@ import {
   loadToothTemplates,
 } from "./teeth-3d.js";
 
+import {
+  getSurfaceCameraPose,
+  paintMeshSurfaceColors,
+} from "./tooth-surface-3d.js";
+
 const ODONTOGRAM_BASE = new URL("./", import.meta.url);
 const TEETH_MODELS_BASE = new URL("models/teeth/", ODONTOGRAM_BASE);
 
@@ -52,6 +53,7 @@ const clearToothBtn = document.getElementById("clearTooth");
 const resetViewBtn = document.getElementById("resetView");
 const toothCommentEl = document.getElementById("toothComment");
 const modelStatusEl = document.getElementById("modelStatus");
+const isolationStatusEl = document.getElementById("isolationStatus");
 const legendGridEl = document.getElementById("legendGrid");
 const chartPane = document.getElementById("chartPane");
 const viewport3d = document.getElementById("viewport3d");
@@ -79,11 +81,11 @@ function setView(view) {
     if (readonlyMode) {
       viewHintEl.textContent = isChart
         ? "View only — click a surface to inspect charting codes."
-        : "View only — click a tooth in 3D to inspect its charting.";
+        : "View only — double-click a tooth for close-up, double-click again to return.";
     } else {
       viewHintEl.textContent = isChart
         ? "Click a crown zone or root on the chart (FDI numbering)."
-        : "Drag to orbit the 3D model. Scroll to zoom.";
+        : "Double-click a tooth for close-up. Pick a surface to tilt the view; apply codes on the left.";
     }
   }
   if (!isChart) resizeToDisplaySize();
@@ -163,6 +165,7 @@ function updateStatusUI() {
 
   updateLegendButtons();
   setActiveSvgSelection(selectedTooth, selectedSurface);
+  if (isolatedToothFdi) updateIsolationStatusPanel();
 }
 
 function normalizeIncomingToothState(ts) {
@@ -187,32 +190,48 @@ function sendStateToParent() {
   }
 }
 
-function applyVisualStatus(fdi) {
-  applySvgVisualStatus(fdi, toothState[fdi]);
-  const mesh = toothMeshes.get(fdi);
-  if (!mesh) return;
+function ensureStandardMaterial(mesh) {
+  const make = () =>
+    new THREE.MeshStandardMaterial({
+      color: 0xf3f5ff,
+      roughness: 0.35,
+      metalness: 0,
+      transparent: true,
+      opacity: 1,
+    });
 
-  const entry = toothState[fdi];
-  const allLabels = Object.values(entry.surfaces || {}).flat();
-  const color = colorForLabels(allLabels);
+  if (Array.isArray(mesh.material)) {
+    mesh.material = mesh.material.map((mat) => {
+      if (mat?.isMeshStandardMaterial || mat?.isMeshPhysicalMaterial) return mat;
+      return make();
+    });
+    return;
+  }
+
+  if (!mesh.material?.isMeshStandardMaterial && !mesh.material?.isMeshPhysicalMaterial) {
+    mesh.material = make();
+  }
+}
+
+function paintTooth3d(fdi) {
+  const toothRoot = toothMeshes.get(fdi);
+  if (!toothRoot) return;
+
+  const entry = toothState[fdi] || createEmptyToothEntry();
   const missing = toothHasMissing(entry);
+  const highlightSurface =
+    isolatedToothFdi === String(fdi) && selectedTooth === String(fdi) ? selectedSurface : null;
 
   forEachToothMesh(fdi, (m) => {
-    if (!m.material) return;
-    if (!m.material.isMeshStandardMaterial && !m.material.isMeshPhysicalMaterial) {
-      m.material = new THREE.MeshStandardMaterial({
-        color: 0xf3f5ff,
-        roughness: 0.35,
-        metalness: 0,
-        transparent: true,
-        opacity: 1,
-      });
-    }
-    m.material.color.set(color === "#ffffff" ? 0xf3f5ff : new THREE.Color(color).getHex());
-    m.material.opacity = missing ? 0.15 : 1;
-    m.visible = true;
-    m.material.needsUpdate = true;
+    ensureStandardMaterial(m);
+    paintMeshSurfaceColors(m, toothRoot, fdi, entry, { highlightSurface, missing });
+    m.visible = !isolatedToothFdi || String(fdi) === isolatedToothFdi;
   });
+}
+
+function applyVisualStatus(fdi) {
+  applySvgVisualStatus(fdi, toothState[fdi]);
+  paintTooth3d(fdi);
 }
 
 function applyLegendCode(code) {
@@ -224,6 +243,7 @@ function applyLegendCode(code) {
 
   applyVisualStatus(selectedTooth);
   updateStatusUI();
+  updateIsolationStatusPanel();
   sendStateToParent();
 }
 
@@ -233,30 +253,24 @@ function selectSurface(fdi, surface) {
   updateStatusUI();
 
   const mesh = toothMeshes.get(selectedTooth);
-  if (mesh) {
-    setHighlight(selectedTooth);
-    focusCameraOnTooth(mesh);
+  if (!mesh) return;
+
+  if (isolatedToothFdi === selectedTooth) {
+    paintTooth3d(selectedTooth);
+    focusCameraOnSurface(mesh, selectedTooth, selectedSurface);
+    return;
   }
+
+  setHighlight(selectedTooth);
+  focusCameraOnTooth(mesh);
 }
 
 function clearSelection() {
   selectedTooth = null;
   selectedSurface = null;
   updateStatusUI();
-  if (highlightMesh) {
-    const prev = highlightMesh.userData.toothFdi;
-    if (prev) {
-      forEachToothMesh(prev, (m) => {
-        if (m.material?.emissive) {
-          m.material.emissive.set(0x000000);
-          m.material.emissiveIntensity = 0;
-        }
-      });
-    }
-    highlightMesh = null;
-  }
+  clearHighlight();
   resetCameraView();
-  focusProgress = 0;
 }
 
 clearSurfaceBtn?.addEventListener("click", () => {
@@ -264,6 +278,7 @@ clearSurfaceBtn?.addEventListener("click", () => {
   delete toothState[selectedTooth].surfaces[selectedSurface];
   applyVisualStatus(selectedTooth);
   updateStatusUI();
+  updateIsolationStatusPanel();
   sendStateToParent();
 });
 
@@ -272,6 +287,7 @@ clearToothBtn?.addEventListener("click", () => {
   toothState[selectedTooth] = createEmptyToothEntry();
   applyVisualStatus(selectedTooth);
   updateStatusUI();
+  updateIsolationStatusPanel();
   sendStateToParent();
 });
 
@@ -279,6 +295,7 @@ if (toothCommentEl) {
   toothCommentEl.addEventListener("input", () => {
     if (readonlyMode || !selectedTooth) return;
     toothState[selectedTooth].comment = toothCommentEl.value || "";
+    updateIsolationStatusPanel();
     sendStateToParent();
   });
 }
@@ -292,19 +309,52 @@ renderer.toneMappingExposure = 1.08;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x101820);
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
-camera.position.set(0, 7.5, 24);
+camera.position.set(0, 3.8, 8.5);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.target.set(0, 2.6, -2);
-controls.minDistance = 9;
-controls.maxDistance = 42;
-controls.minPolarAngle = 0.35;
-controls.maxPolarAngle = Math.PI / 2.02;
-controls.maxAzimuthAngle = Math.PI * 0.7;
-controls.minAzimuthAngle = -Math.PI * 0.7;
+controls.target.set(0, 2.5, -2.4);
 controls.enablePan = false;
-const defaultCamPos = camera.position.clone();
-const defaultTarget = controls.target.clone();
+
+const archControlLimits = {
+  minDistance: 4.5,
+  maxDistance: 24,
+  minPolarAngle: 0.35,
+  maxPolarAngle: Math.PI / 2.02,
+  minAzimuthAngle: -Math.PI * 0.7,
+  maxAzimuthAngle: Math.PI * 0.7,
+  zoomSpeed: 1.65,
+};
+
+const toothControlLimits = {
+  minDistance: 0.35,
+  maxDistance: 5.5,
+  minPolarAngle: 0.05,
+  maxPolarAngle: Math.PI - 0.05,
+  minAzimuthAngle: -Infinity,
+  maxAzimuthAngle: Infinity,
+  zoomSpeed: 2.2,
+};
+
+function applyControlLimits(limits) {
+  controls.minDistance = limits.minDistance;
+  controls.maxDistance = limits.maxDistance;
+  controls.minPolarAngle = limits.minPolarAngle;
+  controls.maxPolarAngle = limits.maxPolarAngle;
+  controls.minAzimuthAngle = limits.minAzimuthAngle;
+  controls.maxAzimuthAngle = limits.maxAzimuthAngle;
+  controls.zoomSpeed = limits.zoomSpeed ?? 1;
+}
+
+applyControlLimits(archControlLimits);
+let defaultCamPos = camera.position.clone();
+let defaultTarget = controls.target.clone();
+
+function refreshDefaultPreview() {
+  camera.position.set(0, 3.8, 8.5);
+  controls.target.set(0, 2.5, -2.4);
+  defaultCamPos = camera.position.clone();
+  defaultTarget = controls.target.clone();
+}
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.52));
 scene.add(new THREE.HemisphereLight(0xf0f4ff, 0x1a2438, 0.42));
@@ -417,9 +467,10 @@ function createFallbackTooth(fdi) {
 }
 
 function tagToothObject(obj, fdi) {
-  obj.userData.toothFdi = fdi;
+  const id = String(fdi);
+  obj.userData.toothFdi = id;
   obj.traverse((child) => {
-    child.userData.toothFdi = fdi;
+    child.userData.toothFdi = id;
   });
 }
 
@@ -443,6 +494,7 @@ function layoutTeeth() {
     createFallbackTooth,
   });
   usingGlbTeeth = loaded > 0;
+  refreshDefaultPreview();
   return loaded;
 }
 
@@ -456,6 +508,19 @@ function forEachToothMesh(fdi, fn) {
   root.traverse((child) => {
     if (child.isMesh) fn(child);
   });
+}
+
+function forEachToothMaterial(mesh, fn) {
+  if (!mesh?.material) return;
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((mat) => mat && fn(mat));
+    return;
+  }
+  fn(mesh.material);
+}
+
+function forEachToothMeshMaterial(fdi, fn) {
+  forEachToothMesh(fdi, (mesh) => forEachToothMaterial(mesh, fn));
 }
 
 function setModelStatus(text, isError = false) {
@@ -494,28 +559,197 @@ async function loadPreviewModels() {
   }
 }
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const hTilt = new ShaderPass(HorizontalTiltShiftShader);
-const vTilt = new ShaderPass(VerticalTiltShiftShader);
-hTilt.uniforms.h.value = 1 / 800;
-vTilt.uniforms.v.value = 1 / 800;
-hTilt.uniforms.r.value = 0.5;
-vTilt.uniforms.r.value = 0.5;
-composer.addPass(hTilt);
-composer.addPass(vTilt);
-
-let focusProgress = 0;
 let highlightMesh = null;
+let isolatedToothFdi = null;
+let savedArchCamera = null;
+
+function syncToothVisibility() {
+  for (const [fdi, mesh] of toothMeshes.entries()) {
+    mesh.visible = !isolatedToothFdi || String(fdi) === isolatedToothFdi;
+  }
+}
+
+function updateIsolationBanner() {
+  if (isolatedToothFdi) {
+    setModelStatus(`Tooth ${isolatedToothFdi} — double-click again to show all teeth`);
+    return;
+  }
+  if (!modelStatusEl?.classList.contains("is-error")) {
+    setModelStatus("");
+  }
+}
+
+function formatSurfaceCodes(labels) {
+  if (!labels?.length) return null;
+  return labels.map((code) => {
+    const item = LEGEND_BY_CODE[code];
+    return item ? { code, label: item.label, color: item.color } : { code, label: code, color: "#e2e8f0" };
+  });
+}
+
+function buildIsolationSurfaceValue(codes) {
+  if (!codes?.length) {
+    return `<span class="isolation-status__value is-empty">No charting</span>`;
+  }
+  const value = codes.map((item) =>
+    `<span class="isolation-status__code">
+      <span class="isolation-status__swatch" style="background:${item.color}"></span>
+      <strong>${item.code}</strong> ${item.label}
+    </span>`
+  ).join("");
+  return `<span class="isolation-status__value">${value}</span>`;
+}
+
+function updateIsolationStatusPanel() {
+  if (!isolationStatusEl) return;
+  if (!isolatedToothFdi) {
+    isolationStatusEl.classList.add("is-hidden");
+    isolationStatusEl.classList.remove("isolation-status--selectable");
+    isolationStatusEl.innerHTML = "";
+    return;
+  }
+
+  const fdi = isolatedToothFdi;
+  const entry = toothState[fdi] || createEmptyToothEntry();
+  const surfaces = entry.surfaces || {};
+  const selectable = !readonlyMode;
+
+  const rows = SURFACE_KEYS.map((key) => {
+    const codes = formatSurfaceCodes(surfaces[key]);
+    const surfaceName = SURFACE_LABELS[key] || key;
+    const isActive = selectedTooth === fdi && selectedSurface === key;
+    const valueHtml = buildIsolationSurfaceValue(codes);
+    const activeClass = isActive ? " is-active" : "";
+    if (!selectable) {
+      return `<div class="isolation-status__row${activeClass}">
+        <span class="isolation-status__surface">${surfaceName}</span>
+        ${valueHtml}
+      </div>`;
+    }
+    return `<button type="button" class="isolation-status__row${activeClass}" data-surface-key="${key}">
+      <span class="isolation-status__surface">${surfaceName}</span>
+      ${valueHtml}
+    </button>`;
+  }).join("");
+
+  isolationStatusEl.innerHTML = `
+    <h3 class="isolation-status__title">Tooth ${fdi}</h3>
+    <p class="isolation-status__hint">${selectable ? "Select a surface to tilt the view and highlight that part only." : "Charted surfaces for this tooth"}</p>
+    <div class="isolation-status__list">${rows}</div>
+  `;
+  isolationStatusEl.classList.toggle("isolation-status--selectable", selectable);
+  isolationStatusEl.classList.remove("is-hidden");
+}
+
+function bindIsolationPanelEvents() {
+  if (!isolationStatusEl || isolationStatusEl.dataset.bound === "1") return;
+  isolationStatusEl.dataset.bound = "1";
+
+  isolationStatusEl.addEventListener("click", (e) => {
+    if (readonlyMode || !isolatedToothFdi) return;
+    const row = e.target.closest("[data-surface-key]");
+    if (!row) return;
+    selectSurface(isolatedToothFdi, row.dataset.surfaceKey);
+  });
+}
+
+function focusCameraOnIsolatedTooth(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const focusTarget = new THREE.Vector3();
+  box.getCenter(focusTarget);
+  const size = box.getSize(new THREE.Vector3());
+  const radius = Math.max(size.x, size.y, size.z, 0.5) * 0.55;
+  const desiredCamPos = focusTarget.clone().add(new THREE.Vector3(radius * 1.1, radius * 0.85, radius * 2.4));
+  camAnim.start(camera.position.clone(), desiredCamPos, controls.target.clone(), focusTarget, 700);
+}
+
+function enterToothIsolation(fdi) {
+  fdi = String(fdi);
+  savedArchCamera = {
+    pos: camera.position.clone(),
+    target: controls.target.clone(),
+  };
+  isolatedToothFdi = fdi;
+  syncToothVisibility();
+  applyControlLimits(toothControlLimits);
+  const mesh = toothMeshes.get(fdi);
+  if (mesh) focusCameraOnIsolatedTooth(mesh);
+  clearHighlight();
+  selectSurface(fdi, selectedTooth === fdi && selectedSurface ? selectedSurface : "O");
+  updateIsolationBanner();
+  updateIsolationStatusPanel();
+}
+
+function exitToothIsolation() {
+  if (!isolatedToothFdi) return;
+  const prevSelected = selectedTooth;
+  const prevIsolated = isolatedToothFdi;
+  isolatedToothFdi = null;
+  syncToothVisibility();
+  paintTooth3d(prevIsolated);
+  applyControlLimits(archControlLimits);
+  if (savedArchCamera) {
+    camAnim.start(
+      camera.position.clone(),
+      savedArchCamera.pos.clone(),
+      controls.target.clone(),
+      savedArchCamera.target.clone(),
+      700
+    );
+  }
+  savedArchCamera = null;
+  updateIsolationBanner();
+  updateIsolationStatusPanel();
+  if (prevSelected) setHighlight(prevSelected);
+}
+
+function toggleToothIsolation(fdi) {
+  fdi = String(fdi);
+  if (isolatedToothFdi === fdi) {
+    exitToothIsolation();
+    return;
+  }
+  if (isolatedToothFdi) {
+    const prevFdi = isolatedToothFdi;
+    isolatedToothFdi = fdi;
+    syncToothVisibility();
+    paintTooth3d(prevFdi);
+    clearHighlight();
+    selectSurface(fdi, selectedTooth === fdi && selectedSurface ? selectedSurface : "O");
+    updateIsolationBanner();
+    updateIsolationStatusPanel();
+    return;
+  }
+  enterToothIsolation(fdi);
+}
+
+function clearHighlight() {
+  if (!highlightMesh) return;
+  const prev = String(highlightMesh.userData.toothFdi || "");
+  if (prev) {
+    forEachToothMeshMaterial(prev, (material) => {
+      if (material.emissive) {
+        material.emissive.set(0x000000);
+        material.emissiveIntensity = 0;
+      }
+    });
+  }
+  highlightMesh = null;
+}
 
 function setHighlight(fdi) {
+  fdi = String(fdi);
+  if (isolatedToothFdi) {
+    clearHighlight();
+    return;
+  }
   if (highlightMesh) {
-    const prev = highlightMesh.userData.toothFdi;
-    if (prev) {
-      forEachToothMesh(prev, (m) => {
-        if (m.material?.emissive) {
-          m.material.emissive.set(0x000000);
-          m.material.emissiveIntensity = 0;
+    const prev = String(highlightMesh.userData.toothFdi || "");
+    if (prev && prev !== fdi) {
+      forEachToothMeshMaterial(prev, (material) => {
+        if (material.emissive) {
+          material.emissive.set(0x000000);
+          material.emissiveIntensity = 0;
         }
       });
     }
@@ -523,12 +757,12 @@ function setHighlight(fdi) {
   }
   const mesh = toothMeshes.get(fdi);
   if (!mesh) return;
-  forEachToothMesh(fdi, (m) => {
-    if (!m.material) return;
-    if (!m.material.emissive) m.material.emissive = new THREE.Color(0x000000);
-    m.material.emissive.set(0x7aa2ff);
-    m.material.emissiveIntensity = 0.45;
+  forEachToothMeshMaterial(fdi, (material) => {
+    if (!material.emissive) material.emissive = new THREE.Color(0x000000);
+    material.emissive.set(0x7aa2ff);
+    material.emissiveIntensity = 0.45;
   });
+  mesh.userData.toothFdi = fdi;
   highlightMesh = mesh;
 }
 
@@ -556,6 +790,14 @@ function easeInOutCubic(t) {
 }
 
 function resetCameraView() {
+  if (isolatedToothFdi) {
+    isolatedToothFdi = null;
+    savedArchCamera = null;
+    syncToothVisibility();
+    applyControlLimits(archControlLimits);
+    updateIsolationBanner();
+    updateIsolationStatusPanel();
+  }
   camAnim.start(camera.position.clone(), defaultCamPos.clone(), controls.target.clone(), defaultTarget.clone(), 650);
 }
 
@@ -567,25 +809,62 @@ function focusCameraOnTooth(mesh) {
   const desiredCamPos = focusTarget.clone().add(dir.multiplyScalar(10));
   desiredCamPos.y += 1.2;
   camAnim.start(camera.position.clone(), desiredCamPos, controls.target.clone(), focusTarget.clone(), 650);
-  focusProgress = 0;
+}
+
+function focusCameraOnSurface(mesh, fdi, surface) {
+  const pose = getSurfaceCameraPose(mesh, fdi, surface);
+  camAnim.start(camera.position.clone(), pose.pos, controls.target.clone(), pose.target, 650);
 }
 
 resetViewBtn?.addEventListener("click", resetCameraView);
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+const DBL_CLICK_MS = 320;
+let pendingClickTimer = null;
+let lastPointerDown = { t: 0, fdi: null };
 
-canvas.addEventListener("pointerdown", (e) => {
-  if (e.button !== 0) return;
+function pickToothFromPointer(e) {
   const rect = canvas.getBoundingClientRect();
   mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
   mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
   raycaster.setFromCamera(mouse, camera);
   const hits = raycaster.intersectObjects([...toothMeshes.values()], true);
-  if (!hits.length) return;
-  const fdi = resolveToothFdi(hits[0].object);
+  const seen = new Set();
+  for (const hit of hits) {
+    const fdi = String(resolveToothFdi(hit.object) || "");
+    if (!fdi || seen.has(fdi)) continue;
+    seen.add(fdi);
+    return fdi;
+  }
+  return null;
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) return;
+  const fdi = pickToothFromPointer(e);
   if (!fdi) return;
-  selectSurface(fdi, "O");
+  const now = performance.now();
+  if (lastPointerDown.fdi === fdi && now - lastPointerDown.t <= DBL_CLICK_MS) {
+    if (pendingClickTimer) {
+      clearTimeout(pendingClickTimer);
+      pendingClickTimer = null;
+    }
+    lastPointerDown.t = 0;
+    lastPointerDown.fdi = null;
+    toggleToothIsolation(fdi);
+    selectedTooth = fdi;
+    selectedSurface = "O";
+    updateStatusUI();
+    return;
+  }
+  lastPointerDown.t = now;
+  lastPointerDown.fdi = fdi;
+  if (pendingClickTimer) clearTimeout(pendingClickTimer);
+  pendingClickTimer = setTimeout(() => {
+    pendingClickTimer = null;
+    selectSurface(fdi, "O");
+  }, DBL_CLICK_MS);
 });
 
 function resizeToDisplaySize() {
@@ -595,9 +874,6 @@ function resizeToDisplaySize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  composer.setSize(w, h);
-  hTilt.uniforms.h.value = 1 / Math.max(w, 1);
-  vTilt.uniforms.v.value = 1 / Math.max(h, 1);
 }
 
 function animate() {
@@ -605,14 +881,18 @@ function animate() {
   if (!render3d) return;
   resizeToDisplaySize();
   controls.update();
-  controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 8);
-  controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, 8.5);
-  controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 8);
-  const distance = camera.position.distanceTo(controls.target);
-  if (distance < controls.minDistance || distance > controls.maxDistance) {
-    const dir = camera.position.clone().sub(controls.target).normalize();
-    const clampedDistance = THREE.MathUtils.clamp(distance, controls.minDistance, controls.maxDistance);
-    camera.position.copy(controls.target.clone().add(dir.multiplyScalar(clampedDistance)));
+  if (!isolatedToothFdi) {
+    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 8);
+    controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, 8.5);
+    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 8);
+  }
+  if (!camAnim.active) {
+    const distance = camera.position.distanceTo(controls.target);
+    if (distance < controls.minDistance || distance > controls.maxDistance) {
+      const dir = camera.position.clone().sub(controls.target).normalize();
+      const clampedDistance = THREE.MathUtils.clamp(distance, controls.minDistance, controls.maxDistance);
+      camera.position.copy(controls.target.clone().add(dir.multiplyScalar(clampedDistance)));
+    }
   }
   if (camAnim.active) {
     const t = (performance.now() - camAnim.t0) / camAnim.dur;
@@ -621,17 +901,7 @@ function animate() {
     controls.target.lerpVectors(camAnim.fromTarget, camAnim.toTarget, tt);
     if (t >= 1) camAnim.active = false;
   }
-  if (!selectedTooth) {
-    hTilt.uniforms.r.value = 0.2;
-    vTilt.uniforms.r.value = 0.2;
-  } else {
-    focusProgress = Math.min(focusProgress + 0.02, 1);
-    const pulse = 1 - Math.pow(1 - focusProgress, 3);
-    const r = THREE.MathUtils.lerp(0.75, 0.35, pulse);
-    hTilt.uniforms.r.value = r;
-    vTilt.uniforms.r.value = r;
-  }
-  composer.render();
+  renderer.render(scene, camera);
 }
 
 function setReadonlyMode(on) {
@@ -659,6 +929,7 @@ function setReadonlyMode(on) {
 
 buildLegendUI();
 buildOdontogramUI();
+bindIsolationPanelEvents();
 loadPreviewModels();
 updateStatusUI();
 setView("chart");

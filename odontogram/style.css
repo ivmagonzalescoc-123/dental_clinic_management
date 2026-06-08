@@ -391,6 +391,110 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   display: none;
 }
 
+.isolation-status {
+  position: absolute;
+  top: 52px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+  width: min(290px, 38%);
+  overflow-y: auto;
+  padding: 14px 14px 12px;
+  border-radius: 12px;
+  background: rgba(16, 24, 42, 0.94);
+  border: 1px solid var(--line);
+  pointer-events: none;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.isolation-status.isolation-status--selectable {
+  pointer-events: auto;
+}
+
+.isolation-status.is-hidden {
+  display: none;
+}
+
+.isolation-status__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+
+.isolation-status__hint {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.isolation-status__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.isolation-status__row {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 8px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.isolation-status--selectable .isolation-status__row[data-surface-key] {
+  cursor: pointer;
+}
+
+.isolation-status__row + .isolation-status__row {
+  margin-top: 4px;
+}
+
+.isolation-status__row.is-active {
+  border-color: rgba(122, 162, 255, 0.55);
+  background: rgba(122, 162, 255, 0.1);
+}
+
+.isolation-status__surface {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.isolation-status__value {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.isolation-status__value.is-empty {
+  color: rgba(255, 255, 255, 0.38);
+  font-style: italic;
+}
+
+.isolation-status__code {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.isolation-status__swatch {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  margin-top: 4px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 #c {
   width: 100%;
   height: 100%;

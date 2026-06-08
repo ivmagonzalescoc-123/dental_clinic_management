@@ -124,7 +124,7 @@ if (!function_exists('odontogram_format_findings')) {
 }
 
 if (!defined('ODONTOGRAM_EMBED_VERSION')) {
-    define('ODONTOGRAM_EMBED_VERSION', '6');
+    define('ODONTOGRAM_EMBED_VERSION', '20');
 }
 
 if (!function_exists('odontogram_embed_src')) {

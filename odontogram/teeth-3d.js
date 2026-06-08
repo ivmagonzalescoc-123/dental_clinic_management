@@ -60,23 +60,27 @@ export function toothTypeFromFdi(fdi) {
   return "molar";
 }
 
+// Tighter side-by-side spacing; arch curve/tilt math stays the same as the original layout.
+const ARCH_CONTACT = 0.93;
+const ARCH_WIDTH = 1.84;
+
 export function buildArchLayout(jaw) {
   const isUp = jaw === "upper";
   const ids = isUp
     ? ["18", "17", "16", "15", "14", "13", "12", "11", "21", "22", "23", "24", "25", "26", "27", "28"]
     : ["48", "47", "46", "45", "44", "43", "42", "41", "31", "32", "33", "34", "35", "36", "37", "38"];
 
-  const halfW = ids.slice(0, 8).reduce((sum, id) => sum + toothWidthByFdi(id), 0);
+  const halfW = ids.slice(0, 8).reduce((sum, id) => sum + toothWidthByFdi(id) * ARCH_CONTACT, 0);
   const positions = [];
   let cumX = -halfW;
 
   for (const fdi of ids) {
-    const w = toothWidthByFdi(fdi);
+    const w = toothWidthByFdi(fdi) * ARCH_CONTACT;
     const cx = cumX + w / 2;
     cumX += w;
 
     const nx = cx / halfW;
-    const archWidth = 2.5;
+    const archWidth = ARCH_WIDTH;
     const archDepth = 3.5;
     const z = -archDepth * Math.pow(Math.abs(nx), 2.8);
     const scaleX = archWidth / halfW;
@@ -119,6 +123,29 @@ export function applyNaturalToothOrientation(tooth, pos, { procedural = false } 
   tooth.rotation.x = 0;
   tooth.rotation.y = pos.rotY + extraRot;
   tooth.rotation.z = 0;
+}
+
+/** Each placed tooth needs its own geometry + materials (templates are reused by type). */
+export function isolateToothAssets(root) {
+  root.traverse((child) => {
+    if (!child.isMesh) return;
+    if (child.geometry?.clone) {
+      child.geometry = child.geometry.clone();
+    }
+    if (!child.material) return;
+    if (Array.isArray(child.material)) {
+      child.material = child.material.map((mat) => (mat?.clone ? mat.clone() : mat));
+      return;
+    }
+    if (child.material.clone) {
+      child.material = child.material.clone();
+    }
+  });
+}
+
+/** @deprecated Use isolateToothAssets */
+export function isolateToothMaterials(root) {
+  isolateToothAssets(root);
 }
 
 function normalizeMeshMaterials(mesh) {
@@ -233,7 +260,7 @@ export function layoutRealisticArch({
   teethGroup.clear();
   toothMeshes.clear();
 
-  const layoutScale = 3.15;
+  const layoutScale = 2.9;
   const archRoot = new THREE.Group();
   archRoot.position.set(0, 3.0, -5);
   teethGroup.add(archRoot);
@@ -260,6 +287,7 @@ export function layoutRealisticArch({
 
       if (tpl) {
         tooth = tpl.clone(true);
+        isolateToothAssets(tooth);
         tagToothObject(tooth, pos.fdi);
         loadedCount++;
       } else if (typeof createFallbackTooth === "function") {
@@ -277,7 +305,7 @@ export function layoutRealisticArch({
 
       const typeScale =
         type === "molar" ? 1.08 : type === "premolar" ? 0.96 : type === "canine" ? 0.88 : 0.82;
-      tooth.scale.multiplyScalar(typeScale * layoutScale * 0.52);
+      tooth.scale.multiplyScalar(typeScale * layoutScale * 0.57);
 
       parent.add(tooth);
       toothMeshes.set(pos.fdi, tooth);
