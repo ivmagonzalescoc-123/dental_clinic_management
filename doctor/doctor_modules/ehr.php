@@ -188,7 +188,7 @@ if ($tstmt) {
 
     <div class="d-flex gap-2 mt-4">
         <button type="button" id="submitFinishAppointmentBtn" class="btn btn-primary">
-            <i class="fas fa-check"></i> Finish Appointment
+            <i class="fas fa-check"></i> Finalize Session
         </button>
     </div>
     </form>
@@ -204,6 +204,34 @@ if ($tstmt) {
 <style>
 .odontogram-viewport {
     position: relative;
+    width: 100%;
+}
+
+#odontogramContainer {
+    width: 100%;
+    height: <?php echo (int) odontogram_embed_height_px(); ?>px;
+}
+
+#odontogramContainer iframe,
+#odontogramFrame {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.odontogram-viewport:fullscreen,
+.odontogram-viewport:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: #0b0f19;
+    padding: 0;
+}
+
+.odontogram-viewport:fullscreen #odontogramContainer,
+.odontogram-viewport:-webkit-full-screen #odontogramContainer {
+    height: 100% !important;
 }
 
 .odontogram-fs-close {
@@ -294,8 +322,8 @@ if ($tstmt) {
             iframe.id = 'odontogramFrame';
             iframe.src = ODONTOGRAM_IFRAME_SRC;
             iframe.style.width = '100%';
-            iframe.style.height = ODONTOGRAM_IFRAME_HEIGHT + 'px';
-            iframe.style.border = '1px solid #ddd';
+            iframe.style.height = '100%';
+            iframe.style.border = '0';
             iframe.loading = 'eager';
             container.appendChild(iframe);
             // on load, if data present, post it
@@ -378,13 +406,27 @@ if ($tstmt) {
             if (exitFn) exitFn.call(document);
         }
 
+        function notifyOdontogramResize() {
+            const frame = document.getElementById('odontogramFrame');
+            try {
+                if (frame?.contentWindow) {
+                    frame.contentWindow.postMessage({ type: 'odontogram_resize' }, '*');
+                }
+            } catch (e) {}
+        }
+
         function syncOdontogramFullscreenUI() {
             const closeBtn = document.getElementById('closeOdontogramFullscreenBtn');
             const openBtn = document.getElementById('openOdontogramFullscreenBtn');
+            const container = document.getElementById('odontogramContainer');
             const active = isOdontogramFullscreen();
 
             if (closeBtn) closeBtn.style.display = active ? '' : 'none';
             if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+            if (container) {
+                container.style.height = active ? '100%' : (ODONTOGRAM_IFRAME_HEIGHT + 'px');
+            }
+            setTimeout(notifyOdontogramResize, 50);
         }
 
         // toggle button

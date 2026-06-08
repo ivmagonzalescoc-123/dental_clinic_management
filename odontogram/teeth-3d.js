@@ -60,9 +60,9 @@ export function toothTypeFromFdi(fdi) {
   return "molar";
 }
 
-// Tighter side-by-side spacing; arch curve/tilt math stays the same as the original layout.
-const ARCH_CONTACT = 0.93;
-const ARCH_WIDTH = 1.84;
+// Tight side-by-side spacing — teeth sit close like a natural arch.
+const ARCH_CONTACT = 0.78;
+const ARCH_WIDTH = 1.38;
 
 export function buildArchLayout(jaw) {
   const isUp = jaw === "upper";
@@ -86,13 +86,15 @@ export function buildArchLayout(jaw) {
     const scaleX = archWidth / halfW;
     const dzdcx = (-archDepth * 2.8 * Math.sign(nx) * Math.pow(Math.abs(nx), 1.8)) / halfW;
     const dzdx = dzdcx / scaleX;
-    const rotY = Math.atan2(-dzdx, 1.0);
+    const rawRotY = Math.atan2(-dzdx, 1.0);
+    const rotY = archRotationForTooth(nx, rawRotY);
 
     positions.push({
       fdi,
       x: cx * scaleX,
       y: isUp ? 0.7 : -0.7,
       z,
+      nx,
       rotY,
       isUpper: isUp,
     });
@@ -101,15 +103,35 @@ export function buildArchLayout(jaw) {
   return positions;
 }
 
-function archTiltRadians(fdi) {
+function smoothstep(edge0, edge1, x) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/** Front teeth face forward; arch tangent rotation ramps in toward the sides. */
+function archRotationForTooth(nx, rawRotY) {
+  const blend = smoothstep(Math.abs(nx), 0.06, 0.38);
+  return rawRotY * blend;
+}
+
+function archTiltRadians(fdi, nx = 0) {
+  const pos = parseInt(String(fdi).slice(-1), 10);
+  const sideBlend = smoothstep(Math.abs(nx), 0.12, 0.5);
+
+  if (pos <= 2) return 0;
+
+  if (pos === 3) {
+    return ((-10 * Math.PI) / 180) * sideBlend;
+  }
+
   const type = toothTypeFromFdi(fdi);
   const deg = type === "molar" || type === "premolar" ? -45 : -20;
-  return (deg * Math.PI) / 180;
+  return ((deg * Math.PI) / 180) * sideBlend;
 }
 
 /** Match DentProSave GLB placement: models are already jaw-oriented; only arch Y rotation. */
 export function applyNaturalToothOrientation(tooth, pos, { procedural = false } = {}) {
-  const extraRot = archTiltRadians(pos.fdi);
+  const extraRot = archTiltRadians(pos.fdi, pos.nx ?? 0);
   tooth.rotation.order = "YXZ";
 
   if (procedural) {
@@ -259,11 +281,21 @@ function parseGltfBuffer(loader, buffer, url) {
   });
 }
 
-export async function loadToothTemplates(loader, modelsBase) {
+export async function loadToothTemplates(loader, modelsBase, { onProgress } = {}) {
   const templates = new Map();
   const base = resolveTeethModelsBase(modelsBase);
   const entries = Object.entries(TOOTH_FILES);
   const failures = [];
+  const total = entries.length;
+  let done = 0;
+
+  const report = (label) => {
+    if (!onProgress) return;
+    const pct = Math.min(85, Math.round((done / total) * 85));
+    onProgress(pct, label);
+  };
+
+  onProgress?.(0, "Starting 3D model download…");
 
   await Promise.all(
     entries.map(async ([key, file]) => {
@@ -279,6 +311,9 @@ export async function loadToothTemplates(loader, modelsBase) {
       } catch (err) {
         failures.push({ file, url, message: err?.message || String(err) });
         console.warn(`[odontogram 3d] failed to load ${file} from ${url}`, err);
+      } finally {
+        done += 1;
+        report(`Loading models (${done}/${total})…`);
       }
     })
   );
@@ -298,7 +333,7 @@ export function layoutRealisticArch({
   teethGroup.clear();
   toothMeshes.clear();
 
-  const layoutScale = 2.9;
+  const layoutScale = 2.65;
   const archRoot = new THREE.Group();
   archRoot.position.set(0, 3.0, -5);
   teethGroup.add(archRoot);
@@ -343,7 +378,7 @@ export function layoutRealisticArch({
 
       const typeScale =
         type === "molar" ? 1.08 : type === "premolar" ? 0.96 : type === "canine" ? 0.88 : 0.82;
-      tooth.scale.multiplyScalar(typeScale * layoutScale * 0.57);
+      tooth.scale.multiplyScalar(typeScale * layoutScale * 0.64);
 
       parent.add(tooth);
       const fdi = String(pos.fdi);

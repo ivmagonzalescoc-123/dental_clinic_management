@@ -61,6 +61,8 @@ export function isMesialRight(fdi) {
   return q === 1 || q === 4;
 }
 
+export { toothAnatomicalName, toothDisplayLabel } from "./tooth-names.js";
+
 export function createEmptyToothEntry() {
   return { comment: "", surfaces: {} };
 }

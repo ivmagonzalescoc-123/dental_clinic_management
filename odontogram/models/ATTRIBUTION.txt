@@ -14,4 +14,9 @@ URL: https://github.com/Igor-Vuk/dentist-dream
 Original file: public/models/tooth-final.glb
 (Not used for the 3D preview arch — kept for reference only.)
 
-2D charting uses SVG (svg-chart.js) and is unchanged. The 3D tab is preview-only.
+2D chart tooth artwork (odontogram/assets/chart-teeth/11.svg, 13.svg, 14.svg, 16.svg)
+Source: React-Odontogram-Modul (Zoltan Dul / ZoliQua)
+URL: https://github.com/ZoliQua/React-Odontogram-Modul
+License: MIT
+
+Surface click zones and legend colors are handled in svg-chart.js; toothState syncs with the 3D tab.

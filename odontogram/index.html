@@ -19,7 +19,6 @@
       <aside class="panel">
         <header class="panel__header">
           <h1>Odontogram</h1>
-          <p>Click a tooth surface on the chart, then apply a legend code.</p>
         </header>
 
         <section class="section section--flat">
@@ -47,14 +46,14 @@
             <button class="btn btn--ghost" id="clearTooth" type="button">Clear tooth</button>
           </div>
 
-          <label class="label" for="toothComment" style="display:block;margin-top:12px;">Tooth comment</label>
+          <label class="label" for="toothComment" style="display:block;margin-top:12px;">Tooth Comment/Notes</label>
           <textarea id="toothComment" class="toothComment" rows="3" placeholder="Notes for the selected tooth..."></textarea>
 
           <button class="btn btn--reset" id="resetView" type="button" style="display:none;">Reset 3D View</button>
         </section>
 
         <footer class="panel__footer">
-          <small id="viewHint">Click a surface on the 2D chart (e.g. tooth 18 — buccal).</small>
+          <small id="viewHint">Click a tooth on the arch, then pick a surface in the bar above the chart.</small>
         </footer>
       </aside>
 
@@ -65,9 +64,21 @@
         </div>
         <div class="workspace__body">
           <div id="chartPane" class="chart-pane" role="tabpanel">
-            <div id="odontogram" class="odontogram"></div>
+            <div class="chart-pane__stack">
+              <div id="chartToothDetail" class="chart-tooth-detail"></div>
+              <div id="odontogram" class="odontogram odontogram--arch"></div>
+            </div>
           </div>
           <div id="viewport3d" class="viewport-3d is-hidden" role="tabpanel">
+            <div id="loadOverlay" class="load-overlay is-hidden" aria-live="polite" aria-busy="true">
+              <div class="load-overlay__panel">
+                <p class="load-overlay__label" id="loadLabel">Loading 3D models…</p>
+                <div class="load-overlay__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div class="load-overlay__bar" id="loadBar"></div>
+                </div>
+                <p class="load-overlay__pct" id="loadPct">0%</p>
+              </div>
+            </div>
             <div id="modelStatus" class="model-status is-hidden"></div>
             <div id="isolationStatus" class="isolation-status is-hidden" aria-live="polite"></div>
             <canvas id="c"></canvas>
@@ -75,6 +86,6 @@
         </div>
       </section>
     </div>
-    <script type="module" src="./main.js"></script>
+    <script type="module" src="./main.js?v=20250606"></script>
   </body>
 </html>

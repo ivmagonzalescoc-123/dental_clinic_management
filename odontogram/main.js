@@ -16,12 +16,21 @@ import {
   serializeToothState,
   toothHasMissing,
 } from "./chart-constants.js";
+import { toothAnatomicalName, toothDisplayLabel } from "./tooth-names.js";
 
 import {
   applySvgVisualStatus,
   buildSvgOdontogram,
-  setActiveSvgSelection,
+  setActiveArchTooth,
 } from "./svg-chart.js";
+
+import {
+  applyDetailVisualStatus,
+  initToothDetailPanel,
+  setActiveDetailSurface,
+  setToothDetailReadonly,
+  showToothDetail,
+} from "./tooth-detail-2d.js";
 
 import {
   layoutRealisticArch,
@@ -45,6 +54,7 @@ let readonlyMode = false;
 let usingGlbTeeth = false;
 
 const odontogramEl = document.getElementById("odontogram");
+const chartToothDetailEl = document.getElementById("chartToothDetail");
 const selectedToothEl = document.getElementById("selectedTooth");
 const selectedSurfaceEl = document.getElementById("selectedSurface");
 const statusSummaryEl = document.getElementById("statusSummary");
@@ -54,6 +64,11 @@ const resetViewBtn = document.getElementById("resetView");
 const toothCommentEl = document.getElementById("toothComment");
 const modelStatusEl = document.getElementById("modelStatus");
 const isolationStatusEl = document.getElementById("isolationStatus");
+const loadOverlayEl = document.getElementById("loadOverlay");
+const loadLabelEl = document.getElementById("loadLabel");
+const loadBarEl = document.getElementById("loadBar");
+const loadPctEl = document.getElementById("loadPct");
+const loadTrackEl = loadOverlayEl?.querySelector(".load-overlay__track");
 const legendGridEl = document.getElementById("legendGrid");
 const chartPane = document.getElementById("chartPane");
 const viewport3d = document.getElementById("viewport3d");
@@ -80,15 +95,21 @@ function setView(view) {
   if (viewHintEl) {
     if (readonlyMode) {
       viewHintEl.textContent = isChart
-        ? "View only — click a surface to inspect charting codes."
+        ? "View only — select a tooth, then inspect surfaces in the bar above the chart."
         : "View only — double-click a tooth for close-up, double-click again to return.";
     } else {
       viewHintEl.textContent = isChart
-        ? "Click a crown zone or root on the chart (FDI numbering)."
+        ? "Click a tooth on the arch, pick a surface in the bar above, then apply a legend code."
         : "Double-click a tooth for close-up. Pick a surface to tilt the view; apply codes on the left.";
     }
   }
-  if (!isChart) resizeToDisplaySize();
+  if (!isChart) {
+    resizeToDisplaySize();
+    if (!isolatedToothFdi) fitCameraToArch();
+    updateModelStatusForSelection();
+  } else if (!modelStatusEl?.classList.contains("is-error")) {
+    setModelStatus("");
+  }
 }
 
 viewTabChart?.addEventListener("click", () => setView("chart"));
@@ -112,13 +133,37 @@ function buildLegendUI() {
   }
 }
 
-function buildOdontogramUI() {
-  buildSvgOdontogram(odontogramEl, {
+function initChartDetailPanel() {
+  if (!chartToothDetailEl || chartToothDetailEl.dataset.ready === "1") return;
+  chartToothDetailEl.dataset.ready = "1";
+  initToothDetailPanel(chartToothDetailEl, {
+    legendByCode: LEGEND_BY_CODE,
+    readonly: readonlyMode,
+    onSurfaceClick: (surface) => {
+      if (!selectedTooth) return;
+      selectSurface(selectedTooth, surface);
+    },
+  });
+}
+
+async function buildOdontogramUI() {
+  initChartDetailPanel();
+  await buildSvgOdontogram(odontogramEl, {
     toothState,
     readonly: readonlyMode,
-    onSurfaceClick: (fdi, surface) => selectSurface(fdi, surface),
+    onToothClick: (fdi) => selectTooth(fdi),
   });
   for (const fdi of ALL_FDI_TEETH) applySvgVisualStatus(fdi, toothState[fdi]);
+  refreshChartDetailPanel();
+}
+
+function refreshChartDetailPanel() {
+  if (!selectedTooth) {
+    showToothDetail(null);
+    return;
+  }
+  showToothDetail(selectedTooth, toothState[selectedTooth], selectedSurface);
+  setActiveDetailSurface(selectedSurface);
 }
 
 function updateLegendButtons() {
@@ -142,11 +187,14 @@ function updateStatusUI() {
       toothCommentEl.disabled = true;
     }
     updateLegendButtons();
-    setActiveSvgSelection(null, null);
+    setActiveArchTooth(null);
+    showToothDetail(null);
+    updateModelStatusForSelection();
     return;
   }
 
-  selectedToothEl.textContent = String(selectedTooth);
+  selectedToothEl.textContent = toothDisplayLabel(selectedTooth);
+  selectedToothEl.title = toothAnatomicalName(selectedTooth);
   selectedSurfaceEl.textContent = SURFACE_LABELS[selectedSurface] || selectedSurface;
 
   const labels = toothState[selectedTooth]?.surfaces?.[selectedSurface] || [];
@@ -164,16 +212,18 @@ function updateStatusUI() {
   }
 
   updateLegendButtons();
-  setActiveSvgSelection(selectedTooth, selectedSurface);
+  setActiveArchTooth(selectedTooth);
+  refreshChartDetailPanel();
   if (isolatedToothFdi) updateIsolationStatusPanel();
+  updateModelStatusForSelection();
 }
 
-function normalizeIncomingToothState(ts) {
+async function normalizeIncomingToothState(ts) {
   const migrated = migrateToothState(ts);
   for (const fdi of ALL_FDI_TEETH) {
     toothState[fdi] = migrated[fdi] || createEmptyToothEntry();
   }
-  buildOdontogramUI();
+  await buildOdontogramUI();
 }
 
 window.getOdontogramData = function () {
@@ -233,6 +283,9 @@ function paintTooth3d(fdi) {
 function applyVisualStatus(fdi) {
   fdi = String(fdi);
   applySvgVisualStatus(fdi, toothState[fdi]);
+  if (selectedTooth === fdi) {
+    applyDetailVisualStatus(fdi, toothState[fdi], selectedSurface);
+  }
   paintTooth3d(fdi);
 }
 
@@ -251,6 +304,12 @@ function applyLegendCode(code) {
   updateStatusUI();
   updateIsolationStatusPanel();
   sendStateToParent();
+}
+
+function selectTooth(fdi) {
+  selectedTooth = String(fdi);
+  if (!selectedSurface) selectedSurface = "O";
+  updateStatusUI();
 }
 
 function selectSurface(fdi, surface) {
@@ -324,10 +383,10 @@ controls.enablePan = false;
 const archControlLimits = {
   minDistance: 4.5,
   maxDistance: 24,
-  minPolarAngle: 0.35,
-  maxPolarAngle: Math.PI / 2.02,
-  minAzimuthAngle: -Math.PI * 0.7,
-  maxAzimuthAngle: Math.PI * 0.7,
+  minPolarAngle: 0.05,
+  maxPolarAngle: Math.PI - 0.05,
+  minAzimuthAngle: -Infinity,
+  maxAzimuthAngle: Infinity,
   zoomSpeed: 1.65,
 };
 
@@ -355,11 +414,38 @@ applyControlLimits(archControlLimits);
 let defaultCamPos = camera.position.clone();
 let defaultTarget = controls.target.clone();
 
+function fitCameraToArch({ animate = false } = {}) {
+  if (isolatedToothFdi || !teethGroup.children.length) return;
+
+  teethGroup.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(teethGroup);
+  if (box.isEmpty()) return;
+
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z, 1);
+  const aspect = Math.max(camera.aspect || 1, 0.5);
+  const fov = THREE.MathUtils.degToRad(camera.fov);
+  const distV = (maxDim * 0.52) / Math.tan(fov / 2);
+  const distH = (maxDim * 0.52) / (Math.tan(fov / 2) * aspect);
+  const dist = Math.max(distV, distH) * 1.2;
+
+  const dir = new THREE.Vector3(0.1, 0.32, 1).normalize();
+  const pos = center.clone().add(dir.multiplyScalar(dist));
+
+  if (animate) {
+    camAnim.start(camera.position.clone(), pos, controls.target.clone(), center, 650);
+  } else {
+    camera.position.copy(pos);
+    controls.target.copy(center);
+  }
+
+  defaultCamPos = pos.clone();
+  defaultTarget = center.clone();
+}
+
 function refreshDefaultPreview() {
-  camera.position.set(0, 3.8, 8.5);
-  controls.target.set(0, 2.5, -2.4);
-  defaultCamPos = camera.position.clone();
-  defaultTarget = controls.target.clone();
+  fitCameraToArch();
 }
 
 scene.add(new THREE.AmbientLight(0xffffff, 0.52));
@@ -536,33 +622,72 @@ function setModelStatus(text, isError = false) {
   modelStatusEl.classList.toggle("is-hidden", !text);
 }
 
+function setLoadProgress(percent, label) {
+  const pct = Math.max(0, Math.min(100, Math.round(percent)));
+  if (loadLabelEl && label) loadLabelEl.textContent = label;
+  if (loadBarEl) loadBarEl.style.width = `${pct}%`;
+  if (loadPctEl) loadPctEl.textContent = `${pct}%`;
+  if (loadTrackEl) loadTrackEl.setAttribute("aria-valuenow", String(pct));
+}
+
+function showLoadOverlay(show) {
+  if (!loadOverlayEl) return;
+  loadOverlayEl.classList.toggle("is-hidden", !show);
+  loadOverlayEl.setAttribute("aria-busy", show ? "true" : "false");
+}
+
+function finishLoadProgress() {
+  setLoadProgress(100, "3D preview ready");
+  setTimeout(() => showLoadOverlay(false), 350);
+}
+
 async function loadPreviewModels() {
   const loader = new GLTFLoader();
-  setModelStatus("Loading realistic 3D teeth…");
+  showLoadOverlay(true);
+  setLoadProgress(0, "Preparing 3D scene…");
+  setModelStatus("");
   usingGlbTeeth = false;
   toothTemplates = new Map();
 
   try {
-    const result = await loadToothTemplates(loader, TEETH_MODELS_BASE);
+    const result = await loadToothTemplates(loader, TEETH_MODELS_BASE, {
+      onProgress: (pct, label) => setLoadProgress(pct, label),
+    });
     toothTemplates = result.templates;
+
+    setLoadProgress(88, "Placing teeth on the arch…");
     const loaded = layoutTeeth();
+
+    setLoadProgress(94, "Applying chart colors…");
     repaintAllTeeth3d();
 
+    setLoadProgress(98, "Framing camera…");
+    resizeToDisplaySize();
+    fitCameraToArch();
+
     if (loaded >= 28) {
-      setModelStatus("");
+      finishLoadProgress();
       console.info("[odontogram 3d] loaded realistic teeth from", result.modelsBase);
     } else if (loaded > 0) {
+      finishLoadProgress();
       setModelStatus(`${loaded}/32 realistic teeth loaded — some models missing.`);
     } else {
+      setLoadProgress(100, "Using schematic fallback…");
       const sample = result.failures[0];
       const hint = sample ? `${sample.file}: ${sample.message}` : "check odontogram/models/teeth/";
+      setTimeout(() => showLoadOverlay(false), 400);
       setModelStatus(`Schematic fallback — models did not load (${hint}). Hard-refresh the page.`, true);
       console.error("[odontogram 3d] all model loads failed", result.failures);
     }
   } catch (err) {
     console.warn("[odontogram 3d] load failed", err);
+    setLoadProgress(92, "Building schematic teeth…");
     layoutTeeth();
     repaintAllTeeth3d();
+    resizeToDisplaySize();
+    fitCameraToArch();
+    setLoadProgress(100, "Schematic preview ready");
+    setTimeout(() => showLoadOverlay(false), 400);
     setModelStatus("Schematic fallback — tooth models could not be loaded. Hard-refresh the page.", true);
   }
 }
@@ -577,14 +702,23 @@ function syncToothVisibility() {
   }
 }
 
-function updateIsolationBanner() {
+function updateModelStatusForSelection() {
+  if (activeView !== "3d" || modelStatusEl?.classList.contains("is-error")) return;
   if (isolatedToothFdi) {
-    setModelStatus(`Tooth ${isolatedToothFdi} — double-click again to show all teeth`);
+    setModelStatus(
+      `${toothAnatomicalName(isolatedToothFdi)} (${isolatedToothFdi}) — double-click again to show all teeth`,
+    );
     return;
   }
-  if (!modelStatusEl?.classList.contains("is-error")) {
-    setModelStatus("");
+  if (selectedTooth) {
+    setModelStatus(`${toothAnatomicalName(selectedTooth)} (${selectedTooth})`);
+    return;
   }
+  setModelStatus("");
+}
+
+function updateIsolationBanner() {
+  updateModelStatusForSelection();
 }
 
 function formatSurfaceCodes(labels) {
@@ -641,7 +775,10 @@ function updateIsolationStatusPanel() {
   }).join("");
 
   isolationStatusEl.innerHTML = `
-    <h3 class="isolation-status__title">Tooth ${fdi}</h3>
+    <h3 class="isolation-status__title">
+      <span class="isolation-status__tooth-name">${toothAnatomicalName(fdi)}</span>
+      <span class="isolation-status__tooth-fdi">FDI ${fdi}</span>
+    </h3>
     <p class="isolation-status__hint">${selectable ? "Select a surface to tilt the view and highlight that part only." : "Charted surfaces for this tooth"}</p>
     <div class="isolation-status__list">${rows}</div>
   `;
@@ -708,6 +845,7 @@ function exitToothIsolation() {
   savedArchCamera = null;
   updateIsolationBanner();
   updateIsolationStatusPanel();
+  updateModelStatusForSelection();
   if (prevSelected) setHighlight(prevSelected);
 }
 
@@ -806,7 +944,7 @@ function resetCameraView() {
     updateIsolationBanner();
     updateIsolationStatusPanel();
   }
-  camAnim.start(camera.position.clone(), defaultCamPos.clone(), controls.target.clone(), defaultTarget.clone(), 650);
+  fitCameraToArch({ animate: true });
 }
 
 function focusCameraOnTooth(mesh) {
@@ -889,11 +1027,6 @@ function animate() {
   if (!render3d) return;
   resizeToDisplaySize();
   controls.update();
-  if (!isolatedToothFdi) {
-    controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 8);
-    controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, 8.5);
-    controls.target.z = THREE.MathUtils.clamp(controls.target.z, -16, 8);
-  }
   if (!camAnim.active) {
     const distance = camera.position.distanceTo(controls.target);
     if (distance < controls.minDistance || distance > controls.maxDistance) {
@@ -926,25 +1059,43 @@ function setReadonlyMode(on) {
   }
   if (panelSubtitleEl) {
     panelSubtitleEl.textContent = readonlyMode
-      ? "View only — select a tooth surface to inspect charting."
-      : "Click a tooth surface on the chart, then apply a legend code.";
+      ? "View only — select a tooth and inspect surfaces in the bar above the chart."
+      : "Select a tooth on the chart, pick a surface above it, then apply a legend code.";
   }
 
   odontogramEl?.classList.toggle("odontogram--readonly", readonlyMode);
+  setToothDetailReadonly(readonlyMode);
   updateStatusUI();
   setView(activeView);
 }
 
 buildLegendUI();
-buildOdontogramUI();
 bindIsolationPanelEvents();
 loadPreviewModels();
 updateStatusUI();
 setView("chart");
 animate();
 
+buildOdontogramUI().catch((err) => {
+  console.error("2D chart failed to load", err);
+  if (odontogramEl) {
+    odontogramEl.innerHTML = "<p class=\"chart-load-error\">Could not load dental chart artwork. Check network and refresh.</p>";
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (!render3d || isolatedToothFdi) return;
+  resizeToDisplaySize();
+  fitCameraToArch();
+});
+
 window.addEventListener("message", (ev) => {
   try {
+    if (ev.data?.type === "odontogram_resize") {
+      resizeToDisplaySize();
+      if (!isolatedToothFdi) fitCameraToArch();
+      return;
+    }
     if (!ev.data || ev.data.type !== "load_odontogram") return;
     setReadonlyMode(!!ev.data.readonly);
     normalizeIncomingToothState(ev.data.toothState || {});

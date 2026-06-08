@@ -134,6 +134,6 @@ if (!function_exists('odontogram_embed_src')) {
 if (!function_exists('odontogram_embed_height_px')) {
     function odontogram_embed_height_px(): int
     {
-        return 620;
+        return 820;
     }
 }

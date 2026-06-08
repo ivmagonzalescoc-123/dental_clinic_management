@@ -336,7 +336,6 @@ switch ($role_key) {
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
-    <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js"></script>
 
     <!-- Active Navigation Highlight -->
