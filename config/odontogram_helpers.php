@@ -123,15 +123,11 @@ if (!function_exists('odontogram_format_findings')) {
     }
 }
 
-if (!defined('ODONTOGRAM_EMBED_VERSION')) {
-    define('ODONTOGRAM_EMBED_VERSION', '20');
-}
-
 if (!function_exists('odontogram_embed_src')) {
     /** Single iframe entry point for 2D chart + realistic 3D preview (odontogram/index.html). */
     function odontogram_embed_src(): string
     {
-        return '../odontogram/index.html?v=' . ODONTOGRAM_EMBED_VERSION;
+        return '../odontogram/index.html';
     }
 }
 

@@ -214,6 +214,7 @@ function ensureStandardMaterial(mesh) {
 }
 
 function paintTooth3d(fdi) {
+  fdi = String(fdi);
   const toothRoot = toothMeshes.get(fdi);
   if (!toothRoot) return;
 
@@ -230,8 +231,13 @@ function paintTooth3d(fdi) {
 }
 
 function applyVisualStatus(fdi) {
+  fdi = String(fdi);
   applySvgVisualStatus(fdi, toothState[fdi]);
   paintTooth3d(fdi);
+}
+
+function repaintAllTeeth3d() {
+  for (const fdi of ALL_FDI_TEETH) paintTooth3d(fdi);
 }
 
 function applyLegendCode(code) {
@@ -540,6 +546,7 @@ async function loadPreviewModels() {
     const result = await loadToothTemplates(loader, TEETH_MODELS_BASE);
     toothTemplates = result.templates;
     const loaded = layoutTeeth();
+    repaintAllTeeth3d();
 
     if (loaded >= 28) {
       setModelStatus("");
@@ -555,6 +562,7 @@ async function loadPreviewModels() {
   } catch (err) {
     console.warn("[odontogram 3d] load failed", err);
     layoutTeeth();
+    repaintAllTeeth3d();
     setModelStatus("Schematic fallback — tooth models could not be loaded. Hard-refresh the page.", true);
   }
 }

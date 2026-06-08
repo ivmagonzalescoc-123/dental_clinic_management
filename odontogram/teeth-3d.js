@@ -125,22 +125,60 @@ export function applyNaturalToothOrientation(tooth, pos, { procedural = false } 
   tooth.rotation.z = 0;
 }
 
+/** Copy geometry buffers so GLB clones never share vertex/color data across teeth. */
+export function deepCloneGeometry(geometry) {
+  const cloned = new THREE.BufferGeometry();
+  for (const name in geometry.attributes) {
+    const attr = geometry.attributes[name];
+    cloned.setAttribute(
+      name,
+      new THREE.BufferAttribute(attr.array.slice(), attr.itemSize, attr.normalized)
+    );
+  }
+  if (geometry.index) {
+    cloned.setIndex(
+      new THREE.BufferAttribute(geometry.index.array.slice(), geometry.index.itemSize)
+    );
+  }
+  return cloned;
+}
+
+function cloneMeshMaterial(material) {
+  return material?.clone ? material.clone() : material;
+}
+
 /** Each placed tooth needs its own geometry + materials (templates are reused by type). */
 export function isolateToothAssets(root) {
   root.traverse((child) => {
     if (!child.isMesh) return;
-    if (child.geometry?.clone) {
-      child.geometry = child.geometry.clone();
+    if (child.geometry) {
+      child.geometry = deepCloneGeometry(child.geometry);
     }
     if (!child.material) return;
     if (Array.isArray(child.material)) {
-      child.material = child.material.map((mat) => (mat?.clone ? mat.clone() : mat));
+      child.material = child.material.map(cloneMeshMaterial);
       return;
     }
-    if (child.material.clone) {
-      child.material = child.material.clone();
-    }
+    child.material = cloneMeshMaterial(child.material);
+    child.userData.__paintReady = true;
   });
+  root.userData.__assetsIsolated = true;
+}
+
+/** Safety net before painting — guarantees this mesh is not sharing GLB buffers. */
+export function ensureMeshAssetsIsolated(mesh) {
+  if (mesh.userData.__paintReady) return;
+  if (mesh.geometry) {
+    mesh.geometry = deepCloneGeometry(mesh.geometry);
+  }
+  if (mesh.material) {
+    if (Array.isArray(mesh.material)) {
+      mesh.material = mesh.material.map(cloneMeshMaterial);
+    } else {
+      mesh.material = cloneMeshMaterial(mesh.material);
+    }
+  }
+  mesh.userData.__paintReady = true;
 }
 
 /** @deprecated Use isolateToothAssets */
@@ -308,8 +346,9 @@ export function layoutRealisticArch({
       tooth.scale.multiplyScalar(typeScale * layoutScale * 0.57);
 
       parent.add(tooth);
-      toothMeshes.set(pos.fdi, tooth);
-      applyVisualStatus(pos.fdi);
+      const fdi = String(pos.fdi);
+      toothMeshes.set(fdi, tooth);
+      applyVisualStatus(fdi);
     }
   }
 

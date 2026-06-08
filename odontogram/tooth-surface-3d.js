@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { colorForLabels, isMesialRight, toothHasMissing } from "./chart-constants.js";
+import { ensureMeshAssetsIsolated } from "./teeth-3d.js";
 
 const ENAMEL = new THREE.Color(0xf3f5ff);
 const HIGHLIGHT = new THREE.Color(0x7aa2ff);
@@ -77,17 +78,9 @@ function enableVertexColorMaterial(material, { missing = false } = {}) {
   material.needsUpdate = true;
 }
 
-function ensureMeshGeometryInstance(mesh) {
-  if (!mesh.geometry || mesh.userData.__geometryIsolated) return;
-  if (mesh.geometry.clone) {
-    mesh.geometry = mesh.geometry.clone();
-  }
-  mesh.userData.__geometryIsolated = true;
-}
-
 export function paintMeshSurfaceColors(mesh, toothRoot, fdi, entry, { highlightSurface = null, missing = false } = {}) {
   if (!mesh.geometry) return;
-  ensureMeshGeometryInstance(mesh);
+  ensureMeshAssetsIsolated(mesh);
 
   const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   for (const material of materials) enableVertexColorMaterial(material, { missing });
