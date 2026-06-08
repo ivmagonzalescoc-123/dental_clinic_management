@@ -1,8 +1,18 @@
 <?php
+header('Content-Type: application/json');
+
 include '../../../config/database.php';
 include_once '../../../config/session_check.php';
 include_once '../../../config/patient_profiling_helpers.php';
-header('Content-Type: application/json');
+
+security_start_session();
+
+$role = $_SESSION['role'] ?? '';
+if (!in_array($role, ['doctor', 'secretary', 'admin'], true)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Forbidden']);
+    exit;
+}
 
 $patient_id = (int)($_GET['patient_id'] ?? 0);
 

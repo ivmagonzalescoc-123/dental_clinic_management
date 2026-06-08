@@ -71,4 +71,7 @@ if (!function_exists('env')) {
 
 // Load .env file on first include
 load_env();
+
+require_once __DIR__ . '/app.php';
+app_bootstrap();
 ?>

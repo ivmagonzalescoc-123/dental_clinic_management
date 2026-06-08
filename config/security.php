@@ -4,6 +4,9 @@
 if (!function_exists('env')) {
     require_once __DIR__ . '/env.php';
 }
+if (!function_exists('app_request_is_https')) {
+    require_once __DIR__ . '/app.php';
+}
 
 if (!function_exists('security_start_session')) {
     function security_start_session()
@@ -12,7 +15,7 @@ if (!function_exists('security_start_session')) {
             return;
         }
 
-        $secure = env('SECURE_COOKIES', false) || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+        $secure = app_request_is_https() || (env('SECURE_COOKIES', false) && !app_is_localhost());
         $params = session_get_cookie_params();
         session_set_cookie_params([
             'lifetime' => (int)env('SESSION_LIFETIME', 1800),

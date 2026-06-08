@@ -106,7 +106,8 @@ echo "Admin Login:\n";
 echo "  Email: $admin_email\n";
 echo "  Password: " . str_repeat('*', strlen($admin_password)) . "\n";
 echo "\nYou can now login to the admin panel.\n";
-echo "URL: " . env('APP_URL', 'http://localhost/capstone_dental') . "/admin/admin.php\n";
+require_once __DIR__ . '/../config/app.php';
+echo "URL: " . app_base_url() . "/admin/admin.php\n";
 
 $conn->close();
 ?>

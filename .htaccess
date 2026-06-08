@@ -1,0 +1,26 @@
+# Block access to environment and dependency files if Apache serves this folder.
+<FilesMatch "^(\.env|\.env\..*)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^(capstone_dental\.sql|\.gitignore)$">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+
+# Force HTTPS on live hosts (skip local XAMPP)
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:\d+)?$ [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Block direct web access to internal folders
+RewriteRule ^config/ - [F,L]
+RewriteRule ^scripts/ - [F,L]
+RewriteRule ^docs/ - [F,L]
+RewriteRule ^ws-server/ - [F,L]
