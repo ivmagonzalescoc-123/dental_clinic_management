@@ -12,6 +12,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -109,7 +110,8 @@ try {
     $stmt->close();
     if ($crRow) {
         if (!empty($crRow['odontogram'])) {
-            $odontogram = json_decode($crRow['odontogram'], true);
+            $decoded = json_decode($crRow['odontogram'], true);
+            $odontogram = is_array($decoded) ? odontogram_normalize_data($decoded) : null;
         }
         $followUpDate = $crRow['follow_up_date'] ?? null;
         $summary = (string)($crRow['summary'] ?? '');

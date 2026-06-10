@@ -23,6 +23,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 
 $year = date('Y');
 $csrf_token = security_generate_csrf_token();
+$clinicLogo = 'assets/img/clinic-logo.jpg';
 $pageBackgroundImage = 'assets/img/landing-background.jpg';
 $pageOverlayStrength = 52;
 
@@ -100,11 +101,13 @@ $heroPoints = [
     <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
             <a href="index.php" class="flex items-center gap-2.5">
-                <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-500">
-                    <svg class="h-6 w-6" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                        <path d="M32 6c-8.5 0-15 6.5-15 15 0 5.5 1.8 9.2 3 13.2 1.4 4.5 2 8.5 2 12.8 0 3.2 1.5 6.2 4.5 7.8 1 .6 2.2 1 3.5 1h13c1.3 0 2.5-.4 3.5-1 3-1.6 4.5-4.6 4.5-7.8 0-4.3.6-8.3 2-12.8C45.2 30.2 47 26.5 47 21 47 12.5 40.5 6 32 6z" stroke="currentColor" stroke-width="2.5"/>
-                    </svg>
-                </span>
+                <img
+                    src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
+                    alt="Azucena's Dental Clinic logo"
+                    class="h-9 w-auto object-contain sm:h-10"
+                    width="40"
+                    height="40"
+                >
                 <span class="text-sm font-bold text-slate-900 sm:text-base">Azucena's Dental Clinic</span>
             </a>
             <nav class="hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex" aria-label="Main">
@@ -114,7 +117,7 @@ $heroPoints = [
                 <a href="#contact" class="hover:text-sky-500 transition-colors">Contact</a>
             </nav>
             <a href="login.php" class="rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
-                Portal Login
+                Login
             </a>
         </div>
     </header>

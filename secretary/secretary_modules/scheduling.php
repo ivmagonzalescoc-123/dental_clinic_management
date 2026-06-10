@@ -293,15 +293,6 @@ foreach ($schedules as $row) {
     const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     let modal = null;
 
-    function showToast(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(message, type || 'info');
-            return;
-        }
-
-        alert(String(message || ''));
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
         const el = document.getElementById('scheduleRescheduleModal');
         if (el && window.bootstrap) {
@@ -348,7 +339,7 @@ foreach ($schedules as $row) {
         const wrap = document.getElementById('scSuggestions');
         wrap.innerHTML = '';
         if (!doctorId) {
-            showToast('Missing doctor reference.', 'warning');
+            window.showToast('Missing doctor reference.', 'warning');
             return;
         }
 
@@ -363,7 +354,7 @@ foreach ($schedules as $row) {
             const j = await res.json();
             if (!j.success || !Array.isArray(j.slots) || j.slots.length === 0) {
                 wrap.innerHTML = '<div class="text-muted small">No suggested slots found.</div>';
-                showToast('No suggested slots found for the selected doctor.', 'warning');
+                window.showToast('No suggested slots found for the selected doctor.', 'warning');
                 return;
             }
             j.slots.slice(0, 10).forEach(function(slot) {
@@ -379,7 +370,7 @@ foreach ($schedules as $row) {
             });
         } catch (err) {
             wrap.innerHTML = '<div class="text-danger small">Error loading suggestions.</div>';
-            showToast('Error loading suggested slots.', 'danger');
+            window.showToast('Error loading suggested slots.', 'danger');
         }
     }
 
@@ -389,7 +380,7 @@ foreach ($schedules as $row) {
         const end = toServer(document.getElementById('scEnd').value);
 
         if (!scheduleId || !start || !end) {
-            showToast('Start and end date/time are required.', 'warning');
+            window.showToast('Start and end date/time are required.', 'warning');
             return;
         }
 
@@ -404,13 +395,13 @@ foreach ($schedules as $row) {
             const res = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                showToast(j.message || 'Schedule update failed.', 'danger');
+                window.showToast(j.message || 'Schedule update failed.', 'danger');
                 return;
             }
-            showToast('Schedule updated successfully.', 'success');
+            window.showToast('Schedule updated successfully.', 'success');
             window.location.reload();
         } catch (err) {
-            showToast('Server error while updating schedule.', 'danger');
+            window.showToast('Server error while updating schedule.', 'danger');
         }
     }
 
@@ -426,13 +417,13 @@ foreach ($schedules as $row) {
             const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                showToast(j.message || 'Cancel failed.', 'danger');
+                window.showToast(j.message || 'Cancel failed.', 'danger');
                 return;
             }
-            showToast('Schedule cancelled.', 'success');
+            window.showToast('Schedule cancelled.', 'success');
             window.location.reload();
         } catch (err) {
-            showToast('Server error while cancelling schedule.', 'danger');
+            window.showToast('Server error while cancelling schedule.', 'danger');
         }
     };
 })();

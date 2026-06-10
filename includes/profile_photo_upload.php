@@ -52,12 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form || !input || !previewWrap || !saveBtn) return;
 
     function showPhotoAlert(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(String(message || ''), type || 'info');
-        }
-        if (alertBox) {
-            alertBox.innerHTML = '<span class="text-' + type + '">' + message + '</span>';
-        }
+        window.showToast(String(message || ''), type || 'info');
     }
 
     const maxBytes = <?php echo (int)profile_photo_max_bytes(); ?>;

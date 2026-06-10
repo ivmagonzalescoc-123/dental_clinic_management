@@ -69,7 +69,6 @@ if ($patient_id) {
 }
 ?>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
 .patient-appt-card .card-header {
     background: #1173c1;
@@ -572,7 +571,7 @@ if ($patient_id) {
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const appointmentCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
@@ -661,12 +660,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showBookingToast(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(message, type || 'info');
-            return;
-        }
-
-        showAlert(message, type === 'success' ? 'success' : 'danger');
+        window.showToast(String(message || ''), type || 'info');
     }
 
     function statusBadgeClass(status) {

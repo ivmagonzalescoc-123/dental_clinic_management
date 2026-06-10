@@ -39,12 +39,23 @@ if (!security_validate_csrf_token($csrf)) {
 $billingId = (int)($_POST['billing_id'] ?? 0);
 $amount = (float)($_POST['amount'] ?? 0);
 $method = trim((string)($_POST['payment_method'] ?? 'cash'));
+$orNumber = trim((string)($_POST['or_number'] ?? ''));
 $notes = trim((string)($_POST['notes'] ?? ''));
 $recordedBy = (int)($_SESSION['user_id'] ?? 0);
 $idempotencyKey = $_POST['idempotency_key'] ?? '';
 
 if ($billingId <= 0 || $amount <= 0) {
     echo json_encode(['success' => false, 'message' => 'Valid billing ID and amount required']);
+    exit;
+}
+
+if ($orNumber === '') {
+    echo json_encode(['success' => false, 'message' => 'OR number is required']);
+    exit;
+}
+
+if (strlen($orNumber) > 50) {
+    echo json_encode(['success' => false, 'message' => 'OR number must be 50 characters or less']);
     exit;
 }
 
@@ -119,7 +130,7 @@ try {
         exit;
     }
 
-    $ok = billing_record_payment($conn, $billingId, $amount, $method, $notes, $recordedBy);
+    $ok = billing_record_payment($conn, $billingId, $amount, $method, $orNumber, $notes, $recordedBy);
     if (!$ok) {
         throw new Exception('Failed to record payment');
     }

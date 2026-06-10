@@ -87,10 +87,11 @@ switch ($role_key) {
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
 </head>
 
-<body>
+<body class="admin-portal">
 
     <!-- ======= Header ======= -->
     <header id="header" class="header fixed-top d-flex align-items-center">
@@ -107,13 +108,14 @@ switch ($role_key) {
             </button>
         </div>
 
+        <div class="header-actions ms-auto d-flex align-items-center flex-shrink-0">
         <?php
         $header_search_id = 'adminSearch';
         $header_search_placeholder = 'Search pages...';
         include dirname(__DIR__) . '/includes/header_search.php';
         ?>
 
-        <nav class="header-nav ms-auto">
+        <nav class="header-nav">
             <ul class="d-flex align-items-center">
                 <?php
                 $notifications_portal_url = 'admin.php?page=notifications';
@@ -155,6 +157,7 @@ switch ($role_key) {
                 </li>
             </ul>
         </nav>
+        </div>
     </header>
 
     <!-- ======= Sidebar ======= -->
@@ -290,7 +293,9 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260607-header-search"></script>
+    <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/password-toggle.js?v=20260608"></script>
+    <script src="../assets/js/main.js?v=20260610-header"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
@@ -403,6 +408,11 @@ switch ($role_key) {
 
                 let currentSuggestions = [];
                 const renderMenu = (term) => {
+                    const header = document.getElementById('header');
+                    if (header && !header.classList.contains('header-search-open') && window.innerWidth <= 991) {
+                        menu.style.display = 'none';
+                        return;
+                    }
                     currentSuggestions = findMatches(term);
                     if (!currentSuggestions.length) {
                         menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
@@ -429,6 +439,10 @@ switch ($role_key) {
                 });
 
                 searchInput.addEventListener('focus', function () {
+                    if (window.innerWidth <= 991) {
+                        const header = document.getElementById('header');
+                        if (header && !header.classList.contains('header-search-open')) return;
+                    }
                     renderMenu(searchInput.value || '');
                 });
 

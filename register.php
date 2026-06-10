@@ -16,6 +16,8 @@ $loginBackground = 'assets/img/login-background.jpg';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/app-toast.css">
+    <link rel="stylesheet" href="assets/css/password-toggle.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -30,11 +32,11 @@ $loginBackground = 'assets/img/login-background.jpg';
     </script>
     <style>
         .input-field {
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            transition: border-color 0.2s ease;
         }
         .input-field:focus {
             border-color: rgb(14 165 233);
-            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+            box-shadow: none;
             outline: none;
         }
         .btn-submit {
@@ -177,24 +179,16 @@ $loginBackground = 'assets/img/login-background.jpg';
         </div>
     </main>
 
+    <script src="assets/js/app-toast.js?v=20260608"></script>
+    <script src="assets/js/password-toggle.js?v=20260608"></script>
     <script>
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
 
         function setAlert(message, type) {
-            const alertEl = document.getElementById('register-alert');
-            if (!alertEl) return;
-
-            alertEl.classList.remove('hidden', 'border-red-200', 'bg-red-50', 'text-red-700', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700', 'border-amber-200', 'bg-amber-50', 'text-amber-700');
-
-            if (type === 'success') {
-                alertEl.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
-            } else if (type === 'warning') {
-                alertEl.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-700');
-            } else {
-                alertEl.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
+            const tone = type === 'error' ? 'danger' : (type || 'info');
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), tone);
             }
-
-            alertEl.textContent = message;
         }
 
         function validatePasswordPolicy(password) {

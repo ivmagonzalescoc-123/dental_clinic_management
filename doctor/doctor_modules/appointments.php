@@ -23,6 +23,44 @@ function appointment_can_transition_doctor(string $from, string $to): bool
     return in_array($to, $matrix[$from] ?? [], true);
 }
 
+function doctor_appointment_status_badge(string $status): string
+{
+    $status = strtolower(trim($status));
+    if (in_array($status, ['completed', 'records_complete'], true)) {
+        return 'success';
+    }
+    if ($status === 'awaiting_secretary_records') {
+        return 'info';
+    }
+    if (in_array($status, ['cancelled', 'no_show'], true)) {
+        return 'danger';
+    }
+    if ($status === 'in_progress') {
+        return 'primary';
+    }
+    return 'warning text-dark';
+}
+
+function doctor_appointment_status_label(string $status): string
+{
+    $status = strtolower(trim($status));
+    $labels = [
+        'awaiting_secretary_records' => 'Awaiting secretary record',
+        'in_progress' => 'In session',
+        'checked_in' => 'Checked in',
+        'confirmed' => 'Confirmed',
+        'scheduled' => 'Scheduled',
+        'completed' => 'Completed',
+        'records_complete' => 'Record complete',
+        'cancelled' => 'Cancelled',
+        'no_show' => 'No show',
+    ];
+    if (isset($labels[$status])) {
+        return $labels[$status];
+    }
+    return ucfirst(str_replace('_', ' ', $status));
+}
+
 // Get logged-in doctor ID
 $doctor_id = $_SESSION['user_id'] ?? 0;
 if ($doctor_id <= 0) {
@@ -119,11 +157,8 @@ $all_sql = "
         p.first_name,
         p.last_name,
         NULL as appointment_time,
-        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history,
-        -- latest schedule summary for this appointment (if any)
-        (SELECT s.status FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
-        (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
-        (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_clinical_record,
+        (SELECT cr.status FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_status
     FROM appointments a
     INNER JOIN patients p ON a.patient_id = p.patient_id
     -- timeslot removed; appointment_time not available
@@ -346,8 +381,8 @@ if ($stmt) {
                                     <th>Patient</th>
                                     <th>Date</th>
                                     <th>Status</th>
-                                    <th>Followup</th>
-                                    <th>Record</th>
+                                    <th>Workflow</th>
+                                    <th>History</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -356,27 +391,35 @@ if ($stmt) {
                                         <td><?php echo htmlspecialchars($appt['first_name'] . ' ' . $appt['last_name']); ?></td>
                                         <td><?php echo htmlspecialchars($appt['appointment_date']); ?></td>
                                         <td>
-                                            <span class="badge bg-<?php echo $appt['status'] === 'completed' ? 'success' : ($appt['status'] === 'cancelled' ? 'danger' : 'warning'); ?>">
-                                                <?php echo htmlspecialchars(ucfirst($appt['status'])); ?>
+                                            <?php
+                                            $apptStatus = (string)($appt['status'] ?? 'scheduled');
+                                            $badgeClass = doctor_appointment_status_badge($apptStatus);
+                                            ?>
+                                            <span class="badge bg-<?php echo htmlspecialchars($badgeClass); ?>">
+                                                <?php echo htmlspecialchars(doctor_appointment_status_label($apptStatus)); ?>
                                             </span>
                                         </td>
                                         <td>
-                                            <?php if (!empty($appt['schedule_status'])): ?>
-                                                <span class="badge bg-<?php echo ($appt['schedule_status'] === 'scheduled' ? 'primary' : ($appt['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
-                                                    <?php echo ($appt['schedule_status'] === 'scheduled') ? 'Followup' : htmlspecialchars(ucfirst($appt['schedule_status'])); ?>
-                                                </span>
-                                                <div class="small text-muted"><?php echo htmlspecialchars($appt['schedule_start'] ?? ''); ?> <?php echo $appt['schedule_end'] ? '&ndash; ' . htmlspecialchars($appt['schedule_end']) : ''; ?></div>
+                                            <?php
+                                            $recordStatus = strtolower((string)($appt['record_status'] ?? ''));
+                                            if ($apptStatus === 'awaiting_secretary_records'): ?>
+                                                <span class="text-muted small">Ready for secretary record</span>
+                                            <?php elseif ($recordStatus === 'finalized'): ?>
+                                                <span class="text-success small">Official record filed</span>
+                                            <?php elseif (!empty($appt['has_clinical_record'])): ?>
+                                                <span class="text-muted small">Doctor session saved</span>
                                             <?php else: ?>
-                                                <span class="text-muted small">No schedule</span>
+                                                <span class="text-muted small">No session yet</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="record-col-cell">
-                                            <?php if (!empty($appt['has_history'])): ?>
+                                            <?php if (!empty($appt['has_clinical_record'])): ?>
+                                                <?php $historyLabel = ($recordStatus === 'finalized') ? 'Record' : 'Session'; ?>
                                                 <button class="btn btn-sm doctor-record-btn doctor-record-btn-clickable" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
-                                                    <i class="bi bi-file-earmark-text"></i> View
+                                                    <i class="bi bi-file-earmark-text"></i> View <?php echo htmlspecialchars($historyLabel); ?>
                                                 </button>
                                             <?php else: ?>
-                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-disabled" type="button" disabled aria-disabled="true" title="No clinical record available">
+                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-disabled" type="button" disabled aria-disabled="true" title="No session or record available yet">
                                                     <i class="bi bi-file-earmark-text"></i> View
                                                 </button>
                                             <?php endif; ?>
@@ -457,8 +500,8 @@ if ($stmt) {
                                     <td><?php echo htmlspecialchars($eventDate); ?></td>
                                     <td><?php echo htmlspecialchars($timeLabel); ?></td>
                                     <td>
-                                        <span class="badge bg-<?php echo ($apptStatus === 'completed' ? 'success' : ($apptStatus === 'cancelled' ? 'danger' : ($apptStatus === 'in_progress' ? 'info' : 'warning text-dark'))); ?>">
-                                            <?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', (string)$apptStatus))); ?>
+                                        <span class="badge bg-<?php echo htmlspecialchars(doctor_appointment_status_badge($apptStatus)); ?>">
+                                            <?php echo htmlspecialchars(doctor_appointment_status_label($apptStatus)); ?>
                                         </span>
                                     </td>
                                     <td>
@@ -556,6 +599,7 @@ if ($stmt) {
                         </div>
                         <div class="modal-body" style="max-height:75vh; overflow:auto;">
                             <div id="historyContent">
+                                <div id="histWorkflowBanner" class="alert alert-info py-2 small mb-3" style="display:none;"></div>
                                 <div class="mb-3"><strong>Patient:</strong> <span id="histPatientName"></span></div>
                                 <div class="mb-3"><strong>Appointment Date:</strong> <span id="histApptDate"></span></div>
 
@@ -605,9 +649,6 @@ if ($stmt) {
                                     <div id="histImages" class="row g-2"></div>
                                 </div>
 
-                                <div class="mb-3"><strong>Related Schedules</strong>
-                                    <div id="histSchedules" class="list-group small"></div>
-                                </div>
                                 <div class="mb-3">
                                     <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
                                         <label class="form-label mb-0"><strong>Odontogram (read-only)</strong></label>
@@ -633,7 +674,6 @@ if ($stmt) {
                 </div>
             </div>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
 .doctor-recent-appointments-table thead th {
     white-space: nowrap;
@@ -774,7 +814,7 @@ if ($stmt) {
 
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
 // Service map for resolving service IDs to names
 const serviceMap = {
@@ -1193,6 +1233,11 @@ async function openHistoryModal(appointmentId) {
     document.getElementById('histMaterials').textContent = '';
     document.getElementById('histTreatmentWrap').style.display = 'none';
     document.getElementById('histMaterialsWrap').style.display = 'none';
+    const workflowBannerReset = document.getElementById('histWorkflowBanner');
+    if (workflowBannerReset) {
+        workflowBannerReset.style.display = 'none';
+        workflowBannerReset.textContent = '';
+    }
     exitHistoryOdontogramFullscreen();
 
         try {
@@ -1203,11 +1248,30 @@ async function openHistoryModal(appointmentId) {
                 return;
             }
             const rec = j.record;
-            const schedules = j.schedules || [];
+            const appointmentMeta = j.appointment || {};
+            const isDoctorSessionOnly = !!j.is_doctor_session_only;
+            const isFinalizedRecord = !!j.is_finalized_record;
         if (!rec) {
             notifyDoctor('No clinical record found for this appointment.', 'warning');
             return;
         }
+
+        const workflowBanner = document.getElementById('histWorkflowBanner');
+        if (workflowBanner) {
+            let bannerText = '';
+            const apptStatus = String(appointmentMeta.status || '').toLowerCase();
+            if (apptStatus === 'awaiting_secretary_records' || isDoctorSessionOnly) {
+                bannerText = 'Doctor session completed. This visit is waiting for the secretary to create the official record and follow-up date.';
+            } else if (isFinalizedRecord || apptStatus === 'completed') {
+                bannerText = 'Official record filed. This history is read-only.';
+            } else {
+                bannerText = 'Read-only appointment history.';
+            }
+            workflowBanner.textContent = bannerText;
+            workflowBanner.className = 'alert py-2 small mb-3 ' + ((apptStatus === 'awaiting_secretary_records' || isDoctorSessionOnly) ? 'alert-warning' : 'alert-info');
+            workflowBanner.style.display = '';
+        }
+
         // show patient+date
         document.getElementById('histPatientName').textContent = rec._patient_name || 'Unknown patient';
         document.getElementById('histApptDate').textContent = rec._appointment_date || rec.submitted_at || '';
@@ -1226,7 +1290,9 @@ async function openHistoryModal(appointmentId) {
         }
 
         // populate clinical summary
-        document.getElementById('histSummary').textContent = rec.summary || 'No summary provided.';
+        document.getElementById('histSummary').textContent = isDoctorSessionOnly
+            ? 'Secretary has not filed the official summary yet.'
+            : (rec.summary || 'No summary provided.');
 
         // populate prescriptions
         const presBody = document.querySelector('#histPrescriptions tbody');
@@ -1247,8 +1313,10 @@ async function openHistoryModal(appointmentId) {
             presBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No prescriptions</td></tr>';
         }
 
-        // populate follow-up date
-        document.getElementById('histFollowUpDate').textContent = rec.follow_up_date || 'None';
+        // populate follow-up date (secretary sets this when creating the record)
+        document.getElementById('histFollowUpDate').textContent = isDoctorSessionOnly
+            ? 'Not set yet'
+            : (rec.follow_up_date || 'None');
 
         // services availed for this appointment
         populateServicesAvailedList(document.getElementById('histServices'), j.services_availed || []);
@@ -1307,106 +1375,6 @@ async function openHistoryModal(appointmentId) {
         // odontogram: send to iframe via postMessage if present (read-only)
         postHistoryOdontogram(rec.odontogram || null);
 
-        // schedules: list all related schedules with expand/collapse and actions
-        try {
-            const wrap = document.getElementById('histSchedules');
-            wrap.innerHTML = '';
-            if (Array.isArray(schedules) && schedules.length) {
-                schedules.forEach(s => {
-                    const id = s.schedule_id || Math.random().toString(36).substr(2,6);
-                    const start = s.scheduled_start ? s.scheduled_start : '(no start)';
-                    const end = s.scheduled_end ? (' — ' + s.scheduled_end) : '';
-
-                    const item = document.createElement('div');
-                    item.className = 'list-group-item';
-
-                    const header = document.createElement('div');
-                    header.className = 'd-flex w-100 justify-content-between align-items-center';
-                    header.innerHTML = `<div><strong>${(s.status||'').toUpperCase()}</strong> <span class="text-muted">${start}${end}</span></div>`;
-
-                    const toggleBtn = document.createElement('a');
-                    toggleBtn.setAttribute('data-bs-toggle','collapse');
-                    toggleBtn.href = '#sch-details-' + id;
-                    toggleBtn.className = 'btn btn-sm btn-outline-secondary';
-                    toggleBtn.textContent = 'Details';
-                    header.appendChild(toggleBtn);
-                    item.appendChild(header);
-
-                    const details = document.createElement('div');
-                    details.className = 'collapse mt-2';
-                    details.id = 'sch-details-' + id;
-
-                    let inner = `<div class="small text-muted">Created: ${s.created_at || 'N/A'}</div>`;
-                    if (s.priority) inner += `<div class="small text-muted">Priority: ${s.priority}</div>`;
-                    inner += `<div class="pt-2">Schedule notes: ${s.notes || ''}</div>`;
-
-                    // actions container
-                    inner += '<div class="mt-2">';
-
-                    // Mark Arrived - only secretary/admin allowed (server enforces too)
-                    if (CURRENT_ROLE === 'secretary' || CURRENT_ROLE === 'admin') {
-                        inner += `<button class="btn btn-sm btn-success me-1" data-action="arrive" data-sid="${s.schedule_id}">Mark Arrived</button>`;
-                    }
-
-                    // Cancel - admin/secretary can cancel any; doctors can cancel their own (server enforces)
-                    if (['admin','secretary','doctor'].includes(CURRENT_ROLE)) {
-                        inner += `<button class="btn btn-sm btn-danger me-1" data-action="cancel" data-sid="${s.schedule_id}">Cancel</button>`;
-                    }
-
-                    // Reschedule - show if admin/secretary or doctor-owner
-                    if (CURRENT_ROLE === 'admin' || CURRENT_ROLE === 'secretary' || (CURRENT_ROLE === 'doctor' && s.user_id == CURRENT_USER)) {
-                        inner += `<button class="btn btn-sm btn-warning me-1" data-action="reschedule" data-sid="${s.schedule_id}">Reschedule</button>`;
-                    }
-
-                    inner += '</div>';
-                    details.innerHTML = inner;
-                    item.appendChild(details);
-
-                    // wire event delegation for the buttons
-                    item.addEventListener('click', async function(e){
-                        const btn = e.target.closest('button[data-action]');
-                        if (!btn) return;
-                        const act = btn.getAttribute('data-action');
-                        const sid = btn.getAttribute('data-sid');
-                        if (act === 'arrive') {
-                            btn.disabled = true;
-                            try {
-                                const fd = new FormData(); fd.append('schedule_id', sid);
-                                const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd });
-                                const j = await r.json();
-                                if (j.success) {
-                                    btn.textContent = 'Arrived';
-                                    btn.classList.remove('btn-success');
-                                    btn.classList.add('btn-secondary');
-                                } else notifyDoctor(j.message || 'Failed', 'danger');
-                            } catch (e) { notifyDoctor('Error', 'danger'); }
-                            btn.disabled = false;
-                        } else if (act === 'cancel') {
-                            if (!confirm('Cancel this schedule?')) return;
-                            btn.disabled = true;
-                            try {
-                                const fd = new FormData(); fd.append('schedule_id', sid);
-                                fd.append('csrf_token', doctorCsrfToken);
-                                const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
-                                const j = await r.json();
-                                if (j.success) {
-                                    // update header status
-                                    header.querySelector('strong').textContent = 'CANCELLED';
-                                } else notifyDoctor(j.message || 'Failed', 'danger');
-                            } catch (e) { notifyDoctor('Error', 'danger'); }
-                            btn.disabled = false;
-                        } else if (act === 'reschedule') {
-                            openRescheduleModal(s);
-                        }
-                    });
-
-                    wrap.appendChild(item);
-                });
-            } else {
-                wrap.innerHTML = '<div class="text-muted small">No schedules found for this appointment.</div>';
-            }
-        } catch (e) { console.warn('render schedules', e); }
-
         bs.show();
     } catch (e) {
         console.error(e);
@@ -1415,8 +1383,8 @@ async function openHistoryModal(appointmentId) {
 }
 </script>
 <!-- Reschedule Modal -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
+<script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
 <div class="modal fade" id="rescheduleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1442,11 +1410,7 @@ async function openHistoryModal(appointmentId) {
 <script>
 const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 function notifyDoctor(message, type) {
-    if (typeof window.showAppToast === 'function') {
-        window.showAppToast(String(message || ''), type || 'info');
-        return;
-    }
-    alert(String(message || ''));
+    window.showToast(String(message || ''), type || 'info');
 }
 const resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
 // initialize flatpickr on modal inputs

@@ -260,10 +260,41 @@ if ($tstmt) {
                 const rec = data.record;
 
                 if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
-                if (rec.follow_up_date) document.getElementById('follow_up_date').value = rec.follow_up_date;
 
-                if (rec.odontogram) { document.getElementById('odontogram_data').value = JSON.stringify(rec.odontogram); }
+                const odEl = document.getElementById('odontogram_data');
+                if (odEl) {
+                    odEl.value = rec.odontogram ? JSON.stringify(rec.odontogram) : '';
+                }
+                syncOdontogramFrame();
             } catch (e) { console.warn('prefill failed', e); }
+        }
+
+        function syncOdontogramFrame() {
+            ensureOdontogramFrame();
+            const od = document.getElementById('odontogram_data')?.value || '';
+            if (od && od !== '{}' && od !== 'null') {
+                postOdontogramToFrame(od);
+            }
+        }
+
+        function collectOdontogramPayload() {
+            const hidden = document.getElementById('odontogram_data');
+            ensureOdontogramFrame();
+            const frame = document.getElementById('odontogramFrame');
+            if (frame && frame.contentWindow && typeof frame.contentWindow.getOdontogramData === 'function') {
+                try {
+                    const live = frame.contentWindow.getOdontogramData();
+                    if (live && typeof live === 'object' && Object.keys(live).length > 0) {
+                        const serialized = JSON.stringify(live);
+                        if (hidden) hidden.value = serialized;
+                        return serialized;
+                    }
+                } catch (e) {
+                    console.warn('getOdontogramData failed', e);
+                }
+            }
+            const val = hidden?.value || '';
+            return (val && val !== '{}' && val !== 'null') ? val : '';
         }
 
         // Wire queue selector
@@ -280,7 +311,12 @@ if ($tstmt) {
                     apptInfoDiv.style.display = 'none';
                 }
             }
-            if (apptId) prefillClinicalRecord(apptId);
+            if (apptId) {
+                prefillClinicalRecord(apptId).then(() => {
+                    showOdontogram();
+                    try { updateOdontogramToggle(); } catch (e) { }
+                });
+            }
         });
 
         // On page load, prefill if appointment provided
@@ -295,22 +331,13 @@ if ($tstmt) {
                     apptInfoDiv.innerHTML = `<strong>Selected Patient:</strong> ${chosenText}`;
                     apptInfoDiv.style.display = 'block';
                 }
-                prefillClinicalRecord(initialAppt);
-            }
-            // Auto-load odontogram iframe if data exists
-            try {
-                const odData = document.getElementById('odontogram_data')?.value || '';
-                if (odData) {
-                    ensureOdontogramFrame();
-                    postOdontogramToFrame(odData);
+                prefillClinicalRecord(initialAppt).then(() => {
                     showOdontogram();
-                } else {
-                    // start hidden if no data
-                    hideOdontogram();
-                }
-            } catch (e) { console.warn('odontogram autoload', e); }
-            // ensure toggle reflects initial state
-            try { updateOdontogramToggle(); } catch (e) { }
+                    try { updateOdontogramToggle(); } catch (e) { }
+                });
+            } else {
+                try { updateOdontogramToggle(); } catch (e) { }
+            }
         });
 
         // Create odontogram iframe if not exists
@@ -613,9 +640,9 @@ if ($tstmt) {
                 fd.append('csrf_token', doctorCsrfToken);
                 fd.append('idempotency_key', ehrFinishIdempotencyKey);
                 
-                const odontogramData = document.getElementById('odontogram_data')?.value || '';
-                if (odontogramData) {
-                    fd.append('odontogram', odontogramData);
+                const odontogramPayload = collectOdontogramPayload();
+                if (odontogramPayload) {
+                    fd.append('odontogram', odontogramPayload);
                 }
                 
                 uploadedPhotos.forEach((file) => {
@@ -661,11 +688,7 @@ if ($tstmt) {
         });
 
         function notifyDoctor(message, type = 'info') {
-            if (typeof window.showAppToast === 'function') {
-                window.showAppToast(String(message || ''), type);
-                return;
-            }
-            alert(String(message || ''));
+            window.showToast(String(message || ''), type);
         }
 
     })();

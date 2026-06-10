@@ -157,11 +157,7 @@ if ($stmt) {
         <script>
         const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
         function notifyDoctorRecord(message, type) {
-            if (typeof window.showAppToast === 'function') {
-                window.showAppToast(String(message || ''), type || 'info');
-                return;
-            }
-            alert(String(message || ''));
+            window.showToast(String(message || ''), type || 'info');
         }
         // Service map lookup (load names)
         const serviceMapRec = {
@@ -502,8 +498,8 @@ if ($stmt) {
         </script>
 
         <!-- Reschedule Modal (records) -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+        <link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
+        <script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
         <div class="modal fade" id="rescheduleModalRec" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">

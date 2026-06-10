@@ -104,7 +104,7 @@ if (table_exists($conn, 'billing')) {
 $paymentRows = [];
 if (table_exists($conn, 'payments') && table_exists($conn, 'billing')) {
     $paySql = "
-        SELECT pay.paid_at, pay.amount, pay.payment_method, pay.notes,
+        SELECT pay.paid_at, pay.amount, pay.payment_method, pay.or_number, pay.notes,
                b.billing_id, inv.invoice_number,
                p.first_name AS patient_first, p.last_name AS patient_last,
                a.appointment_date
@@ -234,6 +234,7 @@ echo bir_csv_row([]);
 echo bir_csv_row(['COLLECTIONS / PAYMENT RECEIPTS']);
 echo bir_csv_row([
     'Payment Date',
+    'OR Number',
     'Invoice No',
     'Service Date',
     'Patient Name',
@@ -247,6 +248,7 @@ foreach ($paymentRows as $pay) {
     $patient = trim(($pay['patient_first'] ?? '') . ' ' . ($pay['patient_last'] ?? ''));
     echo bir_csv_row([
         $pay['paid_at'],
+        $pay['or_number'] ?? '',
         $invoiceNo,
         $pay['appointment_date'],
         $patient,

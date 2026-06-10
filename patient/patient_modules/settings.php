@@ -1,20 +1,8 @@
-<?php
-$forceChange = isset($_GET['force_password_change']) ? 1 : 0;
-?>
-
 <div class="card border-0 shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">Account Settings</h5>
     </div>
     <div class="card-body">
-        <?php if ($forceChange): ?>
-            <div class="alert alert-warning">
-                For security, you must change your default password before using other pages.
-                <div class="small mt-2 mb-0">
-                    Default password hint: <strong>Lastname_Last4digitphonenumber</strong> (example: <strong>DelaCruz_1234</strong>).
-                </div>
-            </div>
-        <?php endif; ?>
         <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
         <div id="passwordChangeAlert" class="mt-3"></div>
         <form id="passwordChangeForm" class="mt-3" autocomplete="off">
@@ -37,10 +25,6 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
                 <label class="form-label">Confirm New Password</label>
                 <input type="password" class="form-control" id="confirmPassword" required minlength="8">
             </div>
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="togglePasswords">
-                <label class="form-check-label" for="togglePasswords">Show passwords</label>
-            </div>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
     </div>
@@ -49,19 +33,16 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('passwordChangeForm');
-    const alertBox = document.getElementById('passwordChangeAlert');
     const csrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
-    const togglePasswords = document.getElementById('togglePasswords');
     const newPasswordInput = document.getElementById('newPassword');
     const passwordPolicyHints = document.getElementById('passwordPolicyHints');
     let isEditingNewPassword = false;
     if (!form) return;
 
     function showAlert(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(String(message || ''), type || 'info');
+        if (typeof window.showToast === 'function') {
+            window.showToast(String(message || ''), type || 'info');
         }
-        alertBox.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
     }
 
     function setRuleState(id, passed) {
@@ -90,14 +71,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    if (togglePasswords) {
-        togglePasswords.addEventListener('change', function () {
-            const mode = this.checked ? 'text' : 'password';
-            ['currentPassword', 'newPassword', 'confirmPassword'].forEach(function (id) {
-                const el = document.getElementById(id);
-                if (el) el.type = mode;
-            });
-        });
+    if (typeof window.initPasswordToggles === 'function') {
+        window.initPasswordToggles(form);
     }
 
     if (newPasswordInput) {

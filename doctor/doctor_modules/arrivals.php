@@ -34,11 +34,7 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 
 <script>
 function notifyDoctorArrival(message, type) {
-    if (typeof window.showAppToast === 'function') {
-        window.showAppToast(String(message || ''), type || 'info');
-        return;
-    }
-    alert(String(message || ''));
+    window.showToast(String(message || ''), type || 'info');
 }
 const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 const DOC_TODAY    = <?= json_encode($today) ?>;

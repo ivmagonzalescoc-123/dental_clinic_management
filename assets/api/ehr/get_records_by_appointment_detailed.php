@@ -102,8 +102,10 @@ if (!isset($record['tooth_image'])) $record['tooth_image'] = null;
 
 $patientName = '';
 $appointmentDate = '';
+$appointmentMeta = null;
 $apptStmt = $conn->prepare('
-    SELECT a.appointment_date, p.first_name, p.last_name
+    SELECT a.appointment_date, a.status, a.completed_by_doctor_at, a.secretary_records_completed_at,
+           p.first_name, p.last_name
     FROM appointments a
     INNER JOIN patients p ON p.patient_id = a.patient_id
     WHERE a.appointment_id = ?
@@ -117,7 +119,29 @@ if ($apptStmt) {
     if ($apptRow) {
         $patientName = trim((string)($apptRow['first_name'] ?? '') . ' ' . (string)($apptRow['last_name'] ?? ''));
         $appointmentDate = (string)($apptRow['appointment_date'] ?? '');
+        $appointmentMeta = [
+            'status' => (string)($apptRow['status'] ?? ''),
+            'completed_by_doctor_at' => $apptRow['completed_by_doctor_at'] ?? null,
+            'secretary_records_completed_at' => $apptRow['secretary_records_completed_at'] ?? null,
+        ];
     }
+}
+
+$followUpAppointments = [];
+$fuStmt = $conn->prepare('
+    SELECT appointment_id, appointment_date, status, reason
+    FROM appointments
+    WHERE rescheduled_from = ?
+    ORDER BY appointment_date ASC, appointment_id ASC
+');
+if ($fuStmt) {
+    $fuStmt->bind_param('i', $appointment_id);
+    $fuStmt->execute();
+    $fuRes = $fuStmt->get_result();
+    while ($fuRow = $fuRes->fetch_assoc()) {
+        $followUpAppointments[] = $fuRow;
+    }
+    $fuStmt->close();
 }
 
 if ($record) {
@@ -236,12 +260,22 @@ if ($record) {
     }
 }
 
+$recordStatus = is_array($record) ? (string)($record['status'] ?? '') : '';
+$isDoctorSessionOnly = ($recordStatus === 'submitted');
+$isFinalizedRecord = ($recordStatus === 'finalized');
+
 echo json_encode([
     'success' => true,
     'record' => $record,
+    'appointment' => $appointmentMeta,
+    'record_status' => $recordStatus,
+    'is_doctor_session_only' => $isDoctorSessionOnly,
+    'is_finalized_record' => $isFinalizedRecord,
     'schedules' => $schedules,
+    'follow_up_appointments' => $followUpAppointments,
     'prescriptions' => $prescriptions,
     'services_availed' => $servicesAvailed,
+    'read_only_for_doctor' => ($role === 'doctor'),
 ]);
 
 ?>

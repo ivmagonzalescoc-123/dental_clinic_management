@@ -57,7 +57,7 @@ if ($li) {
 }
 
 $payments = [];
-$pay = $conn->prepare('SELECT amount, payment_method, notes, paid_at FROM payments WHERE billing_id = ? ORDER BY paid_at DESC');
+$pay = $conn->prepare('SELECT amount, payment_method, or_number, notes, paid_at FROM payments WHERE billing_id = ? ORDER BY paid_at DESC');
 if ($pay) {
     $pay->bind_param('i', $billingId);
     $pay->execute();

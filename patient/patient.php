@@ -65,6 +65,7 @@ switch ($role_key) {
     <link href="../assets/css/module-content-ux.css?v=20260607-mobile6" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
     <link href="../assets/css/patient-mobile.css?v=20260607-mobile-search5" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -261,7 +262,9 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/main.js?v=20260607-mobile-search5"></script>
+    <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/password-toggle.js?v=20260608"></script>
+    <script src="../assets/js/main.js?v=20260610-header"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>

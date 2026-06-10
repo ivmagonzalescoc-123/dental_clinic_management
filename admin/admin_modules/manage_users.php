@@ -161,7 +161,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $updSql = 'UPDATE patients
                    SET password_hash = ?,
-                       must_change_password = 1,
+                       must_change_password = 0,
                        password_updated_at = NOW(),
                        failed_login_attempts = 0,
                        locked_until = NULL
@@ -178,8 +178,12 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($ok) {
             $displayName = trim((string)($targetPatient['first_name'] ?? '') . ' ' . (string)($targetPatient['last_name'] ?? ''));
-            $_SESSION['message'] = 'Temporary password generated for patient ' . $displayName . ': ' . $temporaryPassword . '. Share this securely. Patient must change password on next login.';
-            $_SESSION['message_type'] = 'success';
+            security_set_generated_password_modal(
+                $temporaryPassword,
+                $displayName . ' (patient)',
+                'Temporary password generated for patient.',
+                false
+            );
         } else {
             $_SESSION['message'] = 'Failed to reset patient password.';
             $_SESSION['message_type'] = 'danger';
@@ -237,8 +241,12 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $displayName = trim((string)($targetUser['first_name'] ?? '') . ' ' . (string)($targetUser['last_name'] ?? ''));
         $roleName = (string)($targetUser['role_name'] ?? 'user');
-        $_SESSION['message'] = 'Temporary password generated for ' . $displayName . ' (' . $roleName . '): ' . $temporaryPassword . '. Share this securely. User must change password on next login.';
-        $_SESSION['message_type'] = 'success';
+        security_set_generated_password_modal(
+            $temporaryPassword,
+            $displayName . ' (' . $roleName . ')',
+            'Temporary password generated successfully.',
+            true
+        );
     } else {
         $_SESSION['message'] = 'Failed to reset password.';
         $_SESSION['message_type'] = 'danger';
@@ -588,7 +596,7 @@ foreach ($roles as $roleRow) {
                         <div class="col-md-6">
                             <label class="form-label">Password</label>
                             <input type="text" class="form-control" id="add_password" value="Auto-generated secure default password" readonly>
-                            <small class="text-muted">A strong default password is generated automatically and the user must change it on first login.</small>
+                            <small class="text-muted">A strong default password is generated automatically. The user can change it anytime in Account Settings.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Role</label>
@@ -791,7 +799,7 @@ foreach ($roles as $roleRow) {
                         <div class="col-md-6">
                             <label class="form-label">Password</label>
                             <input type="text" class="form-control" id="add_patient_password" value="Auto-generated secure default password" readonly>
-                            <small class="text-muted">Patient receives a generated default password and must change it after login.</small>
+                            <small class="text-muted">Patient receives a generated default password and may change it anytime in Account Settings.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Date of Birth</label>
@@ -950,7 +958,87 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editRole) editRole.addEventListener('change', toggleDoctorWorkTypeFields);
     toggleDoctorWorkTypeFields();
 });
+</script>
 
+<!-- Temporary password modal (copyable; not shown in toast) -->
+<div class="modal fade" id="tempPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Temporary Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2 fw-semibold" id="tempPasswordAccountLabel"></p>
+                <p class="text-muted small mb-3" id="tempPasswordHint"></p>
+                <label class="form-label" for="tempPasswordValue">Password</label>
+                <div class="input-group">
+                    <input type="text" class="form-control font-monospace" id="tempPasswordValue" readonly autocomplete="off">
+                    <button type="button" class="btn btn-outline-primary" id="tempPasswordCopyBtn">Copy</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php if (!empty($_SESSION['temp_password_modal'])):
+    $tempPasswordModal = $_SESSION['temp_password_modal'];
+    unset($_SESSION['temp_password_modal']);
+?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modalEl = document.getElementById('tempPasswordModal');
+    const input = document.getElementById('tempPasswordValue');
+    const labelEl = document.getElementById('tempPasswordAccountLabel');
+    const copyBtn = document.getElementById('tempPasswordCopyBtn');
+    const hintEl = document.getElementById('tempPasswordHint');
+    if (!modalEl || !input || !labelEl) return;
+
+    labelEl.textContent = <?php echo json_encode('Account: ' . ($tempPasswordModal['account_label'] ?? ''), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    input.value = <?php echo json_encode((string)($tempPasswordModal['password'] ?? ''), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    if (hintEl) {
+        hintEl.textContent = <?php echo !empty($tempPasswordModal['require_change_on_login'])
+            ? json_encode('Copy this password and share it securely. This staff account must change it before using other pages.', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP)
+            : json_encode('Copy this password and share it securely. The account may change it anytime from Account Settings.', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    }
+
+    function copyPassword() {
+        const value = input.value || '';
+        if (!value) return;
+        const done = function () {
+            if (typeof window.showToast === 'function') {
+                window.showToast('Password copied to clipboard.', 'success');
+            }
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(value).then(done).catch(function () {
+                input.focus();
+                input.select();
+                document.execCommand('copy');
+                done();
+            });
+        } else {
+            input.focus();
+            input.select();
+            document.execCommand('copy');
+            done();
+        }
+    }
+
+    copyBtn?.addEventListener('click', copyPassword);
+    input.addEventListener('click', function () {
+        input.select();
+    });
+
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+});
+</script>
+<?php endif; ?>
+
+<script>
 // Edit Patient Function
 function editPatient(patient) {
     document.getElementById('edit_patient_id').value = patient.patient_id;

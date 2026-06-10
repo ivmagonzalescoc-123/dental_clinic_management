@@ -55,7 +55,6 @@ try {
         if (empty($password)) {
             $password = security_generate_default_password();
             $generated_default_password = $password;
-            $must_change_password = 1;
         } else {
             $passwordErrors = security_password_policy_errors($password);
             if (!empty($passwordErrors)) {
@@ -85,7 +84,6 @@ try {
     $response = ['success' => true, 'message' => 'Patient created', 'patient_id' => $patient_id];
     if ($generated_default_password !== null) {
         $response['generated_password'] = $generated_default_password;
-        $response['must_change_password'] = true;
     }
     echo json_encode($response);
     exit;

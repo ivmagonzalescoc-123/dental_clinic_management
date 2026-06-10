@@ -327,7 +327,7 @@ $_SESSION['first_name'] = $patient['first_name'];
 $_SESSION['last_name'] = $patient['last_name'];
 $_SESSION['role'] = 'patient';
 $_SESSION['user_type'] = 'patient';
-$_SESSION['must_change_password'] = (int)($patient['must_change_password'] ?? 0) === 1;
+$_SESSION['must_change_password'] = false;
 $_SESSION['profile_image'] = $patient['profile_image'] ?? null;
 $_SESSION['last_activity'] = time();
 

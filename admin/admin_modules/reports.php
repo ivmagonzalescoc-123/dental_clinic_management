@@ -37,8 +37,8 @@ $doctors = [];
 $doctorRes = $conn->query("
     SELECT u.user_id, u.first_name, u.last_name
     FROM users u
-    INNER JOIN role r ON r.role_id = u.role_id
-    WHERE r.role_name = 'doctor'
+    INNER JOIN role r ON r.role_id = u.role_id 
+    WHERE r.role_name = 'doctor' 
     ORDER BY u.first_name ASC
 ");
 if ($doctorRes) {
@@ -161,7 +161,7 @@ if ($svcStmt) {
     call_user_func_array([$svcStmt, 'bind_param'], $bind);
     $svcStmt->execute();
     $res = $svcStmt->get_result();
-    while ($row = $res->fetch_assoc()) {
+        while ($row = $res->fetch_assoc()) {
         $topServices[] = $row;
     }
     $svcStmt->close();
@@ -265,7 +265,7 @@ if ($recentStmt) {
     call_user_func_array([$recentStmt, 'bind_param'], $bind);
     $recentStmt->execute();
     $res = $recentStmt->get_result();
-    while ($row = $res->fetch_assoc()) {
+        while ($row = $res->fetch_assoc()) {
         $recentVisits[] = $row;
     }
     $recentStmt->close();
@@ -384,7 +384,7 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
     </div>
 
     <form method="GET" action="admin.php" class="clinic-reports-filter card border-0 mb-3">
-        <div class="card-body">
+    <div class="card-body">
             <input type="hidden" name="page" value="reports">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
@@ -399,22 +399,22 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                 <div class="col-md-2 report-custom-date" style="<?php echo $range === 'custom' ? '' : 'display:none;'; ?>">
                     <label class="form-label small mb-1">From</label>
                     <input type="date" name="start_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($startDate); ?>">
-                </div>
+            </div>
                 <div class="col-md-2 report-custom-date" style="<?php echo $range === 'custom' ? '' : 'display:none;'; ?>">
                     <label class="form-label small mb-1">To</label>
                     <input type="date" name="end_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($endDate); ?>">
-                </div>
-                <div class="col-md-3">
+            </div>
+            <div class="col-md-3">
                     <label class="form-label small mb-1">Doctor</label>
                     <select name="doctor_id" class="form-select form-select-sm">
                         <option value="">All doctors</option>
-                        <?php foreach ($doctors as $doc): ?>
+                    <?php foreach ($doctors as $doc): ?>
                             <option value="<?php echo (int)$doc['user_id']; ?>" <?php echo $doctorId === (int)$doc['user_id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
                 <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply</button>
                     <a href="admin.php?page=reports" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
@@ -447,17 +447,17 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                 <h6 class="mb-1">Needs Attention</h6>
                 <div class="display-6 fw-bold"><?php echo (int)($noShows + $cancelled + $awaitingRecords); ?></div>
             </div>
+            </div>
         </div>
-    </div>
 
     <?php if ($billingCount > 0): ?>
-    <div class="row g-3 mb-3">
+        <div class="row g-3 mb-3">
         <div class="col-md-4">
-            <div class="card dental-kpi-card p-3 h-100">
+                <div class="card dental-kpi-card p-3 h-100">
                 <h6 class="mb-1">Total Billed</h6>
                 <div class="display-6 fw-bold">₱<?php echo number_format($totalBilled, 2); ?></div>
             </div>
-        </div>
+                </div>
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <h6 class="mb-1">Collected</h6>
@@ -465,7 +465,7 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card dental-kpi-card p-3 h-100">
+                <div class="card dental-kpi-card p-3 h-100">
                 <h6 class="mb-1">Outstanding</h6>
                 <div class="display-6 fw-bold <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
             </div>
@@ -500,8 +500,8 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
         </div>
         <?php if ($billingCount > 0): ?>
         <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
-                <div class="card-body">
+                <div class="card dental-surface-card h-100">
+                    <div class="card-body">
                     <h5 class="card-title mb-2">Collections vs Outstanding</h5>
                     <div id="reportCollectionsChart" class="clinic-simple-chart"></div>
                 </div>
@@ -512,8 +512,8 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
 
     <div class="row g-3">
         <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
-                <div class="card-body">
+                <div class="card dental-surface-card h-100">
+                    <div class="card-body">
                     <h5 class="card-title mb-3">Where Appointments Stand</h5>
                     <?php if (empty($statusBreakdown)): ?>
                         <p class="text-muted mb-0">No appointments in this period.</p>
@@ -534,7 +534,7 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                     </div>
                                     <div class="clinic-report-bar-track">
                                         <div class="clinic-report-bar-fill" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                                    </div>
+                    </div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
@@ -545,7 +545,7 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
 
         <div class="col-lg-6">
             <div class="card dental-surface-card h-100">
-                <div class="card-body">
+                            <div class="card-body">
                     <h5 class="card-title mb-3">Most Booked Services</h5>
                     <?php if (empty($topServices)): ?>
                         <p class="text-muted mb-0">No service bookings in this period.</p>
@@ -560,34 +560,34 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="fw-semibold"><?php echo htmlspecialchars($row['service_name']); ?></span>
                                         <strong><?php echo $count; ?></strong>
-                                    </div>
+                            </div>
                                     <div class="clinic-report-bar-track">
                                         <div class="clinic-report-bar-fill is-service" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                                    </div>
+                        </div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
-                </div>
-            </div>
-        </div>
+                            </div>
+                        </div>
+                    </div>
 
         <div class="col-12">
             <div class="card dental-surface-card">
                 <div class="card-body">
                     <h5 class="card-title mb-3">Doctor Activity</h5>
-                    <div class="table-responsive">
+                <div class="table-responsive">
                         <table class="table table-sm table-hover align-middle mb-0">
                             <thead>
-                                <tr>
-                                    <th>Doctor</th>
+                            <tr>
+                                <th>Doctor</th>
                                     <th class="text-end">Total Appointments</th>
                                     <th class="text-end">Completed</th>
                                     <th class="text-end">No-Shows</th>
                                     <th class="text-end">Completion</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            </tr>
+                        </thead>
+                        <tbody>
                                 <?php if (empty($doctorActivity)): ?>
                                     <tr><td colspan="5" class="text-muted text-center py-3">No doctor data for this period.</td></tr>
                                 <?php else: ?>
@@ -603,15 +603,15 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                             <td class="text-end text-success fw-semibold"><?php echo $done; ?></td>
                                             <td class="text-end <?php echo (int)$doc['no_shows'] > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$doc['no_shows']; ?></td>
                                             <td class="text-end"><?php echo (int)$rate; ?>%</td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                </div>
                 </div>
             </div>
-        </div>
 
         <?php if (!empty($birSalesPreview)): ?>
         <div class="col-12">
@@ -622,8 +622,8 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                         <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-outline-success clinic-report-no-print">
                             <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
                         </a>
-                    </div>
-                    <div class="table-responsive">
+                </div>
+                <div class="table-responsive">
                         <table class="table table-sm table-hover align-middle mb-0">
                             <thead>
                                 <tr>
@@ -634,9 +634,9 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                     <th class="text-end">Collected</th>
                                     <th class="text-end">Balance</th>
                                     <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            </tr>
+                        </thead>
+                        <tbody>
                                 <?php foreach ($birSalesPreview as $row): ?>
                                     <?php
                                     $inv = $row['invoice_number'] ?: ('INV-' . str_pad((string)$row['billing_id'], 6, '0', STR_PAD_LEFT));
@@ -652,30 +652,30 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                         <td><span class="badge bg-secondary"><?php echo htmlspecialchars($row['status']); ?></span></td>
                                     </tr>
                                 <?php endforeach; ?>
-                            </tbody>
-                        </table>
+                        </tbody>
+                    </table>
                     </div>
                 </div>
-            </div>
-        </div>
+                    </div>
+                </div>
         <?php endif; ?>
 
         <div class="col-12">
             <div class="card dental-surface-card">
                 <div class="card-body">
                     <h5 class="card-title mb-3">Recent Completed Visits</h5>
-                    <div class="table-responsive">
+                <div class="table-responsive">
                         <table class="table table-sm table-hover align-middle mb-0">
                             <thead>
-                                <tr>
+                            <tr>
                                     <th>Date</th>
-                                    <th>Patient</th>
+                                <th>Patient</th>
                                     <th>Doctor</th>
                                     <th>Services</th>
                                     <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            </tr>
+                        </thead>
+                        <tbody>
                                 <?php if (empty($recentVisits)): ?>
                                     <tr><td colspan="5" class="text-muted text-center py-3">No completed visits in this period.</td></tr>
                                 <?php else: ?>
@@ -691,11 +691,11 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
                                                     <?php echo htmlspecialchars(reports_format_status($st)); ?>
                                                 </span>
                                             </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                     </div>
                 </div>
             </div>

@@ -274,6 +274,10 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     </select>
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">OR Number <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="paymentOrNumber" maxlength="50" required placeholder="Official receipt number">
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Notes</label>
                     <input type="text" class="form-control" id="paymentNotes" placeholder="Optional">
                 </div>
@@ -295,6 +299,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         const amountInput = document.getElementById('paymentAmount');
         amountInput.value = balance.toFixed(2);
         amountInput.max = balance.toFixed(2);
+        document.getElementById('paymentOrNumber').value = '';
         document.getElementById('paymentBalanceHint').textContent = 'Remaining balance: ₱' + balance.toFixed(2);
         new bootstrap.Modal(document.getElementById('paymentModal')).show();
     }
@@ -311,29 +316,40 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 
         const idempotencyKey = (window.Idempotency && Idempotency.newKey('pay')) || ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2));
 
+        const orNumber = (document.getElementById('paymentOrNumber').value || '').trim();
+        if (!orNumber) {
+            window.showToast('OR number is required', 'danger');
+            paymentSubmitting = false;
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            document.getElementById('paymentOrNumber').focus();
+            return;
+        }
+
         try {
             const fd = new FormData();
             fd.append('csrf_token', BILLING_CSRF);
             fd.append('billing_id', document.getElementById('paymentBillingId').value);
             fd.append('amount', document.getElementById('paymentAmount').value);
             fd.append('payment_method', document.getElementById('paymentMethod').value);
+            fd.append('or_number', orNumber);
             fd.append('notes', document.getElementById('paymentNotes').value);
             fd.append('idempotency_key', idempotencyKey);
             const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
             const res = await fetch(appRoot + '/assets/api/billing/record_payment.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                alert(j.message || 'Payment failed');
+                window.showToast(j.message || 'Payment failed', 'danger');
                 paymentSubmitting = false;
                 btn.disabled = false;
                 btn.innerHTML = originalHtml;
                 return;
             }
-            alert(j.duplicate_replay || j.idempotent_replay ? 'Payment already recorded.' : 'Payment recorded successfully');
+            window.showToast(j.duplicate_replay || j.idempotent_replay ? 'Payment already recorded.' : 'Payment recorded successfully', 'success');
             location.reload();
         } catch (err) {
             console.error(err);
-            alert('Payment failed. Please try again.');
+            window.showToast('Payment failed. Please try again.', 'danger');
             paymentSubmitting = false;
             btn.disabled = false;
             btn.innerHTML = originalHtml;
@@ -353,7 +369,8 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 });
                 let payRows = '';
                 (details.payments || []).forEach(p => {
-                    payRows += `<tr><td>${p.payment_method} — ${p.paid_at}</td><td class="text-end">₱${(parseFloat(p.amount)||0).toFixed(2)}</td></tr>`;
+                    const orLabel = p.or_number ? `OR ${p.or_number} — ` : '';
+                    payRows += `<tr><td>${orLabel}${p.payment_method} — ${p.paid_at}</td><td class="text-end">₱${(parseFloat(p.amount)||0).toFixed(2)}</td></tr>`;
                 });
                 let instRows = '';
                 if (details.installment) {

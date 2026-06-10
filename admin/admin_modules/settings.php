@@ -32,10 +32,6 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
                 <label class="form-label">Confirm New Password</label>
                 <input type="password" class="form-control" id="confirmPassword" required minlength="8">
             </div>
-            <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" id="togglePasswords">
-                <label class="form-check-label" for="togglePasswords">Show passwords</label>
-            </div>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
     </div>
@@ -45,18 +41,15 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const form = document.getElementById('passwordChangeForm');
-    const alertBox = document.getElementById('passwordChangeAlert');
-    const togglePasswords = document.getElementById('togglePasswords');
     const newPasswordInput = document.getElementById('newPassword');
     const passwordPolicyHints = document.getElementById('passwordPolicyHints');
     let isEditingNewPassword = false;
     if (!form) return;
 
     function showAlert(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(String(message || ''), type || 'info');
+        if (typeof window.showToast === 'function') {
+            window.showToast(String(message || ''), type || 'info');
         }
-        alertBox.innerHTML = '<div class="alert alert-' + type + '">' + message + '</div>';
     }
 
     function setRuleState(id, passed) {
@@ -85,14 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    if (togglePasswords) {
-        togglePasswords.addEventListener('change', function () {
-            const mode = this.checked ? 'text' : 'password';
-            ['currentPassword', 'newPassword', 'confirmPassword'].forEach(function (id) {
-                const el = document.getElementById(id);
-                if (el) el.type = mode;
-            });
-        });
+    if (typeof window.initPasswordToggles === 'function') {
+        window.initPasswordToggles(form);
     }
 
     if (newPasswordInput) {

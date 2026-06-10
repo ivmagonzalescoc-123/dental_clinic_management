@@ -120,19 +120,15 @@ if ($aStmt) {
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
+<link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const modalEl = document.getElementById('createScheduleModal');
     const bsModal = new bootstrap.Modal(modalEl);
     function notifyDoctorSchedule(message, type) {
-        if (typeof window.showAppToast === 'function') {
-            window.showAppToast(String(message || ''), type || 'info');
-            return;
-        }
-        alert(String(message || ''));
+        window.showToast(String(message || ''), type || 'info');
     }
     document.getElementById('btnOpenCreateSchedule').addEventListener('click', ()=>bsModal.show());
 

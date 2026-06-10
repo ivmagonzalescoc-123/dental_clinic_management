@@ -115,7 +115,7 @@ if (!function_exists('check_session')) {
         exit;
     }
 
-    // Force password change for staff default passwords only (patients choose their own at signup).
+    // Force password change for staff only when admin generated a temporary reset password.
     if (!empty($_SESSION['must_change_password']) && $user_role !== 'patient') {
         $requested = $_GET['page'] ?? '';
         if ($requested !== 'settings') {

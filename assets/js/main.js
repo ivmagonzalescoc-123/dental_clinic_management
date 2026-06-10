@@ -38,19 +38,6 @@
     el.addEventListener('scroll', listener)
   }
 
-  function ensureAppToastHost() {
-    let host = document.getElementById('appToastHost')
-    if (host) return host
-
-    host = document.createElement('div')
-    host.id = 'appToastHost'
-    host.className = 'app-toast-host'
-    host.setAttribute('aria-live', 'polite')
-    host.setAttribute('aria-atomic', 'true')
-    document.body.appendChild(host)
-    return host
-  }
-
   function toastTypeFromAlertClass(alertEl) {
     if (!alertEl || !alertEl.classList) return 'info'
     if (alertEl.classList.contains('alert-success')) return 'success'
@@ -66,46 +53,6 @@
     return String(clone.textContent || '').replace(/\s+/g, ' ').trim()
   }
 
-  function showAppToast(message, type = 'info', options = {}) {
-    const text = String(message || '').trim()
-    if (!text) return
-
-    const host = ensureAppToastHost()
-    const toast = document.createElement('div')
-    toast.className = 'app-toast app-toast-' + String(type || 'info')
-    toast.setAttribute('role', 'status')
-
-    const body = document.createElement('div')
-    body.className = 'app-toast-body'
-    body.textContent = text
-
-    const closeBtn = document.createElement('button')
-    closeBtn.type = 'button'
-    closeBtn.className = 'app-toast-close'
-    closeBtn.setAttribute('aria-label', 'Dismiss notification')
-    closeBtn.innerHTML = '&times;'
-
-    toast.appendChild(body)
-    toast.appendChild(closeBtn)
-    host.appendChild(toast)
-
-    requestAnimationFrame(() => toast.classList.add('is-visible'))
-
-    let removed = false
-    const removeToast = () => {
-      if (removed) return
-      removed = true
-      toast.classList.remove('is-visible')
-      setTimeout(() => {
-        try { toast.remove() } catch (e) {}
-      }, 180)
-    }
-
-    closeBtn.addEventListener('click', removeToast)
-    const delay = Number(options.delay || 3200)
-    setTimeout(removeToast, delay)
-  }
-
   function convertInlineAlertsToToasts(scope) {
     const root = scope instanceof HTMLElement ? scope : document
     const alerts = root.querySelectorAll('.alert.alert-dismissible.fade.show:not([data-toastified="1"])')
@@ -118,12 +65,10 @@
       const message = getAlertText(alertEl)
       const type = toastTypeFromAlertClass(alertEl)
       alertEl.setAttribute('data-toastified', '1')
-      if (message) showAppToast(message, type)
+      if (message && typeof window.showAppToast === 'function') window.showAppToast(message, type)
       alertEl.remove()
     })
   }
-
-  window.showAppToast = showAppToast
 
   /**
    * Sidebar toggle
@@ -885,8 +830,15 @@
     }
   }
 
-  function initPatientHeaderSearch() {
-    if (!document.body.classList.contains('patient-portal')) return;
+  function isPortalBody() {
+    return document.body.classList.contains('patient-portal')
+      || document.body.classList.contains('doctor-portal')
+      || document.body.classList.contains('secretary-portal')
+      || document.body.classList.contains('admin-portal');
+  }
+
+  function initPortalHeaderSearch() {
+    if (!isPortalBody()) return;
 
     const header = document.getElementById('header');
     if (!header) return;
@@ -901,13 +853,13 @@
       if (window.innerWidth > 991) {
         header.classList.remove('header-search-open');
         toggle.setAttribute('aria-expanded', 'false');
-        header.style.removeProperty('--patient-search-expand-width');
+        header.style.removeProperty('--portal-search-expand-width');
         return;
       }
       const headerRect = header.getBoundingClientRect();
       const hostRect = searchHost.getBoundingClientRect();
       const expandWidth = Math.max(140, hostRect.right - headerRect.left - 8);
-      header.style.setProperty('--patient-search-expand-width', expandWidth + 'px');
+      header.style.setProperty('--portal-search-expand-width', expandWidth + 'px');
     };
 
     const closeSearch = function () {
@@ -985,7 +937,7 @@
   }
 
   document.addEventListener('DOMContentLoaded', function () {
-    initPatientHeaderSearch();
+    initPortalHeaderSearch();
     initNotificationDropdown();
   });
   // start polling notifications every 30s

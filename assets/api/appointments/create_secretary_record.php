@@ -16,6 +16,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.p
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/followup_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -151,15 +152,22 @@ try {
     ensure_clinical_records_profiling_column($conn);
     $visitClinicalJson = json_encode($visitClinicalData, JSON_UNESCAPED_UNICODE);
 
-    $odontogramJson = json_encode($odontogramData);
     $submittedAt = date('Y-m-d H:i:s');
     $recordStatus = 'finalized';
 
-    $existingStmt = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ? LIMIT 1');
+    $existingStmt = $conn->prepare('SELECT record_id, odontogram FROM clinical_records WHERE appointment_id = ? LIMIT 1');
     $existingStmt->bind_param('i', $appointmentId);
     $existingStmt->execute();
     $existing = $existingStmt->get_result()->fetch_assoc();
     $existingStmt->close();
+
+    if (empty($odontogramData) && $existing && !empty($existing['odontogram'])) {
+        $decodedExisting = json_decode($existing['odontogram'], true);
+        if (is_array($decodedExisting)) {
+            $odontogramData = odontogram_normalize_data($decodedExisting);
+        }
+    }
+    $odontogramJson = json_encode($odontogramData);
 
     if ($existing) {
         $clinicalRecordId = (int)$existing['record_id'];
@@ -320,6 +328,17 @@ try {
 
     billing_create_invoice($conn, $billingId, $secretaryId);
 
+    $followUpAppointmentId = null;
+    if ($followUpDateDb !== null) {
+        $followUpAppointmentId = workflow_create_followup_appointment(
+            $conn,
+            $appointmentId,
+            $patientId,
+            $doctorId,
+            $followUpDateDb
+        );
+    }
+
     $recordsCompletedAt = date('Y-m-d H:i:s');
     $completedStatus = 'completed';
     $apptUpd = $conn->prepare('
@@ -354,6 +373,7 @@ try {
         'billing_id' => $billingId,
         'total_amount' => $grandTotal,
         'installment' => ($useInstallment === 1 && $installmentTerms > 0),
+        'follow_up_appointment_id' => $followUpAppointmentId,
     ];
     idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
     echo json_encode($response);

@@ -88,6 +88,8 @@ if ($odontogram !== null) {
     $decodedOdonto = json_decode($odontogram, true);
     if (is_array($decodedOdonto)) {
         $odontogram = json_encode(odontogram_normalize_data($decodedOdonto), JSON_UNESCAPED_UNICODE);
+    } else {
+        $odontogram = null;
     }
 }
 $doctorId = $_SESSION['user_id'];

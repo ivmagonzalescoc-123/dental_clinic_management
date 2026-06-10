@@ -73,15 +73,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("sssssssss", $first_name, $middle_name, $last_name, $email, $passwordHash, $date_of_birth, $gender, $phone_number, $address);
 
     if ($stmt->execute()) {
-        $newPatientId = (int)$stmt->insert_id;
-        $forceStmt = $conn->prepare('UPDATE patients SET must_change_password = 1, password_updated_at = NOW() WHERE patient_id = ?');
-        if ($forceStmt) {
-            $forceStmt->bind_param('i', $newPatientId);
-            $forceStmt->execute();
-            $forceStmt->close();
-        }
-        $_SESSION['message'] = 'Patient added. Default password: ' . $defaultPassword . ' (must change on first login).';
-        $_SESSION['message_type'] = 'success';
+        security_set_generated_password_modal(
+            $defaultPassword,
+            trim($first_name . ' ' . $last_name) . ' (patient)',
+            'Patient added successfully.'
+        );
     } else {
         $_SESSION['message'] = 'Error adding patient: ' . $stmt->error;
         $_SESSION['message_type'] = 'danger';

@@ -110,11 +110,12 @@ switch ($role_key) {
 
     <!-- Template Main CSS File -->
     <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
 </head>
 
-<body>
+<body class="doctor-portal">
 
     <!-- ======= Header ======= -->
     <header id="header" class="header fixed-top d-flex align-items-center">
@@ -131,13 +132,14 @@ switch ($role_key) {
             </button>
         </div>
 
+        <div class="header-actions ms-auto d-flex align-items-center flex-shrink-0">
         <?php
         $header_search_id = 'doctorSearch';
         $header_search_placeholder = 'Search pages...';
         include dirname(__DIR__) . '/includes/header_search.php';
         ?>
 
-        <nav class="header-nav ms-auto">
+        <nav class="header-nav">
             <ul class="d-flex align-items-center">
                 <?php
                 $notifications_portal_url = 'doctor.php?page=notifications';
@@ -179,6 +181,7 @@ switch ($role_key) {
                 </li>
             </ul>
         </nav>
+        </div>
     </header>
 
     <!-- ======= Sidebar ======= -->
@@ -332,7 +335,9 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
-    <script src="../assets/js/main.js?v=20260607-header-search"></script>
+    <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/password-toggle.js?v=20260608"></script>
+    <script src="../assets/js/main.js?v=20260610-header"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
@@ -443,6 +448,11 @@ switch ($role_key) {
 
                 let currentSuggestions = [];
                 const renderMenu = (term) => {
+                    const header = document.getElementById('header');
+                    if (header && !header.classList.contains('header-search-open') && window.innerWidth <= 991) {
+                        menu.style.display = 'none';
+                        return;
+                    }
                     currentSuggestions = findMatches(term);
                     if (!currentSuggestions.length) {
                         menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
@@ -469,6 +479,10 @@ switch ($role_key) {
                 });
 
                 searchInput.addEventListener('focus', function () {
+                    if (window.innerWidth <= 991) {
+                        const header = document.getElementById('header');
+                        if (header && !header.classList.contains('header-search-open')) return;
+                    }
                     renderMenu(searchInput.value || '');
                 });
 
@@ -513,15 +527,7 @@ switch ($role_key) {
     </script>
 
     <script>
-        // Use shared compact top toast across all roles/pages.
-        function showToast(message, type) {
-            if (typeof window.showAppToast === 'function') {
-                window.showAppToast(message, type || 'info');
-                return;
-            }
-
-            alert(String(message || ''));
-        }
+        window.showToast = window.showToast || window.showAppToast;
     </script>
 
 </body>

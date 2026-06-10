@@ -141,16 +141,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $spStmt->close();
         }
 
-        $forceStmt = $conn->prepare('UPDATE users SET must_change_password = 1, password_updated_at = NOW() WHERE user_id = ?');
-        if ($forceStmt) {
-            $forceStmt->bind_param('i', $newUserId);
-            $forceStmt->execute();
-            $forceStmt->close();
-        }
-
         $conn->commit();
-        $_SESSION['message'] = 'User added. Default password: ' . $defaultPassword . ' (must change on first login).';
-        $_SESSION['message_type'] = 'success';
+        security_set_generated_password_modal(
+            $defaultPassword,
+            trim($first_name . ' ' . $last_name),
+            'User added successfully.'
+        );
     } catch (Throwable $e) {
         $conn->rollback();
         $_SESSION['message'] = $e->getMessage();

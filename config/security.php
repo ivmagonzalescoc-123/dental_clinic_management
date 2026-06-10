@@ -98,6 +98,19 @@ if (!function_exists('security_generate_default_password')) {
     }
 }
 
+if (!function_exists('security_set_generated_password_modal')) {
+    function security_set_generated_password_modal($password, $accountLabel, $toastMessage = 'Password generated successfully.', $requireChangeOnLogin = false)
+    {
+        $_SESSION['temp_password_modal'] = [
+            'password' => (string)$password,
+            'account_label' => (string)$accountLabel,
+            'require_change_on_login' => $requireChangeOnLogin ? 1 : 0,
+        ];
+        $_SESSION['message'] = (string)$toastMessage;
+        $_SESSION['message_type'] = 'success';
+    }
+}
+
 if (!function_exists('security_hash_password')) {
     function security_hash_password($password)
     {

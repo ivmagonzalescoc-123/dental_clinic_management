@@ -128,6 +128,7 @@ CREATE TABLE `payments` (
   `billing_id` int(11) NOT NULL,
   `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `payment_method` varchar(50) DEFAULT 'cash',
+  `or_number` varchar(50) NOT NULL,
   `notes` varchar(500) DEFAULT NULL,
   `recorded_by` int(11) DEFAULT NULL,
   `paid_at` datetime NOT NULL DEFAULT current_timestamp()

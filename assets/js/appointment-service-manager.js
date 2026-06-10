@@ -115,12 +115,12 @@ class AppointmentServiceManager {
                 return true;
             } else {
                 console.error('Failed to update services:', data.message);
-                alert('Error: ' + data.message);
+                if (typeof window.showToast === 'function') window.showToast('Error: ' + data.message, 'danger');
                 return false;
             }
         } catch (error) {
             console.error('Error updating services:', error);
-            alert('Error updating services');
+            if (typeof window.showToast === 'function') window.showToast('Error updating services', 'danger');
             return false;
         }
     }
@@ -366,7 +366,7 @@ class AppointmentServiceManager {
                     .map(cb => parseInt(cb.value));
 
                 if (selected.length === 0) {
-                    alert('Please select at least one service');
+                    if (typeof window.showToast === 'function') window.showToast('Please select at least one service', 'warning');
                     return;
                 }
 
@@ -376,8 +376,8 @@ class AppointmentServiceManager {
                     summaryContainer.classList.remove('d-none');
                 }
 
-                if (typeof window.showAppToast === 'function') {
-                    window.showAppToast('Services confirmed successfully.', 'success');
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Services confirmed successfully.', 'success');
                 }
             });
         }

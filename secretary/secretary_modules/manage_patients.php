@@ -267,11 +267,7 @@ if ($res) {
 
 <script>
 function notifySecretaryPatients(message, type) {
-	if (typeof window.showAppToast === 'function') {
-		window.showAppToast(String(message || ''), type || 'info');
-		return;
-	}
-	alert(String(message || ''));
+	window.showToast(String(message || ''), type || 'info');
 }
 // Open profiling modal and load patient data
 function openProfilingModal(patient) {
@@ -394,7 +390,7 @@ document.getElementById('addPatientForm').addEventListener('submit', function(e)
 	}).then(r => r.json()).then(res => {
 		if (res.success) {
 			if (res.generated_password) {
-				notifySecretaryPatients('Patient created. Default password: ' + res.generated_password + ' (must change on first login).', 'success');
+				notifySecretaryPatients('Patient created. Default password: ' + res.generated_password, 'success');
 			}
 			// reload to show new patient (simple approach)
 			location.reload();

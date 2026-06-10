@@ -18,6 +18,8 @@ $email = isset($_GET['email']) ? trim($_GET['email']) : '';
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/app-toast.css">
+    <link rel="stylesheet" href="assets/css/password-toggle.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -63,21 +65,21 @@ $email = isset($_GET['email']) ? trim($_GET['email']) : '';
                         id="reset-otp"
                         required
                         placeholder="OTP Code"
-                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-0 outline-none"
                     >
                     <input
                         type="password"
                         id="reset-password"
                         required
                         placeholder="New Password"
-                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-0 outline-none"
                     >
                     <input
                         type="password"
                         id="reset-confirm"
                         required
                         placeholder="Confirm Password"
-                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none"
+                        class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-sky-500 focus:ring-0 outline-none"
                     >
                     <button type="submit" class="w-full rounded-xl bg-sky-500 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
                         Update Password
@@ -89,24 +91,16 @@ $email = isset($_GET['email']) ? trim($_GET['email']) : '';
         </div>
     </main>
 
+    <script src="assets/js/app-toast.js?v=20260608"></script>
+    <script src="assets/js/password-toggle.js?v=20260608"></script>
     <script>
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
 
         function setAlert(message, type) {
-            const alertEl = document.getElementById('reset-alert');
-            if (!alertEl) return;
-
-            alertEl.classList.remove('hidden', 'border-red-200', 'bg-red-50', 'text-red-700', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700', 'border-amber-200', 'bg-amber-50', 'text-amber-700');
-
-            if (type === 'success') {
-                alertEl.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
-            } else if (type === 'warning') {
-                alertEl.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-700');
-            } else {
-                alertEl.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
+            const tone = type === 'error' ? 'danger' : (type || 'info');
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), tone);
             }
-
-            alertEl.textContent = message;
         }
 
         document.getElementById('reset-form').addEventListener('submit', async (event) => {

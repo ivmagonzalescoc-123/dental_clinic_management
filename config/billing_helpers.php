@@ -119,6 +119,7 @@ if (!function_exists('billing_ensure_tables')) {
             billing_id INT NOT NULL,
             amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             payment_method VARCHAR(50) DEFAULT 'cash',
+            or_number VARCHAR(50) NOT NULL,
             notes VARCHAR(500) DEFAULT NULL,
             recorded_by INT NULL,
             paid_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -443,19 +444,20 @@ if (!function_exists('billing_create_invoice')) {
 }
 
 if (!function_exists('billing_record_payment')) {
-    function billing_record_payment($conn, $billingId, $amount, $method, $notes, $recordedBy)
+    function billing_record_payment($conn, $billingId, $amount, $method, $orNumber, $notes, $recordedBy)
     {
         $billingId = (int)$billingId;
         $amount = (float)$amount;
-        if ($billingId <= 0 || $amount <= 0) {
+        $orNumber = trim((string)$orNumber);
+        if ($billingId <= 0 || $amount <= 0 || $orNumber === '') {
             return false;
         }
 
-        $ins = $conn->prepare('INSERT INTO payments (billing_id, amount, payment_method, notes, recorded_by) VALUES (?, ?, ?, ?, ?)');
+        $ins = $conn->prepare('INSERT INTO payments (billing_id, amount, payment_method, or_number, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?)');
         if (!$ins) {
             return false;
         }
-        $ins->bind_param('idssi', $billingId, $amount, $method, $notes, $recordedBy);
+        $ins->bind_param('idsssi', $billingId, $amount, $method, $orNumber, $notes, $recordedBy);
         $ok = $ins->execute();
         $ins->close();
         if (!$ok) {

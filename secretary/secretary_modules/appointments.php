@@ -935,7 +935,6 @@ $appointmentsViewFilters = [
 </div>
 <?php endif; ?>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
 <style>
 .secretary-booking-calendar {
     border: 1px solid #dce4ef;
@@ -1067,7 +1066,7 @@ $appointmentsViewFilters = [
     font-size: 0.85rem;
 }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 
 <!-- Book New Appointment Modal -->
 <div class="modal fade" id="bookAppointmentModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -1716,7 +1715,7 @@ $appointmentsViewFilters = [
                             .map(cb => parseInt(cb.value));
 
                         if (selected.length === 0) {
-                            alert('Please select at least one service');
+                            notifySecretary('Please select at least one service', 'warning');
                             return;
                         }
 
@@ -1816,7 +1815,7 @@ $appointmentsViewFilters = [
                     
                     const res  = await fetch(url);
                     const data = await res.json();
-                    select.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+                    select.innerHTML = '<option value="">-- Select a timeslot --</option>';
                     if (data.success && data.slots.length > 0) {
                         data.slots.forEach(slot => {
                             const opt = document.createElement('option');
@@ -1853,7 +1852,7 @@ $appointmentsViewFilters = [
 
                 const timeslotId = document.getElementById('bookTimeslotSelect')?.value || '';
                 if (!timeslotId) {
-                    showSecretaryActionFeedback('Please select a 20-minute timeslot before booking.', 'warning');
+                    showSecretaryActionFeedback('Please select a timeslot before booking.', 'warning');
                     return;
                 }
 
@@ -1915,8 +1914,8 @@ $appointmentsViewFilters = [
 </script>
 
 <!-- Reschedule Modal (secretary) -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
+<script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
 <div class="modal fade" id="rescheduleModalSec" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1983,11 +1982,7 @@ function toServerFormatSec(localVal) {
 }
 
 function notifySecretary(message, type) {
-    if (typeof window.showAppToast === 'function') {
-        window.showAppToast(String(message || ''), type || 'info');
-        return;
-    }
-    alert(String(message || ''));
+    window.showToast(String(message || ''), type || 'info');
 }
 
 async function loadRescheduleTimeslotsSec(preselectTimeslotId) {
@@ -2520,12 +2515,21 @@ function escapeHtml(text) {
                     </form>
                 </div>
 
-                <!-- Odontogram Section (3D) -->
+                <!-- Odontogram Section -->
                 <div class="mb-4">
                     <h6 class="mb-3"><i class="bi bi-box"></i> Odontogram</h6>
                     <p class="text-muted small">Use the 2D chart to set status and comments. Switch to 3D preview if needed.</p>
-                    <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"
-                            style="width: 100%; height: <?php echo (int) odontogram_embed_height_px(); ?>px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                    <div class="d-flex align-items-center mb-2 gap-2">
+                        <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                    </div>
+                    <div id="secretaryOdontogramViewport" class="odontogram-viewport">
+                        <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                            <i class="bi bi-x-lg"></i> Close
+                        </button>
+                        <div id="secretaryOdontogramContainer" class="secretary-odontogram-container">
+                            <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"></iframe>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2545,12 +2549,52 @@ function escapeHtml(text) {
     letter-spacing: 0.02em;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
+
+.odontogram-viewport {
+    position: relative;
+    width: 100%;
+}
+
+.secretary-odontogram-container {
+    width: 100%;
+    height: <?php echo (int) odontogram_embed_height_px(); ?>px;
+}
+
+.secretary-odontogram-container iframe,
+#odontogramFrame {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.odontogram-viewport:fullscreen,
+.odontogram-viewport:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    background: #0b0f19;
+    padding: 0;
+}
+
+.odontogram-viewport:fullscreen .secretary-odontogram-container,
+.odontogram-viewport:-webkit-full-screen .secretary-odontogram-container {
+    height: 100% !important;
+}
+
+.odontogram-fs-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+}
 </style>
 
 <script>
 let currentRecordAppointmentId = null;
 let currentRecordPatientId = null;
 let secretaryOdontogramData = {};
+const SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
 
 window.addEventListener('message', function(ev) {
     if (ev.data && ev.data.type === 'odontogram_update' && ev.data.toothState) {
@@ -2587,6 +2631,78 @@ function postOdontogramToSecretaryFrame(data) {
     frame.contentWindow.postMessage({ type: 'load_odontogram', toothState: data || {}, readonly: false }, '*');
 }
 
+function getSecretaryOdontogramFullscreenElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
+}
+
+function isSecretaryOdontogramFullscreen() {
+    const viewport = document.getElementById('secretaryOdontogramViewport');
+    return !!viewport && getSecretaryOdontogramFullscreenElement() === viewport;
+}
+
+function requestSecretaryOdontogramFullscreen() {
+    const viewport = document.getElementById('secretaryOdontogramViewport');
+    if (!viewport) return;
+    const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
+    if (requestFn) requestFn.call(viewport);
+}
+
+function exitSecretaryOdontogramFullscreen() {
+    const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (exitFn) exitFn.call(document);
+}
+
+function notifySecretaryOdontogramResize() {
+    const frame = document.getElementById('odontogramFrame');
+    try {
+        if (frame?.contentWindow) {
+            frame.contentWindow.postMessage({ type: 'odontogram_resize' }, '*');
+        }
+    } catch (e) {}
+}
+
+function syncSecretaryOdontogramFullscreenUI() {
+    const closeBtn = document.getElementById('closeSecretaryOdontogramFullscreenBtn');
+    const openBtn = document.getElementById('openSecretaryOdontogramFullscreenBtn');
+    const container = document.getElementById('secretaryOdontogramContainer');
+    const active = isSecretaryOdontogramFullscreen();
+
+    if (closeBtn) closeBtn.style.display = active ? '' : 'none';
+    if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+    if (container) {
+        container.style.height = active ? '100%' : (SECRETARY_ODONTOGRAM_IFRAME_HEIGHT + 'px');
+    }
+    setTimeout(notifySecretaryOdontogramResize, 50);
+}
+
+document.getElementById('openSecretaryOdontogramFullscreenBtn')?.addEventListener('click', function () {
+    if (isSecretaryOdontogramFullscreen()) {
+        exitSecretaryOdontogramFullscreen();
+        return;
+    }
+    requestSecretaryOdontogramFullscreen();
+});
+
+document.getElementById('closeSecretaryOdontogramFullscreenBtn')?.addEventListener('click', function () {
+    exitSecretaryOdontogramFullscreen();
+});
+
+document.addEventListener('fullscreenchange', syncSecretaryOdontogramFullscreenUI);
+document.addEventListener('webkitfullscreenchange', syncSecretaryOdontogramFullscreenUI);
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isSecretaryOdontogramFullscreen()) {
+        exitSecretaryOdontogramFullscreen();
+    }
+});
+
+document.getElementById('secretaryRecordModal')?.addEventListener('hidden.bs.modal', function () {
+    if (isSecretaryOdontogramFullscreen()) {
+        exitSecretaryOdontogramFullscreen();
+    }
+});
+
+syncSecretaryOdontogramFullscreenUI();
+
 function getAppRoot() {
     const parts = window.location.pathname.split('/').filter(Boolean);
     return parts.length ? ('/' + parts[0]) : '';
@@ -2617,7 +2733,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
             if (patientNameEl) {
                 patientNameEl.textContent = '';
             }
-            alert('Error loading appointment data: ' + (data.message || ''));
+            notifySecretary('Error loading appointment data: ' + (data.message || ''), 'danger');
             return;
         }
 
@@ -2715,7 +2831,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         modal.show();
     } catch (e) {
         console.error(e);
-        alert('Error loading appointment: ' + e.message);
+        notifySecretary('Error loading appointment: ' + e.message, 'danger');
     }
 }
 
@@ -2819,7 +2935,7 @@ function addBillingChargeRow(desc = '', amount = '') {
 document.getElementById('addBillingServiceBtn')?.addEventListener('click', () => {
     const select = document.getElementById('addServiceSelect');
     if (!select || !select.value) {
-        alert('Select a service from the price list first.');
+        notifySecretary('Select a service from the price list first.', 'warning');
         return;
     }
     const opt = select.options[select.selectedIndex];
@@ -2937,21 +3053,21 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         
         const json = await res.json();
         if (!json.success) {
-            alert('Error: ' + (json.message || 'Failed to create record'));
+            notifySecretary('Error: ' + (json.message || 'Failed to create record'), 'danger');
             secretaryRecordSubmitting = false;
             this.disabled = false;
             this.innerHTML = btnText;
             return;
         }
         
-        alert(json.already_processed || json.idempotent_replay ? 'Clinical record was already submitted.' : 'Clinical record created successfully!');
+        notifySecretary(json.already_processed || json.idempotent_replay ? 'Clinical record was already submitted.' : 'Clinical record created successfully!', 'success');
         bootstrap.Modal.getInstance(document.getElementById('secretaryRecordModal')).hide();
         
         // Reload page to update queue
         setTimeout(() => location.reload(), 1000);
     } catch (e) {
         console.error(e);
-        alert('Error: ' + e.message);
+        notifySecretary('Error: ' + e.message, 'danger');
         secretaryRecordSubmitting = false;
         this.disabled = false;
         this.innerHTML = btnText;
