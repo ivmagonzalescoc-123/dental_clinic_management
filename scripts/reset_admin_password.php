@@ -161,7 +161,7 @@ if (!$stmt->execute()) {
 echo "Admin password reset successfully.\n";
 echo "  User ID: {$user_id}\n";
 echo "  Email:   {$target['email']}\n";
-echo "  Login:   " . app_base_url() . "/login.php\n";
+echo "  Login:   " . app_base_url() . "/index.php\n";
 
 if ($generate) {
     echo "  Password: {$password}\n";

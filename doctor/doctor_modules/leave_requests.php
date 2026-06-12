@@ -392,7 +392,10 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
     </div>
     <div class="card-body">
         <?php if ($message !== ''): ?>
-            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?>"><?php echo htmlspecialchars($message); ?></div>
+            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($message); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         <?php endif; ?>
 
         <form method="POST" class="row g-3 mb-4">
@@ -447,7 +450,7 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
                                 <td><?php echo htmlspecialchars($leave['created_at']); ?></td>
                                 <td>
                                     <?php if ($leave['status'] === 'pending'): ?>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Cancel this leave request?');">
+                                        <form method="POST" style="display:inline;" data-confirm="Cancel this leave request?" data-confirm-title="Cancel Leave" data-confirm-variant="danger" data-confirm-ok="Cancel Request">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="cancel_leave">
                                             <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">

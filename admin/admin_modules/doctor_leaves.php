@@ -187,7 +187,10 @@ if ($filter === 'all') {
     </div>
     <div class="card-body">
         <?php if ($message !== ''): ?>
-            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?>"><?php echo htmlspecialchars($message); ?></div>
+            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($message); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         <?php endif; ?>
 
         <div class="card border-0 bg-light mb-3">
@@ -282,13 +285,13 @@ if ($filter === 'all') {
                                         <div class="d-flex flex-column gap-2">
                                             <span class="badge bg-<?php echo $cls; ?> align-self-start"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
                                             <div class="d-flex gap-1">
-                                                <form method="POST" onsubmit="return confirm('Approve this leave request?');">
+                                                <form method="POST" data-confirm="Approve this leave request?" data-confirm-title="Approve Leave" data-confirm-ok="Approve">
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                     <input type="hidden" name="action" value="approve">
                                                     <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">
                                                     <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                                 </form>
-                                                <form method="POST" onsubmit="return confirm('Reject this leave request?');">
+                                                <form method="POST" data-confirm="Reject this leave request?" data-confirm-title="Reject Leave" data-confirm-variant="danger" data-confirm-ok="Reject">
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                     <input type="hidden" name="action" value="reject">
                                                     <input type="hidden" name="leave_id" value="<?php echo (int)$leave['leave_id']; ?>">

@@ -263,8 +263,9 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260608"></script>
-    <script src="../assets/js/main.js?v=20260610-header"></script>
+    <script src="../assets/js/main.js?v=20260611-toast"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
     <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>

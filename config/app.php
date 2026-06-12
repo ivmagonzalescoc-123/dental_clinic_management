@@ -93,7 +93,7 @@ if (!function_exists('app_reset_password_url')) {
             return $configured;
         }
 
-        return app_base_url() . '/reset-password.php';
+        return app_base_url() . '/index.php';
     }
 }
 

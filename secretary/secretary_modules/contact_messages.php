@@ -123,6 +123,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showAlert(message, type) {
+        if (typeof window.showToast === 'function') {
+            window.showToast(String(message || ''), type || 'info');
+            return;
+        }
         if (!alertEl) return;
         alertEl.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
             escapeHtml(message) +

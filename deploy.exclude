@@ -1,11 +1,8 @@
 .git/
 .gitignore
-.venv/
 .vscode/
 .idea/
-ws-server/
-docs/
-pdf files/
+archive/
 capstone_dental.sql
 deploy.exclude
 ENV_SETUP_GUIDE.md

@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchMeta = document.getElementById('patientTransactionSearchMeta');
     let allTransactions = [];
 
-    fetch('../get_transactions.php')
+    fetch('../assets/api/billing/get_transactions.php')
         .then(async (response) => {
             const data = await response.json().catch(() => null);
             if (!response.ok || !data) {

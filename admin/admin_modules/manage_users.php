@@ -444,7 +444,7 @@ foreach ($roles as $roleRow) {
                                                 data-bs-target="#editUserModal" onclick="editUser(<?php echo htmlspecialchars(json_encode($user)); ?>)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Generate a new temporary password for this account?');">
+                                        <form method="POST" style="display:inline;" data-confirm="Generate a new temporary password for this account?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="reset_password">
                                             <input type="hidden" name="id" value="<?php echo (int)$user['user_id']; ?>">
@@ -454,7 +454,10 @@ foreach ($roles as $roleRow) {
                                         </form>
                                         <?php if ((int)($user['is_active'] ?? 0) === 1): ?>
                                             <form method="POST" style="display:inline;" 
-                                                  onsubmit="return confirm('Are you sure you want to archive this user?');">
+                                                  data-confirm="Are you sure you want to archive this user?"
+                                                  data-confirm-title="Archive User"
+                                                  data-confirm-variant="danger"
+                                                  data-confirm-ok="Archive">
                                                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                 <input type="hidden" name="action" value="archive">
                                                 <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
@@ -465,7 +468,9 @@ foreach ($roles as $roleRow) {
                                             </form>
                                         <?php else: ?>
                                             <form method="POST" style="display:inline;" 
-                                                  onsubmit="return confirm('Reactivate this user account?');">
+                                                  data-confirm="Reactivate this user account?"
+                                                  data-confirm-title="Reactivate User"
+                                                  data-confirm-ok="Reactivate">
                                                                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                                 <input type="hidden" name="action" value="reactivate">
                                                 <input type="hidden" name="id" value="<?php echo $user['user_id']; ?>">
@@ -535,7 +540,7 @@ foreach ($roles as $roleRow) {
                                                 data-bs-target="#editPatientModal" onclick="editPatient(<?php echo htmlspecialchars(json_encode($patient)); ?>)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Generate a new temporary password for this patient?');">
+                                        <form method="POST" style="display:inline;" data-confirm="Generate a new temporary password for this patient?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="reset_password">
                                             <input type="hidden" name="type" value="patients">
@@ -545,7 +550,10 @@ foreach ($roles as $roleRow) {
                                             </button>
                                         </form>
                                         <form method="POST" style="display:inline;" 
-                                              onsubmit="return confirm('Are you sure you want to archive this patient?');">
+                                              data-confirm="Are you sure you want to archive this patient?"
+                                              data-confirm-title="Archive Patient"
+                                              data-confirm-variant="danger"
+                                              data-confirm-ok="Archive">
                                                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <input type="hidden" name="action" value="archive">
                                             <input type="hidden" name="id" value="<?php echo $patient['patient_id']; ?>">

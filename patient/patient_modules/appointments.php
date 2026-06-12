@@ -654,13 +654,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const todayIso = toIsoDateLocal(new Date());
 
     function showAlert(message, type = 'info') {
-        if (!alertBox) return;
-        alertBox.innerHTML = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
-            message + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>';
+        window.showToast(String(message || ''), type || 'info');
     }
 
     function showBookingToast(message, type) {
-        window.showToast(String(message || ''), type || 'info');
+        showAlert(message, type);
     }
 
     function statusBadgeClass(status) {
@@ -1245,19 +1243,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedDate = dateSelect ? String(dateSelect.value || '').trim() : '';
             if (!doctorId) {
                 showAlert('Please select a doctor first.', 'warning');
-                showBookingToast('Please select a doctor first.', 'warning');
                 return;
             }
             if (!selectedDate) {
                 showAlert('Please select an available date on the calendar.', 'warning');
-                showBookingToast('Please select an available date on the calendar.', 'warning');
                 return;
             }
 
             const tsId = timeslotSelect ? String(timeslotSelect.value || '').trim() : '';
             if (!tsId) {
-                showAlert('Please select a time slot before submitting.', 'warning');
-                showBookingToast('Please select a time slot before booking.', 'warning');
+                showAlert('Please select a time slot before booking.', 'warning');
                 return;
             }
 
@@ -1299,13 +1294,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 } else {
                     const failType = resp.warning ? 'warning' : 'danger';
-                    showAlert(resp.message || 'Failed to create appointment.', 'warning');
-                    showBookingToast(resp.message || 'Failed to create appointment.', failType);
+                    showAlert(resp.message || 'Failed to create appointment.', failType);
                 }
             }).catch(function(err) {
                 console.error(err);
                 showAlert('Server error creating appointment.', 'danger');
-                showBookingToast('Server error creating appointment.', 'danger');
             });
         });
     }

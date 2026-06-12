@@ -140,6 +140,20 @@ if (!function_exists('billing_ensure_tables')) {
     }
 }
 
+if (!function_exists('billing_senior_discount_percent')) {
+    function billing_senior_discount_percent(): float
+    {
+        return 20.0;
+    }
+}
+
+if (!function_exists('billing_pwd_discount_percent')) {
+    function billing_pwd_discount_percent(): float
+    {
+        return 20.0;
+    }
+}
+
 if (!function_exists('billing_migrate_billing_columns')) {
     function billing_migrate_billing_columns($conn)
     {
@@ -157,10 +171,86 @@ if (!function_exists('billing_migrate_billing_columns')) {
 
         if (!isset($cols['amount_paid'])) {
             @$conn->query('ALTER TABLE billing ADD COLUMN amount_paid DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER total_amount');
+            $cols['amount_paid'] = true;
         }
         if (!isset($cols['balance'])) {
             @$conn->query('ALTER TABLE billing ADD COLUMN balance DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER amount_paid');
+            $cols['balance'] = true;
         }
+        if (!isset($cols['subtotal_amount'])) {
+            @$conn->query('ALTER TABLE billing ADD COLUMN subtotal_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER balance');
+        }
+        if (!isset($cols['discount_type'])) {
+            @$conn->query("ALTER TABLE billing ADD COLUMN discount_type ENUM('none','senior','pwd','custom') NOT NULL DEFAULT 'none' AFTER subtotal_amount");
+        }
+        if (!isset($cols['discount_percent'])) {
+            @$conn->query('ALTER TABLE billing ADD COLUMN discount_percent DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER discount_type');
+        }
+        if (!isset($cols['discount_amount'])) {
+            @$conn->query('ALTER TABLE billing ADD COLUMN discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER discount_percent');
+        }
+        if (!isset($cols['discount_notes'])) {
+            @$conn->query('ALTER TABLE billing ADD COLUMN discount_notes VARCHAR(255) DEFAULT NULL AFTER discount_amount');
+        }
+    }
+}
+
+if (!function_exists('billing_normalize_discount_type')) {
+    function billing_normalize_discount_type($type): string
+    {
+        $type = strtolower(trim((string)$type));
+        return in_array($type, ['senior', 'pwd', 'custom'], true) ? $type : 'none';
+    }
+}
+
+if (!function_exists('billing_apply_discount')) {
+    /**
+     * @return array{subtotal_amount:float,discount_type:string,discount_percent:float,discount_amount:float,total_amount:float}
+     */
+    function billing_apply_discount($subtotal, $discountType = 'none', $customPercent = null): array
+    {
+        $subtotal = round(max(0, (float)$subtotal), 2);
+        $type = billing_normalize_discount_type($discountType);
+        $percent = 0.0;
+
+        if ($type === 'senior') {
+            $percent = billing_senior_discount_percent();
+        } elseif ($type === 'pwd') {
+            $percent = billing_pwd_discount_percent();
+        } elseif ($type === 'custom') {
+            $percent = max(0, min(100, (float)$customPercent));
+        }
+
+        $discountAmount = round($subtotal * ($percent / 100), 2);
+        $total = round(max(0, $subtotal - $discountAmount), 2);
+
+        return [
+            'subtotal_amount' => $subtotal,
+            'discount_type' => $type,
+            'discount_percent' => round($percent, 2),
+            'discount_amount' => $discountAmount,
+            'total_amount' => $total,
+        ];
+    }
+}
+
+if (!function_exists('billing_discount_label')) {
+    function billing_discount_label($discountType, $discountPercent = 0.0): string
+    {
+        $type = billing_normalize_discount_type($discountType);
+        $percent = round((float)$discountPercent, 2);
+
+        if ($type === 'senior') {
+            return 'Senior Citizen Discount (' . rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.') . '%)';
+        }
+        if ($type === 'pwd') {
+            return 'PWD Discount (' . rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.') . '%)';
+        }
+        if ($type === 'custom') {
+            return 'Custom Discount (' . rtrim(rtrim(number_format($percent, 2, '.', ''), '0'), '.') . '%)';
+        }
+
+        return 'Discount';
     }
 }
 
@@ -276,8 +366,20 @@ if (!function_exists('billing_sum_appointment_services')) {
 }
 
 if (!function_exists('billing_create_or_update')) {
-    function billing_create_or_update($conn, $appointmentId, $patientId, $totalAmount, $initialStatus = 'unpaid')
+    function billing_create_or_update($conn, $appointmentId, $patientId, $subtotalAmount, $initialStatus = 'unpaid', array $discountOptions = [])
     {
+        billing_migrate_billing_columns($conn);
+
+        $discountType = billing_normalize_discount_type($discountOptions['discount_type'] ?? 'none');
+        $customPercent = $discountOptions['discount_percent'] ?? null;
+        $discountNotes = trim((string)($discountOptions['discount_notes'] ?? ''));
+
+        $totals = billing_apply_discount($subtotalAmount, $discountType, $customPercent);
+        $subtotalAmount = $totals['subtotal_amount'];
+        $discountPercent = $totals['discount_percent'];
+        $discountAmount = $totals['discount_amount'];
+        $totalAmount = $totals['total_amount'];
+
         $billingId = 0;
         $check = $conn->prepare('SELECT billing_id, status FROM billing WHERE appointment_id = ? LIMIT 1');
         if ($check) {
@@ -289,9 +391,26 @@ if (!function_exists('billing_create_or_update')) {
                 $billingId = (int)$row['billing_id'];
                 $paid = billing_get_amount_paid($conn, $billingId);
                 $balance = max(0, round($totalAmount - $paid, 2));
-                $upd = $conn->prepare('UPDATE billing SET total_amount = ?, user_id = ?, amount_paid = ?, balance = ? WHERE billing_id = ?');
+                $upd = $conn->prepare('
+                    UPDATE billing
+                    SET total_amount = ?, user_id = ?, amount_paid = ?, balance = ?,
+                        subtotal_amount = ?, discount_type = ?, discount_percent = ?, discount_amount = ?, discount_notes = ?
+                    WHERE billing_id = ?
+                ');
                 if ($upd) {
-                    $upd->bind_param('diddi', $totalAmount, $patientId, $paid, $balance, $billingId);
+                    $upd->bind_param(
+                        'didddsddsi',
+                        $totalAmount,
+                        $patientId,
+                        $paid,
+                        $balance,
+                        $subtotalAmount,
+                        $discountType,
+                        $discountPercent,
+                        $discountAmount,
+                        $discountNotes,
+                        $billingId
+                    );
                     $upd->execute();
                     $upd->close();
                 }
@@ -302,11 +421,29 @@ if (!function_exists('billing_create_or_update')) {
 
         $balance = round((float)$totalAmount, 2);
         $zeroPaid = 0.0;
-        $ins = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, amount_paid, balance, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $ins = $conn->prepare('
+            INSERT INTO billing (
+                appointment_id, user_id, total_amount, amount_paid, balance, status,
+                subtotal_amount, discount_type, discount_percent, discount_amount, discount_notes, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ');
         if (!$ins) {
             return 0;
         }
-        $ins->bind_param('iiddds', $appointmentId, $patientId, $totalAmount, $zeroPaid, $balance, $initialStatus);
+        $ins->bind_param(
+            'iidddsdsdds',
+            $appointmentId,
+            $patientId,
+            $totalAmount,
+            $zeroPaid,
+            $balance,
+            $initialStatus,
+            $subtotalAmount,
+            $discountType,
+            $discountPercent,
+            $discountAmount,
+            $discountNotes
+        );
         $ins->execute();
         $billingId = (int)$conn->insert_id;
         $ins->close();

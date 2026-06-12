@@ -1,0 +1,20 @@
+.app-confirm-modal .modal-content {
+    border: 0;
+    box-shadow: 0 16px 40px rgba(10, 30, 55, 0.22);
+}
+
+.app-confirm-modal .modal-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.app-confirm-modal .modal-body {
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: #334155;
+    white-space: pre-line;
+}
+
+.app-confirm-modal .modal-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    gap: 0.5rem;
+}

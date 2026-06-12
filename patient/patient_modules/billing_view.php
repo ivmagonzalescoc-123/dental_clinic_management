@@ -1,5 +1,8 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
+
+billing_ensure_tables($conn);
 
 $billing_id = (int)($_GET['billing_id'] ?? 0);
 $patient_id = $_SESSION['patient_id'] ?? 0;
@@ -131,8 +134,15 @@ if ($appointment_id > 0) {
 }
 
 // 3) If items_total < billing total, add a consultation/other fee line to show remainder
+$billing_subtotal = (float)($billing['subtotal_amount'] ?? 0.0);
+$billing_discount = (float)($billing['discount_amount'] ?? 0.0);
+$billing_discount_type = (string)($billing['discount_type'] ?? 'none');
+$billing_discount_percent = (float)($billing['discount_percent'] ?? 0.0);
 $billing_total = (float)($billing['total_amount'] ?? 0.0);
-$remainder = $billing_total - $items_total;
+if ($billing_subtotal <= 0) {
+    $billing_subtotal = $billing_total + $billing_discount;
+}
+$remainder = $billing_subtotal - $items_total;
 if ($remainder > 0.005) {
     $items[] = [ 'description' => 'Consultation / Treatment Fee', 'amount' => $remainder ];
     $items_total += $remainder;
@@ -165,8 +175,18 @@ if ($remainder > 0.005) {
                             </tr>
                         <?php endforeach; ?>
                         <tr class="table-light">
-                            <td><strong>Total</strong></td>
-                            <td class="text-end"><strong>₱<?php echo htmlspecialchars(number_format($items_total,2)); ?></strong></td>
+                            <td><strong>Subtotal</strong></td>
+                            <td class="text-end"><strong>₱<?php echo htmlspecialchars(number_format($billing_subtotal > 0 ? $billing_subtotal : $items_total, 2)); ?></strong></td>
+                        </tr>
+                        <?php if ($billing_discount > 0 && $billing_discount_type !== 'none'): ?>
+                            <tr>
+                                <td class="text-success"><?php echo htmlspecialchars(billing_discount_label($billing_discount_type, $billing_discount_percent)); ?></td>
+                                <td class="text-end text-success">-₱<?php echo htmlspecialchars(number_format($billing_discount, 2)); ?></td>
+                            </tr>
+                        <?php endif; ?>
+                        <tr class="table-light">
+                            <td><strong>Total Due</strong></td>
+                            <td class="text-end"><strong>₱<?php echo htmlspecialchars(number_format($billing_total, 2)); ?></strong></td>
                         </tr>
                     </tbody>
                 </table>

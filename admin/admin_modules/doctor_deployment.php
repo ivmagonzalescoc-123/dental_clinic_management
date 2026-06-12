@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $del = $conn->prepare('DELETE FROM doctor_availability WHERE user_id = ?');
                     if (!$del) {
-                        throw new Exception('Failed to refresh deployment days.');
+                        throw new Exception('Failed to refresh worktype');
                     }
                     $del->bind_param('i', $doctorId);
                     $del->execute();
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($workType === 'part_time') {
                         $ins = $conn->prepare('INSERT INTO doctor_availability (user_id, weekday, start_time, end_time) VALUES (?, ?, "08:00:00", "17:00:00")');
                         if (!$ins) {
-                            throw new Exception('Failed to save deployment days.');
+                            throw new Exception('Failed to save worktype');
                         }
                         foreach (array_keys($validWeekdays) as $wd) {
                             $ins->bind_param('ii', $doctorId, $wd);
@@ -95,11 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $conn->commit();
-                    $message = 'Doctor deployment saved successfully.';
+                    $message = 'Doctor shift saved successfully.';
                     $messageType = 'success';
                 } catch (Throwable $e) {
                     $conn->rollback();
-                    $message = 'Failed to save deployment: ' . $e->getMessage();
+                    $message = 'Failed to save shift days: ' . $e->getMessage();
                     $messageType = 'danger';
                 }
             }
@@ -140,12 +140,14 @@ $weekdayNames = [
 
 <div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Doctor Deployment</h5>
-        <small class="text-muted">Regular: auto-available Monday-Saturday | Part-time: deploy selected days</small>
+        <h5 class="card-title mb-0">Doctor's Worktype</h5>
     </div>
     <div class="card-body">
         <?php if ($message !== ''): ?>
-            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?>"><?php echo htmlspecialchars($message); ?></div>
+            <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($message); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
         <?php endif; ?>
 
         <form method="POST" class="card border-0 bg-light mb-3">
@@ -180,7 +182,7 @@ $weekdayNames = [
                     </div>
                 </div>
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Save Deployment</button>
+                    <button type="submit" class="btn btn-primary">Save Worktype</button>
                 </div>
             </div>
         </form>

@@ -380,6 +380,19 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     });
                 }
                 const billingTotal = parseFloat(billing.total_amount) || 0;
+                const billingSubtotal = parseFloat(details.billing?.subtotal_amount ?? billingTotal) || billingTotal;
+                const discountType = details.billing?.discount_type || 'none';
+                const discountPercent = parseFloat(details.billing?.discount_percent || 0) || 0;
+                const discountAmount = parseFloat(details.billing?.discount_amount || 0) || 0;
+                const discountNotes = details.billing?.discount_notes || '';
+                let discountRowHtml = '';
+                if (discountAmount > 0 && discountType !== 'none') {
+                    let discountLabel = 'Discount';
+                    if (discountType === 'senior') discountLabel = 'Senior Citizen Discount (' + discountPercent + '%)';
+                    else if (discountType === 'pwd') discountLabel = 'PWD Discount (' + discountPercent + '%)';
+                    else if (discountType === 'custom') discountLabel = 'Custom Discount (' + discountPercent + '%)';
+                    discountRowHtml = `<tr><td>${discountLabel}${discountNotes ? ' — ' + discountNotes : ''}</td><td class="text-end text-success">-₱${discountAmount.toFixed(2)}</td></tr>`;
+                }
                 const invoiceNum = details.invoice ? details.invoice.invoice_number : String(billing.billing_id).padStart(6, '0');
                 const invoiceHtml = `
             <div class="container mt-4">
@@ -416,6 +429,11 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                     </thead>
                     <tbody>
                         ${itemRows}
+                        <tr class="table-light">
+                            <td><strong>Subtotal:</strong></td>
+                            <td class="text-end"><strong>₱${billingSubtotal.toFixed(2)}</strong></td>
+                        </tr>
+                        ${discountRowHtml}
                         <tr class="table-light">
                             <td><strong>Total Amount Due:</strong></td>
                             <td class="text-end"><strong>₱${billingTotal.toFixed(2)}</strong></td>

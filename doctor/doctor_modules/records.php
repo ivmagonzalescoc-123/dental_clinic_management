@@ -470,7 +470,7 @@ if ($stmt) {
                                     } catch(e){ notifyDoctorRecord('Error', 'danger'); }
                                     btn.disabled = false;
                                 } else if (act === 'cancel') {
-                                    if (!confirm('Cancel this schedule?')) return;
+                                    if (!(await showConfirmModal({ title: 'Cancel Schedule', message: 'Cancel this schedule?', confirmText: 'Cancel', variant: 'danger' }))) return;
                                     btn.disabled = true;
                                     try {
                                         const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);

@@ -26,6 +26,7 @@ billing_sync_from_payments($conn, $billingId);
 
 $stmt = $conn->prepare('
     SELECT b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status, b.created_at,
+           b.subtotal_amount, b.discount_type, b.discount_percent, b.discount_amount, b.discount_notes,
            a.appointment_date, p.first_name, p.last_name, p.email, p.phone_number
     FROM billing b
     INNER JOIN appointments a ON a.appointment_id = b.appointment_id

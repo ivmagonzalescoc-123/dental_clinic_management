@@ -406,7 +406,12 @@ foreach ($schedules as $row) {
     }
 
     window.cancelSchedule = async function(scheduleId) {
-        if (!confirm('Cancel this follow-up schedule?')) {
+        if (!(await showConfirmModal({
+            title: 'Cancel Schedule',
+            message: 'Cancel this follow-up schedule?',
+            confirmText: 'Cancel Schedule',
+            variant: 'danger'
+        }))) {
             return;
         }
         const fd = new FormData();

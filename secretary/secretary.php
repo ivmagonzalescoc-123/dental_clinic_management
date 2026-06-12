@@ -351,8 +351,9 @@ switch ($role_key) {
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
     <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260608"></script>
-    <script src="../assets/js/main.js?v=20260610-header"></script>
+    <script src="../assets/js/main.js?v=20260611-toast"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>

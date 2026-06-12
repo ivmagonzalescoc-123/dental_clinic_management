@@ -141,7 +141,7 @@ function renderDocTable(rows, date) {
 }
 
 async function doStartSession(appointmentId) {
-    if (!confirm('Start session for this patient?')) return;
+    if (!(await showConfirmModal({ title: 'Start Session', message: 'Start session for this patient?', confirmText: 'Start Session' }))) return;
     const fd = new FormData();
     fd.append('appointment_id', appointmentId);
     fd.append('csrf_token', doctorCsrfToken);

@@ -4,6 +4,7 @@ include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/capabilities.php';
 include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
 include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
 security_ensure_work_type_column($conn);
@@ -679,12 +680,12 @@ $appointmentsViewFilters = [
                                 <td><?php echo htmlspecialchars((string)($req['request_note'] ?? '')); ?></td>
                                 <td>
                                     <div class="d-flex gap-1 flex-wrap">
-                                        <form method="POST" action="secretary.php?page=appointments&action=approve_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Approve and apply this reschedule request?');">
+                                        <form method="POST" action="secretary.php?page=appointments&action=approve_patient_reschedule&view=<?php echo urlencode($view); ?>" data-confirm="Approve and apply this reschedule request?" data-confirm-title="Approve Reschedule">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                                             <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                         </form>
-                                        <form method="POST" action="secretary.php?page=appointments&action=reject_patient_reschedule&view=<?php echo urlencode($view); ?>" onsubmit="return confirm('Reject this reschedule request?');">
+                                        <form method="POST" action="secretary.php?page=appointments&action=reject_patient_reschedule&view=<?php echo urlencode($view); ?>" data-confirm="Reject this reschedule request?" data-confirm-title="Reject Reschedule" data-confirm-variant="danger">
                                             <input type="hidden" name="request_id" value="<?php echo (int)$req['request_id']; ?>">
                                             <input type="hidden" name="review_note" value="Rejected by secretary">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
@@ -1178,7 +1179,7 @@ $appointmentsViewFilters = [
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="secretary.php?page=appointments&view=all&action=decline" onsubmit="return confirm('Are you sure you want to decline this appointment?');">
+            <form method="POST" action="secretary.php?page=appointments&view=all&action=decline" data-confirm="Are you sure you want to decline this appointment?" data-confirm-title="Decline Appointment" data-confirm-variant="danger" data-confirm-ok="Decline">
                 <div class="modal-body">
                     <input type="hidden" id="declineAppointmentId" name="appointment_id">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
@@ -1234,34 +1235,9 @@ $appointmentsViewFilters = [
     
     document.addEventListener('DOMContentLoaded', function() {
         function showSecretaryActionFeedback(message, type = 'info') {
-            const holderId = 'secretaryActionFeedbackHolder';
-            let holder = document.getElementById(holderId);
-            if (!holder) {
-                holder = document.createElement('div');
-                holder.id = holderId;
-                holder.style.position = 'fixed';
-                holder.style.top = '84px';
-                holder.style.right = '18px';
-                holder.style.zIndex = '2000';
-                holder.style.minWidth = '260px';
-                holder.style.maxWidth = '420px';
-                document.body.appendChild(holder);
+            if (typeof window.showToast === 'function') {
+                window.showToast(String(message || ''), type || 'info');
             }
-
-            const el = document.createElement('div');
-            el.className = 'alert alert-' + type + ' alert-dismissible fade show shadow-sm';
-            el.role = 'alert';
-            el.innerHTML = '<span>' + message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
-            holder.appendChild(el);
-
-            window.setTimeout(function() {
-                if (el && el.parentNode) {
-                    el.classList.remove('show');
-                    window.setTimeout(function() {
-                        if (el.parentNode) el.parentNode.removeChild(el);
-                    }, 180);
-                }
-            }, 2800);
         }
 
         // Handle book appointment form: booking requires existing patient_id
@@ -1284,7 +1260,11 @@ $appointmentsViewFilters = [
 
             // Confirm appointment via AJAX (calls confirm_appointment.php)
             window.confirmAppointment = async function(appointmentId) {
-                if (!confirm('Approve and schedule this appointment?')) return;
+                if (!(await showConfirmModal({
+                    title: 'Approve Appointment',
+                    message: 'Approve and schedule this appointment?',
+                    confirmText: 'Approve'
+                }))) return;
                 try {
                     const fd = new FormData();
                     fd.append('appointment_id', appointmentId);
@@ -1888,7 +1868,12 @@ $appointmentsViewFilters = [
                     let ajson = await aresp.json();
 
                     if (!ajson.success && ajson.code === 'duplicate_day_warning') {
-                        const proceed = confirm((ajson.message || 'Patient already has an appointment for this day.') + '\n\nClick OK to override and continue, or Cancel to keep one appointment per day.');
+                        const proceed = await showConfirmModal({
+                            title: 'Duplicate Appointment',
+                            message: (ajson.message || 'Patient already has an appointment for this day.') + '\n\nContinue anyway and allow more than one appointment for this day?',
+                            confirmText: 'Continue',
+                            variant: 'warning'
+                        });
                         if (!proceed) {
                             return;
                         }
@@ -2365,6 +2350,45 @@ function escapeHtml(text) {
                             </tfoot>
                         </table>
                     </div>
+
+                    <h6 class="small text-uppercase text-muted mb-2 mt-3">Discounts</h6>
+                    <p class="text-muted small mb-2">Apply senior/PWD discount or a custom rate approved by the doctor.</p>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountNone" value="none" checked>
+                                <label class="form-check-label" for="discountNone">No discount</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountSenior" value="senior">
+                                <label class="form-check-label" for="discountSenior">Senior Citizen (<?php echo (int) billing_senior_discount_percent(); ?>%)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountPwd" value="pwd">
+                                <label class="form-check-label" for="discountPwd">PWD (<?php echo (int) billing_pwd_discount_percent(); ?>%)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountCustom" value="custom">
+                                <label class="form-check-label" for="discountCustom">Custom discount</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div id="customDiscountFields" style="display:none;">
+                                <label class="form-label">Custom discount (%)</label>
+                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" id="customDiscountPercent" value="20" placeholder="e.g. 25">
+                                <label class="form-label mt-2">Reason / notes</label>
+                                <input type="text" class="form-control form-control-sm" id="discountNotes" maxlength="255" placeholder="e.g. Doctor approved additional discount">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-2 bg-white border rounded mb-3" id="billingTotalsSummary">
+                        <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
+                        <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;">
+                            <span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
+                    </div>
+
                     <div class="mt-3 p-2 bg-light rounded">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" id="useInstallment">
@@ -2595,6 +2619,8 @@ let currentRecordAppointmentId = null;
 let currentRecordPatientId = null;
 let secretaryOdontogramData = {};
 const SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
+const BILLING_SENIOR_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_senior_discount_percent()); ?>;
+const BILLING_PWD_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_pwd_discount_percent()); ?>;
 
 window.addEventListener('message', function(ev) {
     if (ev.data && ev.data.type === 'odontogram_update' && ev.data.toothState) {
@@ -2715,6 +2741,9 @@ function resolveMediaUrl(filePath) {
     return getAppRoot() + '/' + path;
 }
 
+let recordBillingCatalog = [];
+const recordBillingServiceIds = new Set();
+
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
@@ -2805,6 +2834,8 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         document.getElementById('useInstallment').checked = false;
         document.getElementById('installmentOptions').style.display = 'none';
         document.getElementById('installmentTerms').value = '6';
+        resetBillingDiscountFields();
+        updateBillingTotals();
 
         // Pre-fill visit clinical exam from this appointment's clinical record
         const visitClinical = data.existing_visit_clinical || data.existing_profiling || {};
@@ -2835,8 +2866,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
     }
 }
 
-let recordBillingCatalog = [];
-const recordBillingServiceIds = new Set();
+window.openSecretaryRecordModal = openSecretaryRecordModal;
 
 function escapeBillingHtml(value) {
     return String(value ?? '')
@@ -2850,6 +2880,95 @@ function formatBillingAmount(amount) {
     const num = parseFloat(amount);
     return Number.isFinite(num) ? num.toFixed(2) : '0.00';
 }
+
+function getBillingSubtotal() {
+    let subtotal = 0;
+    document.querySelectorAll('#billingServicesBody tr[data-service-id]').forEach(tr => {
+        subtotal += parseFloat(tr.querySelector('.billing-service-amount')?.value || '0') || 0;
+    });
+    document.querySelectorAll('#billingChargesBody tr').forEach(tr => {
+        subtotal += parseFloat(tr.querySelector('.billing-charge-amt')?.value || '0') || 0;
+    });
+    return Math.max(0, subtotal);
+}
+
+function getSelectedBillingDiscount() {
+    const type = document.querySelector('input[name="billingDiscountType"]:checked')?.value || 'none';
+    let percent = 0;
+    if (type === 'senior') {
+        percent = BILLING_SENIOR_DISCOUNT_PERCENT;
+    } else if (type === 'pwd') {
+        percent = BILLING_PWD_DISCOUNT_PERCENT;
+    } else if (type === 'custom') {
+        percent = parseFloat(document.getElementById('customDiscountPercent')?.value || '0') || 0;
+        percent = Math.max(0, Math.min(100, percent));
+    }
+    return { type, percent };
+}
+
+function updateBillingTotals() {
+    const subtotal = getBillingSubtotal();
+    const discount = getSelectedBillingDiscount();
+    const discountAmount = (discount.type === 'none' || discount.percent <= 0)
+        ? 0
+        : Math.round(subtotal * (discount.percent / 100) * 100) / 100;
+    const total = Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+
+    const subtotalEl = document.getElementById('billingSubtotalDisplay');
+    const discountRow = document.getElementById('billingDiscountRow');
+    const discountLabel = document.getElementById('billingDiscountLabel');
+    const discountDisplay = document.getElementById('billingDiscountDisplay');
+    const totalEl = document.getElementById('billingTotalDisplay');
+    const customFields = document.getElementById('customDiscountFields');
+
+    if (subtotalEl) subtotalEl.textContent = '₱' + formatBillingAmount(subtotal);
+    if (totalEl) totalEl.textContent = '₱' + formatBillingAmount(total);
+    if (customFields) customFields.style.display = discount.type === 'custom' ? '' : 'none';
+
+    if (discountRow && discountLabel && discountDisplay) {
+        if (discountAmount > 0) {
+            let label = 'Discount';
+            if (discount.type === 'senior') label = 'Senior Citizen Discount (' + discount.percent + '%)';
+            else if (discount.type === 'pwd') label = 'PWD Discount (' + discount.percent + '%)';
+            else if (discount.type === 'custom') label = 'Custom Discount (' + discount.percent + '%)';
+            discountLabel.textContent = label;
+            discountDisplay.textContent = '-₱' + formatBillingAmount(discountAmount);
+            discountRow.style.display = '';
+        } else {
+            discountRow.style.display = 'none';
+        }
+    }
+}
+
+function resetBillingDiscountFields() {
+    const none = document.getElementById('discountNone');
+    if (none) none.checked = true;
+    const customPercent = document.getElementById('customDiscountPercent');
+    if (customPercent) customPercent.value = '20';
+    const notes = document.getElementById('discountNotes');
+    if (notes) notes.value = '';
+    updateBillingTotals();
+}
+
+document.querySelectorAll('.billing-discount-type').forEach(el => {
+    el.addEventListener('change', updateBillingTotals);
+});
+document.getElementById('customDiscountPercent')?.addEventListener('input', updateBillingTotals);
+document.getElementById('billingChargesBody')?.addEventListener('input', function(ev) {
+    if (ev.target?.classList?.contains('billing-charge-amt')) {
+        updateBillingTotals();
+    }
+});
+
+document.getElementById('billingChargesBody')?.addEventListener('click', function(ev) {
+    const btn = ev.target.closest('.btn-outline-danger');
+    if (!btn || !this.contains(btn)) return;
+    const row = btn.closest('tr');
+    if (row) {
+        row.remove();
+        updateBillingTotals();
+    }
+});
 
 function populateAddServiceSelect() {
     const select = document.getElementById('addServiceSelect');
@@ -2910,11 +3029,13 @@ function addBillingServiceRow(serviceId, desc, amount) {
         tr.remove();
         updateBillingServicesEmptyRow();
         populateAddServiceSelect();
+        updateBillingTotals();
     });
     tbody.appendChild(tr);
     recordBillingServiceIds.add(sid);
     updateBillingServicesEmptyRow();
     populateAddServiceSelect();
+    updateBillingTotals();
 }
 
 function addBillingChargeRow(desc = '', amount = '') {
@@ -2930,6 +3051,7 @@ function addBillingChargeRow(desc = '', amount = '') {
         </td>
     `;
     tbody.appendChild(tr);
+    updateBillingTotals();
 }
 
 document.getElementById('addBillingServiceBtn')?.addEventListener('click', () => {
@@ -3036,6 +3158,10 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         fd.append('visit_clinical', JSON.stringify(visitClinicalData));
         fd.append('odontogram', JSON.stringify(odontogramData));
         fd.append('billing_items', JSON.stringify(billingItems));
+        const selectedDiscount = getSelectedBillingDiscount();
+        fd.append('discount_type', selectedDiscount.type);
+        fd.append('discount_percent', String(selectedDiscount.percent));
+        fd.append('discount_notes', document.getElementById('discountNotes')?.value || '');
         fd.append('prescriptions', JSON.stringify(prescriptions));
         fd.append('summary', document.getElementById('recordSummary')?.value || '');
         fd.append('follow_up_date', document.getElementById('followUpDate')?.value || '');
@@ -3050,8 +3176,19 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             method: 'POST',
             body: fd
         });
-        
-        const json = await res.json();
+
+        const responseText = await res.text();
+        let json;
+        try {
+            json = JSON.parse(responseText);
+        } catch (parseErr) {
+            console.error('create_secretary_record non-JSON response:', responseText);
+            notifySecretary('Server error: invalid response while saving record.', 'danger');
+            secretaryRecordSubmitting = false;
+            this.disabled = false;
+            this.innerHTML = btnText;
+            return;
+        }
         if (!json.success) {
             notifySecretary('Error: ' + (json.message || 'Failed to create record'), 'danger');
             secretaryRecordSubmitting = false;

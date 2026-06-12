@@ -52,6 +52,9 @@ $followUpIntervalMonths = isset($_POST['follow_up_interval_months']) ? (int)$_PO
 $followUpTotalVisits = isset($_POST['follow_up_total_visits']) ? (int)$_POST['follow_up_total_visits'] : 0;
 $useInstallment = isset($_POST['use_installment']) ? (int)$_POST['use_installment'] : 0;
 $installmentTerms = isset($_POST['installment_terms']) ? (int)$_POST['installment_terms'] : 0;
+$discountType = billing_normalize_discount_type($_POST['discount_type'] ?? 'none');
+$discountPercent = isset($_POST['discount_percent']) ? (float)$_POST['discount_percent'] : 0.0;
+$discountNotes = isset($_POST['discount_notes']) ? trim($_POST['discount_notes']) : '';
 $secretaryId = (int)($_SESSION['user_id'] ?? 0);
 $idempotencyKey = $_POST['idempotency_key'] ?? '';
 
@@ -251,7 +254,7 @@ try {
     }
 
     $lineItems = [];
-    $grandTotal = 0.0;
+    $subtotal = 0.0;
 
     if (!empty($billingItems)) {
         foreach ($billingItems as $item) {
@@ -278,7 +281,7 @@ try {
                 if ($desc === '' || $amt <= 0) {
                     continue;
                 }
-                $grandTotal += $amt;
+                $subtotal += $amt;
                 $lineItems[] = [
                     'service_id' => $serviceId,
                     'description' => $desc,
@@ -296,7 +299,7 @@ try {
             if ($desc === '') {
                 $desc = 'Additional charge';
             }
-            $grandTotal += $amt;
+            $subtotal += $amt;
             $lineItems[] = [
                 'service_id' => null,
                 'description' => $desc,
@@ -309,13 +312,27 @@ try {
     if (empty($lineItems)) {
         [, $serviceItems] = billing_sum_appointment_services($conn, $appointmentId);
         foreach ($serviceItems as $svc) {
-            $grandTotal += (float)$svc['amount'];
+            $subtotal += (float)$svc['amount'];
             $lineItems[] = $svc;
         }
     }
 
-    $grandTotal = round($grandTotal, 2);
-    $billingId = billing_create_or_update($conn, $appointmentId, $patientId, $grandTotal, 'unpaid');
+    $subtotal = round($subtotal, 2);
+    if ($discountType === 'custom' && $discountNotes === '') {
+        $discountNotes = 'Doctor-approved custom discount';
+    }
+    if ($discountType !== 'custom') {
+        $discountNotes = '';
+    }
+
+    $discountTotals = billing_apply_discount($subtotal, $discountType, $discountPercent);
+    $grandTotal = $discountTotals['total_amount'];
+
+    $billingId = billing_create_or_update($conn, $appointmentId, $patientId, $subtotal, 'unpaid', [
+        'discount_type' => $discountType,
+        'discount_percent' => $discountType === 'custom' ? $discountPercent : null,
+        'discount_notes' => $discountNotes,
+    ]);
     if ($billingId <= 0) {
         throw new Exception('Failed to create billing record');
     }
@@ -371,6 +388,10 @@ try {
         'message' => 'Clinical record submitted and billing generated',
         'clinical_record_id' => $clinicalRecordId,
         'billing_id' => $billingId,
+        'subtotal_amount' => $subtotal,
+        'discount_type' => $discountTotals['discount_type'],
+        'discount_percent' => $discountTotals['discount_percent'],
+        'discount_amount' => $discountTotals['discount_amount'],
         'total_amount' => $grandTotal,
         'installment' => ($useInstallment === 1 && $installmentTerms > 0),
         'follow_up_appointment_id' => $followUpAppointmentId,

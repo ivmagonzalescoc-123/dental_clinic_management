@@ -685,14 +685,15 @@
   document.addEventListener('DOMContentLoaded', () => convertInlineAlertsToToasts(document));
 
   const mainRoot = document.getElementById('main');
-  if (mainRoot && typeof MutationObserver !== 'undefined') {
-    new MutationObserver(() => {
+  if (typeof MutationObserver !== 'undefined') {
+    const observeTargets = [mainRoot, document.body].filter(Boolean);
+    const observer = new MutationObserver(() => {
       queueBadgeNormalization();
-      convertInlineAlertsToToasts(mainRoot);
-      initUnifiedTableSearch(mainRoot);
-    }).observe(mainRoot, {
-      childList: true,
-      subtree: true
+      observeTargets.forEach((target) => convertInlineAlertsToToasts(target));
+      if (mainRoot) initUnifiedTableSearch(mainRoot);
+    });
+    observeTargets.forEach((target) => {
+      observer.observe(target, { childList: true, subtree: true });
     });
   }
   

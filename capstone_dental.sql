@@ -83,6 +83,11 @@ CREATE TABLE `billing` (
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `amount_paid` decimal(12,2) NOT NULL DEFAULT 0.00,
   `balance` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `subtotal_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `discount_type` enum('none','senior','pwd','custom') NOT NULL DEFAULT 'none',
+  `discount_percent` decimal(5,2) NOT NULL DEFAULT 0.00,
+  `discount_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `discount_notes` varchar(255) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `status` enum('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
   `processed_by` int(11) DEFAULT NULL

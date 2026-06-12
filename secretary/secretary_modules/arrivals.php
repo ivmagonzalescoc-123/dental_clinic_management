@@ -126,7 +126,7 @@ function renderArrTable(rows, date) {
 }
 
 async function doArrived(id) {
-    if (!confirm('Mark this patient as arrived?')) return;
+    if (!(await showConfirmModal({ title: 'Mark Arrived', message: 'Mark this patient as arrived?', confirmText: 'Mark Arrived' }))) return;
     const fd = new FormData();
     fd.append('appointment_id', id);
     fd.append('csrf_token', secretaryCsrfToken);
@@ -149,7 +149,7 @@ async function doArrived(id) {
 }
 
 async function doNoShow(id) {
-    if (!confirm('Mark this patient as no-show?')) return;
+    if (!(await showConfirmModal({ title: 'Mark No-Show', message: 'Mark this patient as no-show?', confirmText: 'Mark No-Show', variant: 'danger' }))) return;
     const fd = new FormData();
     fd.append('appointment_id', id);
     fd.append('csrf_token', secretaryCsrfToken);
@@ -172,20 +172,9 @@ async function doNoShow(id) {
 }
 
 function showArrToast(msg, type) {
-    let c = document.getElementById('arrToastC');
-    if (!c) {
-        c = document.createElement('div');
-        c.id = 'arrToastC';
-        c.style.cssText = 'position:fixed;top:16px;right:16px;z-index:1060;';
-        document.body.appendChild(c);
+    if (typeof window.showToast === 'function') {
+        window.showToast(String(msg || ''), type || 'info');
     }
-    const el = document.createElement('div');
-    el.className = 'alert alert-' + type + ' alert-dismissible shadow';
-    el.role = 'alert';
-    el.style.minWidth = '240px';
-    el.innerHTML = msg + '<button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>';
-    c.appendChild(el);
-    setTimeout(function() { try { el.remove(); } catch(ex) {} }, 4000);
 }
 
 document.addEventListener('DOMContentLoaded', function() {

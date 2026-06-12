@@ -478,7 +478,7 @@ if ($tRes) {
                                         onclick='openEditServiceModal(<?php echo htmlspecialchars(json_encode($svc), ENT_QUOTES, "UTF-8"); ?>)'>
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <form method="POST" action="admin.php?page=services&tab=services&action=archive" onsubmit="return confirm('Archive this service?');" style="display:inline-block;">
+                                <form method="POST" action="admin.php?page=services&tab=services&action=archive" data-confirm="Archive this service?" data-confirm-title="Archive Service" data-confirm-variant="danger" data-confirm-ok="Archive" style="display:inline-block;">
                                     <input type="hidden" name="service_id" value="<?php echo htmlspecialchars($svc['service_id']); ?>">
                                     <button type="submit" class="btn btn-sm btn-danger">
                                         <i class="bi bi-trash"></i> <?php echo $hasIsActive ? '' : 'Delete'; ?>
@@ -533,7 +533,7 @@ if ($tRes) {
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <?php if (!empty($row['service_time_id'])): ?>
-                                    <form method="POST" action="admin.php?page=services&tab=timeslot&action=delete_time" style="display:inline-block;" onsubmit="return confirm('Remove service time profile?');">
+                                    <form method="POST" action="admin.php?page=services&tab=timeslot&action=delete_time" style="display:inline-block;" data-confirm="Remove service time profile?" data-confirm-title="Remove Time Profile" data-confirm-variant="danger" data-confirm-ok="Remove">
                                         <input type="hidden" name="service_time_id" value="<?php echo htmlspecialchars($row['service_time_id']); ?>">
                                         <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                     </form>
@@ -578,7 +578,7 @@ if ($tRes) {
                                         onclick='openEditTreatmentModal(<?php echo htmlspecialchars(json_encode($tr), ENT_QUOTES, "UTF-8"); ?>)'>
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <form method="POST" action="admin.php?page=services&tab=treatments&action=delete_treatment" style="display:inline-block;" onsubmit="return confirm('Delete this treatment?');">
+                                <form method="POST" action="admin.php?page=services&tab=treatments&action=delete_treatment" style="display:inline-block;" data-confirm="Delete this treatment?" data-confirm-title="Delete Treatment" data-confirm-variant="danger" data-confirm-ok="Delete">
                                     <input type="hidden" name="treatment_id" value="<?php echo (int)$tr['treatment_id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                 </form>

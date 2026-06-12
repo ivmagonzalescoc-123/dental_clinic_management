@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function(){
     }));
 
     document.querySelectorAll('.btn-cancel').forEach(btn=>btn.addEventListener('click', async function(){
-        if (!confirm('Cancel this schedule?')) return;
+        if (!(await showConfirmModal({ title: 'Cancel Schedule', message: 'Cancel this schedule?', confirmText: 'Cancel', variant: 'danger' }))) return;
         const sid = this.getAttribute('data-sid');
         const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
