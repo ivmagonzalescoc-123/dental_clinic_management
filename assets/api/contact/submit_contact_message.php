@@ -77,6 +77,6 @@ if (function_exists('wf_notify_secretaries')) {
 
 echo json_encode([
     'success' => true,
-    'message' => 'Thank you! Your message has been sent. Our secretary will get back to you soon.',
+    'message' => 'Message sent.',
     'message_id' => $messageId,
 ]);

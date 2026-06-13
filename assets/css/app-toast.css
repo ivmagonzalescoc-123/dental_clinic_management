@@ -29,8 +29,8 @@
     border-radius: 14px;
     border: none !important;
     outline: none;
-    background: #f3f4f6 !important;
-    color: #1f2937 !important;
+    background: #959595 !important;
+    color: #ffffff !important;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
     opacity: 0;
     transform: translateY(8px) scale(0.98);
@@ -46,8 +46,8 @@
 .app-toast-danger,
 .app-toast-warning,
 .app-toast-info {
-    background: #f3f4f6 !important;
-    color: #1f2937 !important;
+    background: #959595 !important;
+    color: #ffffff !important;
     border: none !important;
     border-left: none !important;
 }
@@ -90,7 +90,7 @@
     line-height: 1.4;
     font-weight: 600;
     white-space: nowrap;
-    color: #1f2937;
+    color: #ffffff;
 }
 
 @media (max-width: 576px) {

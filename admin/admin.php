@@ -86,7 +86,8 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260613-dropdown" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260614-short" rel="stylesheet">
+    <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
 </head>
@@ -264,7 +265,7 @@ switch ($role_key) {
     <script src="../assets/vendor/php-email-form/validate.js"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/app-toast.js?v=20260613"></script>
+    <script src="../assets/js/app-toast.js?v=20260614-short"></script>
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260608"></script>

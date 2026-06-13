@@ -350,9 +350,12 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
                             if (!empty($leaveDetailsByDate[$dateStr])) {
                                 $lines = [];
                                 foreach ($leaveDetailsByDate[$dateStr] as $detail) {
+                                    $reasonText = (string)($detail['reason'] ?? '');
+                                    // Strip "Filed by Secretary" prefix if present
+                                    $cleanReason = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
                                     $line = (string)($detail['status'] ?? 'Leave') . ': ' . (string)($detail['start'] ?? '') . ' to ' . (string)($detail['end'] ?? '');
-                                    if (!empty($detail['reason'])) {
-                                        $line .= ' (' . (string)$detail['reason'] . ')';
+                                    if ($cleanReason !== '') {
+                                        $line .= ' (' . $cleanReason . ')';
                                     }
                                     $lines[] = $line;
                                 }
@@ -439,7 +442,24 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
                             <tr>
                                 <td><?php echo htmlspecialchars($leave['leave_start_date']); ?></td>
                                 <td><?php echo htmlspecialchars($leave['leave_end_date']); ?></td>
-                                <td><?php echo htmlspecialchars($leave['reason'] ?? ''); ?></td>
+                                <td>
+                                    <?php
+                                        $reasonText = (string)($leave['reason'] ?? '');
+                                        $filedByName = '';
+                                        $isFiledBySecretary = false;
+                                        if (preg_match('/^\[Filed by Secretary\s*[#:]\s*(.*?)\]\s*/', $reasonText, $matches)) {
+                                            $isFiledBySecretary = true;
+                                            $filedByName = trim($matches[1]);
+                                            $displayReasonText = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
+                                        } else {
+                                            $displayReasonText = $reasonText;
+                                        }
+                                    ?>
+                                    <?php if ($isFiledBySecretary): ?>
+                                        <span class="text-success fw-bold" style="background:none;padding:0;">Filed by <?php echo htmlspecialchars($filedByName); ?></span><br>
+                                    <?php endif; ?>
+                                    <?php echo htmlspecialchars($displayReasonText); ?>
+                                </td>
                                 <td>
                                     <?php
                                         $status = $leave['status'];

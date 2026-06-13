@@ -265,14 +265,18 @@ if ($filter === 'all') {
                                 <td>
                                     <?php
                                         $reasonText = (string)($leave['reason'] ?? '');
-                                        $isFiledBySecretary = (stripos($reasonText, '[Filed by Secretary #') === 0);
-                                        $displayReasonText = $reasonText;
-                                        if ($isFiledBySecretary) {
-                                            $displayReasonText = preg_replace('/^\[Filed by Secretary #[0-9]+\]\s*/', '', $reasonText) ?? $reasonText;
+                                        $filedByName = '';
+                                        $isFiledBySecretary = false;
+                                        if (preg_match('/^\[Filed by Secretary\s*[#:]\s*(.*?)\]\s*/', $reasonText, $matches)) {
+                                            $isFiledBySecretary = true;
+                                            $filedByName = trim($matches[1]);
+                                            $displayReasonText = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
+                                        } else {
+                                            $displayReasonText = $reasonText;
                                         }
                                     ?>
                                     <?php if ($isFiledBySecretary): ?>
-                                        <span class="badge bg-info text-dark mb-1">Filed by Secretary</span><br>
+                                        <span class="text-success fw-bold" style="background:none;padding:0;">Filed by <?php echo htmlspecialchars($filedByName); ?></span><br>
                                     <?php endif; ?>
                                     <?php echo htmlspecialchars($displayReasonText); ?>
                                 </td>

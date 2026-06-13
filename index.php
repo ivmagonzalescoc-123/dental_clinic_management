@@ -87,7 +87,7 @@ $stats = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260613">
+    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260614-short">
     <link rel="stylesheet" href="assets/css/app-request.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -184,6 +184,61 @@ $stats = [
             outline: none;
         }
 
+        /* Terms & Conditions modal */
+        .terms-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .terms-overlay.open { display: flex; }
+        .terms-backdrop {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(3px);
+        }
+        .terms-panel {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 42rem;
+            max-height: 88vh;
+            border-radius: 1.25rem;
+            background-color: #fff;
+            box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35);
+            animation: authPanelIn 0.22s ease;
+        }
+        .terms-content {
+            overflow-y: auto;
+            padding: 1.25rem 1.5rem;
+        }
+        .terms-content h3 {
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .terms-content h3:first-child { margin-top: 0; }
+        .terms-content p,
+        .terms-content li {
+            font-size: 0.875rem;
+            line-height: 1.55;
+            color: #475569;
+        }
+        .terms-content ul {
+            margin: 0.5rem 0 0.75rem;
+            padding-left: 1.25rem;
+            list-style: disc;
+        }
+        .terms-content li + li { margin-top: 0.35rem; }
+
         @media (prefers-reduced-motion: reduce) {
             .reveal { opacity: 1; transform: none; transition: none; }
             .float-slow { animation: none; }
@@ -192,26 +247,6 @@ $stats = [
     </style>
 </head>
 <body class="font-sans antialiased text-slate-800 bg-white">
-
-    <!-- Top info bar -->
-    <div class="hidden border-b border-sky-100 bg-sky-50 text-xs text-slate-600 sm:block">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2 sm:px-6">
-            <div class="flex items-center gap-5">
-                <span class="inline-flex items-center gap-1.5">
-                    <svg class="h-3.5 w-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    Mon - Sat: 8:00 AM - 5:00 PM
-                </span>
-                <span class="inline-flex items-center gap-1.5">
-                    <svg class="h-3.5 w-3.5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                    Metz Arcade, Cagayan de Oro City
-                </span>
-            </div>
-            <a href="tel:+63880000000" class="inline-flex items-center gap-1.5 font-semibold text-sky-600 hover:text-sky-700 transition-colors">
-                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
-                +63 (88) 000 0000
-            </a>
-        </div>
-    </div>
 
     <!-- Header -->
     <header id="siteHeader" class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-sm transition-shadow">
@@ -768,21 +803,13 @@ $stats = [
                     </ul>
                 </div>
 
-                <details class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                    <summary class="cursor-pointer font-semibold text-slate-700">View Terms and Conditions</summary>
-                    <div class="mt-3 space-y-2">
-                        <p>By creating an account, you agree to provide truthful and updated personal and medical information for dental care services.</p>
-                        <p>You acknowledge that your appointment requests are subject to clinic approval, schedule availability, and standard clinic policies.</p>
-                        <p>You consent to the secure processing of your account and health-related data for treatment, scheduling, reminders, and billing purposes.</p>
-                        <p>You are responsible for safeguarding your account credentials and for notifying the clinic immediately of unauthorized account access.</p>
-                        <p>The clinic may update these terms to comply with legal, operational, or patient safety requirements, with updates reflected in this system.</p>
-                    </div>
-                </details>
-
-                <label class="flex items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" id="reg-terms" class="h-4 w-4 rounded border-slate-300 text-sky-500 focus:ring-sky-400">
-                    I agree to the Terms and Conditions
-                </label>
+                <div class="flex items-start gap-2.5 text-sm text-slate-600">
+                    <input type="checkbox" id="reg-terms" class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-sky-500 focus:ring-sky-400">
+                    <span>
+                        I agree to the
+                        <button type="button" id="openTermsModal" class="font-semibold text-sky-600 underline underline-offset-2 hover:text-sky-700 transition-colors">Terms and Conditions</button>
+                    </span>
+                </div>
 
                 <button type="submit" class="block w-full rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-bold text-white hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 transition-colors">
                     Create Account
@@ -842,12 +869,113 @@ $stats = [
         </section>
     </div>
 
+    <!-- Terms and Conditions -->
+    <div id="termsModal" class="terms-overlay" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle" aria-hidden="true">
+        <div class="terms-backdrop" data-terms-close></div>
+        <div class="terms-panel">
+            <div class="border-b border-slate-100 px-6 py-5 sm:px-8">
+                <h2 id="termsModalTitle" class="text-base font-bold text-slate-900">Terms and Conditions</h2>
+                <p class="mt-1 text-xs text-slate-500">Azucena's Dental Clinic Patient Portal</p>
+            </div>
+
+            <div class="terms-content sm:px-8">
+                <p class="text-sm text-slate-600">Last updated: <?php echo date('F j, Y'); ?>. By creating an account and using this system, you agree to the following terms.</p>
+
+                <h3>1. Acceptance of Terms</h3>
+                <p>These Terms and Conditions govern your use of the Azucena's Dental Clinic online patient portal. Registration constitutes your acceptance of these terms, our privacy practices, and applicable Philippine laws including the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+
+                <h3>2. Account Registration</h3>
+                <ul>
+                    <li>You must provide accurate, complete, and current personal, contact, and health-related information.</li>
+                    <li>You are responsible for maintaining the confidentiality of your login credentials.</li>
+                    <li>You must notify the clinic immediately of any unauthorized access or suspected breach of your account.</li>
+                    <li>The clinic may suspend or deactivate accounts that contain false information or are used improperly.</li>
+                </ul>
+
+                <h3>3. Appointments and Clinic Services</h3>
+                <ul>
+                    <li>Online appointment requests are subject to clinic approval, dentist availability, and scheduling policies.</li>
+                    <li>Missed appointments, late arrivals, or repeated no-shows may affect future booking privileges.</li>
+                    <li>Treatment plans, fees, and clinical decisions remain at the discretion of licensed dental professionals.</li>
+                    <li>Emergency or urgent cases should be addressed in person or through direct clinic contact.</li>
+                </ul>
+
+                <h3>4. Medical and Dental Records</h3>
+                <p>Information you provide—including dental history, profiling data, treatment notes, prescriptions, billing records, and uploaded documents—may be stored as part of your patient record. These records support diagnosis, treatment, continuity of care, and legal compliance for dental practice in the Philippines.</p>
+
+                <h3>5. Data Privacy (RA 10173)</h3>
+                <p>Azucena's Dental Clinic processes personal and sensitive personal information in accordance with the Data Privacy Act of 2012 and its implementing rules. Sensitive personal information may include health, medical, and dental data necessary for treatment and clinic operations.</p>
+
+                <h3>6. Purpose of Data Collection and Use</h3>
+                <ul>
+                    <li>Patient registration, identity verification, and account management</li>
+                    <li>Appointment scheduling, reminders, follow-ups, and clinic communications</li>
+                    <li>Dental treatment, clinical documentation, and continuity of care</li>
+                    <li>Billing, payment tracking, installment plans, and official receipts</li>
+                    <li>Compliance with health regulations, record-keeping laws, and lawful requests</li>
+                </ul>
+
+                <h3>7. Data Retention</h3>
+                <ul>
+                    <li>Patient and clinical records are retained only as long as necessary for treatment, legal, regulatory, and operational purposes.</li>
+                    <li>Medical and dental records are generally kept for a minimum period required by applicable health and professional regulations, or longer when required by law or ongoing treatment.</li>
+                    <li>Account, billing, and transaction records are retained for auditing, tax, and financial compliance purposes.</li>
+                    <li>System logs and security records may be retained for a limited period to investigate incidents and protect the platform.</li>
+                    <li>When retention is no longer required, data is securely archived or permanently deleted in accordance with clinic policy.</li>
+                </ul>
+
+                <h3>8. Data Security</h3>
+                <p>The clinic implements reasonable organizational, physical, and technical safeguards—including access controls, secure authentication, and monitored system activity—to protect your information against unauthorized access, disclosure, alteration, or destruction.</p>
+
+                <h3>9. Your Rights as a Data Subject</h3>
+                <p>Under the Data Privacy Act, you may request access to, correction of, or objection to the processing of your personal data, subject to legal and clinical limitations. You may also file a complaint with the National Privacy Commission (NPC) if you believe your data privacy rights have been violated.</p>
+
+                <h3>10. Communications and Notifications</h3>
+                <p>By using this system, you consent to receive appointment updates, billing notices, password recovery messages, and clinic-related notifications through the contact details you provide, including email and phone when applicable.</p>
+
+                <h3>11. Billing and Payment Information</h3>
+                <p>Payment records, OR numbers, installment terms, and billing history may be stored in the system. You agree that financial information submitted through the portal is accurate and used solely for clinic billing and accounting purposes.</p>
+
+                <h3>12. Disclosure to Third Parties</h3>
+                <p>Your information is not sold to third parties. Disclosure may occur only when required by law, necessary for treatment coordination, needed for secure system hosting or payment processing, or authorized by you in writing.</p>
+
+                <h3>13. Minors and Guardians</h3>
+                <p>If the account is created for a minor, the parent or legal guardian consents to the collection and processing of the minor's information for dental care and clinic services.</p>
+
+                <h3>14. System Use and Acceptable Conduct</h3>
+                <ul>
+                    <li>You must not attempt to access another patient's records or staff-only areas.</li>
+                    <li>You must not upload malicious content or interfere with system security.</li>
+                    <li>Misuse of the portal may result in account suspension and appropriate action under applicable law.</li>
+                </ul>
+
+                <h3>15. Policy Updates</h3>
+                <p>The clinic may update these Terms and Conditions, privacy practices, or retention policies to reflect legal, regulatory, or operational changes. Material updates will be reflected in this system. Continued use after updates constitutes acceptance of the revised terms.</p>
+
+                <h3>16. Contact and Privacy Inquiries</h3>
+                <p>For questions about these terms, your personal data, or requests related to the Data Privacy Act, contact Azucena's Dental Clinic through the Contact section of this website or visit the clinic during business hours.</p>
+
+                <h3>17. Governing Law</h3>
+                <p>These terms are governed by the laws of the Republic of the Philippines. Any disputes shall be resolved in accordance with applicable Philippine law and regulations.</p>
+            </div>
+
+            <div class="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:flex-row sm:justify-end sm:px-8">
+                <button type="button" data-terms-close class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                    Close
+                </button>
+                <button type="button" id="acceptTermsBtn" class="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                    I Agree
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Back to top -->
     <button type="button" id="backToTopBtn" class="fixed bottom-6 right-6 z-40 hidden h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg shadow-sky-300/60 hover:bg-sky-600 transition-colors" aria-label="Back to top">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
     </button>
 
-    <script src="assets/js/app-toast.js?v=20260613"></script>
+    <script src="assets/js/app-toast.js?v=20260614-short"></script>
     <script src="assets/js/app-request.js?v=20260612"></script>
     <script>
         const contactCsrfToken = <?php echo json_encode($csrf_token); ?>;
@@ -912,9 +1040,50 @@ $stats = [
         });
 
         document.addEventListener('keydown', function(event) {
-            if (event.key === 'Escape' && authModal?.classList.contains('open')) {
-                closeAuthModal();
+            if (event.key === 'Escape') {
+                if (termsModal?.classList.contains('open')) {
+                    closeTermsModal();
+                    return;
+                }
+                if (authModal?.classList.contains('open')) {
+                    closeAuthModal();
+                }
             }
+        });
+
+        // ----- Terms and Conditions modal -----
+        const termsModal = document.getElementById('termsModal');
+        const regTermsCheckbox = document.getElementById('reg-terms');
+
+        function openTermsModal() {
+            if (!termsModal) return;
+            termsModal.classList.add('open');
+            termsModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeTermsModal() {
+            if (!termsModal) return;
+            termsModal.classList.remove('open');
+            termsModal.setAttribute('aria-hidden', 'true');
+            if (!authModal?.classList.contains('open')) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.getElementById('openTermsModal')?.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openTermsModal();
+        });
+
+        document.querySelectorAll('[data-terms-close]').forEach(function(el) {
+            el.addEventListener('click', closeTermsModal);
+        });
+
+        document.getElementById('acceptTermsBtn')?.addEventListener('click', function() {
+            if (regTermsCheckbox) regTermsCheckbox.checked = true;
+            closeTermsModal();
         });
 
         // ----- Password visibility toggles -----
@@ -992,7 +1161,7 @@ $stats = [
                 const data = await response.json();
 
                 if (data.success) {
-                    setAlert('Login successful. Redirecting...', 'success');
+                    setAlert('Login successful.', 'success');
 
                     let redirectUrl = 'index.php';
                     const role = data.user.role;
@@ -1059,7 +1228,7 @@ $stats = [
             }
 
             if (!termsAccepted) {
-                setAlert('Please accept the Terms and Conditions to create an account.', 'warning');
+                setAlert('Accept Terms and Conditions.', 'warning');
                 return;
             }
 
@@ -1097,7 +1266,7 @@ $stats = [
                 const data = await response.json();
 
                 if (data.success) {
-                    setAlert('Account created! Taking you to your dashboard...', 'success');
+                    setAlert('Account created.', 'success');
                     setTimeout(function() {
                         window.location.href = 'patient/patient.php';
                     }, 1200);
@@ -1189,7 +1358,7 @@ $stats = [
                 }
 
                 if (response.ok && data && data.success) {
-                    setAlert('Password updated successfully. You can now log in.', 'success');
+                    setAlert('Password updated.', 'success');
                     document.getElementById('reset-form').reset();
                     resetSection?.classList.add('hidden');
                     setTimeout(function() {
@@ -1208,7 +1377,7 @@ $stats = [
 
         // Session timeout notice (redirected here from a protected page)
         if (new URLSearchParams(window.location.search).has('timeout')) {
-            setAlert('Your session has expired. Please log in again.', 'warning');
+            setAlert('Session expired.', 'warning');
             openAuthModal('login');
             window.history.replaceState({}, '', 'index.php');
         }
@@ -1313,7 +1482,7 @@ $stats = [
                 const message = document.getElementById('contact-message').value.trim();
 
                 if (!name || !email || !phone || !message) {
-                    setContactAlert('Please complete all fields before sending your message.', 'error');
+                    setContactAlert('Complete all fields.', 'error');
                     return;
                 }
 
@@ -1338,14 +1507,14 @@ $stats = [
                     const data = await response.json();
 
                     if (!response.ok || !data.success) {
-                        setContactAlert(data.message || 'Unable to send your message right now.', 'error');
+                        setContactAlert(data.message || 'Could not send message.', 'error');
                         return;
                     }
 
                     contactForm.reset();
-                    setContactAlert(data.message || 'Thank you! Your message has been sent.', 'success');
+                    setContactAlert(data.message || 'Message sent.', 'success');
                 } catch (error) {
-                    setContactAlert('An error occurred while sending your message. Please try again.', 'error');
+                    setContactAlert('Send failed.', 'error');
                 }
             });
         }

@@ -106,13 +106,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $message = 'This doctor already has a pending or approved leave overlapping that range.';
                             $messageType = 'warning';
                         } else {
-                            if (mb_strlen($reasonInput) > 220) {
-                                $reasonInput = mb_substr($reasonInput, 0, 220);
-                            }
-                            $reason = '[Filed by Secretary #' . $secretaryId . '] ' . $reasonInput;
-                            if (mb_strlen($reason) > 255) {
-                                $reason = mb_substr($reason, 0, 255);
-                            }
+            // Look up the secretary's full name
+            $secretaryName = '';
+            $nameStmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM users WHERE user_id = ? LIMIT 1");
+            if ($nameStmt) {
+                $nameStmt->bind_param('i', $secretaryId);
+                $nameStmt->execute();
+                $nameRes = $nameStmt->get_result();
+                if ($nameRow = $nameRes->fetch_assoc()) {
+                    $secretaryName = trim((string)($nameRow['full_name'] ?? ''));
+                }
+                $nameStmt->close();
+            }
+            if ($secretaryName === '') {
+                $secretaryName = 'Secretary (User #' . $secretaryId . ')';
+            }
+
+            if (mb_strlen($reasonInput) > 220) {
+                $reasonInput = mb_substr($reasonInput, 0, 220);
+            }
+            $reason = '[Filed by Secretary: ' . $secretaryName . '] ' . $reasonInput;
+            if (mb_strlen($reason) > 255) {
+                $reason = mb_substr($reason, 0, 255);
+            }
 
                             $ins = $conn->prepare(
                                 "INSERT INTO doctor_leaves (user_id, leave_start_date, leave_end_date, reason, status)
@@ -335,9 +351,11 @@ if (!function_exists('secretary_leave_popover_html')) {
             $start = (string)($item['start'] ?? '');
             $end = (string)($item['end'] ?? '');
             $reason = trim((string)($item['reason'] ?? ''));
+            // Strip "Filed by Secretary" prefix if present
+            $cleanReason = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reason) ?? $reason;
             $line = $status . ': ' . $start . ' to ' . $end;
-            if ($reason !== '') {
-                $line .= ' (' . $reason . ')';
+            if ($cleanReason !== '') {
+                $line .= ' (' . $cleanReason . ')';
             }
             $parts[] = $line;
         }
@@ -666,13 +684,30 @@ if (!function_exists('secretary_present_popover_html')) {
                                 $status = (string)($lv['status'] ?? '');
                                 $badge = $status === 'approved' ? 'success' : ($status === 'pending' ? 'warning text-dark' : 'secondary');
                             ?>
+                            <?php
+                                $reasonText = (string)($lv['reason'] ?? '');
+                                $isFiledBySecretary = false;
+                                $filedByName = '';
+                                if (preg_match('/^\[Filed by Secretary\s*[#:]\s*(.*?)\]\s*/', $reasonText, $matches)) {
+                                    $isFiledBySecretary = true;
+                                    $filedByName = trim($matches[1]);
+                                    $displayReasonText = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
+                                } else {
+                                    $displayReasonText = $reasonText;
+                                }
+                            ?>
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <strong><?php echo htmlspecialchars(trim((string)($lv['first_name'] ?? '') . ' ' . (string)($lv['last_name'] ?? ''))); ?></strong>
                                     <span class="badge bg-<?php echo $badge; ?>"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
                                 </div>
                                 <div class="small text-muted"><?php echo htmlspecialchars((string)$lv['leave_start_date']); ?> to <?php echo htmlspecialchars((string)$lv['leave_end_date']); ?></div>
-                                <div class="small"><?php echo htmlspecialchars((string)($lv['reason'] ?? '')); ?></div>
+                                <div class="small">
+                                    <?php if ($isFiledBySecretary): ?>
+                                        <span class="text-success fw-bold" style="background:none;padding:0;">Filed by <?php echo htmlspecialchars($filedByName); ?></span>
+                                    <?php endif; ?>
+                                    <?php echo htmlspecialchars($displayReasonText); ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
