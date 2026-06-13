@@ -72,34 +72,19 @@ if ($stmt) {
 
     <div class="row g-3">
         <div class="col-md-6 col-xl-4 col-xxl-2">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Arrived Today</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$arrivedToday; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Arrived Today', (string)(int)$arrivedToday, 'bi-person-check'); ?>
         </div>
         <div class="col-md-6 col-xl-4 col-xxl-2">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Pending Today</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$pendingToday; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Pending Today', (string)(int)$pendingToday, 'bi-hourglass-split', 'amber'); ?>
         </div>
         <div class="col-md-6 col-xl-4 col-xxl-2">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Records Queue</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$recordsQueue; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Records Queue', (string)(int)$recordsQueue, 'bi-file-earmark-medical', 'teal'); ?>
         </div>
         <div class="col-md-6 col-xl-4 col-xxl-2">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Unpaid Bills</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$unpaidBills; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Unpaid Bills', (string)(int)$unpaidBills, 'bi-receipt', 'rose'); ?>
         </div>
         <div class="col-md-6 col-xl-4 col-xxl-2">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Appointments Today</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Appointments Today', (string)(int)$appointmentsToday, 'bi-calendar-day', 'violet'); ?>
         </div>
 
         <div class="col-12 col-xxl-7">
@@ -107,7 +92,7 @@ if ($stmt) {
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Today's Schedule</h5>
-                        <a class="small" href="secretary.php?page=appointments">View all</a>
+                        <a class="card-link-action" href="secretary.php?page=appointments">View all</a>
                     </div>
                     <?php if (empty($todayAppointments)): ?>
                         <div class="alert alert-info mb-0 mt-3">No appointments scheduled for today.</div>

@@ -124,10 +124,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260614-short" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260614-pw-no-lock" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260614-notify" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260614-dashboard3" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">
@@ -194,12 +194,6 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=scheduling">
-                    <i class="bi bi-calendar-range"></i>
-                    <span>Follow-up Scheduling</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=doctor_schedule">
                     <i class="bi bi-calendar2-check"></i>
                     <span>Doctor Schedule</span>
@@ -261,8 +255,8 @@ switch ($role_key) {
                                         include "secretary_modules/appointments.php";
                                         break;
                                     case "scheduling":
-                                        include "secretary_modules/scheduling.php";
-                                        break;
+                                        header('Location: secretary.php?page=appointments');
+                                        exit;
                                     case "doctor_schedule":
                                         include "secretary_modules/doctor_schedule.php";
                                         break;
@@ -325,9 +319,9 @@ switch ($role_key) {
     <script src="../assets/js/app-toast.js?v=20260614-short"></script>
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
-    <script src="../assets/js/password-toggle.js?v=20260608"></script>
-    <script src="../assets/js/main.js?v=20260613-dropdown"></script>
-    <script src="../assets/js/portal-dropdown.js?v=20260613"></script>
+    <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
+    <script src="../assets/js/main.js?v=20260614-notify"></script>
+    <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
@@ -360,7 +354,7 @@ switch ($role_key) {
                 const portalBaseFile = 'secretary.php';
                 const pageKeywordMap = {
                     dashboard: ['home', 'overview', 'summary'],
-                    appointments: ['booking', 'calendar', 'schedule'],
+                    appointments: ['booking', 'calendar', 'schedule', 'follow-up', 'followup'],
                     patients: ['patient list', 'records', 'profiles'],
                     doctors: ['doctor list', 'dentist', 'providers'],
                     services: ['treatments', 'procedures', 'pricing'],
@@ -390,7 +384,6 @@ switch ($role_key) {
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
-                    wrap.style.position = 'relative';
                     wrap.appendChild(menu);
                 }
 

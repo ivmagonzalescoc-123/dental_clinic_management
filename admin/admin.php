@@ -86,10 +86,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260614-short" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260614-pw-no-lock" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260606-reports2" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260614-notify" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260614-dashboard3" rel="stylesheet">
 </head>
 
 <body class="admin-portal">
@@ -268,9 +268,9 @@ switch ($role_key) {
     <script src="../assets/js/app-toast.js?v=20260614-short"></script>
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
-    <script src="../assets/js/password-toggle.js?v=20260608"></script>
-    <script src="../assets/js/main.js?v=20260613-dropdown"></script>
-    <script src="../assets/js/portal-dropdown.js?v=20260613"></script>
+    <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
+    <script src="../assets/js/main.js?v=20260614-notify"></script>
+    <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>
 
     <!-- Active Navigation Highlight -->
@@ -331,7 +331,6 @@ switch ($role_key) {
                 const menu = document.createElement('div');
                 menu.className = 'search-suggest-menu';
                 if (wrap) {
-                    wrap.style.position = 'relative';
                     wrap.appendChild(menu);
                 }
 

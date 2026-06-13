@@ -1,9 +1,11 @@
 <?php
-include dirname(dirname(__DIR__)) . '/config/database.php';
-include_once dirname(dirname(__DIR__)) . '/config/security.php';
-security_ensure_work_type_column($conn);
-include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
-check_session(['secretary']);
+if (empty($secretary_scheduling_embedded)) {
+    include dirname(dirname(__DIR__)) . '/config/database.php';
+    include_once dirname(dirname(__DIR__)) . '/config/security.php';
+    security_ensure_work_type_column($conn);
+    include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
+    check_session(['secretary']);
+}
 
 $doctorId = (int)($_GET['doctor_id'] ?? 0);
 $status = trim((string)($_GET['status'] ?? 'all'));
@@ -113,14 +115,18 @@ foreach ($schedules as $row) {
 }
 ?>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h5 class="mb-0"><i class="bi bi-calendar-range me-2"></i>Follow-up Scheduling</h5>
-    <span class="text-muted small">View and update appointment-linked schedules from doctors.</span>
-</div>
-
-<form class="card border-0 mb-3" method="GET" action="secretary.php">
+<div class="card border-0 mb-3 mt-4">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 class="card-title mb-0"><i class="bi bi-calendar-range me-2"></i>Follow-up Appointments</h2>
+        <span class="text-muted small">Scheduled follow-up visits linked to appointments above.</span>
+    </div>
+    <div class="card-body">
+<form class="card border mb-3" method="GET" action="secretary.php">
     <div class="card-body row g-2 align-items-end">
-        <input type="hidden" name="page" value="scheduling">
+        <input type="hidden" name="page" value="appointments">
+        <?php if (!empty($secretary_scheduling_view) && $secretary_scheduling_view !== 'all'): ?>
+            <input type="hidden" name="view" value="<?php echo htmlspecialchars($secretary_scheduling_view); ?>">
+        <?php endif; ?>
         <div class="col-md-3">
             <label class="form-label">Doctor</label>
             <select name="doctor_id" class="form-select">
@@ -154,7 +160,13 @@ foreach ($schedules as $row) {
         </div>
         <div class="col-md-3 d-flex gap-2">
             <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Apply</button>
-            <a href="secretary.php?page=scheduling" class="btn btn-outline-secondary w-100">Reset</a>
+            <?php
+                $schedulingResetUrl = 'secretary.php?page=appointments';
+                if (!empty($secretary_scheduling_view) && $secretary_scheduling_view !== 'all') {
+                    $schedulingResetUrl .= '&view=' . urlencode($secretary_scheduling_view);
+                }
+            ?>
+            <a href="<?php echo htmlspecialchars($schedulingResetUrl); ?>" class="btn btn-outline-secondary w-100">Reset</a>
         </div>
     </div>
 </form>
@@ -167,7 +179,7 @@ foreach ($schedules as $row) {
 </div>
 
 <div class="card border-0">
-    <div class="card-body table-responsive">
+    <div class="card-body table-responsive p-0">
         <table class="table table-hover align-middle mb-0">
             <thead>
                 <tr>
@@ -239,6 +251,8 @@ foreach ($schedules as $row) {
             <?php endif; ?>
             </tbody>
         </table>
+    </div>
+</div>
     </div>
 </div>
 

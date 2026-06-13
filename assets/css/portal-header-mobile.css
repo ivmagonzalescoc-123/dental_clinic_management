@@ -43,10 +43,10 @@ body.admin-portal {
         height: 40px;
     }
 
-    body.patient-portal #header .header-search,
-    body.doctor-portal #header .header-search,
-    body.secretary-portal #header .header-search,
-    body.admin-portal #header .header-search {
+    body.patient-portal .header-search,
+    body.doctor-portal .header-search,
+    body.secretary-portal .header-search,
+    body.admin-portal .header-search {
         position: relative;
         order: -1 !important;
         flex: 0 0 40px !important;
@@ -59,6 +59,8 @@ body.admin-portal {
         display: flex !important;
         align-items: center;
         justify-content: center;
+        overflow: visible;
+        isolation: isolate;
     }
 
     body.patient-portal #header .header-nav,
@@ -103,6 +105,8 @@ body.admin-portal {
         display: inline-flex !important;
         align-items: center;
         justify-content: center;
+        position: relative;
+        z-index: 20;
         width: 40px;
         height: 40px;
         border: 0;
@@ -110,6 +114,10 @@ body.admin-portal {
         background: transparent;
         color: #1173c1;
         font-size: 1.15rem;
+        cursor: pointer;
+        pointer-events: auto !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
         transition: opacity 0.2s ease, transform 0.25s ease, background-color 0.2s ease;
     }
 
@@ -138,19 +146,23 @@ body.admin-portal {
         top: 0;
         right: 0;
         height: 40px;
-        width: var(--portal-search-expand-width, 260px) !important;
+        width: 0 !important;
+        min-width: 0 !important;
         max-width: 0 !important;
         opacity: 0;
+        visibility: hidden;
         overflow: hidden !important;
-        pointer-events: none;
-        z-index: 2;
+        pointer-events: none !important;
+        z-index: 1;
         background: #f8fbff;
         border: 1px solid #c9deef;
         border-radius: 999px;
         box-shadow: 0 4px 16px rgba(17, 115, 193, 0.12);
         transition:
             max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+            width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
             opacity 0.2s ease,
+            visibility 0.2s ease,
             box-shadow 0.32s ease;
     }
 
@@ -159,24 +171,13 @@ body.admin-portal {
     body.secretary-portal #header.header-search-open .header-search-wrap,
     body.admin-portal #header.header-search-open .header-search-wrap {
         max-width: var(--portal-search-expand-width, 260px) !important;
+        width: var(--portal-search-expand-width, 260px) !important;
         opacity: 1;
-        pointer-events: auto;
+        visibility: visible;
+        pointer-events: auto !important;
         overflow: visible !important;
         box-shadow: 0 6px 20px rgba(17, 115, 193, 0.16);
-    }
-
-    body.patient-portal #header:not(.header-search-open) .header-search-wrap,
-    body.doctor-portal #header:not(.header-search-open) .header-search-wrap,
-    body.secretary-portal #header:not(.header-search-open) .header-search-wrap,
-    body.admin-portal #header:not(.header-search-open) .header-search-wrap {
-        visibility: hidden;
-    }
-
-    body.patient-portal #header.header-search-open .header-search-wrap,
-    body.doctor-portal #header.header-search-open .header-search-wrap,
-    body.secretary-portal #header.header-search-open .header-search-wrap,
-    body.admin-portal #header.header-search-open .header-search-wrap {
-        visibility: visible;
+        border-width: 1px !important;
     }
 
     body.patient-portal .header-search-wrap .unified-table-search-icon,

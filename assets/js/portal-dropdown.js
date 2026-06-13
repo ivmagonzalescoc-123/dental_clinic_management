@@ -19,6 +19,14 @@
     }
   }
 
+  function isMobileHeader() {
+    return window.innerWidth <= 991.98;
+  }
+
+  window.closePortalHeaderDropdowns = function () {
+    closeAll(null);
+  };
+
   function openDropdown(item) {
     item.classList.add('is-open');
     var toggle = getToggle(item);
@@ -38,6 +46,9 @@
         toggle.addEventListener('click', function (event) {
           event.preventDefault();
           event.stopPropagation();
+          if (isMobileHeader() && typeof window.closePortalHeaderSearch === 'function') {
+            window.closePortalHeaderSearch();
+          }
           var willOpen = !item.classList.contains('is-open');
           closeAll(item);
           if (willOpen) {
@@ -57,6 +68,9 @@
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' || event.key === 'Esc') {
         closeAll(null);
+        if (typeof window.closePortalHeaderSearch === 'function') {
+          window.closePortalHeaderSearch();
+        }
       }
     });
 

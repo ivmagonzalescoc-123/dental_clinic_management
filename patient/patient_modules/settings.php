@@ -5,26 +5,31 @@
     <div class="card-body">
         <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
         <div id="passwordChangeAlert" class="mt-3"></div>
-        <form id="passwordChangeForm" class="mt-3" autocomplete="off">
-            <div class="mb-3">
-                <label class="form-label">Current Password</label>
-                <input type="password" class="form-control" id="currentPassword" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">New Password</label>
-                <input type="password" class="form-control" id="newPassword" required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}">
-                <div id="passwordPolicyHints" class="small mt-2 d-none">
+        <form id="passwordChangeForm" class="mt-3 account-settings-form" autocomplete="off">
+            <?php
+            $password_field_id = 'currentPassword';
+            $password_field_label = 'Current Password';
+            $password_field_attrs = 'required';
+            include dirname(dirname(__DIR__)) . '/includes/password_field.php';
+
+            $password_field_id = 'newPassword';
+            $password_field_label = 'New Password';
+            $password_field_attrs = 'required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"';
+            $password_field_after = '<div id="passwordPolicyHints" class="small mt-2 d-none">
                     <div id="rule-length" class="text-danger">- At least 8 characters</div>
                     <div id="rule-upper" class="text-danger">- At least one uppercase letter (A-Z)</div>
                     <div id="rule-lower" class="text-danger">- At least one lowercase letter (a-z)</div>
                     <div id="rule-number" class="text-danger">- At least one number (0-9)</div>
                     <div id="rule-special" class="text-danger">- At least one special character</div>
-                </div>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Confirm New Password</label>
-                <input type="password" class="form-control" id="confirmPassword" required minlength="8">
-            </div>
+                </div>';
+            include dirname(dirname(__DIR__)) . '/includes/password_field.php';
+            unset($password_field_after);
+
+            $password_field_id = 'confirmPassword';
+            $password_field_label = 'Confirm New Password';
+            $password_field_attrs = 'required minlength="8"';
+            include dirname(dirname(__DIR__)) . '/includes/password_field.php';
+            ?>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
     </div>

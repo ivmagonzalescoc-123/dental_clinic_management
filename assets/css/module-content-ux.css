@@ -28,9 +28,15 @@
 }
 
 #main .card .card-header {
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
   border-bottom: 1px solid var(--ux-border-soft);
-  padding: 0.9rem 1rem;
+  padding: 0.95rem 1.1rem;
+}
+
+#main .card .card-header .card-title {
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 0;
 }
 
 #main .card .card-body {
@@ -64,10 +70,32 @@
 }
 
 /* Table readability for high-density medical workflows */
-#main .table-responsive {
-  border: 1px solid var(--ux-border);
-  border-radius: 12px;
+#main .table-responsive,
+#main .history-table-wrap.table-responsive {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #e4edf5;
+  border-radius: 14px;
   background: #fff;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 1px 2px rgba(15, 35, 60, 0.04);
+}
+
+#main .table-responsive > .table,
+#main .table-responsive > table,
+#main .history-table-wrap.table-responsive > .table,
+#main .history-table-wrap.table-responsive > table {
+  width: 100%;
+  min-width: max-content;
+}
+
+body.patient-portal #main .history-table-wrap.table-responsive > .table,
+body.patient-portal #main .history-table-wrap.table-responsive > table,
+body.patient-portal #main .history-table-wrap.table-responsive > table.patient-appt-history-table {
+  min-width: 0;
 }
 
 #main .table,
@@ -75,36 +103,43 @@
   margin-bottom: 0;
   border-collapse: separate;
   border-spacing: 0;
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: #f8fbfe;
+  --bs-table-hover-bg: #f0f7ff;
+  --bs-table-border-color: #edf2f8;
 }
 
 #main .table thead th,
 #main .dataTable-table thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  background: #f8fbff;
-  color: #2a425f;
-  border-bottom: 1px solid var(--ux-border);
+  z-index: 2;
+  background: linear-gradient(180deg, #fbfdff 0%, #f3f8ff 100%);
+  color: #3d5673;
+  border-bottom: 1px solid #dce8f4;
   border-top: 0;
   border-left: 0;
   border-right: 0;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   vertical-align: middle;
-  padding: 0.72rem 0.85rem;
+  padding: 0.78rem 0.95rem;
+  white-space: nowrap;
 }
 
 #main .table tbody td,
 #main .dataTable-table tbody td {
   color: var(--ux-text);
-  border-top: 1px solid var(--ux-border-soft);
+  border-top: 1px solid #edf2f8;
   border-left: 0;
   border-right: 0;
   border-bottom: 0;
   vertical-align: middle;
-  padding: 0.72rem 0.85rem;
+  padding: 0.78rem 0.95rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 #main .table tbody tr:first-child td,
@@ -114,7 +149,17 @@
 
 #main .table-hover tbody tr:hover,
 #main .dataTable-table tbody tr:hover {
-  background: #f4faff;
+  background: #f0f7ff;
+}
+
+#main .table-striped > tbody > tr:nth-of-type(odd) > * {
+  --bs-table-accent-bg: #f8fbfe;
+  background-color: #f8fbfe;
+  box-shadow: none;
+}
+
+#main .table-striped > tbody > tr:nth-of-type(even) > * {
+  background-color: #fff;
 }
 
 #main .table > :not(caption) > * > * {
@@ -124,20 +169,87 @@
 #main .table-bordered > :not(caption) > * > * {
   border-left: 0;
   border-right: 0;
-  border-color: var(--ux-border-soft);
+  border-color: #edf2f8;
+}
+
+#main .table tbody td a:not(.btn):not(.dropdown-item) {
+  color: #1173c1;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#main .table tbody td a:not(.btn):not(.dropdown-item):hover {
+  color: #0a4f88;
+  text-decoration: underline;
+}
+
+#main .table tbody tr.unified-table-no-results td {
+  padding: 2rem 1rem;
+  color: #5d6f85 !important;
+  font-size: 0.9rem;
+  background: #fbfdff;
+  border-top: 0;
+}
+
+#main .dataTable-wrapper,
+#main .datatable-wrapper {
+  border: 1px solid #e4edf5;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 35, 60, 0.04);
+}
+
+#main .dataTable-wrapper .datatable-container,
+#main .datatable-wrapper .datatable-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+#main .dataTable-wrapper .dataTable-table,
+#main .dataTable-wrapper .datatable-table,
+#main .datatable-wrapper .dataTable-table,
+#main .datatable-wrapper .datatable-table {
+  min-width: max-content;
 }
 
 #main .dataTable-wrapper .dataTable-top,
-#main .dataTable-wrapper .dataTable-bottom {
-  padding: 0.7rem 0.85rem;
-  border-color: var(--ux-border-soft);
+#main .dataTable-wrapper .dataTable-bottom,
+#main .datatable-wrapper .datatable-top,
+#main .datatable-wrapper .datatable-bottom {
+  padding: 0.75rem 0.95rem;
+  border-color: #edf2f8;
+  background: linear-gradient(180deg, #fbfdff 0%, #f6faff 100%);
 }
 
 #main .dataTable-wrapper .dataTable-input,
-#main .dataTable-wrapper .dataTable-selector {
-  border: 1px solid var(--ux-border);
+#main .dataTable-wrapper .dataTable-selector,
+#main .datatable-wrapper .datatable-input,
+#main .datatable-wrapper .datatable-selector {
+  border: 1px solid #c9deef;
   border-radius: 10px;
-  padding: 0.42rem 0.62rem;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  color: #213548;
+  font-size: 0.86rem;
+  min-height: 36px;
+}
+
+#main .dataTable-wrapper .dataTable-input:focus,
+#main .dataTable-wrapper .dataTable-selector:focus,
+#main .datatable-wrapper .datatable-input:focus,
+#main .datatable-wrapper .datatable-selector:focus {
+  border-color: #1173c1;
+  box-shadow: 0 0 0 0.14rem rgba(17, 115, 193, 0.12);
+  outline: 0;
+}
+
+#main .dataTable-info,
+#main .datatable-info {
+  color: #5d6f85;
+  font-size: 0.82rem;
+  font-weight: 500;
 }
 
 /* Professional form system without unnecessarily wide fields */
@@ -212,6 +324,16 @@
   letter-spacing: 0.01em;
 }
 
+/* Keep compact row action buttons unchanged */
+#main .table td .btn,
+#main table tbody td .btn,
+#main .dataTable-table tbody td .btn {
+  border-radius: 6px;
+  letter-spacing: normal;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+
 #main .btn + .btn,
 #main .btn-group .btn + .btn {
   margin-left: 0.35rem;
@@ -226,9 +348,68 @@
   margin-bottom: 0.75rem;
 }
 
+#main .pagination {
+  gap: 4px;
+}
+
 #main .pagination .page-link {
-  border-radius: 8px;
-  border-color: var(--ux-border);
+  border-radius: 9px;
+  border-color: #d4e4f2;
+  color: #3a5167;
+  font-weight: 600;
+  font-size: 0.84rem;
+  min-width: 36px;
+  text-align: center;
+  padding: 0.42rem 0.62rem;
+  margin: 0;
+  box-shadow: none;
+}
+
+#main .pagination .page-link:hover {
+  background: #eef6ff;
+  border-color: #b9d4ee;
+  color: #1173c1;
+}
+
+#main .pagination .page-item.active .page-link {
+  background: #1173c1;
+  border-color: #1173c1;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(17, 115, 193, 0.22);
+}
+
+#main .datatable-pagination a,
+#main .datatable-pagination button,
+#main .dataTable-pagination a,
+#main .dataTable-pagination button {
+  border: 1px solid #d4e4f2 !important;
+  border-radius: 9px !important;
+  color: #3a5167 !important;
+  font-weight: 600;
+  font-size: 0.84rem;
+  padding: 0.42rem 0.7rem !important;
+  margin: 0 2px !important;
+  background: #fff !important;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+#main .datatable-pagination a:hover,
+#main .datatable-pagination button:hover,
+#main .dataTable-pagination a:hover,
+#main .dataTable-pagination button:hover {
+  background: #eef6ff !important;
+  border-color: #b9d4ee !important;
+  color: #1173c1 !important;
+}
+
+#main .datatable-pagination .datatable-active a,
+#main .datatable-pagination .datatable-active button,
+#main .dataTable-pagination .datatable-active a,
+#main .dataTable-pagination .datatable-active button {
+  background: #1173c1 !important;
+  border-color: #1173c1 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 10px rgba(17, 115, 193, 0.2);
 }
 
 #main .modal-content {
@@ -429,76 +610,325 @@
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-bottom: 10px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #d8e7f5;
-  background: #f3f8ff;
+  margin-bottom: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 14px;
+  border: 0;
+  background: linear-gradient(135deg, #1173c1 0%, #0a4f88 100%);
+  box-shadow: 0 12px 32px rgba(17, 115, 193, 0.2);
 }
 
-#main .dental-dashboard-hero h4,
+#main .dental-dashboard-hero h4 {
+  color: #ffffff !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 #main .dental-dashboard-hero p,
 #main .dental-dashboard-hero .small,
-#main .dental-dashboard-hero .badge,
 #main .dental-dashboard-hero strong {
-  color: #1f3347 !important;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 
 #main .dental-dashboard-hero p {
   margin: 0;
-  color: #5a6f82 !important;
-}
-
-#main .dental-kpi-card {
-  position: static;
-  overflow: visible;
-  border: 1px solid #d8e7f5;
-  min-height: 148px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 4px;
-}
-
-#main .dental-kpi-card::before {
-  content: none;
-}
-
-#main .dental-kpi-card .card-icon,
-#main .dental-kpi-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #e9f4ff;
-  color: #0b6fbf;
-  border: 1px solid #cbe4fa;
-}
-
-#main .dental-kpi-card .display-6,
-#main .dental-kpi-card h6 {
-  color: #0f2133;
-}
-
-#main .dental-surface-card {
-  border: 1px solid #dce9f6;
-  background: #ffffff;
-}
-
-#main .dental-surface-card .card-title {
-  letter-spacing: 0.01em;
 }
 
 #main .dental-chip {
   border-radius: 999px;
-  padding: 4px 10px;
-  border: 1px solid #cfe3f6;
-  background: #eff7ff;
-  color: #214a70;
-  font-size: 0.75rem;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 0.76rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(4px);
+}
+
+#main .dental-kpi-card {
+  position: relative;
+  overflow: visible;
+  border: 1px solid #d4e6f5;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 6px 16px rgba(17, 115, 193, 0.2),
+    0 16px 36px rgba(17, 115, 193, 0.14),
+    0 2px 4px rgba(15, 35, 60, 0.06);
+  min-height: 132px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#main .dental-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(17, 115, 193, 0.26),
+    0 20px 42px rgba(17, 115, 193, 0.18),
+    0 4px 8px rgba(15, 35, 60, 0.07);
+  border-color: #b9d4ee;
+}
+
+#main .dental-kpi-card__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 1rem 1.05rem 1.05rem;
+  height: 100%;
+}
+
+#main .dental-kpi-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #eaf4ff;
+  color: #1173c1;
+  border: 1px solid #c5dcf3;
+  font-size: 1.2rem;
+}
+
+#main .dental-kpi-card__meta {
+  min-width: 0;
+  flex: 1;
+}
+
+#main .dental-kpi-card__label {
+  margin: 0 0 0.35rem;
+  color: #5d6f85;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#main .dental-kpi-card__value {
+  color: #0f2133;
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+#main .dental-kpi-card__value.is-text {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+#main .dental-kpi-card__value.is-compact {
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+#main .dental-kpi-card--teal {
+  border-color: #b7ebe4;
+  box-shadow:
+    0 6px 16px rgba(13, 148, 136, 0.2),
+    0 16px 36px rgba(13, 148, 136, 0.14),
+    0 2px 4px rgba(15, 35, 60, 0.06);
+}
+
+#main .dental-kpi-card--teal:hover {
+  border-color: #7dd3c8;
+  box-shadow:
+    0 8px 20px rgba(13, 148, 136, 0.26),
+    0 20px 42px rgba(13, 148, 136, 0.18),
+    0 4px 8px rgba(15, 35, 60, 0.07);
+}
+
+#main .dental-kpi-card--teal .dental-kpi-icon {
+  background: #e6fffa;
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+
+#main .dental-kpi-card--amber {
+  border-color: #f5d9a8;
+  box-shadow:
+    0 6px 16px rgba(217, 119, 6, 0.2),
+    0 16px 36px rgba(217, 119, 6, 0.14),
+    0 2px 4px rgba(15, 35, 60, 0.06);
+}
+
+#main .dental-kpi-card--amber:hover {
+  border-color: #f0c06a;
+  box-shadow:
+    0 8px 20px rgba(217, 119, 6, 0.26),
+    0 20px 42px rgba(217, 119, 6, 0.18),
+    0 4px 8px rgba(15, 35, 60, 0.07);
+}
+
+#main .dental-kpi-card--amber .dental-kpi-icon {
+  background: #fff8eb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+#main .dental-kpi-card--violet {
+  border-color: #d8c9fa;
+  box-shadow:
+    0 6px 16px rgba(109, 40, 217, 0.2),
+    0 16px 36px rgba(109, 40, 217, 0.14),
+    0 2px 4px rgba(15, 35, 60, 0.06);
+}
+
+#main .dental-kpi-card--violet:hover {
+  border-color: #c4b5fd;
+  box-shadow:
+    0 8px 20px rgba(109, 40, 217, 0.26),
+    0 20px 42px rgba(109, 40, 217, 0.18),
+    0 4px 8px rgba(15, 35, 60, 0.07);
+}
+
+#main .dental-kpi-card--violet .dental-kpi-icon {
+  background: #f3efff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+#main .dental-kpi-card--rose {
+  border-color: #f8c4d0;
+  box-shadow:
+    0 6px 16px rgba(225, 29, 72, 0.2),
+    0 16px 36px rgba(225, 29, 72, 0.14),
+    0 2px 4px rgba(15, 35, 60, 0.06);
+}
+
+#main .dental-kpi-card--rose:hover {
+  border-color: #f9a8b8;
+  box-shadow:
+    0 8px 20px rgba(225, 29, 72, 0.26),
+    0 20px 42px rgba(225, 29, 72, 0.18),
+    0 4px 8px rgba(15, 35, 60, 0.07);
+}
+
+#main .dental-kpi-card--rose .dental-kpi-icon {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+#main .dental-surface-card {
+  border: 1px solid #d4e6f5;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow:
+    0 8px 20px rgba(17, 115, 193, 0.16),
+    0 18px 38px rgba(17, 115, 193, 0.12),
+    0 2px 6px rgba(15, 35, 60, 0.05);
+  overflow: hidden;
+}
+
+#main .dental-surface-card > .card-body {
+  padding: 1.1rem 1.15rem;
+}
+
+#main .dental-surface-card .card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #122132;
+}
+
+#main .dental-surface-card .card-title span {
+  color: #5d6f85;
+  font-weight: 500;
+}
+
+#main .dental-surface-card .card-link-action {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1173c1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#main .dental-surface-card .card-link-action:hover {
+  color: #0a4f88;
+  text-decoration: underline;
+}
+
+#main .dental-dashboard-shell .progress {
+  height: 10px;
+  border-radius: 999px;
+  background: #edf4fb;
+  overflow: hidden;
+}
+
+#main .dental-dashboard-shell .progress-bar {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1173c1, #3d9ae8);
+}
+
+#main .dental-pipeline-stat {
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9fd 100%);
+  border: 1px solid #e4edf5 !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 0.85rem !important;
+  height: 100%;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#main .dental-pipeline-stat:hover {
+  border-color: #c9deef !important;
+  box-shadow: 0 6px 16px rgba(15, 35, 60, 0.06);
+}
+
+#main .dental-pipeline-stat .small,
+#main .dental-pipeline-stat .text-muted {
+  color: #5d6f85 !important;
+  font-weight: 600;
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#main .dental-pipeline-stat .h5 {
+  color: #0f2133;
+  font-weight: 800;
+  margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#main .dental-surface-card .list-group-item {
+  border-color: #edf2f8;
+  padding: 0.85rem 0;
+  background: transparent;
+}
+
+#main .dental-surface-card .list-group-item:first-child {
+  border-top: 0;
+  padding-top: 0.25rem;
+}
+
+#main .dental-surface-card .list-group-flush > .list-group-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0.15rem;
+}
+
+#main .dental-chart-frame {
+  border-radius: 12px;
+  border: 1px solid #edf2f8;
+  background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  padding: 0.65rem 0.5rem 0.25rem;
+}
+
+#main .dental-dashboard-shell .table-responsive {
+  border-radius: 12px;
+  margin-top: 0.75rem;
+}
+
+#main .dental-dashboard-shell .alert-info {
+  border: 1px solid #c5dcf3;
+  background: #f0f7ff;
+  color: #185f9f;
+  border-radius: 12px;
 }
 
 #main .clinic-reports-filter {
@@ -552,9 +982,270 @@
   }
 }
 
-#main .dental-chart-frame {
+/* ========== TABLE TOOLBARS & ADJACENT CONTROLS (not row actions) ========== */
+#main .module-search-toolbar,
+#main .unified-table-search-toolbar,
+#main .datatable-top,
+#main .dataTable-top {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid #e4edf5;
   border-radius: 12px;
-  border: 0;
-  background: transparent;
-  padding: 0;
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f9fd 100%);
+}
+
+#main .module-search-toolbar.appointments-filter-toolbar,
+#main .appointments-filter-toolbar {
+  justify-content: flex-start;
+}
+
+#main .module-search-toolbar .text-muted,
+#main .module-search-toolbar small,
+#main .unified-table-search-toolbar .text-muted {
+  color: #5d6f85 !important;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+#main .module-search-toolbar .unified-table-search-wrap,
+#main .unified-table-search-toolbar .unified-table-search-wrap,
+#main .datatable-top .unified-table-search-wrap,
+#main .dataTable-top .unified-table-search-wrap {
+  width: min(320px, 100%);
+}
+
+#main .module-search-toolbar .form-select,
+#main .unified-table-search-toolbar .form-select,
+#main .appointments-view-filter,
+#main .datatable-top .form-select,
+#main .dataTable-top .form-select {
+  border: 1px solid #c9deef;
+  border-radius: 10px;
+  background: #fff;
+  color: #213548;
+  font-size: 0.86rem;
+  font-weight: 500;
+  min-height: 38px;
+  padding: 0.45rem 2rem 0.45rem 0.75rem;
+  box-shadow: none;
+}
+
+#main .module-search-toolbar .form-select:focus,
+#main .unified-table-search-toolbar .form-select:focus,
+#main .appointments-view-filter:focus,
+#main .datatable-top .form-select:focus,
+#main .dataTable-top .form-select:focus {
+  border-color: #1173c1;
+  box-shadow: 0 0 0 0.14rem rgba(17, 115, 193, 0.12);
+}
+
+#main .module-search-toolbar .unified-table-search-input,
+#main .unified-table-search-toolbar .unified-table-search-input,
+#main .datatable-top .unified-table-search-input,
+#main .dataTable-top .unified-table-search-input {
+  min-height: 38px;
+}
+
+#main .module-search-toolbar .dropdown-menu,
+#main .card-header .dropdown-menu {
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 35, 60, 0.12);
+  padding: 12px;
+}
+
+/* Table-adjacent buttons: card headers, toolbars, filter tabs */
+#main .card-header .btn,
+#main .module-search-toolbar .btn,
+#main .unified-table-search-toolbar .btn,
+#main .datatable-top .btn,
+#main .dataTable-top .btn,
+#main .datatable-bottom .btn,
+#main .dataTable-bottom .btn {
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#main .card-header .btn-primary,
+#main .module-search-toolbar .btn-primary,
+#main .unified-table-search-toolbar .btn-primary,
+#main .datatable-top .btn-primary,
+#main .dataTable-top .btn-primary {
+  border-color: #1173c1;
+  background: #1173c1;
+  box-shadow: 0 4px 12px rgba(17, 115, 193, 0.18);
+}
+
+#main .card-header .btn-primary:hover,
+#main .module-search-toolbar .btn-primary:hover,
+#main .unified-table-search-toolbar .btn-primary:hover,
+#main .datatable-top .btn-primary:hover,
+#main .dataTable-top .btn-primary:hover {
+  background: #0a4f88;
+  border-color: #0a4f88;
+  box-shadow: 0 6px 14px rgba(10, 79, 136, 0.22);
+}
+
+#main .card-header .btn-outline-primary,
+#main .module-search-toolbar .btn-outline-primary,
+#main .unified-table-search-toolbar .btn-outline-primary,
+#main .datatable-top .btn-outline-primary,
+#main .dataTable-top .btn-outline-primary {
+  background: #fff;
+  border-color: #b9d4ee;
+  color: #1173c1;
+}
+
+#main .card-header .btn-outline-primary:hover,
+#main .module-search-toolbar .btn-outline-primary:hover,
+#main .unified-table-search-toolbar .btn-outline-primary:hover,
+#main .datatable-top .btn-outline-primary:hover,
+#main .dataTable-top .btn-outline-primary:hover {
+  background: #eef6ff;
+  border-color: #1173c1;
+  color: #0a4f88;
+  box-shadow: none;
+}
+
+#main .card-header .btn-outline-secondary,
+#main .module-search-toolbar .btn-outline-secondary,
+#main .unified-table-search-toolbar .btn-outline-secondary {
+  background: #fff;
+  border-color: #d4e4f2;
+  color: #4a6280;
+}
+
+#main .card-header .btn-outline-secondary:hover,
+#main .module-search-toolbar .btn-outline-secondary:hover,
+#main .unified-table-search-toolbar .btn-outline-secondary:hover {
+  background: #f4f8fc;
+  border-color: #b9cddd;
+  color: #2f4a63;
+}
+
+#main .card-header .btn-link.text-muted,
+#main .module-search-toolbar .btn-link.text-muted {
+  color: #5d6f85 !important;
+  text-decoration: none;
+  box-shadow: none;
+  min-height: auto;
+}
+
+#main .card-header .btn-link.text-muted:hover,
+#main .module-search-toolbar .btn-link.text-muted:hover {
+  color: #1173c1 !important;
+  text-decoration: underline;
+}
+
+/* Segmented filter tabs */
+#main .card-header .btn-group,
+#main .module-search-toolbar .btn-group {
+  background: #edf4fb;
+  border: 1px solid #d4e4f2;
+  border-radius: 11px;
+  padding: 3px;
+  gap: 2px;
+}
+
+#main .card-header .btn-group > .btn,
+#main .module-search-toolbar .btn-group > .btn {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #4a6280 !important;
+  box-shadow: none !important;
+  min-height: 32px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.82rem;
+}
+
+#main .card-header .btn-group > .btn.btn-primary,
+#main .card-header .btn-group > .btn.active,
+#main .module-search-toolbar .btn-group > .btn.btn-primary,
+#main .module-search-toolbar .btn-group > .btn.active {
+  background: #fff !important;
+  color: #1173c1 !important;
+  box-shadow: 0 2px 8px rgba(15, 35, 60, 0.08) !important;
+}
+
+#main .card-header .btn-group > .btn.btn-outline-primary:hover,
+#main .module-search-toolbar .btn-group > .btn.btn-outline-primary:hover {
+  background: rgba(255, 255, 255, 0.72) !important;
+  color: #1173c1 !important;
+}
+
+/* Card body table spacing */
+#main .card-body > .module-search-toolbar:first-child,
+#main .card-body > .unified-table-search-toolbar:first-child {
+  margin-top: 0;
+}
+
+#main .card-body > .table-responsive,
+#main .card-body > .history-table-wrap {
+  margin-bottom: 0;
+}
+
+#main .table-responsive::-webkit-scrollbar,
+#main .history-table-wrap.table-responsive::-webkit-scrollbar,
+#main .dataTable-wrapper .datatable-container::-webkit-scrollbar,
+#main .datatable-wrapper .datatable-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+#main .table-responsive::-webkit-scrollbar-track,
+#main .history-table-wrap.table-responsive::-webkit-scrollbar-track,
+#main .dataTable-wrapper .datatable-container::-webkit-scrollbar-track,
+#main .datatable-wrapper .datatable-container::-webkit-scrollbar-track {
+  background: #f3f8fc;
+  border-radius: 999px;
+}
+
+#main .table-responsive::-webkit-scrollbar-thumb,
+#main .history-table-wrap.table-responsive::-webkit-scrollbar-thumb,
+#main .dataTable-wrapper .datatable-container::-webkit-scrollbar-thumb,
+#main .datatable-wrapper .datatable-container::-webkit-scrollbar-thumb {
+  background: #b9d0e6;
+  border-radius: 999px;
+}
+
+#main .table-responsive::-webkit-scrollbar-thumb:hover,
+#main .history-table-wrap.table-responsive::-webkit-scrollbar-thumb:hover,
+#main .dataTable-wrapper .datatable-container::-webkit-scrollbar-thumb:hover,
+#main .datatable-wrapper .datatable-container::-webkit-scrollbar-thumb:hover {
+  background: #8fb5d8;
+}
+
+@media (max-width: 768px) {
+  #main .module-search-toolbar,
+  #main .unified-table-search-toolbar,
+  #main .datatable-top,
+  #main .dataTable-top {
+    justify-content: stretch;
+    padding: 10px 12px;
+  }
+
+  #main .module-search-toolbar .unified-table-search-wrap,
+  #main .unified-table-search-toolbar .unified-table-search-wrap,
+  #main .module-search-toolbar .form-select,
+  #main .appointments-view-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #main .card-header .btn-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
 }

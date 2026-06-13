@@ -234,14 +234,11 @@ body.patient-portal {
 
     body.patient-portal .dental-kpi-card {
         min-height: auto;
-        padding: 0.75rem !important;
-        border-radius: 10px;
-        box-shadow: none;
+        border-radius: 12px;
     }
 
     body.patient-portal .dental-surface-card {
-        border-radius: 10px;
-        box-shadow: none;
+        border-radius: 12px;
     }
 
     body.patient-portal .dental-surface-card .card-body {

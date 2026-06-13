@@ -178,3 +178,23 @@ if (!function_exists('dashboard_render_appt_chart_script')) {
 HTML;
     }
 }
+
+if (!function_exists('dashboard_render_kpi_card')) {
+    function dashboard_render_kpi_card(string $label, string $value, string $icon, string $tone = ''): void
+    {
+        $toneClass = $tone !== '' ? ' dental-kpi-card--' . preg_replace('/[^a-z]/', '', strtolower($tone)) : '';
+        $valueClass = '';
+        if (preg_match('/^₱/', $value)) {
+            $valueClass = ' is-compact';
+        } elseif (preg_match('/[A-Za-z]/', $value)) {
+            $valueClass = ' is-text';
+        }
+        echo '<div class="card dental-kpi-card h-100' . htmlspecialchars($toneClass, ENT_QUOTES, 'UTF-8') . '">';
+        echo '<div class="dental-kpi-card__inner">';
+        echo '<div class="dental-kpi-icon" aria-hidden="true"><i class="bi ' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '"></i></div>';
+        echo '<div class="dental-kpi-card__meta">';
+        echo '<h6 class="dental-kpi-card__label">' . htmlspecialchars($label) . '</h6>';
+        echo '<div class="dental-kpi-card__value' . $valueClass . '">' . $value . '</div>';
+        echo '</div></div></div>';
+    }
+}

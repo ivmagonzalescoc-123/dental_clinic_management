@@ -600,6 +600,28 @@
     return '#';
   }
 
+  function resolveNotificationHref(rawLink) {
+    const link = String(rawLink || '').trim();
+    if (link === '' || link === '#' || /^javascript:/i.test(link)) {
+      return null;
+    }
+    if (/^https?:\/\//i.test(link)) {
+      return link;
+    }
+    if (link.startsWith('/')) {
+      const root = String(appRoot || '').replace(/\/$/, '');
+      if (root && link.startsWith(root + '/')) {
+        return link;
+      }
+      return root ? (root + link) : link;
+    }
+    try {
+      return new URL(link, window.location.href).href;
+    } catch (err) {
+      return link;
+    }
+  }
+
   // Normalize table badge colors: only status badges keep accent color.
   const statusBadgeTerms = [
     'pending',
@@ -764,23 +786,12 @@
         } else {
           if (emptyEl) emptyEl.hidden = true;
           rows.forEach((n) => {
-            const rawLink = String(n.link || '').trim();
-            const hasValidRawLink = rawLink !== '' && rawLink !== '#' && !/^javascript:/i.test(rawLink);
-            const fallbackLink = currentPortalNotificationsUrl();
-            const isNavigable = hasValidRawLink || fallbackLink !== '#';
-            let resolvedHref = fallbackLink !== '#' ? fallbackLink : '#';
-            if (resolvedHref === '#' && hasValidRawLink) {
-              if (/^https?:\/\//i.test(rawLink)) {
-                resolvedHref = rawLink;
-              } else if (rawLink.startsWith('/')) {
-                resolvedHref = rawLink.startsWith(appRoot + '/') ? rawLink : (appRoot + rawLink);
-              } else {
-                resolvedHref = rawLink;
-              }
-            }
+            const resolvedHref = resolveNotificationHref(n.link);
+            const isNavigable = resolvedHref !== null;
 
             const isUnread = String(n.is_read) === '0' || n.is_read === 0 || n.is_read === false;
-            const item = document.createElement(isNavigable ? 'a' : 'div');
+            const item = document.createElement(isNavigable ? 'a' : 'button');
+            item.type = isNavigable ? undefined : 'button';
             if (isNavigable) item.href = resolvedHref;
             item.className = 'notification-dropdown-item' + (isUnread ? ' is-unread' : '');
             item.dataset.notificationId = n.notification_id || '';
@@ -803,24 +814,29 @@
             item.appendChild(content);
             item.appendChild(time);
 
-            if (isNavigable) {
-              item.addEventListener('click', async function (e) {
-                e.preventDefault();
-                const nid = this.dataset.notificationId;
-                if (nid) {
-                  try {
-                    await fetch(appRoot + '/assets/api/notifications/mark_read.php', {
-                      method: 'POST',
-                      body: new URLSearchParams({ notification_id: nid })
-                    });
-                  } catch (err) {
-                    // silent
-                  }
+            item.addEventListener('click', async function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              const nid = this.dataset.notificationId;
+              if (nid) {
+                try {
+                  await fetch(appRoot + '/assets/api/notifications/mark_read.php', {
+                    method: 'POST',
+                    body: new URLSearchParams({ notification_id: nid })
+                  });
+                } catch (err) {
+                  // silent
                 }
-                const href = this.getAttribute('href') || '#';
-                if (href && href !== '#') window.location.href = href;
-              });
-            }
+              }
+              if (typeof window.closePortalHeaderDropdowns === 'function') {
+                window.closePortalHeaderDropdowns();
+              }
+              if (isNavigable && resolvedHref) {
+                window.location.href = resolvedHref;
+                return;
+              }
+              await fetchNotifications();
+            });
 
             list.appendChild(item);
           });
@@ -858,8 +874,9 @@
         return;
       }
       const headerRect = header.getBoundingClientRect();
-      const hostRect = searchHost.getBoundingClientRect();
-      const expandWidth = Math.max(140, hostRect.right - headerRect.left - 8);
+      const actionsEl = header.querySelector('.header-actions');
+      const anchorRect = (actionsEl || searchHost).getBoundingClientRect();
+      const expandWidth = Math.max(160, anchorRect.right - headerRect.left - 12);
       header.style.setProperty('--portal-search-expand-width', expandWidth + 'px');
     };
 
@@ -871,8 +888,13 @@
       if (menu) menu.style.display = 'none';
     };
 
+    window.closePortalHeaderSearch = closeSearch;
+
     const openSearch = function () {
       if (window.innerWidth > 991) return;
+      if (typeof window.closePortalHeaderDropdowns === 'function') {
+        window.closePortalHeaderDropdowns();
+      }
       syncLayout();
       header.classList.add('header-search-open');
       toggle.setAttribute('aria-expanded', 'true');
@@ -883,12 +905,20 @@
       }
     };
 
-    toggle.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
+    const openSearchFromToggle = function (e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       if (window.innerWidth > 991) return;
       if (header.classList.contains('header-search-open')) return;
       openSearch();
+    };
+
+    toggle.addEventListener('click', openSearchFromToggle);
+    toggle.addEventListener('pointerup', function (e) {
+      if (e.pointerType !== 'touch') return;
+      openSearchFromToggle(e);
     });
 
     wrap.addEventListener('click', function (e) {
@@ -906,6 +936,9 @@
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && header.classList.contains('header-search-open')) {
           closeSearch();
+          if (typeof window.closePortalHeaderDropdowns === 'function') {
+            window.closePortalHeaderDropdowns();
+          }
         }
       });
     }

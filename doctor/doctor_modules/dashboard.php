@@ -90,28 +90,16 @@ if ($userId > 0) {
 
     <div class="row g-3">
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Upcoming</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Upcoming', (string)(int)$upcoming, 'bi-calendar-plus'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Patients Today</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$queueToday; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Patients Today', (string)(int)$queueToday, 'bi-people', 'teal'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Visit History</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$past; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Visit History', (string)(int)$past, 'bi-clock-history', 'amber'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">All Appointments</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$appointmentsTotal; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('All Appointments', (string)(int)$appointmentsTotal, 'bi-calendar2-week', 'violet'); ?>
         </div>
 
         <div class="col-12">
@@ -130,7 +118,7 @@ if ($userId > 0) {
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="card-title mb-0">Upcoming Appointments</h6>
-                        <a class="small" href="doctor.php?page=appointments">View all</a>
+                        <a class="card-link-action" href="doctor.php?page=appointments">View all</a>
                     </div>
                     <?php if (empty($nextAppts)): ?>
                         <div class="text-muted mt-3">No upcoming appointments.</div>

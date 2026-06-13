@@ -157,31 +157,19 @@ if ($res) {
 
 <div class="row g-3">
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card dental-kpi-card p-3 h-100">
-			<h6 class="mb-1">Patients</h6>
-			<div class="display-6 fw-bold"><?php echo (int)$patientsTotal; ?></div>
-		</div>
+		<?php dashboard_render_kpi_card('Patients', (string)(int)$patientsTotal, 'bi-people'); ?>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card dental-kpi-card p-3 h-100">
-			<h6 class="mb-1">Appointments Today</h6>
-			<div class="display-6 fw-bold"><?php echo (int)$appointmentsToday; ?></div>
-		</div>
+		<?php dashboard_render_kpi_card('Appointments Today', (string)(int)$appointmentsToday, 'bi-calendar-event', 'teal'); ?>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card dental-kpi-card p-3 h-100">
-			<h6 class="mb-1">Arrivals Today</h6>
-			<div class="display-6 fw-bold"><?php echo (int)$checkedInToday; ?></div>
-		</div>
+		<?php dashboard_render_kpi_card('Arrivals Today', (string)(int)$checkedInToday, 'bi-person-check', 'amber'); ?>
 	</div>
 
 	<div class="col-12 col-md-6 col-xl-3">
-		<div class="card dental-kpi-card p-3 h-100">
-			<h6 class="mb-1">Users Active</h6>
-			<div class="display-6 fw-bold"><?php echo (int)$usersTotal; ?></div>
-		</div>
+		<?php dashboard_render_kpi_card('Users Active', (string)(int)$usersTotal, 'bi-person-badge', 'violet'); ?>
 	</div>
 
 	<div class="col-12">
@@ -195,13 +183,13 @@ if ($res) {
 					<div class="progress-bar bg-success" role="progressbar" style="width: <?php echo (int)$pipelineCompletionPct; ?>%" aria-valuenow="<?php echo (int)$pipelineCompletionPct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
 				</div>
 				<div class="row g-2">
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Scheduled</div><div class="h5 mb-0"><?php echo (int)$pipelineScheduled; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Confirmed</div><div class="h5 mb-0"><?php echo (int)$pipelineConfirmed; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Checked In</div><div class="h5 mb-0"><?php echo (int)$pipelineCheckedIn; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">In Progress</div><div class="h5 mb-0"><?php echo (int)$pipelineInProgress; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Awaiting Records</div><div class="h5 mb-0"><?php echo (int)$pipelineAwaitingRecords; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Completed</div><div class="h5 mb-0"><?php echo (int)$pipelineCompleted; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="border rounded p-2 h-100"><div class="small text-muted">Billed / Paid</div><div class="h5 mb-0"><?php echo (int)$pipelineBilled; ?> / <?php echo (int)$pipelinePaid; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Scheduled</div><div class="h5 mb-0"><?php echo (int)$pipelineScheduled; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Confirmed</div><div class="h5 mb-0"><?php echo (int)$pipelineConfirmed; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Checked In</div><div class="h5 mb-0"><?php echo (int)$pipelineCheckedIn; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">In Progress</div><div class="h5 mb-0"><?php echo (int)$pipelineInProgress; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Awaiting Records</div><div class="h5 mb-0"><?php echo (int)$pipelineAwaitingRecords; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Completed</div><div class="h5 mb-0"><?php echo (int)$pipelineCompleted; ?></div></div></div>
+					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Billed / Paid</div><div class="h5 mb-0"><?php echo (int)$pipelineBilled; ?> / <?php echo (int)$pipelinePaid; ?></div></div></div>
 				</div>
 			</div>
 		</div>
@@ -212,7 +200,7 @@ if ($res) {
 			<div class="card-body">
 				<div class="d-flex justify-content-between align-items-center">
 					<h5 class="card-title mb-0">Today’s Appointments <span>| Next 10</span></h5>
-					<a class="small" href="admin.php?page=doctor_management&tab=schedule">View all</a>
+					<a class="card-link-action" href="admin.php?page=doctor_management&tab=schedule">View all</a>
 				</div>
 
 				<?php if (empty($todayAppointments)): ?>
@@ -272,7 +260,7 @@ if ($res) {
 			<div class="card-body">
 				<div class="d-flex justify-content-between align-items-center">
 					<h5 class="card-title mb-0">User Logs <span>| Recent</span></h5>
-					<a class="small" href="admin.php?page=system_logs">Open logs</a>
+					<a class="card-link-action" href="admin.php?page=system_logs">Open logs</a>
 				</div>
 
 				<?php if (empty($recentUserLogs)): ?>

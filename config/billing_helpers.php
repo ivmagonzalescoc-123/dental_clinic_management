@@ -317,7 +317,76 @@ if (!function_exists('billing_sync_from_payments')) {
         $ok = $upd->execute();
         $upd->close();
 
+        if ($ok) {
+            billing_sync_installment_terms($conn, $billingId);
+        }
+
         return (bool)$ok;
+    }
+}
+
+if (!function_exists('billing_sync_installment_terms')) {
+    /**
+     * Align installment term statuses with recorded payments (cumulative by term order).
+     */
+    function billing_sync_installment_terms($conn, $billingId)
+    {
+        $billingId = (int)$billingId;
+        if ($billingId <= 0 || !billing_table_exists($conn, 'billing_installments')) {
+            return false;
+        }
+
+        $inst = $conn->prepare('SELECT installment_id FROM billing_installments WHERE billing_id = ? LIMIT 1');
+        if (!$inst) {
+            return false;
+        }
+        $inst->bind_param('i', $billingId);
+        $inst->execute();
+        $instRow = $inst->get_result()->fetch_assoc();
+        $inst->close();
+        if (!$instRow) {
+            return true;
+        }
+
+        $installmentId = (int)$instRow['installment_id'];
+        $remainingPaid = billing_get_amount_paid($conn, $billingId);
+
+        $tstmt = $conn->prepare('SELECT term_id, amount FROM billing_installment_terms WHERE installment_id = ? ORDER BY term_number ASC');
+        if (!$tstmt) {
+            return false;
+        }
+        $tstmt->bind_param('i', $installmentId);
+        $tstmt->execute();
+        $terms = $tstmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $tstmt->close();
+
+        $markPaid = $conn->prepare("UPDATE billing_installment_terms SET status = 'paid', paid_at = COALESCE(paid_at, NOW()) WHERE term_id = ?");
+        $markPending = $conn->prepare("UPDATE billing_installment_terms SET status = 'pending', paid_at = NULL WHERE term_id = ?");
+        if (!$markPaid || !$markPending) {
+            return false;
+        }
+
+        foreach ($terms as $term) {
+            $termId = (int)$term['term_id'];
+            $amount = (float)($term['amount'] ?? 0);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            if ($remainingPaid + 0.001 >= $amount) {
+                $markPaid->bind_param('i', $termId);
+                $markPaid->execute();
+                $remainingPaid = round($remainingPaid - $amount, 2);
+            } else {
+                $markPending->bind_param('i', $termId);
+                $markPending->execute();
+            }
+        }
+
+        $markPaid->close();
+        $markPending->close();
+
+        return true;
     }
 }
 

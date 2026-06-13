@@ -127,28 +127,16 @@ if ($patientId > 0) {
 
     <div class="row g-3">
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Upcoming Appointments</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$upcoming; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Upcoming Appointments', (string)(int)$upcoming, 'bi-calendar-check'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Visit History</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$past; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Visit History', (string)(int)$past, 'bi-journal-medical', 'teal'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Outstanding Balance</h6>
-                <div class="display-6 fw-bold">₱<?php echo number_format($outstandingBalance, 2); ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Outstanding Balance', '₱' . number_format($outstandingBalance, 2), 'bi-wallet2', 'amber'); ?>
         </div>
         <div class="col-md-6 col-xl-3">
-            <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Next Appointment</h6>
-                <div class="fw-semibold"><?php echo $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None'; ?></div>
-            </div>
+            <?php dashboard_render_kpi_card('Next Appointment', $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None', 'bi-calendar-event', 'violet'); ?>
         </div>
 
         <div class="col-12 col-lg-7">

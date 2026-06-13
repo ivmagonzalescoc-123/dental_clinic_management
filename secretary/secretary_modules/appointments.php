@@ -955,6 +955,12 @@ $appointmentsViewFilters = [
         </div>
     </div>
 </div>
+
+<?php
+    $secretary_scheduling_embedded = true;
+    $secretary_scheduling_view = $view;
+    include __DIR__ . '/scheduling.php';
+?>
 <?php endif; ?>
 
 <style>

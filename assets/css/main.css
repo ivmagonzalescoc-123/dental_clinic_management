@@ -381,11 +381,12 @@ body.toggle-sidebar .footer {
     margin: 2px 8px !important;
     color: var(--sidebar-text) !important;
     text-decoration: none !important;
-    transition: background-color 0.2s ease, color 0.2s ease !important;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease !important;
     border: 0 !important;
     border-radius: 8px !important;
     background-color: transparent !important;
     position: relative !important;
+    box-shadow: none;
 }
 
 .sidebar-nav .nav-link:not(.active):hover,
@@ -400,7 +401,9 @@ body.toggle-sidebar .footer {
     background-image: none !important;
     color: #ffffff !important;
     border-radius: 8px !important;
-    box-shadow: none !important;
+    box-shadow:
+        0 4px 12px rgba(17, 115, 193, 0.24),
+        0 2px 5px rgba(17, 115, 193, 0.14) !important;
     font-weight: 600 !important;
 }
 
@@ -409,12 +412,21 @@ body.toggle-sidebar .footer {
     background-color: var(--primary-hover) !important;
     background-image: none !important;
     color: #ffffff !important;
+    box-shadow:
+        0 5px 14px rgba(17, 115, 193, 0.28),
+        0 3px 6px rgba(17, 115, 193, 0.16) !important;
+}
+
+.sidebar-nav .nav-link:active:not(.active) {
+    transform: none !important;
     box-shadow: none !important;
 }
 
-.sidebar-nav .nav-link:active {
+.sidebar-nav .nav-link.active:active {
     transform: none !important;
-    box-shadow: none !important;
+    box-shadow:
+        0 3px 10px rgba(17, 115, 193, 0.22),
+        0 1px 4px rgba(17, 115, 193, 0.12) !important;
 }
 
 .sidebar-nav .nav-link.collapsed {
@@ -857,7 +869,16 @@ a.text-info,
     box-shadow: none !important;
 }
 
-/* ========== TABLE STYLES ========== */
+/* ========== TABLE STYLES (legacy — portal tables use #main rules in module-content-ux.css) ========== */
+#main table thead {
+    background-color: transparent;
+    border-bottom: 0;
+}
+
+#main table thead th {
+    border-bottom: 1px solid #dce8f4;
+}
+
 .table-header {
     display: flex;
     justify-content: space-between;
@@ -1322,8 +1343,14 @@ table a:hover {
 
 /* ----- Notifications menu ----- */
 .notifications-menu {
-    min-width: 360px;
-    max-width: 400px;
+    min-width: 420px;
+    max-width: 480px;
+    width: min(480px, calc(100vw - 24px));
+}
+
+.header-dropdown--notifications .header-dropdown__menu {
+    min-width: 420px;
+    max-width: 480px;
 }
 
 .notifications-menu__header {
@@ -1331,7 +1358,7 @@ table a:hover {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
-    padding: 16px 16px 12px;
+    padding: 18px 18px 14px;
     border-bottom: 1px solid #f1f5f9;
 }
 
@@ -1382,23 +1409,27 @@ table a:hover {
 }
 
 .notifications-menu__list {
-    max-height: 340px;
+    max-height: 380px;
     overflow-y: auto;
-    padding: 6px;
+    padding: 8px;
 }
 
 .notification-dropdown-item {
     display: grid;
     grid-template-columns: 10px 1fr;
-    grid-template-rows: auto auto;
-    gap: 2px 10px;
+    grid-template-rows: auto auto auto;
+    gap: 3px 12px;
     align-items: start;
-    padding: 11px 12px;
-    margin-bottom: 2px;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 4px;
     border-radius: 12px;
     color: inherit;
     text-decoration: none;
     border: 1px solid transparent;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
@@ -1423,17 +1454,18 @@ table a:hover {
 }
 
 .notification-dropdown-item__title {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #0f172a;
-    line-height: 1.35;
+    line-height: 1.4;
 }
 
 .notification-dropdown-item__body {
-    margin-top: 2px;
-    font-size: 0.8rem;
+    margin-top: 3px;
+    font-size: 0.84rem;
     color: #64748b;
-    line-height: 1.45;
+    line-height: 1.5;
+    word-break: break-word;
 }
 
 .notification-dropdown-item .notification-time {
@@ -1536,26 +1568,9 @@ table a:hover {
     }
 
     #header {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         padding: 8px 10px;
         gap: 8px;
-    }
-
-    .header-search {
-        display: flex !important;
-        flex: 1 1 auto;
-        min-width: 0;
-        order: 0;
-    }
-
-    .header-search-wrap {
-        max-width: none;
-        width: 100%;
-    }
-
-    .header-nav {
-        flex: 0 0 auto;
-        margin-left: auto !important;
     }
 
     .search-bar-toggle {
@@ -1578,31 +1593,17 @@ table a:hover {
         margin-top: 104px;
     }
 
-    #header .header-search {
-        order: 3;
-        flex: 1 1 100%;
-        width: 100%;
-    }
-
-    #header .header-search-wrap {
-        max-width: 100%;
-    }
-
-    #header .header-search-input,
-    #header .header-search .unified-table-search-input {
-        font-size: 16px;
-        min-height: 44px;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-    }
-
+    #main .table-responsive,
     .table-responsive {
         display: block;
         width: 100%;
+        max-width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
+    #main .table-responsive > table,
+    #main .table-responsive > .table,
     .table-responsive > table {
         width: 100%;
         min-width: 480px;
