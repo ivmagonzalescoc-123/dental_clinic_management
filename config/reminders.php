@@ -292,7 +292,7 @@ if (!function_exists('reminder_brevo_post')) {
 }
 
 if (!function_exists('reminder_send_email_brevo')) {
-    function reminder_send_email_brevo($toEmail, $subject, $message)
+    function reminder_send_email_brevo($toEmail, $subject, $message, $htmlMessage = null)
     {
         $from = trim((string)(function_exists('env') ? env('BREVO_EMAIL_FROM', env('REMINDER_EMAIL_FROM', env('SMTP_FROM_EMAIL', ''))) : ''));
         $fromName = trim((string)(function_exists('env') ? env('BREVO_EMAIL_FROM_NAME', env('REMINDER_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic"))) : "Azucena's Dental Clinic"));
@@ -302,7 +302,7 @@ if (!function_exists('reminder_send_email_brevo')) {
             return false;
         }
 
-        return reminder_brevo_post('smtp/email', [
+        $payload = [
             'sender' => [
                 'name' => $fromName,
                 'email' => $from,
@@ -312,7 +312,13 @@ if (!function_exists('reminder_send_email_brevo')) {
             ],
             'subject' => $subject,
             'textContent' => $message,
-        ], 'REMINDER_EMAIL(brevo)');
+        ];
+
+        if ($htmlMessage !== null && trim((string)$htmlMessage) !== '') {
+            $payload['htmlContent'] = (string)$htmlMessage;
+        }
+
+        return reminder_brevo_post('smtp/email', $payload, 'REMINDER_EMAIL(brevo)');
     }
 }
 
@@ -407,7 +413,7 @@ if (!function_exists('smtp_missing_message')) {
 }
 
 if (!function_exists('reminder_send_email')) {
-    function reminder_send_email($toEmail, $subject, $message)
+    function reminder_send_email($toEmail, $subject, $message, $htmlMessage = null)
     {
         $to = trim((string)$toEmail);
         if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -419,7 +425,7 @@ if (!function_exists('reminder_send_email')) {
         $fromName = trim((string)(function_exists('env') ? env('REMINDER_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")) : "Azucena's Dental Clinic"));
 
         if ($mode === 'brevo') {
-            return reminder_send_email_brevo($to, $subject, $message);
+            return reminder_send_email_brevo($to, $subject, $message, $htmlMessage);
         }
 
         if ($mode === 'smtp') {
@@ -433,11 +439,18 @@ if (!function_exists('reminder_send_email')) {
                 error_log('REMINDER_EMAIL(smtp): ' . smtp_missing_message());
                 return false;
             }
-            return reminder_send_email_smtp($to, $subject, $message, $from, $fromName);
+            return reminder_send_email_smtp($to, $subject, $message, $from, $fromName, $htmlMessage);
         }
 
         if ($mode === 'mail') {
             $headers = "MIME-Version: 1.0\r\n";
+            if ($htmlMessage !== null && trim((string)$htmlMessage) !== '') {
+                $boundary = 'b_' . bin2hex(random_bytes(8));
+                $headers .= 'Content-Type: multipart/alternative; boundary="' . $boundary . "\"\r\n";
+                $headers .= 'From: ' . reminder_format_mailbox($fromName, $from) . "\r\n";
+                $body = reminder_email_multipart_body($message, $htmlMessage, $boundary);
+                return @mail($to, $subject, $body, $headers);
+            }
             $headers .= "Content-type:text/plain;charset=UTF-8\r\n";
             $headers .= 'From: ' . reminder_format_mailbox($fromName, $from) . "\r\n";
             return @mail($to, $subject, $message, $headers);
@@ -460,8 +473,30 @@ if (!function_exists('reminder_format_mailbox')) {
     }
 }
 
+if (!function_exists('reminder_email_multipart_body')) {
+    function reminder_email_multipart_body($textMessage, $htmlMessage, $boundary)
+    {
+        $textMessage = str_replace(["\r\n", "\r"], "\n", (string)$textMessage);
+        $htmlMessage = str_replace(["\r\n", "\r"], "\n", (string)$htmlMessage);
+        $textMessage = str_replace("\n.", "\n..", $textMessage);
+        $htmlMessage = str_replace("\n.", "\n..", $htmlMessage);
+
+        $body = '--' . $boundary . "\r\n";
+        $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $body .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $body .= $textMessage . "\r\n\r\n";
+        $body .= '--' . $boundary . "\r\n";
+        $body .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $body .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $body .= $htmlMessage . "\r\n\r\n";
+        $body .= '--' . $boundary . '--';
+
+        return $body;
+    }
+}
+
 if (!function_exists('reminder_send_email_smtp')) {
-    function reminder_send_email_smtp($toEmail, $subject, $message, $fromEmail, $fromName)
+    function reminder_send_email_smtp($toEmail, $subject, $message, $fromEmail, $fromName, $htmlMessage = null)
     {
         if (!function_exists('env')) {
             return false;
@@ -534,8 +569,14 @@ if (!function_exists('reminder_send_email_smtp')) {
         $headers .= 'To: <' . $toEmail . ">\r\n";
         $headers .= 'Subject: ' . $subject . "\r\n";
         $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $body = $headers . "\r\n" . str_replace("\n.", "\n..", $message);
+        if ($htmlMessage !== null && trim((string)$htmlMessage) !== '') {
+            $boundary = 'b_' . bin2hex(random_bytes(8));
+            $headers .= 'Content-Type: multipart/alternative; boundary="' . $boundary . "\"\r\n";
+            $body = $headers . "\r\n" . reminder_email_multipart_body($message, $htmlMessage, $boundary);
+        } else {
+            $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+            $body = $headers . "\r\n" . str_replace("\n.", "\n..", $message);
+        }
         $write($body . "\r\n.");
         $sent = $read();
         $write('QUIT');

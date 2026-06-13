@@ -5,6 +5,7 @@ include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/env.php';
 include '../../../config/reminders.php';
+include '../../../config/email_templates.php';
 
 security_start_session();
 
@@ -138,9 +139,11 @@ if ($emailMode === 'smtp' && !smtp_is_configured() && !$isDev) {
     }
 }
 
-$subject = 'Password Reset Request - Azucena Dental Clinic';
-$message = "You requested a password reset.\n\nOTP: {$otp}\n\nThis OTP expires in 15 minutes.";
-$sent = reminder_send_email($email, $subject, $message);
+$expiresMinutes = 15;
+$subject = 'Password Reset - ' . email_clinic_name();
+$message = email_password_reset_otp_text($otp, $expiresMinutes);
+$htmlMessage = email_password_reset_otp_html($otp, $expiresMinutes);
+$sent = reminder_send_email($email, $subject, $message, $htmlMessage);
 
 // If Brevo API fails (common on free hosts), try SMTP when credentials exist.
 if (!$sent && $emailMode === 'brevo' && function_exists('reminder_send_email_smtp')) {
@@ -150,7 +153,7 @@ if (!$sent && $emailMode === 'brevo' && function_exists('reminder_send_email_smt
     if ($smtpHost !== '' && $smtpUser !== '' && $smtpPass !== '') {
         $from = trim((string)env('BREVO_EMAIL_FROM', env('SMTP_FROM_EMAIL', '')));
         $fromName = trim((string)env('BREVO_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")));
-        $sent = reminder_send_email_smtp($email, $subject, $message, $from, $fromName);
+        $sent = reminder_send_email_smtp($email, $subject, $message, $from, $fromName, $htmlMessage);
     }
 }
 
