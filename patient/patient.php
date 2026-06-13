@@ -42,7 +42,7 @@ switch ($role_key) {
     <meta content="" name="keywords">
 
     <!-- Favicons -->
-    <link href="../assets/img/main_logo.png" rel="icon">
+    <link href="../assets/img/clinic-logo.png" rel="icon">
     <link href="../assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
     <!-- Google Fonts -->
@@ -74,7 +74,7 @@ switch ($role_key) {
     <header id="header" class="header fixed-top d-flex align-items-center">
         <div class="d-flex align-items-center">
             <a href="patient.php?page=dashboard" class="logo d-flex align-items-center">
-                <img src="../assets/img/main_logo.png" alt="">
+                <img src="../assets/img/clinic-logo.png" alt="">
                 <div class="ms-2">
                     <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>

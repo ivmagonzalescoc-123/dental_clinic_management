@@ -407,7 +407,7 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
                 const invoiceHtml = `
             <div class="container mt-4">
                 <div class="text-center mb-4">
-                    <img src="../assets/img/main_logo.png" alt="Clinic Logo" style="max-height: 80px; margin-bottom: 10px;">
+                    <img src="../assets/img/clinic-logo.png" alt="Clinic Logo" style="max-height: 80px; margin-bottom: 10px;">
                     <h4>Azucena's Dental Clinic</h4>
                     <p class="text-muted">Patient Invoice</p>
                 </div>
