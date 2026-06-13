@@ -336,7 +336,6 @@ CREATE TABLE `prescriptions` (
   `dosage` varchar(100) DEFAULT NULL,
   `medicine_brand` varchar(150) DEFAULT NULL,
   `duration` varchar(100) DEFAULT NULL,
-  `selected_treatment_id` int(11) DEFAULT NULL,
   `notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -376,17 +375,6 @@ CREATE TABLE `selected_services` (
   `notes` text DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `service_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-
-
-CREATE TABLE `selected_treatments` (
-  `selected_treatment_id` int(11) NOT NULL,
-  `treatment_id` int(11) NOT NULL,
-  `selected_service_id` int(11) DEFAULT NULL,
-  `status` enum('pending','in_progress','completed','cancelled','declined') DEFAULT 'pending',
-  `notes` text DEFAULT NULL,
-  `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
@@ -7964,8 +7952,7 @@ CREATE TABLE `tooth_images` (
   `image_file` longblob DEFAULT NULL,
   `uploaded_at` datetime DEFAULT current_timestamp(),
   `file_name` varchar(255) DEFAULT NULL,
-  `file_path` varchar(500) DEFAULT NULL,
-  `selected_treatment_id` int(11) DEFAULT NULL
+  `file_path` varchar(500) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
@@ -7975,8 +7962,7 @@ CREATE TABLE `tooth_status` (
   `tooth_selected` int(11) NOT NULL,
   `status_type_id` int(11) DEFAULT NULL,
   `tooth_surface` varchar(50) DEFAULT NULL,
-  `status` enum('healthy','decayed','filled','missing','crowned','root_canal','restored','unknown') DEFAULT 'unknown',
-  `selected_treatment_id` int(11) DEFAULT NULL
+  `status` enum('healthy','decayed','filled','missing','crowned','root_canal','restored','unknown') DEFAULT 'unknown'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
@@ -8005,29 +7991,6 @@ INSERT INTO `tooth_status_type` (`status_type_id`, `label`, `category`, `code`, 
 (12, 'Gold Inlays', 'restoration', 'GI', 'Gold Inlays'),
 (13, 'Missing (Extraction)', 'missing', 'M', 'Missing due to Extraction'),
 (14, 'Unerupted', 'other', 'Un', 'Unerupted');
-
-
-
-CREATE TABLE `treatments` (
-  `treatment_id` int(11) NOT NULL,
-  `treatment_name` varchar(200) NOT NULL,
-  `treatment_type` varchar(100) DEFAULT NULL,
-  `description` text DEFAULT NULL,
-  `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-
-INSERT INTO `treatments` (`treatment_id`, `treatment_name`, `treatment_type`, `description`, `created_at`) VALUES
-(1, 'Scaling and Polishing', 'Cleaning', 'Professional cleaning and polishing of teeth', '2026-01-23 15:54:14'),
-(2, 'Endodontic Therapy', 'Root Canal', 'Treatment of root canal infection', '2026-01-23 15:54:14'),
-(3, 'Crown Preparation', 'Restoration', 'Preparation and placement of dental crown', '2026-01-23 15:54:14'),
-(4, 'Amalgam Filling', 'Filling', 'Traditional silver filling for cavities', '2026-01-23 15:54:14'),
-(5, 'Composite Filling', 'Filling', 'Tooth-colored resin filling', '2026-01-23 15:54:14'),
-(6, 'Simple Extraction', 'Extraction', 'Extraction of visible teeth', '2026-01-23 15:54:14'),
-(7, 'Surgical Extraction', 'Extraction', 'Extraction of impacted or embedded teeth', '2026-01-23 15:54:14'),
-(8, 'Teeth Bleaching', 'Cosmetic', 'Professional whitening treatment', '2026-01-23 15:54:14'),
-(9, 'Bracket Installation', 'Orthodontics', 'Installation of orthodontic brackets', '2026-01-23 15:54:14'),
-(10, 'Provisional Restoration', 'Temporary', 'Temporary restoration while permanent treatment is pending', '2026-01-23 15:54:14');
 
 
 
@@ -8237,8 +8200,7 @@ ALTER TABLE `patient_schedules`
 
 ALTER TABLE `prescriptions`
   ADD PRIMARY KEY (`prescription_id`),
-  ADD KEY `fk_prescriptions_appointment` (`appointment_id`),
-  ADD KEY `fk_prescriptions_treatment` (`selected_treatment_id`);
+  ADD KEY `fk_prescriptions_appointment` (`appointment_id`);
 
 
 ALTER TABLE `role`
@@ -8254,12 +8216,6 @@ ALTER TABLE `selected_services`
   ADD PRIMARY KEY (`selected_service_id`),
   ADD KEY `fk_selected_services_appointment` (`appointment_id`),
   ADD KEY `fk_selected_services_service` (`service_id`);
-
-
-ALTER TABLE `selected_treatments`
-  ADD PRIMARY KEY (`selected_treatment_id`),
-  ADD KEY `fk_selected_treatments_treatment` (`treatment_id`),
-  ADD KEY `fk_selected_treatments_service` (`selected_service_id`);
 
 
 ALTER TABLE `services`
@@ -8292,23 +8248,17 @@ ALTER TABLE `tooth`
 
 
 ALTER TABLE `tooth_images`
-  ADD PRIMARY KEY (`image_id`),
-  ADD KEY `fk_tooth_images_treatment` (`selected_treatment_id`);
+  ADD PRIMARY KEY (`image_id`);
 
 ALTER TABLE `tooth_status`
   ADD PRIMARY KEY (`tooth_status_id`),
   ADD KEY `fk_tooth_status_tooth` (`tooth_selected`),
-  ADD KEY `fk_tooth_status_type` (`status_type_id`),
-  ADD KEY `fk_tooth_status_selected_treatment` (`selected_treatment_id`);
+  ADD KEY `fk_tooth_status_type` (`status_type_id`);
 
 
 ALTER TABLE `tooth_status_type`
   ADD PRIMARY KEY (`status_type_id`),
   ADD UNIQUE KEY `uk_chart_legend_code` (`code`);
-
-
-ALTER TABLE `treatments`
-  ADD PRIMARY KEY (`treatment_id`);
 
 
 ALTER TABLE `users`
@@ -8429,10 +8379,6 @@ ALTER TABLE `selected_services`
   MODIFY `selected_service_id` int(11) NOT NULL AUTO_INCREMENT;
 
 
-ALTER TABLE `selected_treatments`
-  MODIFY `selected_treatment_id` int(11) NOT NULL AUTO_INCREMENT;
-
-
 ALTER TABLE `services`
   MODIFY `service_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
@@ -8466,10 +8412,6 @@ ALTER TABLE `tooth_status`
 
 ALTER TABLE `tooth_status_type`
   MODIFY `status_type_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
-
-ALTER TABLE `treatments`
-  MODIFY `treatment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
-
 
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
@@ -8546,8 +8488,7 @@ ALTER TABLE `patient_schedules`
 
 
 ALTER TABLE `prescriptions`
-  ADD CONSTRAINT `fk_prescriptions_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `fk_prescriptions_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `fk_prescriptions_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL;
 
 
 ALTER TABLE `schedule_reminders`
@@ -8557,11 +8498,6 @@ ALTER TABLE `schedule_reminders`
 ALTER TABLE `selected_services`
   ADD CONSTRAINT `fk_selected_services_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_selected_services_service` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
-
-
-ALTER TABLE `selected_treatments`
-  ADD CONSTRAINT `fk_selected_treatments_service` FOREIGN KEY (`selected_service_id`) REFERENCES `selected_services` (`selected_service_id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_selected_treatments_treatment` FOREIGN KEY (`treatment_id`) REFERENCES `treatments` (`treatment_id`);
 
 
 ALTER TABLE `services`
@@ -8580,11 +8516,7 @@ ALTER TABLE `timeslot_service`
   ADD CONSTRAINT `timeslot_service_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`service_id`);
 
 
-ALTER TABLE `tooth_images`
-  ADD CONSTRAINT `fk_tooth_images_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL;
-
 ALTER TABLE `tooth_status`
-  ADD CONSTRAINT `fk_tooth_status_selected_treatment` FOREIGN KEY (`selected_treatment_id`) REFERENCES `selected_treatments` (`selected_treatment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_tooth_status_tooth` FOREIGN KEY (`tooth_selected`) REFERENCES `tooth` (`tooth_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_tooth_status_type` FOREIGN KEY (`status_type_id`) REFERENCES `tooth_status_type` (`status_type_id`) ON DELETE SET NULL;
 

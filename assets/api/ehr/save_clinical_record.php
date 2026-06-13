@@ -74,12 +74,6 @@ if ($treatment_plan_raw !== '') {
     }
 }
 
-$selected_treatments_raw = isset($_POST['selected_treatments']) ? $_POST['selected_treatments'] : '[]';
-$selected_treatments_decoded = json_decode($selected_treatments_raw, true);
-$selected_treatment_ids = normalize_positive_int_list(
-    is_array($selected_treatments_decoded) ? $selected_treatments_decoded : []
-);
-
 $materials_used = isset($_POST['materials_used']) ? json_decode($_POST['materials_used'], true) : null;
 if (!is_array($materials_used)) {
     $materials_used = null;
@@ -153,18 +147,6 @@ try {
     $service_ids = array_values(array_unique(array_merge($recommended_services, array_values($treatment_service_map))));
 
     $treatment_payload = $treatment_plan;
-    if (!empty($selected_treatment_ids)) {
-        if (is_array($treatment_payload)) {
-            $treatment_payload['_selected_treatment_ids'] = $selected_treatment_ids;
-        } elseif (is_string($treatment_payload) && trim($treatment_payload) !== '') {
-            $treatment_payload = [
-                'notes' => $treatment_payload,
-                '_selected_treatment_ids' => $selected_treatment_ids,
-            ];
-        } else {
-            $treatment_payload = ['_selected_treatment_ids' => $selected_treatment_ids];
-        }
-    }
 
     $json_recommended = !empty($recommended_services) ? json_encode($recommended_services, JSON_UNESCAPED_UNICODE) : null;
     $json_treatment = ($treatment_payload !== null) ? json_encode($treatment_payload, JSON_UNESCAPED_UNICODE) : null;
@@ -280,19 +262,7 @@ try {
     }
 
     // Keep appointment-level service links in selected_services (appointments.service_id is removed).
-    $existingServiceLinkIds = [];
     $existingServiceIds = [];
-    $findLinks = $conn->prepare('SELECT selected_service_id FROM selected_services WHERE appointment_id = ?');
-    if ($findLinks) {
-        $findLinks->bind_param('i', $appointment_id);
-        $findLinks->execute();
-        $linkRes = $findLinks->get_result();
-        while ($linkRes && ($linkRow = $linkRes->fetch_assoc())) {
-            $existingServiceLinkIds[] = (int)$linkRow['selected_service_id'];
-        }
-        $findLinks->close();
-    }
-
     $findExistingServices = $conn->prepare('SELECT service_id FROM selected_services WHERE appointment_id = ?');
     if ($findExistingServices) {
         $findExistingServices->bind_param('i', $appointment_id);
@@ -313,17 +283,6 @@ try {
         $service_ids = normalize_positive_int_list(array_merge($service_ids, array_values($existingServiceIds)));
     }
 
-    if (!empty($existingServiceLinkIds)) {
-        $ph = implode(',', array_fill(0, count($existingServiceLinkIds), '?'));
-        $types = str_repeat('i', count($existingServiceLinkIds));
-        $delTreat = $conn->prepare("DELETE FROM selected_treatments WHERE selected_service_id IN ($ph)");
-        if ($delTreat) {
-            $delTreat->bind_param($types, ...$existingServiceLinkIds);
-            $delTreat->execute();
-            $delTreat->close();
-        }
-    }
-
     $delServices = $conn->prepare('DELETE FROM selected_services WHERE appointment_id = ?');
     if ($delServices) {
         $delServices->bind_param('i', $appointment_id);
@@ -331,7 +290,6 @@ try {
         $delServices->close();
     }
 
-    $selectedServiceLinkIds = [];
     if (!empty($service_ids)) {
         $serviceNote = 'From clinical record';
         $insService = $conn->prepare('INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)');
@@ -342,28 +300,8 @@ try {
                     $insService->close();
                     throw new Exception('Failed to save selected services: ' . $conn->error);
                 }
-                $selectedServiceLinkIds[] = (int)$conn->insert_id;
             }
             $insService->close();
-        }
-    }
-
-    // selected_treatments requires selected_service_id linkage; save when at least one service exists.
-    if (!empty($selected_treatment_ids) && !empty($selectedServiceLinkIds)) {
-        $defaultSelectedServiceId = (int)$selectedServiceLinkIds[0];
-        $insTreatment = $conn->prepare(
-            "INSERT INTO selected_treatments (treatment_id, selected_service_id, status, notes)
-             VALUES (?, ?, 'pending', NULL)"
-        );
-        if ($insTreatment) {
-            foreach ($selected_treatment_ids as $tid) {
-                $insTreatment->bind_param('ii', $tid, $defaultSelectedServiceId);
-                if (!$insTreatment->execute()) {
-                    $insTreatment->close();
-                    throw new Exception('Failed to save selected treatments: ' . $conn->error);
-                }
-            }
-            $insTreatment->close();
         }
     }
 

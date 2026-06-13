@@ -4,14 +4,14 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 if (!function_exists('services_redirect')) {
     function services_redirect($tab = 'services')
     {
-        $safeTab = in_array($tab, ['services', 'timeslot', 'treatments'], true) ? $tab : 'services';
+        $safeTab = in_array($tab, ['services', 'timeslot'], true) ? $tab : 'services';
         header('Location: admin.php?page=services&tab=' . rawurlencode($safeTab));
         exit;
     }
 }
 
 $tab = $_GET['tab'] ?? 'services';
-if (!in_array($tab, ['services', 'timeslot', 'treatments'], true)) {
+if (!in_array($tab, ['services', 'timeslot'], true)) {
     $tab = 'services';
 }
 
@@ -175,101 +175,6 @@ if ($action === 'edit' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     services_redirect('services');
 }
 
-// Handle ADD treatment
-if ($action === 'add_treatment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $treatmentName = trim((string)($_POST['treatment_name'] ?? ''));
-    $treatmentTypeRaw = trim((string)($_POST['treatment_type'] ?? ''));
-    $treatmentDescRaw = trim((string)($_POST['description'] ?? ''));
-    $treatmentType = ($treatmentTypeRaw !== '') ? $treatmentTypeRaw : null;
-    $treatmentDesc = ($treatmentDescRaw !== '') ? $treatmentDescRaw : null;
-
-    if ($treatmentName === '') {
-        $_SESSION['message'] = 'Treatment name is required.';
-        $_SESSION['message_type'] = 'warning';
-    } else {
-        $ins = $conn->prepare('INSERT INTO treatments (treatment_name, treatment_type, description) VALUES (?, ?, ?)');
-        if ($ins) {
-            $ins->bind_param('sss', $treatmentName, $treatmentType, $treatmentDesc);
-            if ($ins->execute()) {
-                $_SESSION['message'] = 'Treatment added successfully.';
-                $_SESSION['message_type'] = 'success';
-            } else {
-                $_SESSION['message'] = 'Error adding treatment: ' . $ins->error;
-                $_SESSION['message_type'] = 'danger';
-            }
-            $ins->close();
-        } else {
-            $_SESSION['message'] = 'Error preparing add treatment query.';
-            $_SESSION['message_type'] = 'danger';
-        }
-    }
-
-    services_redirect('treatments');
-}
-
-// Handle EDIT treatment
-if ($action === 'edit_treatment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $treatmentId = (int)($_POST['treatment_id'] ?? 0);
-    $treatmentName = trim((string)($_POST['treatment_name'] ?? ''));
-    $treatmentTypeRaw = trim((string)($_POST['treatment_type'] ?? ''));
-    $treatmentDescRaw = trim((string)($_POST['description'] ?? ''));
-    $treatmentType = ($treatmentTypeRaw !== '') ? $treatmentTypeRaw : null;
-    $treatmentDesc = ($treatmentDescRaw !== '') ? $treatmentDescRaw : null;
-
-    if ($treatmentId <= 0) {
-        $_SESSION['message'] = 'Invalid treatment.';
-        $_SESSION['message_type'] = 'warning';
-    } elseif ($treatmentName === '') {
-        $_SESSION['message'] = 'Treatment name is required.';
-        $_SESSION['message_type'] = 'warning';
-    } else {
-        $upd = $conn->prepare('UPDATE treatments SET treatment_name = ?, treatment_type = ?, description = ? WHERE treatment_id = ?');
-        if ($upd) {
-            $upd->bind_param('sssi', $treatmentName, $treatmentType, $treatmentDesc, $treatmentId);
-            if ($upd->execute()) {
-                $_SESSION['message'] = 'Treatment updated successfully.';
-                $_SESSION['message_type'] = 'success';
-            } else {
-                $_SESSION['message'] = 'Error updating treatment: ' . $upd->error;
-                $_SESSION['message_type'] = 'danger';
-            }
-            $upd->close();
-        } else {
-            $_SESSION['message'] = 'Error preparing treatment update query.';
-            $_SESSION['message_type'] = 'danger';
-        }
-    }
-
-    services_redirect('treatments');
-}
-
-// Handle DELETE treatment
-if ($action === 'delete_treatment' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $treatmentId = (int)($_POST['treatment_id'] ?? 0);
-    if ($treatmentId <= 0) {
-        $_SESSION['message'] = 'Invalid treatment.';
-        $_SESSION['message_type'] = 'warning';
-    } else {
-        $del = $conn->prepare('DELETE FROM treatments WHERE treatment_id = ?');
-        if ($del) {
-            $del->bind_param('i', $treatmentId);
-            if ($del->execute()) {
-                $_SESSION['message'] = 'Treatment deleted successfully.';
-                $_SESSION['message_type'] = 'success';
-            } else {
-                $_SESSION['message'] = 'Unable to delete treatment. It may be referenced by records.';
-                $_SESSION['message_type'] = 'warning';
-            }
-            $del->close();
-        } else {
-            $_SESSION['message'] = 'Error preparing treatment delete query.';
-            $_SESSION['message_type'] = 'danger';
-        }
-    }
-
-    services_redirect('treatments');
-}
-
 // Handle ADD/UPDATE service time profile
 if ($action === 'save_time' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $serviceId = (int)($_POST['service_id'] ?? 0);
@@ -411,15 +316,7 @@ if ($tsRes) {
     }
 }
 
-$treatments = [];
-$tRes = $conn->query('SELECT treatment_id, treatment_name, treatment_type, description, created_at FROM treatments ORDER BY treatment_name ASC');
-if ($tRes) {
-    while ($tr = $tRes->fetch_assoc()) {
-        $treatments[] = $tr;
-    }
-}
 ?>
-
 <?php if (isset($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
         <?php echo htmlspecialchars($_SESSION['message']); ?>
@@ -434,9 +331,6 @@ if ($tRes) {
     </li>
     <li class="nav-item">
         <a class="nav-link <?php echo $tab === 'timeslot' ? 'active' : ''; ?>" href="admin.php?page=services&tab=timeslot">Service Time</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?php echo $tab === 'treatments' ? 'active' : ''; ?>" href="admin.php?page=services&tab=treatments">Treatments</a>
     </li>
 </ul>
 
@@ -538,50 +432,6 @@ if ($tRes) {
                                         <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                     </form>
                                 <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php else: ?>
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">Treatments</h2>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addTreatmentModal">
-            <i class="bi bi-plus-circle"></i> Add Treatment
-        </button>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover datatable align-middle" data-skip-table-search="1">
-                <thead>
-                    <tr>
-                        <th>Treatment</th>
-                        <th>Type</th>
-                        <th>Description</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($treatments as $tr): ?>
-                        <tr>
-                            <td class="fw-semibold"><?php echo htmlspecialchars($tr['treatment_name']); ?></td>
-                            <td><?php echo htmlspecialchars($tr['treatment_type'] ?? ''); ?></td>
-                            <td style="max-width: 420px;"><span class="text-muted"><?php echo htmlspecialchars($tr['description'] ?? ''); ?></span></td>
-                            <td><?php echo htmlspecialchars($tr['created_at'] ?? ''); ?></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#editTreatmentModal"
-                                        onclick='openEditTreatmentModal(<?php echo htmlspecialchars(json_encode($tr), ENT_QUOTES, "UTF-8"); ?>)'>
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <form method="POST" action="admin.php?page=services&tab=treatments&action=delete_treatment" style="display:inline-block;" data-confirm="Delete this treatment?" data-confirm-title="Delete Treatment" data-confirm-variant="danger" data-confirm-ok="Delete">
-                                    <input type="hidden" name="treatment_id" value="<?php echo (int)$tr['treatment_id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
-                                </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -698,71 +548,6 @@ if ($tRes) {
     </div>
 </div>
 
-<!-- Add Treatment Modal -->
-<div class="modal fade" id="addTreatmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Treatment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="admin.php?page=services&tab=treatments&action=add_treatment">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Treatment Name</label>
-                        <input type="text" name="treatment_name" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Treatment Type</label>
-                        <input type="text" name="treatment_type" class="form-control" placeholder="e.g. Restoration">
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" class="form-control" rows="3" placeholder="Optional"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Treatment Modal -->
-<div class="modal fade" id="editTreatmentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Treatment</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form method="POST" action="admin.php?page=services&tab=treatments&action=edit_treatment">
-                <div class="modal-body">
-                    <input type="hidden" name="treatment_id" id="editTreatmentId">
-                    <div class="mb-3">
-                        <label class="form-label">Treatment Name</label>
-                        <input type="text" name="treatment_name" id="editTreatmentName" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Treatment Type</label>
-                        <input type="text" name="treatment_type" id="editTreatmentType" class="form-control">
-                    </div>
-                    <div class="mb-0">
-                        <label class="form-label">Description</label>
-                        <textarea name="description" id="editTreatmentDescription" class="form-control" rows="3" placeholder="Optional"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script>
     function openEditServiceModal(service) {
         if (!service) return;
@@ -770,14 +555,6 @@ if ($tRes) {
         document.getElementById('editServiceName').value = service.service_name || '';
         document.getElementById('editInitialPrice').value = service.initial_price || 0;
         document.getElementById('editDescription').value = service.description || '';
-    }
-
-    function openEditTreatmentModal(treatment) {
-        if (!treatment) return;
-        document.getElementById('editTreatmentId').value = treatment.treatment_id || '';
-        document.getElementById('editTreatmentName').value = treatment.treatment_name || '';
-        document.getElementById('editTreatmentType').value = treatment.treatment_type || '';
-        document.getElementById('editTreatmentDescription').value = treatment.description || '';
     }
 
     function openServiceTimeModal(row) {

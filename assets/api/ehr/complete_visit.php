@@ -20,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $appointmentId = (int)($_POST['appointment_id'] ?? 0);
 $serviceId = (int)($_POST['service_id'] ?? 0);
 $toothData = isset($_POST['tooth_data']) ? (array)$_POST['tooth_data'] : [];
-$treatmentIds = isset($_POST['treatment_ids']) ? (array)$_POST['treatment_ids'] : [];
 $notes = $_POST['notes'] ?? '';
 $followUpDate = $_POST['follow_up_date'] ?? null;
 // Optional billing extras

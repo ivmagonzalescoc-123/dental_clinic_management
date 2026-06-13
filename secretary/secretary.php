@@ -215,6 +215,12 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="secretary.php?page=services">
+                    <i class="bi bi-clipboard2-pulse"></i>
+                    <span>Services</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages">
                     <i class="bi bi-envelope"></i>
                     <span class="ms-2">Contact Us</span>
@@ -262,6 +268,9 @@ switch ($role_key) {
                                         break;
                                     case "billing":
                                         include "secretary_modules/billing.php";
+                                        break;
+                                    case "services":
+                                        include "secretary_modules/services.php";
                                         break;
                                     case "contact_messages":
                                         include "secretary_modules/contact_messages.php";
@@ -357,7 +366,7 @@ switch ($role_key) {
                     appointments: ['booking', 'calendar', 'schedule', 'follow-up', 'followup'],
                     patients: ['patient list', 'records', 'profiles'],
                     doctors: ['doctor list', 'dentist', 'providers'],
-                    services: ['treatments', 'procedures', 'pricing'],
+                    services: ['procedures', 'pricing', 'clinic services'],
                     billing: ['payments', 'transactions', 'invoice'],
                     contact_messages: ['contact', 'inquiry', 'message', 'email'],
                     reports: ['analytics', 'charts', 'insights'],

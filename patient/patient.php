@@ -285,7 +285,7 @@ switch ($role_key) {
                 const pageKeywordMap = {
                     dashboard: ['home', 'overview', 'summary'],
                     appointments: ['booking', 'schedule', 'calendar'],
-                    services: ['treatments', 'procedures', 'pricing'],
+                    services: ['procedures', 'pricing', 'clinic services'],
                     transactions: ['billing', 'payments', 'history'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']

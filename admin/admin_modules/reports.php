@@ -377,7 +377,7 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
             <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-success clinic-report-no-print">
                 <i class="bi bi-download"></i> Export BIR CSV
             </a>
-            <button type="button" class="btn btn-sm btn-outline-secondary clinic-report-no-print" onclick="window.print()">
+            <button type="button" class="btn btn-sm btn-secondary clinic-report-no-print clinic-report-print-btn" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print
             </button>
         </div>
@@ -475,35 +475,63 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
 
     <div class="row g-3 mb-3">
         <div class="col-lg-4">
-            <div class="card dental-surface-card h-100">
+            <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title mb-2">Completed Visits per Day</h5>
-                    <div id="reportDailyChart" class="clinic-simple-chart"></div>
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Completed Visits per Day</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge completed visits chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportDailyChart" class="clinic-simple-chart" data-chart-title="Completed Visits per Day"></div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card dental-surface-card h-100">
+            <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title mb-2">Appointment Outcomes</h5>
-                    <div id="reportStatusChart" class="clinic-simple-chart"></div>
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Appointment Outcomes</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportStatusChart" aria-label="Enlarge appointment outcomes chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportStatusChart" class="clinic-simple-chart" data-chart-title="Appointment Outcomes"></div>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-lg-4">
-            <div class="card dental-surface-card h-100">
+            <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title mb-2">Top Services Booked</h5>
-                    <div id="reportServicesChart" class="clinic-simple-chart"></div>
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Top Services Booked</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportServicesChart" aria-label="Enlarge top services chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportServicesChart" class="clinic-simple-chart" data-chart-title="Top Services Booked"></div>
+                    </div>
                 </div>
             </div>
         </div>
         <?php if ($billingCount > 0): ?>
         <div class="col-lg-6">
-                <div class="card dental-surface-card h-100">
-                    <div class="card-body">
-                    <h5 class="card-title mb-2">Collections vs Outstanding</h5>
-                    <div id="reportCollectionsChart" class="clinic-simple-chart"></div>
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Collections vs Outstanding</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportCollectionsChart" aria-label="Enlarge collections chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportCollectionsChart" class="clinic-simple-chart" data-chart-title="Collections vs Outstanding"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -703,6 +731,21 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
     </div>
 </div>
 
+<div class="modal fade" id="adminChartExpandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content dental-chart-modal">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adminChartExpandTitle">Chart</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="adminChartExpandHost" class="dental-chart-expand-host"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="../assets/js/admin-charts.js?v=20260614-admin-charts"></script>
 <script>
 document.getElementById('reportRangeSelect')?.addEventListener('change', function () {
     document.querySelectorAll('.report-custom-date').forEach(function (el) {
@@ -720,76 +763,50 @@ document.getElementById('reportRangeSelect')?.addEventListener('change', functio
     const totalCollected = <?php echo json_encode(round($totalCollected, 2)); ?>;
     const totalOutstanding = <?php echo json_encode(round($totalOutstanding, 2)); ?>;
 
-    function renderNoData(id, label) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = '<div class="text-muted small text-center py-5">No ' + label + ' for this period.</div>';
-    }
-
     function renderCharts() {
-        if (typeof ApexCharts === 'undefined') return;
+        if (typeof AdminCharts === 'undefined' || typeof ApexCharts === 'undefined') return;
 
-        if (dailyLabels.length && dailyValues.some(v => v > 0)) {
-            new ApexCharts(document.getElementById('reportDailyChart'), {
-                chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
-                series: [{ name: 'Completed visits', data: dailyValues }],
-                xaxis: { categories: dailyLabels, labels: { rotate: -45, style: { fontSize: '11px' } } },
-                plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
-                dataLabels: { enabled: false },
-                colors: ['#1173c1'],
-                grid: { strokeDashArray: 4 },
-                yaxis: { min: 0, forceNiceScale: true, labels: { formatter: v => Math.round(v) } }
-            }).render();
+        if (dailyLabels.length && dailyValues.some(function (v) { return v > 0; })) {
+            AdminCharts.mount(
+                'reportDailyChart',
+                AdminCharts.buildVerticalBarOptions(dailyLabels, dailyValues, 'Completed visits', AdminCharts.palette.teal),
+                'Completed Visits per Day'
+            );
         } else {
-            renderNoData('reportDailyChart', 'completed visits');
+            AdminCharts.renderNoData('reportDailyChart', 'completed visits');
         }
 
         if (statusLabels.length) {
-            new ApexCharts(document.getElementById('reportStatusChart'), {
-                chart: { type: 'donut', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
-                series: statusValues,
-                labels: statusLabels,
-                legend: { position: 'bottom', fontSize: '12px' },
-                dataLabels: { enabled: true, formatter: (val) => Math.round(val) + '%' },
-                colors: ['#1173c1', '#3d8bfd', '#20c997', '#ffc107', '#dc3545', '#6c757d'],
-                stroke: { width: 1 }
-            }).render();
+            AdminCharts.mount(
+                'reportStatusChart',
+                AdminCharts.buildDonutOptions(statusLabels, statusValues),
+                'Appointment Outcomes'
+            );
         } else {
-            renderNoData('reportStatusChart', 'appointment outcomes');
+            AdminCharts.renderNoData('reportStatusChart', 'appointment outcomes');
         }
 
         if (serviceLabels.length) {
-            new ApexCharts(document.getElementById('reportServicesChart'), {
-                chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
-                series: [{ name: 'Bookings', data: serviceValues }],
-                xaxis: { categories: serviceLabels, labels: { style: { fontSize: '11px' } } },
-                plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '60%' } },
-                dataLabels: { enabled: true, style: { fontSize: '11px' } },
-                colors: ['#3d8bfd'],
-                grid: { strokeDashArray: 4 }
-            }).render();
+            AdminCharts.mount(
+                'reportServicesChart',
+                AdminCharts.buildHorizontalBarOptions(serviceLabels, serviceValues, 'Bookings'),
+                'Top Services Booked'
+            );
         } else {
-            renderNoData('reportServicesChart', 'service bookings');
+            AdminCharts.renderNoData('reportServicesChart', 'service bookings');
         }
 
-        const collectionsEl = document.getElementById('reportCollectionsChart');
-        if (collectionsEl && (totalCollected > 0 || totalOutstanding > 0)) {
-            new ApexCharts(collectionsEl, {
-                chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit' },
-                series: [{ name: 'Amount (PHP)', data: [totalCollected, totalOutstanding] }],
-                xaxis: { categories: ['Collected', 'Outstanding'] },
-                plotOptions: { bar: { borderRadius: 6, columnWidth: '45%', distributed: true } },
-                dataLabels: {
-                    enabled: true,
-                    formatter: (val) => '₱' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                },
-                colors: ['#198754', '#dc3545'],
-                legend: { show: false },
-                yaxis: { labels: { formatter: (val) => '₱' + Number(val).toLocaleString() } }
-            }).render();
-        } else if (collectionsEl) {
-            renderNoData('reportCollectionsChart', 'billing amounts');
+        if (document.getElementById('reportCollectionsChart') && (totalCollected > 0 || totalOutstanding > 0)) {
+            AdminCharts.mount(
+                'reportCollectionsChart',
+                AdminCharts.buildMoneyBarOptions(totalCollected, totalOutstanding),
+                'Collections vs Outstanding'
+            );
+        } else if (document.getElementById('reportCollectionsChart')) {
+            AdminCharts.renderNoData('reportCollectionsChart', 'billing amounts');
         }
+
+        AdminCharts.bindExpandButtons();
     }
 
     if (document.readyState === 'loading') {

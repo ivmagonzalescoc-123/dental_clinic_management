@@ -322,15 +322,6 @@ if ($stmt) {
     }
 }
 
-// Fetch treatments
-$treatments = [];
-$stmt = $conn->query('SELECT treatment_id, treatment_name FROM treatments ORDER BY treatment_name');
-if ($stmt) {
-    while ($row = $stmt->fetch_assoc()) {
-        $treatments[] = $row;
-    }
-}
-
 // Fetch tooth data
 $teeth = [];
 $stmt = $conn->query('SELECT tooth_id, tooth_number, upper_lower FROM tooth ORDER BY tooth_number');

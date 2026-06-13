@@ -73,19 +73,7 @@ if ($sstmt) {
     $sstmt->close();
 }
 
-// Fetch treatment catalog for lookup selection
-$treatments = [];
-$tstmt = $conn->prepare('SELECT treatment_id, treatment_name, treatment_type FROM treatments ORDER BY treatment_name ASC');
-if ($tstmt) {
-    $tstmt->execute();
-    $tres = $tstmt->get_result();
-    while ($tr = $tres->fetch_assoc()) {
-        $treatments[] = $tr;
-    }
-    $tstmt->close();
-}
 ?>
-
 <div class="card border-0 shadow-none">
     <input type="hidden" name="appointment_id" id="appointment_id_hidden" value="<?php echo (int) $appointment_id; ?>">
     <input type="hidden" name="schedule_id" id="schedule_id_hidden"

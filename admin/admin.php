@@ -89,7 +89,7 @@ switch ($role_key) {
     <link href="../assets/css/main.css?v=20260614-pw-no-lock" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260614-notify" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260614-dashboard3" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260614-admin-charts2" rel="stylesheet">
 </head>
 
 <body class="admin-portal">
@@ -306,7 +306,7 @@ switch ($role_key) {
                     doctor_schedule_admin: ['schedule', 'calendar', 'availability'],
                     doctor_leaves: ['leave', 'vacation', 'absence'],
                     doctor_deployment: ['deployment', 'assignment'],
-                    services: ['treatments', 'procedures', 'pricing'],
+                    services: ['procedures', 'pricing', 'clinic services'],
                     system_logs: ['logs', 'audit', 'history'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']

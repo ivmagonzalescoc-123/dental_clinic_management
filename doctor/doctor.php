@@ -347,7 +347,7 @@ switch ($role_key) {
                     dashboard: ['home', 'overview', 'summary'],
                     appointments: ['patients', 'booking', 'calendar'],
                     schedule: ['availability', 'time slots'],
-                    services: ['treatments', 'procedures'],
+                    services: ['procedures', 'clinic services'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']
                 };
