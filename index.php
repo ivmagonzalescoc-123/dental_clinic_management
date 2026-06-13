@@ -255,7 +255,7 @@ $stats = [
                 <img
                     src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                     alt="Azucena's Dental Clinic logo"
-                    class="h-9 w-9 rounded-full object-cover ring-2 ring-sky-100 sm:h-10 sm:w-10"
+                    class="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
                     width="40"
                     height="40"
                 >
@@ -587,7 +587,7 @@ $stats = [
                     <img
                         src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                         alt="Azucena's Dental Clinic logo"
-                        class="h-10 w-10 rounded-full object-cover ring-2 ring-sky-100"
+                        class="h-10 w-10 rounded-full object-cover"
                         width="40"
                         height="40"
                     >
@@ -643,7 +643,7 @@ $stats = [
         <section id="authPanelLogin" class="auth-panel hidden max-w-md" aria-label="Login">
             <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover ring-2 ring-sky-100" width="44" height="44">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Welcome back</h2>
                         <p class="text-xs text-slate-500">Sign in to your account</p>
@@ -712,7 +712,7 @@ $stats = [
         <section id="authPanelRegister" class="auth-panel hidden max-w-2xl" aria-label="Create account">
             <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover ring-2 ring-sky-100" width="44" height="44">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Create Account</h2>
                         <p class="text-xs text-slate-500">Register as a patient of Azucena's Dental Clinic</p>
@@ -826,7 +826,7 @@ $stats = [
         <section id="authPanelForgot" class="auth-panel hidden max-w-md" aria-label="Password recovery">
             <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover ring-2 ring-sky-100" width="44" height="44">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">Password Recovery</h2>
                         <p class="text-xs text-slate-500">Enter your email to receive an OTP, then set a new password</p>
