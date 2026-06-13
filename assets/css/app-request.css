@@ -1,0 +1,57 @@
+.app-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: app-spinner-spin 0.65s linear infinite;
+    vertical-align: -0.125em;
+}
+
+@keyframes app-spinner-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.btn.is-action-loading,
+button.is-action-loading,
+input[type="submit"].is-action-loading,
+input[type="button"].is-action-loading,
+a.btn.is-action-loading {
+    pointer-events: none;
+    opacity: 0.88;
+}
+
+.btn.is-action-loading .app-spinner,
+button.is-action-loading .app-spinner,
+input.is-action-loading .app-spinner {
+    vertical-align: -0.125em;
+}
+
+.app-page-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.42);
+    backdrop-filter: blur(1px);
+    pointer-events: all;
+}
+
+.app-page-loading__panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    color: #1f2937;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+    font-size: 0.9rem;
+    font-weight: 600;
+}

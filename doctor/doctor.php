@@ -109,7 +109,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260607-header-search" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260613-dropdown" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260610-header" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260606-dashboard" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
@@ -146,39 +146,10 @@ switch ($role_key) {
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
                 ?>
 
-                <li class="nav-item dropdown pe-3">
-                    <a class="nav-link nav-profile d-flex align-items-center pe-0" href="#" data-bs-toggle="dropdown">
-                        <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
-                        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($header_display_name); ?></span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
-
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="doctor.php?page=profile">
-
-                                <span>My Profile</span>
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="doctor.php?page=settings">
-
-                                <span>Account Settings</span>
-                            </a>
-                        </li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="#" onclick="logout()">
-
-                                <span>Log Out</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                <?php
+                $profile_portal_base = 'doctor.php';
+                include dirname(__DIR__) . '/includes/profile_dropdown.php';
+                ?>
             </ul>
         </nav>
         </div>
@@ -335,10 +306,12 @@ switch ($role_key) {
 
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
-    <script src="../assets/js/app-toast.js?v=20260608"></script>
+    <script src="../assets/js/app-toast.js?v=20260613"></script>
+    <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260608"></script>
-    <script src="../assets/js/main.js?v=20260611-toast"></script>
+    <script src="../assets/js/main.js?v=20260613-dropdown"></script>
+    <script src="../assets/js/portal-dropdown.js?v=20260613"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>

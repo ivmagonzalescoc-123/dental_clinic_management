@@ -919,7 +919,7 @@
     const markAllBtn = document.getElementById('navMarkAllRead');
 
     if (toggle) {
-      toggle.addEventListener('show.bs.dropdown', function () {
+      toggle.addEventListener('portaldropdown:open', function () {
         if (typeof window.markAllNotificationsRead === 'function') {
           window.markAllNotificationsRead();
         }

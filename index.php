@@ -23,7 +23,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 
 $year = date('Y');
 $csrf_token = security_generate_csrf_token();
-$clinicLogo = 'assets/img/clinic-logo.jpg';
+$clinicLogo = 'assets/img/clinic-logo.png';
 $pageBackgroundImage = 'assets/img/landing-background.jpg';
 
 $pageBgSrc = $pageBackgroundImage;
@@ -87,7 +87,8 @@ $stats = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app-toast.css">
+    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260613">
+    <link rel="stylesheet" href="assets/css/app-request.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -812,7 +813,7 @@ $stats = [
             <form id="reset-form" class="space-y-4 px-6 py-6 sm:px-8">
                 <input type="email" id="reset-email" required placeholder="Email Address"
                     class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                <button type="button" id="send-otp" class="w-full rounded-xl border border-sky-200 bg-sky-50 py-3 text-sm font-semibold text-sky-600 hover:bg-sky-100 transition-colors">
+                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-xl border border-sky-200 bg-sky-50 py-3 text-sm font-semibold text-sky-600 hover:bg-sky-100 transition-colors">
                     Send OTP
                 </button>
 
@@ -846,7 +847,8 @@ $stats = [
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
     </button>
 
-    <script src="assets/js/app-toast.js?v=20260608"></script>
+    <script src="assets/js/app-toast.js?v=20260613"></script>
+    <script src="assets/js/app-request.js?v=20260612"></script>
     <script>
         const contactCsrfToken = <?php echo json_encode($csrf_token); ?>;
         const csrfToken = contactCsrfToken;
@@ -1289,17 +1291,14 @@ $stats = [
 
         // ----- Contact form -----
         function setContactAlert(message, type) {
+            const tone = type === 'error' ? 'danger' : (type === 'success' ? 'success' : (type || 'info'));
+            if (typeof window.showAppToast === 'function') {
+                window.showAppToast(String(message || ''), tone);
+                return;
+            }
             const alertEl = document.getElementById('contact-form-alert');
             if (!alertEl) return;
-
-            alertEl.classList.remove('hidden', 'border-red-200', 'bg-red-50', 'text-red-700', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
-
-            if (type === 'success') {
-                alertEl.classList.add('border-emerald-200', 'bg-emerald-50', 'text-emerald-700');
-            } else {
-                alertEl.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
-            }
-
+            alertEl.classList.remove('hidden');
             alertEl.textContent = message;
         }
 
@@ -1308,7 +1307,6 @@ $stats = [
             contactForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
 
-                const submitBtn = document.getElementById('contact-form-submit');
                 const name = document.getElementById('contact-name').value.trim();
                 const email = document.getElementById('contact-email').value.trim();
                 const phone = document.getElementById('contact-phone').value.trim();
@@ -1323,11 +1321,6 @@ $stats = [
                 if (phoneDigits.length < 7 || phoneDigits.length > 15) {
                     setContactAlert('Please enter a valid phone number.', 'error');
                     return;
-                }
-
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Sending...';
                 }
 
                 try {
@@ -1353,11 +1346,6 @@ $stats = [
                     setContactAlert(data.message || 'Thank you! Your message has been sent.', 'success');
                 } catch (error) {
                     setContactAlert('An error occurred while sending your message. Please try again.', 'error');
-                } finally {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Send Message';
-                    }
                 }
             });
         }

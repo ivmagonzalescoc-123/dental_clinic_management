@@ -110,9 +110,13 @@ if (!function_exists('billing_ensure_tables')) {
             amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
             status ENUM('pending','paid') NOT NULL DEFAULT 'pending',
             paid_at DATETIME NULL,
+            due_soon_reminder_sent_at DATETIME NULL,
+            overdue_reminder_sent_at DATETIME NULL,
             KEY idx_bit_installment (installment_id),
             KEY idx_bit_due (due_date)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        billing_migrate_installment_term_reminders($conn);
 
         $conn->query("CREATE TABLE IF NOT EXISTS payments (
             payment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -548,6 +552,130 @@ if (!function_exists('billing_create_installment_plan')) {
         $termIns->close();
 
         return $installmentId;
+    }
+}
+
+if (!function_exists('billing_migrate_installment_term_reminders')) {
+    function billing_migrate_installment_term_reminders($conn)
+    {
+        if (!billing_table_exists($conn, 'billing_installment_terms')) {
+            return;
+        }
+
+        $cols = [];
+        $r = $conn->query('SHOW COLUMNS FROM billing_installment_terms');
+        if ($r) {
+            while ($row = $r->fetch_assoc()) {
+                $cols[$row['Field']] = true;
+            }
+        }
+
+        if (!isset($cols['due_soon_reminder_sent_at'])) {
+            @$conn->query('ALTER TABLE billing_installment_terms ADD COLUMN due_soon_reminder_sent_at DATETIME NULL AFTER paid_at');
+        }
+        if (!isset($cols['overdue_reminder_sent_at'])) {
+            @$conn->query('ALTER TABLE billing_installment_terms ADD COLUMN overdue_reminder_sent_at DATETIME NULL AFTER due_soon_reminder_sent_at');
+        }
+    }
+}
+
+if (!function_exists('billing_send_installment_reminders')) {
+    /**
+     * Email reminders for installment terms:
+     * - due tomorrow (day before due date)
+     * - overdue (day after due date)
+     */
+    function billing_send_installment_reminders($conn): int
+    {
+        billing_ensure_tables($conn);
+
+        if (!function_exists('reminder_send_email')) {
+            include_once __DIR__ . '/reminders.php';
+        }
+
+        $sentCount = 0;
+        $queries = [
+            [
+                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, bit.amount,
+                                 p.email, p.first_name, p.last_name, b.billing_id
+                          FROM billing_installment_terms bit
+                          INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
+                          INNER JOIN billing b ON b.billing_id = bi.billing_id
+                          INNER JOIN patients p ON p.patient_id = b.patient_id
+                          WHERE bit.status = 'pending'
+                            AND bit.term_number > 0
+                            AND bit.due_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+                            AND bit.due_soon_reminder_sent_at IS NULL",
+                'template' => 'due_soon',
+                'mark_column' => 'due_soon_reminder_sent_at',
+            ],
+            [
+                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, bit.amount,
+                                 p.email, p.first_name, p.last_name, b.billing_id
+                          FROM billing_installment_terms bit
+                          INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
+                          INNER JOIN billing b ON b.billing_id = bi.billing_id
+                          INNER JOIN patients p ON p.patient_id = b.patient_id
+                          WHERE bit.status = 'pending'
+                            AND bit.term_number > 0
+                            AND bit.due_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                            AND bit.overdue_reminder_sent_at IS NULL",
+                'template' => 'overdue',
+                'mark_column' => 'overdue_reminder_sent_at',
+            ],
+        ];
+
+        foreach ($queries as $job) {
+            $res = $conn->query($job['sql']);
+            if (!$res) {
+                error_log('billing_send_installment_reminders query failed: ' . $conn->error);
+                continue;
+            }
+
+            while ($row = $res->fetch_assoc()) {
+                $email = trim((string)($row['email'] ?? ''));
+                if ($email === '') {
+                    continue;
+                }
+
+                $patientName = trim((string)($row['first_name'] ?? '') . ' ' . (string)($row['last_name'] ?? ''));
+                if ($patientName === '') {
+                    $patientName = 'Patient';
+                }
+
+                $dueDate = (string)($row['due_date'] ?? '');
+                $amount = number_format((float)($row['amount'] ?? 0), 2);
+                $termNo = (int)($row['term_number'] ?? 0);
+                $billingId = (int)($row['billing_id'] ?? 0);
+
+                if ($job['template'] === 'due_soon') {
+                    $subject = 'Installment payment due tomorrow';
+                    $message = "Hello {$patientName},\n\nThis is a reminder that installment term #{$termNo} for billing #{$billingId} is due tomorrow ({$dueDate}). Amount due: PHP {$amount}.\n\nPlease contact the clinic if you need assistance.\n\nAzucena's Dental Clinic";
+                } else {
+                    $subject = 'Installment payment overdue';
+                    $message = "Hello {$patientName},\n\nInstallment term #{$termNo} for billing #{$billingId} was due on {$dueDate} and is now overdue. Amount due: PHP {$amount}.\n\nPlease contact the clinic to settle your balance.\n\nAzucena's Dental Clinic";
+                }
+
+                if (!reminder_send_email($email, $subject, $message)) {
+                    error_log('billing_send_installment_reminders: email failed for term_id=' . (int)$row['term_id']);
+                    continue;
+                }
+
+                $termId = (int)$row['term_id'];
+                $markCol = $job['mark_column'];
+                $markSql = "UPDATE billing_installment_terms SET {$markCol} = NOW() WHERE term_id = ? LIMIT 1";
+                $markStmt = $conn->prepare($markSql);
+                if ($markStmt) {
+                    $markStmt->bind_param('i', $termId);
+                    $markStmt->execute();
+                    $markStmt->close();
+                }
+
+                $sentCount++;
+            }
+        }
+
+        return $sentCount;
     }
 }
 

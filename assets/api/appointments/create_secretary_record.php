@@ -367,6 +367,13 @@ try {
     $apptUpd->execute();
     $apptUpd->close();
 
+    $schedComplete = $conn->prepare("UPDATE patient_schedules SET status = 'completed' WHERE appointment_id = ? AND status IN ('scheduled','rescheduled')");
+    if ($schedComplete) {
+        $schedComplete->bind_param('i', $appointmentId);
+        $schedComplete->execute();
+        $schedComplete->close();
+    }
+
     $action = 'appointment.secretary_records_created';
     $details = 'Secretary submitted clinical record. Record ID: ' . $clinicalRecordId . ', Billing ID: ' . $billingId . ', Total: ' . $grandTotal;
     $ipAddr = $_SERVER['REMOTE_ADDR'] ?? '';

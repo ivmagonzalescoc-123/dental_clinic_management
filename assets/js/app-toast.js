@@ -26,19 +26,39 @@
     return 'info';
   }
 
+  function getToastIcon(type) {
+    switch (normalizeToastType(type)) {
+      case 'success':
+        return '\u2713';
+      case 'danger':
+        return '\u2715';
+      case 'warning':
+        return '!';
+      default:
+        return 'i';
+    }
+  }
+
   function showAppToast(message, type, options) {
     var text = String(message || '').trim();
     if (!text) return;
 
     var host = ensureAppToastHost();
+    var toastType = normalizeToastType(type);
     var toast = document.createElement('div');
-    toast.className = 'app-toast app-toast-' + normalizeToastType(type);
+    toast.className = 'app-toast app-toast-' + toastType;
     toast.setAttribute('role', 'status');
+
+    var icon = document.createElement('span');
+    icon.className = 'app-toast-icon app-toast-icon--' + toastType;
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = getToastIcon(toastType);
 
     var body = document.createElement('div');
     body.className = 'app-toast-body';
     body.textContent = text;
 
+    toast.appendChild(icon);
     toast.appendChild(body);
     host.appendChild(toast);
 
@@ -60,6 +80,18 @@
     setTimeout(removeToast, Number(opts.delay || 3200));
   }
 
+  function portalNotify(message, type, options) {
+    if (typeof showAppToast === 'function') {
+      showAppToast(message, type, options);
+      return true;
+    }
+    if (typeof window.alert === 'function') {
+      window.alert(String(message || ''));
+    }
+    return false;
+  }
+
   window.showAppToast = showAppToast;
   window.showToast = showAppToast;
+  window.portalNotify = portalNotify;
 })();

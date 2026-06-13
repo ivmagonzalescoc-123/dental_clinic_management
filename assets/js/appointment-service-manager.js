@@ -506,14 +506,11 @@ class AppointmentServiceManager {
                         serviceIds.push(parseInt(checkbox.value));
                     }
                 });
-                
-                saveBtn.disabled = true;
-                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
-                
-                const success = await this.updateServices(serviceIds);
-                
-                saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="bi bi-save"></i> Save Service Changes';
+
+                if (typeof window.clearPendingAction === 'function') window.clearPendingAction();
+                const success = typeof window.runWithActionLoading === 'function'
+                    ? await window.runWithActionLoading(saveBtn, () => this.updateServices(serviceIds))
+                    : await this.updateServices(serviceIds);
                 
                 if (success) {
                     this.renderDoctorServiceModifier(containerId);

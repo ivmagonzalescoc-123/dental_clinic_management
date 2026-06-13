@@ -93,8 +93,8 @@ if ($res) {
 					<div class="row">
 						<div class="col-md-3 mb-3">
 							<label class="form-label">Password</label>
-							<input type="text" class="form-control compact-control" value="Auto-generated if email is provided" readonly>
-							<small class="text-muted">System generates a secure default password when email is provided.</small>
+							<input type="text" class="form-control compact-control" value="Random password emailed to patient" readonly>
+							<small class="text-muted">A secure random password is generated and sent to the patient's email.</small>
 						</div>
 						<div class="col-md-2 mb-3">
 							<label class="form-label">Gender</label>
@@ -116,8 +116,9 @@ if ($res) {
 					</div>
 					<div class="row">
 						<div class="col-md-12 mb-3">
-							<label class="form-label">Email</label>
-							<input type="email" name="email" class="form-control">
+							<label class="form-label">Email *</label>
+							<input type="email" name="email" class="form-control" required>
+							<small class="text-muted">Required. Login credentials will be sent to this address.</small>
 						</div>
 					</div>
 					<div class="mb-3">
@@ -267,7 +268,17 @@ if ($res) {
 
 <script>
 function notifySecretaryPatients(message, type) {
-	window.showToast(String(message || ''), type || 'info');
+	if (typeof window.portalNotify === 'function') {
+		window.portalNotify(String(message || ''), type || 'info');
+		return;
+	}
+	if (typeof window.showAppToast === 'function') {
+		window.showAppToast(String(message || ''), type || 'info');
+		return;
+	}
+	if (typeof window.showToast === 'function') {
+		window.showToast(String(message || ''), type || 'info');
+	}
 }
 // Open profiling modal and load patient data
 function openProfilingModal(patient) {
@@ -389,11 +400,17 @@ document.getElementById('addPatientForm').addEventListener('submit', function(e)
 		body: data
 	}).then(r => r.json()).then(res => {
 		if (res.success) {
-			if (res.generated_password) {
-				notifySecretaryPatients('Patient created. Default password: ' + res.generated_password, 'success');
+			const tone = res.email_sent === false ? 'warning' : 'success';
+			const message = res.already_exists
+				? (res.message || 'Patient already exists.')
+				: (res.message || 'Patient account created successfully.');
+			notifySecretaryPatients(message, tone);
+			const modalEl = document.getElementById('addPatientModal');
+			const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
+			if (modalInstance) modalInstance.hide();
+			if (!res.already_exists) {
+				setTimeout(function() { location.reload(); }, 1500);
 			}
-			// reload to show new patient (simple approach)
-			location.reload();
 		} else {
 			notifySecretaryPatients('Error: ' + (res.message || 'Unable to create patient'), 'danger');
 		}

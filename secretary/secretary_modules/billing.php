@@ -305,26 +305,33 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     }
 
     let paymentSubmitting = false;
+
+    function notifyBilling(message, type) {
+        if (typeof window.portalNotify === 'function') {
+            window.portalNotify(String(message || ''), type || 'info');
+            return;
+        }
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(String(message || ''), type || 'info');
+            return;
+        }
+        if (typeof window.showToast === 'function') {
+            window.showToast(String(message || ''), type || 'info');
+        }
+    }
+
     document.getElementById('savePaymentBtn')?.addEventListener('click', async function() {
         if (paymentSubmitting) return;
-        paymentSubmitting = true;
-
-        const btn = this;
-        const originalHtml = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = 'Saving...';
-
-        const idempotencyKey = (window.Idempotency && Idempotency.newKey('pay')) || ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2));
 
         const orNumber = (document.getElementById('paymentOrNumber').value || '').trim();
         if (!orNumber) {
-            window.showToast('OR number is required', 'danger');
-            paymentSubmitting = false;
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
+            notifyBilling('OR number is required', 'danger');
             document.getElementById('paymentOrNumber').focus();
             return;
         }
+
+        paymentSubmitting = true;
+        const idempotencyKey = (window.Idempotency && Idempotency.newKey('pay')) || ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2));
 
         try {
             const fd = new FormData();
@@ -335,24 +342,27 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
             fd.append('or_number', orNumber);
             fd.append('notes', document.getElementById('paymentNotes').value);
             fd.append('idempotency_key', idempotencyKey);
-            const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
-            const res = await fetch(appRoot + '/assets/api/billing/record_payment.php', { method: 'POST', body: fd });
+            const res = await fetch('../assets/api/billing/record_payment.php', { method: 'POST', body: fd });
             const j = await res.json();
             if (!j.success) {
-                window.showToast(j.message || 'Payment failed', 'danger');
+                notifyBilling(j.message || 'Payment failed', 'danger');
                 paymentSubmitting = false;
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
                 return;
             }
-            window.showToast(j.duplicate_replay || j.idempotent_replay ? 'Payment already recorded.' : 'Payment recorded successfully', 'success');
-            location.reload();
+
+            const paymentModalEl = document.getElementById('paymentModal');
+            const paymentModal = paymentModalEl ? bootstrap.Modal.getInstance(paymentModalEl) : null;
+            if (paymentModal) paymentModal.hide();
+
+            notifyBilling(
+                j.duplicate_replay || j.idempotent_replay ? 'Payment already recorded.' : 'Payment recorded successfully',
+                'success'
+            );
+            setTimeout(function() { location.reload(); }, 1500);
         } catch (err) {
             console.error(err);
-            window.showToast('Payment failed. Please try again.', 'danger');
+            notifyBilling('Payment failed. Please try again.', 'danger');
             paymentSubmitting = false;
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
         }
     });
 

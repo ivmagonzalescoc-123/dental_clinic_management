@@ -499,6 +499,7 @@ $appointments_sql = "
         (SELECT s.status FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status,
         (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
         (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end,
+        (SELECT cr.follow_up_date FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_follow_up_date,
         (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history
     FROM appointments a
     LEFT JOIN patients p ON a.patient_id = p.patient_id
@@ -826,12 +827,27 @@ $appointmentsViewFilters = [
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if (!empty($appointment['schedule_status'])): ?>
-                                        <div><span class="badge bg-<?php echo ($appointment['schedule_status'] === 'scheduled' ? 'primary' : ($appointment['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($appointment['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($appointment['schedule_status'])); ?></span>
-                                        <div class="small text-muted"><?php echo htmlspecialchars($appointment['schedule_start'] ?? ''); ?> <?php echo $appointment['schedule_end'] ? '&ndash; ' . htmlspecialchars($appointment['schedule_end']) : ''; ?></div>
+                                    <?php
+                                        $recordFollowUpDate = trim((string)($appointment['record_follow_up_date'] ?? ''));
+                                        $isFollowUpAppointment = !empty($appointment['rescheduled_from']);
+                                    ?>
+                                    <?php if ($isFollowUpAppointment && !empty($appointment['schedule_status'])): ?>
+                                        <div>
+                                            <span class="badge bg-<?php echo ($appointment['schedule_status'] === 'scheduled' ? 'primary' : ($appointment['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
+                                                <?php echo htmlspecialchars(ucfirst((string)$appointment['schedule_status'])); ?>
+                                            </span>
+                                            <div class="small text-muted">
+                                                <?php echo htmlspecialchars($appointment['schedule_start'] ?? ''); ?>
+                                                <?php echo !empty($appointment['schedule_end']) ? '&ndash; ' . htmlspecialchars($appointment['schedule_end']) : ''; ?>
+                                            </div>
+                                        </div>
+                                    <?php elseif ($recordFollowUpDate !== ''): ?>
+                                        <div class="small">
+                                            <span class="badge bg-info">Follow-up</span>
+                                            <div class="text-muted mt-1"><?php echo htmlspecialchars($recordFollowUpDate); ?></div>
                                         </div>
                                     <?php else: ?>
-                                        <span class="text-muted small">No schedule</span>
+                                        <span class="text-muted small">&mdash;</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo htmlspecialchars(($appointment['doctor_first_name'] ?? 'N/A') . ' ' . ($appointment['doctor_last_name'] ?? '')); ?></td>
@@ -904,7 +920,12 @@ $appointmentsViewFilters = [
                                         <?php endif; ?>
 
                                         <?php
-                                            $canRescheduleFollowup = !empty($appointment['schedule_id']) && in_array((string)($appointment['schedule_status'] ?? ''), ['scheduled', 'rescheduled'], true);
+                                            $isFollowUpAppointment = !empty($appointment['rescheduled_from']);
+                                            $recordFollowUpDate = trim((string)($appointment['record_follow_up_date'] ?? ''));
+                                            $canRescheduleFollowup = $isFollowUpAppointment
+                                                && !in_array($status, ['completed', 'cancelled', 'no_show'], true)
+                                                && !empty($appointment['schedule_id'])
+                                                && in_array((string)($appointment['schedule_status'] ?? ''), ['scheduled', 'rescheduled'], true);
                                         ?>
                                         <?php if ($canRescheduleFollowup): ?>
                                             <button
@@ -2073,11 +2094,14 @@ document.getElementById('rescheduleStartSec').addEventListener('change', functio
     }
 });
 
-document.getElementById('rescheduleSuggestSec').addEventListener('click', async function(){
+document.getElementById('rescheduleSuggestSec').addEventListener('click', function(){
+    const btn = this;
+    if (btn.dataset.actionLoadingActive === '1') return;
+    if (typeof window.clearPendingAction === 'function') window.clearPendingAction();
+    runWithActionLoading(btn, async function(){
     const sid = document.getElementById('rescheduleScheduleIdSec').value;
     const apptId = document.getElementById('rescheduleAppointmentIdSec').value;
     const apptDoctor = document.getElementById('rescheduleDoctorIdSec').value || '';
-    const btn = this; btn.disabled = true;
     try {
         let user_id = CURRENT_USER;
         let duration = 30;
@@ -2115,7 +2139,7 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', async 
             wrap.appendChild(a);
         });
     } catch(e){ console.error(e); notifySecretary('Error fetching suggestions', 'danger'); }
-    btn.disabled = false;
+    });
 });
 
 document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async function(){
@@ -2125,7 +2149,6 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     const start = toServerFormatSec(document.getElementById('rescheduleStartSec').value);
     const end = toServerFormatSec(document.getElementById('rescheduleEndSec').value);
     if (!start) { notifySecretary('Start date required', 'warning'); return; }
-    this.disabled = true;
     try {
         if (apptId) {
             const timeslotId = document.getElementById('rescheduleTimeslotSec')?.value || '';
@@ -2168,8 +2191,6 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     } catch (e) {
         console.error(e);
         notifySecretary('Error', 'danger');
-    } finally {
-        this.disabled = false;
     }
 });
 
@@ -3079,10 +3100,6 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
     if (!secretaryRecordIdempotencyKey) {
         secretaryRecordIdempotencyKey = (window.Idempotency && Idempotency.newKey('record')) || ('record-' + Date.now() + '-' + Math.random().toString(36).slice(2));
     }
-
-    this.disabled = true;
-    const btnText = this.innerHTML;
-    this.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
     
     try {
         // Collect visit clinical exam data for this appointment record
@@ -3185,15 +3202,11 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             console.error('create_secretary_record non-JSON response:', responseText);
             notifySecretary('Server error: invalid response while saving record.', 'danger');
             secretaryRecordSubmitting = false;
-            this.disabled = false;
-            this.innerHTML = btnText;
             return;
         }
         if (!json.success) {
             notifySecretary('Error: ' + (json.message || 'Failed to create record'), 'danger');
             secretaryRecordSubmitting = false;
-            this.disabled = false;
-            this.innerHTML = btnText;
             return;
         }
         
@@ -3206,8 +3219,6 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         console.error(e);
         notifySecretary('Error: ' + e.message, 'danger');
         secretaryRecordSubmitting = false;
-        this.disabled = false;
-        this.innerHTML = btnText;
     }
 });
 </script>

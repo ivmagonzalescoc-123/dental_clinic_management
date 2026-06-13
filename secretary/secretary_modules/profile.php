@@ -90,8 +90,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
 
         const payload = {
             csrf_token: <?php echo json_encode($csrf_token ?? ''); ?>,
@@ -122,9 +120,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (err) {
             showAlert('Unable to update profile right now. Please try again.', 'danger');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Save Changes';
         }
     });
 });

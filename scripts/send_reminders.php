@@ -8,6 +8,7 @@ ini_set('error_log', dirname(__FILE__) . '/send_reminders.log');
 include __DIR__ . '/../config/database.php';
 include __DIR__ . '/../config/reminders.php';
 include __DIR__ . '/../config/system_logs.php';
+include __DIR__ . '/../config/billing_helpers.php';
 
 if (!function_exists('fetch_secretary_ids')) {
     function fetch_secretary_ids($conn)
@@ -246,6 +247,11 @@ if (!function_exists('table_exists') || !table_exists($conn, 'schedule_reminders
 // Queue late and no-show workflow reminders before dispatch
 queue_missed_reminders($conn);
 auto_mark_no_show_end_of_day($conn);
+
+// Installment due-soon and overdue email reminders
+if (function_exists('billing_send_installment_reminders')) {
+    billing_send_installment_reminders($conn);
+}
 
 // Fetch pending reminders
 $sql = "SELECT r.reminder_id, r.patient_schedule_id, r.remind_at, r.channel, r.payload,

@@ -6,6 +6,7 @@ security_start_session();
 check_session(['admin','secretary','doctor']);
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     security_ensure_auth_columns($conn);
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -20,15 +21,22 @@ try {
     $first_name = trim($_POST['first_name'] ?? '');
     $middle_name = trim($_POST['middle_name'] ?? '');
     $last_name = trim($_POST['last_name'] ?? '');
-    $password = trim($_POST['password'] ?? '');
     $date_of_birth = trim($_POST['date_of_birth'] ?? null);
     $gender = trim($_POST['gender'] ?? null);
     $phone_number = trim($_POST['phone_number'] ?? null);
-    $email = trim($_POST['email'] ?? null);
+    $email = trim($_POST['email'] ?? '');
     $address = trim($_POST['address'] ?? null);
 
     if (empty($first_name) || empty($last_name)) {
         throw new Exception('First name and last name are required');
+    }
+
+    if ($email === '') {
+        throw new Exception('Email is required to create a patient portal account.');
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Please enter a valid email address.');
     }
 
     // Check by email or phone to avoid duplicate patient records.
@@ -39,7 +47,12 @@ try {
         $identifier_stmt->execute();
         $res = $identifier_stmt->get_result();
         if ($res && ($existing = $res->fetch_assoc())) {
-            echo json_encode(['success' => true, 'message' => 'Patient already exists', 'patient_id' => (int)$existing['patient_id']]);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Patient already exists',
+                'patient_id' => (int)$existing['patient_id'],
+                'already_exists' => true,
+            ]);
             exit;
         }
         $identifier_stmt->close();
@@ -47,22 +60,9 @@ try {
 
     $added_by = $_SESSION['user_id'] ?? null;
 
-    // If email is provided, create login credentials for the patient account.
-    $password_hash = null;
-    $must_change_password = 0;
-    $generated_default_password = null;
-    if (!empty($email)) {
-        if (empty($password)) {
-            $password = security_generate_default_password();
-            $generated_default_password = $password;
-        } else {
-            $passwordErrors = security_password_policy_errors($password);
-            if (!empty($passwordErrors)) {
-                throw new Exception($passwordErrors[0]);
-            }
-        }
-        $password_hash = security_hash_password($password);
-    }
+    $generated_password = security_generate_default_password();
+    $password_hash = security_hash_password($generated_password);
+    $must_change_password = 1;
 
     $sql = "INSERT INTO patients (first_name, middle_name, last_name, password_hash, date_of_birth, gender, phone_number, email, address, added_by, must_change_password, password_updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     $stmt = $conn->prepare($sql);
@@ -78,13 +78,33 @@ try {
         throw new Exception('Execute failed: ' . $stmt->error);
     }
 
-    $patient_id = $conn->insert_id;
+    $patient_id = (int)$conn->insert_id;
     $stmt->close();
 
-    $response = ['success' => true, 'message' => 'Patient created', 'patient_id' => $patient_id];
-    if ($generated_default_password !== null) {
-        $response['generated_password'] = $generated_default_password;
+    $patientName = trim($first_name . ' ' . ($middle_name !== '' ? $middle_name . ' ' : '') . $last_name);
+    $subject = 'Your Azucena Dental Clinic Patient Account';
+    $message = "Hello {$patientName},\n\n"
+        . "Your patient portal account has been created.\n\n"
+        . "Login email: {$email}\n"
+        . "Temporary password: {$generated_password}\n\n"
+        . "Please log in and change your password after your first visit.\n\n"
+        . "Azucena's Dental Clinic";
+
+    $emailSent = reminder_send_email($email, $subject, $message);
+
+    $response = [
+        'success' => true,
+        'message' => $emailSent
+            ? 'Patient account created. Login credentials were sent to their email.'
+            : 'Patient account created, but the welcome email could not be sent. Check email settings.',
+        'patient_id' => $patient_id,
+        'email_sent' => $emailSent,
+    ];
+
+    if (!$emailSent) {
+        $response['email_warning'] = 'Welcome email failed to send. Verify Brevo/SMTP settings in .env.';
     }
+
     echo json_encode($response);
     exit;
 
@@ -93,4 +113,3 @@ try {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
 }
-?>
