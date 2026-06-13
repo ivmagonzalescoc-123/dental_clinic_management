@@ -1353,6 +1353,22 @@ table a:hover {
     max-width: 480px;
 }
 
+@media (max-width: 991.98px) {
+    .header-dropdown__menu,
+    .header-dropdown--notifications .header-dropdown__menu,
+    .notifications-menu,
+    .profile-menu {
+        position: fixed;
+        top: 58px;
+        left: 10px;
+        right: 10px;
+        min-width: 0 !important;
+        max-width: none !important;
+        width: auto !important;
+        box-sizing: border-box;
+    }
+}
+
 .notifications-menu__header {
     display: flex;
     align-items: flex-start;
@@ -1458,6 +1474,8 @@ table a:hover {
     font-weight: 700;
     color: #0f172a;
     line-height: 1.4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .notification-dropdown-item__body {
@@ -1509,18 +1527,6 @@ table a:hover {
 #main .notification-time {
     color: #0a4f88 !important;
     font-weight: 700;
-}
-
-@media (max-width: 575.98px) {
-    .header-dropdown__menu {
-        position: fixed;
-        top: 66px;
-        right: 10px;
-        left: 10px;
-        min-width: 0;
-        max-width: none;
-        width: auto;
-    }
 }
 
 /* ========== RESPONSIVE ========== */

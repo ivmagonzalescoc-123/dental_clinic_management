@@ -86,9 +86,9 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260614-pw-no-lock" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260614-header-mobile4" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260614-notify" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260614-header-mobile4" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260614-admin-charts2" rel="stylesheet">
 </head>
 
@@ -269,7 +269,7 @@ switch ($role_key) {
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
-    <script src="../assets/js/main.js?v=20260614-notify"></script>
+    <script src="../assets/js/main.js?v=20260614-header-mobile4"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>
 

@@ -870,14 +870,24 @@
       if (window.innerWidth > 991) {
         header.classList.remove('header-search-open');
         toggle.setAttribute('aria-expanded', 'false');
-        header.style.removeProperty('--portal-search-expand-width');
+        header.style.removeProperty('--portal-search-left');
+        header.style.removeProperty('--portal-search-right');
         return;
       }
+
+      const logoZone = header.querySelector(':scope > .d-flex.align-items-center');
+      const navEl = header.querySelector('.header-nav');
+      if (!logoZone || !navEl) return;
+
       const headerRect = header.getBoundingClientRect();
-      const actionsEl = header.querySelector('.header-actions');
-      const anchorRect = (actionsEl || searchHost).getBoundingClientRect();
-      const expandWidth = Math.max(160, anchorRect.right - headerRect.left - 12);
-      header.style.setProperty('--portal-search-expand-width', expandWidth + 'px');
+      const logoRect = logoZone.getBoundingClientRect();
+      const navRect = navEl.getBoundingClientRect();
+
+      const leftInset = Math.max(0, Math.round(logoRect.right - headerRect.left + 8));
+      const rightInset = Math.max(0, Math.round(headerRect.right - navRect.left + 4));
+
+      header.style.setProperty('--portal-search-left', leftInset + 'px');
+      header.style.setProperty('--portal-search-right', rightInset + 'px');
     };
 
     const closeSearch = function () {

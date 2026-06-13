@@ -27,6 +27,8 @@ body.admin-portal {
     body.admin-portal #header > .d-flex.align-items-center:first-child {
         flex: 0 0 auto;
         min-width: 0;
+        position: relative;
+        z-index: 140;
     }
 
     body.patient-portal #header .header-actions,
@@ -166,18 +168,43 @@ body.admin-portal {
             box-shadow 0.32s ease;
     }
 
+    body.patient-portal #header.header-search-open .header-actions,
+    body.doctor-portal #header.header-search-open .header-actions,
+    body.secretary-portal #header.header-search-open .header-actions,
+    body.admin-portal #header.header-search-open .header-actions {
+        position: static;
+    }
+
+    body.patient-portal #header.header-search-open .header-search,
+    body.doctor-portal #header.header-search-open .header-search,
+    body.secretary-portal #header.header-search-open .header-search,
+    body.admin-portal #header.header-search-open .header-search {
+        position: static !important;
+        flex: 0 0 40px !important;
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+    }
+
     body.patient-portal #header.header-search-open .header-search-wrap,
     body.doctor-portal #header.header-search-open .header-search-wrap,
     body.secretary-portal #header.header-search-open .header-search-wrap,
     body.admin-portal #header.header-search-open .header-search-wrap {
-        max-width: var(--portal-search-expand-width, 260px) !important;
-        width: var(--portal-search-expand-width, 260px) !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: var(--portal-search-left, 88px) !important;
+        right: var(--portal-search-right, 96px) !important;
+        transform: translateY(-50%);
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
         opacity: 1;
         visibility: visible;
         pointer-events: auto !important;
         overflow: visible !important;
         box-shadow: 0 6px 20px rgba(17, 115, 193, 0.16);
         border-width: 1px !important;
+        z-index: 130;
     }
 
     body.patient-portal .header-search-wrap .unified-table-search-icon,
@@ -200,7 +227,7 @@ body.admin-portal {
         min-height: 38px !important;
         height: 38px !important;
         width: 100% !important;
-        min-width: 180px;
+        min-width: 0 !important;
         font-size: 16px;
         border: 0 !important;
         background: transparent !important;
@@ -225,6 +252,10 @@ body.admin-portal {
     body.admin-portal #header.header-search-open .search-suggest-menu {
         left: 0;
         right: 0;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
         border-radius: 12px;
     }
 
