@@ -261,12 +261,12 @@ $basePatientParams = [
 ?>
 
 <div class="card border-0">
-    <div class="card-header d-flex flex-nowrap justify-content-between align-items-center gap-2">
-        <div class="d-flex align-items-center gap-2" style="min-width: 0;">
-            <h2 class="card-title mb-0 text-truncate">My Patients</h2>
-        </div>
+    <div class="card-header">
+        <h2 class="card-title mb-0">My Patients</h2>
+    </div>
 
-        <form class="module-search-toolbar" method="GET" action="doctor.php" style="margin:0;">
+    <div class="card-body border-bottom py-2">
+        <form class="module-search-toolbar module-search-toolbar--bare" method="GET" action="doctor.php" style="margin:0;">
             <input type="hidden" name="page" value="patients">
 
             <div class="unified-table-search-wrap module-search-inline">
@@ -328,6 +328,7 @@ $basePatientParams = [
             </div>
         </form>
     </div>
+
     <div class="card-body">
         <?php if (empty($patientList)): ?>
             <div class="alert alert-info mb-0">No patients found.</div>

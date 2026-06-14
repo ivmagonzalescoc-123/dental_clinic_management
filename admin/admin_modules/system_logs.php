@@ -318,52 +318,49 @@ if ($view === 'user_logs') {
 ?>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center gap-2" style="flex-wrap: nowrap;">
-        <div class="d-flex align-items-center gap-2" style="min-width:0;">
-            <h2 class="card-title mb-0">System Logs</h2>
-        </div>
+    <div class="card-header">
+        <h2 class="card-title mb-0">System Logs</h2>
+    </div>
 
-        <div class="d-flex align-items-center gap-2" style="flex: 0 0 auto;">
-            <form class="module-search-toolbar" method="GET" action="admin.php" style="margin:0;">
-                <input type="hidden" name="page" value="system_logs">
-                <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
+    <div class="card-body border-bottom py-2">
+        <form class="module-search-toolbar module-search-toolbar--bare" method="GET" action="admin.php" style="margin:0;">
+            <input type="hidden" name="page" value="system_logs">
+            <input type="hidden" name="view" value="<?php echo htmlspecialchars($view); ?>">
 
-                <div class="unified-table-search-wrap module-search-inline">
-                    <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
-                    <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or IP..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search system logs">
-                </div>
+            <div class="unified-table-search-wrap module-search-inline">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or IP..." value="<?php echo htmlspecialchars($search); ?>" aria-label="Search system logs">
+            </div>
 
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-funnel"></i>
-                        <span class="d-none d-md-inline">Filter</span>
-                    </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-funnel"></i>
+                    <span class="d-none d-sm-inline">Filter</span>
+                </button>
 
-                    <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 320px;">
-                        <div class="mb-2 fw-semibold">Filters</div>
+                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 320px;">
+                    <div class="mb-2 fw-semibold">Filters</div>
 
-                        <?php if ($view === 'user_logs' || $view === 'audit_logs'): ?>
-                            <div class="mb-2">
-                                <label class="form-label small mb-1">From</label>
-                                <input type="date" class="form-control form-control-sm" name="from" value="<?php echo htmlspecialchars($dateFrom); ?>">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label small mb-1">To</label>
-                                <input type="date" class="form-control form-control-sm" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
-                            </div>
-                        <?php endif; ?>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <a class="btn btn-outline-secondary btn-sm" href="admin.php?page=system_logs&view=<?php echo urlencode($view); ?>">Clear</a>
-                            <button class="btn btn-primary btn-sm" type="submit">Apply</button>
+                    <?php if ($view === 'user_logs' || $view === 'audit_logs'): ?>
+                        <div class="mb-2">
+                            <label class="form-label small mb-1">From</label>
+                            <input type="date" class="form-control form-control-sm" name="from" value="<?php echo htmlspecialchars($dateFrom); ?>">
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label small mb-1">To</label>
+                            <input type="date" class="form-control form-control-sm" name="to" value="<?php echo htmlspecialchars($dateTo); ?>">
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a class="btn btn-outline-secondary btn-sm" href="admin.php?page=system_logs&view=<?php echo urlencode($view); ?>">Clear</a>
+                        <button class="btn btn-primary btn-sm" type="submit">Apply</button>
                     </div>
                 </div>
+            </div>
 
-                <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> Search</button>
-            </form>
-        </div>
+            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search"></i> Search</button>
+        </form>
     </div>
 
     <div class="card-body border-bottom pb-2">

@@ -69,27 +69,29 @@ function secretary_patient_format_datetime(?string $value): string
 <?php endif; ?>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2">
         <div>
             <h5 class="card-title mb-0">Patient Management</h5>
             <p class="text-muted small mb-0 mt-1">View profiles, update account details, manage medical background, and reset login passwords.</p>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <form method="GET" action="secretary.php" class="module-search-toolbar mb-0">
-                <input type="hidden" name="page" value="manage_patients">
-                <div class="unified-table-search-wrap module-search-inline">
-                    <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
-                    <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or phone..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Search patients">
-                </div>
-                <?php if ($search !== ''): ?>
-                    <a href="secretary.php?page=manage_patients" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
-                <?php endif; ?>
-            </form>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
-                <i class="bi bi-person-plus"></i> Add Patient
-            </button>
-        </div>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+            <i class="bi bi-person-plus"></i> Add Patient
+        </button>
     </div>
+
+    <div class="card-body border-bottom py-2">
+        <form method="GET" action="secretary.php" class="module-search-toolbar module-search-toolbar--bare" style="margin:0;">
+            <input type="hidden" name="page" value="manage_patients">
+            <div class="unified-table-search-wrap module-search-inline">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or phone..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Search patients">
+            </div>
+            <?php if ($search !== ''): ?>
+                <a href="secretary.php?page=manage_patients" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
+            <?php endif; ?>
+        </form>
+    </div>
+
     <div class="card-body">
         <div class="table-responsive history-table-wrap">
             <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">

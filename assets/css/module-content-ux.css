@@ -1083,6 +1083,31 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   justify-content: flex-start;
 }
 
+/* Inline variant — no background box, no border, no padding; for use inside card-header */
+#main .module-search-toolbar.module-search-toolbar--bare {
+  padding: 0;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+#main .module-search-toolbar.module-search-toolbar--bare .unified-table-search-wrap {
+  width: min(260px, 100%);
+  min-width: 0;
+  flex: 1 1 160px;
+}
+
+@media (max-width: 575.98px) {
+  #main .module-search-toolbar.module-search-toolbar--bare {
+    width: 100%;
+  }
+  #main .module-search-toolbar.module-search-toolbar--bare .unified-table-search-wrap {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
 #main .module-search-toolbar .text-muted,
 #main .module-search-toolbar small,
 #main .unified-table-search-toolbar .text-muted {
