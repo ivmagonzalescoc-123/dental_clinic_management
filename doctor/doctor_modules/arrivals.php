@@ -12,18 +12,22 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
     </button>
 </div>
 
-<ul class="nav nav-tabs mb-3" id="docArrTabs">
-    <li class="nav-item">
-        <a class="nav-link active" href="#" onclick="switchDocTab('today');return false;">
-            Today <span class="badge bg-success ms-1" id="docTodayBadge">--</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="#" onclick="switchDocTab('tomorrow');return false;">
-            Tomorrow <span class="badge bg-secondary ms-1" id="docTomorrowBadge">--</span>
-        </a>
-    </li>
-</ul>
+<nav class="module-section-nav" aria-label="Arrival days">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-tabs mb-0" id="docArrTabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" onclick="switchDocTab('today');return false;">
+                    Today <span class="badge bg-success ms-1" id="docTodayBadge">--</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="switchDocTab('tomorrow');return false;">
+                    Tomorrow <span class="badge bg-secondary ms-1" id="docTomorrowBadge">--</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <div id="docArrContainer">
     <div class="text-center py-5 text-muted">

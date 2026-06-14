@@ -11,18 +11,22 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
     </button>
 </div>
 
-<ul class="nav nav-tabs mb-3" id="arrivalTabs">
-    <li class="nav-item">
-        <a class="nav-link active" href="#" onclick="switchArrivalTab('today');return false;">
-            Today <span class="badge bg-primary ms-1" id="todayArrBadge">--</span>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="#" onclick="switchArrivalTab('tomorrow');return false;">
-            Tomorrow <span class="badge bg-secondary ms-1" id="tomorrowArrBadge">--</span>
-        </a>
-    </li>
-</ul>
+<nav class="module-section-nav" aria-label="Arrival days">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-tabs mb-0" id="arrivalTabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" onclick="switchArrivalTab('today');return false;">
+                    Today <span class="badge bg-primary ms-1" id="todayArrBadge">--</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="switchArrivalTab('tomorrow');return false;">
+                    Tomorrow <span class="badge bg-secondary ms-1" id="tomorrowArrBadge">--</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <div id="arrivalContainer">
     <div class="text-center py-5 text-muted">

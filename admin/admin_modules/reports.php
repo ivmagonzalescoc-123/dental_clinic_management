@@ -365,6 +365,13 @@ $exportQuery = http_build_query([
     'doctor_id' => $doctorId > 0 ? $doctorId : '',
 ]);
 $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
+$reportNavQuery = $doctorId > 0 ? ['doctor_id' => $doctorId] : [];
+$reportRangeNav = [
+    '7d' => 'Last 7 days',
+    '30d' => 'Last 30 days',
+    'month' => 'This month',
+    'custom' => 'Custom dates',
+];
 ?>
 
 <div class="dental-dashboard-shell clinic-reports-shell" id="clinicReportPrintArea">
@@ -383,27 +390,35 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
         </div>
     </div>
 
+    <nav class="module-section-nav clinic-report-no-print" aria-label="Report period">
+        <div class="module-section-nav__track">
+            <ul class="nav nav-pills mb-0">
+                <?php foreach ($reportRangeNav as $rangeKey => $rangeLabel): ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $range === $rangeKey ? 'active' : ''; ?>" href="<?php echo htmlspecialchars('admin.php?' . http_build_query(array_merge(['page' => 'reports', 'range' => $rangeKey], $reportNavQuery)), ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo htmlspecialchars($rangeLabel); ?>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </nav>
+
     <form method="GET" action="admin.php" class="clinic-reports-filter card border-0 mb-3">
     <div class="card-body">
             <input type="hidden" name="page" value="reports">
+            <input type="hidden" name="range" value="<?php echo htmlspecialchars($range); ?>">
             <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label small mb-1">Period</label>
-                    <select name="range" class="form-select form-select-sm" id="reportRangeSelect">
-                        <option value="7d" <?php echo $range === '7d' ? 'selected' : ''; ?>>Last 7 days</option>
-                        <option value="30d" <?php echo $range === '30d' ? 'selected' : ''; ?>>Last 30 days</option>
-                        <option value="month" <?php echo $range === 'month' ? 'selected' : ''; ?>>This month</option>
-                        <option value="custom" <?php echo $range === 'custom' ? 'selected' : ''; ?>>Custom dates</option>
-                    </select>
-                </div>
-                <div class="col-md-2 report-custom-date" style="<?php echo $range === 'custom' ? '' : 'display:none;'; ?>">
+                <?php if ($range === 'custom'): ?>
+                <div class="col-md-2 report-custom-date">
                     <label class="form-label small mb-1">From</label>
                     <input type="date" name="start_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($startDate); ?>">
             </div>
-                <div class="col-md-2 report-custom-date" style="<?php echo $range === 'custom' ? '' : 'display:none;'; ?>">
+                <div class="col-md-2 report-custom-date">
                     <label class="form-label small mb-1">To</label>
                     <input type="date" name="end_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($endDate); ?>">
             </div>
+                <?php endif; ?>
             <div class="col-md-3">
                     <label class="form-label small mb-1">Doctor</label>
                     <select name="doctor_id" class="form-select form-select-sm">
@@ -747,12 +762,6 @@ $birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
 
 <script src="../assets/js/admin-charts.js?v=20260614-admin-charts"></script>
 <script>
-document.getElementById('reportRangeSelect')?.addEventListener('change', function () {
-    document.querySelectorAll('.report-custom-date').forEach(function (el) {
-        el.style.display = this.value === 'custom' ? '' : 'none';
-    }.bind(this));
-});
-
 (function () {
     const dailyLabels = <?php echo json_encode($dailyChartLabels); ?>;
     const dailyValues = <?php echo json_encode($dailyCompletedValues); ?>;

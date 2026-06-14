@@ -386,6 +386,11 @@ body.patient-portal {
     background: #1173c1;
 }
 
+.patient-mobile-nav-item:focus-visible {
+    outline: 2px solid rgba(17, 115, 193, 0.5);
+    outline-offset: 2px;
+}
+
 .patient-mobile-nav-item:hover,
 .patient-mobile-nav-item:focus {
     color: #1173c1;

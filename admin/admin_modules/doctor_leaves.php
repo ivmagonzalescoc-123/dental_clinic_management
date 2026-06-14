@@ -178,12 +178,16 @@ if ($filter === 'all') {
 <div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Doctor Leaves</h5>
-        <div class="btn-group" role="group" aria-label="Filter leaves">
-            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=pending" class="btn btn-sm <?php echo $filter === 'pending' ? 'btn-primary' : 'btn-outline-primary'; ?>">Pending</a>
-            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=approved" class="btn btn-sm <?php echo $filter === 'approved' ? 'btn-success' : 'btn-outline-success'; ?>">Approved</a>
-            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=rejected" class="btn btn-sm <?php echo $filter === 'rejected' ? 'btn-secondary' : 'btn-outline-secondary'; ?>">Rejected</a>
-            <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=all" class="btn btn-sm <?php echo $filter === 'all' ? 'btn-dark' : 'btn-outline-dark'; ?>">All</a>
-        </div>
+        <nav class="module-section-nav module-section-nav--compact" aria-label="Leave status filter">
+            <div class="module-section-nav__track">
+                <div class="btn-group" role="group" aria-label="Filter leaves">
+                    <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=pending" class="btn btn-sm <?php echo $filter === 'pending' ? 'btn-primary' : 'btn-outline-primary'; ?>">Pending</a>
+                    <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=approved" class="btn btn-sm <?php echo $filter === 'approved' ? 'btn-success' : 'btn-outline-success'; ?>">Approved</a>
+                    <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=rejected" class="btn btn-sm <?php echo $filter === 'rejected' ? 'btn-secondary' : 'btn-outline-secondary'; ?>">Rejected</a>
+                    <a href="admin.php?page=<?php echo htmlspecialchars($leavesBasePage); ?><?php echo htmlspecialchars($leavesExtraParams); ?>&filter=all" class="btn btn-sm <?php echo $filter === 'all' ? 'btn-dark' : 'btn-outline-dark'; ?>">All</a>
+                </div>
+            </div>
+        </nav>
     </div>
     <div class="card-body">
         <?php if ($message !== ''): ?>

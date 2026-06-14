@@ -357,24 +357,26 @@ foreach ($roles as $roleRow) {
 <?php endif; ?>
 
 <!-- Tab Navigation -->
-<div class="mb-3">
-    <ul class="nav nav-tabs" id="userTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link <?php echo $user_type === 'users' ? 'active' : ''; ?>" id="users-tab" 
-                    data-bs-toggle="tab" data-bs-target="#users-content" type="button" 
-                    onclick="window.location.href='admin.php?page=manage_users&type=users'" role="tab">
-                <i class="bi bi-people"></i> System Users (<?php echo count($users); ?>)
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link <?php echo $user_type === 'patients' ? 'active' : ''; ?>" id="patients-tab" 
-                    data-bs-toggle="tab" data-bs-target="#patients-content" type="button"
-                    onclick="window.location.href='admin.php?page=manage_users&type=patients'" role="tab">
-                <i class="bi bi-heart-pulse"></i> Patients (<?php echo count($patients); ?>)
-            </button>
-        </li>
-    </ul>
-</div>
+<nav class="module-section-nav" aria-label="User management sections">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-tabs mb-0" id="userTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $user_type === 'users' ? 'active' : ''; ?>" id="users-tab" 
+                        data-bs-toggle="tab" data-bs-target="#users-content" type="button" 
+                        onclick="window.location.href='admin.php?page=manage_users&type=users'" role="tab">
+                    <i class="bi bi-people"></i> System Users (<?php echo count($users); ?>)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?php echo $user_type === 'patients' ? 'active' : ''; ?>" id="patients-tab" 
+                        data-bs-toggle="tab" data-bs-target="#patients-content" type="button"
+                        onclick="window.location.href='admin.php?page=manage_users&type=patients'" role="tab">
+                    <i class="bi bi-heart-pulse"></i> Patients (<?php echo count($patients); ?>)
+                </button>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <div class="tab-content" id="userTabContent">
     <!-- USERS TABLE -->

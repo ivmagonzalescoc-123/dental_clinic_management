@@ -11,17 +11,21 @@ if (!in_array($doctorTab, $allowedDoctorTabs, true)) {
     <span class="text-muted small">Manage doctor schedule visibility, leave approvals, and worktype settings in one place.</span>
 </div>
 
-<ul class="nav nav-pills mb-3" role="tablist" aria-label="Doctor management pages">
-    <li class="nav-item" role="presentation">
-        <a class="nav-link <?php echo $doctorTab === 'schedule' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=schedule">Doctor Schedule</a>
-    </li>
-    <li class="nav-item" role="presentation">
-        <a class="nav-link <?php echo $doctorTab === 'leaves' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=leaves">Doctor Leaves</a>
-    </li>
-    <li class="nav-item" role="presentation">
-        <a class="nav-link <?php echo $doctorTab === 'deployment' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=deployment">Doctor Worktype</a>
-    </li>
-</ul>
+<nav class="module-section-nav" aria-label="Doctor management sections">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-pills mb-0" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link <?php echo $doctorTab === 'schedule' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=schedule">Doctor Schedule</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link <?php echo $doctorTab === 'leaves' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=leaves">Doctor Leaves</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link <?php echo $doctorTab === 'deployment' ? 'active' : ''; ?>" href="admin.php?page=doctor_management&tab=deployment">Doctor Worktype</a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <?php
 if ($doctorTab === 'schedule') {

@@ -325,14 +325,18 @@ if ($tsRes) {
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link <?php echo $tab === 'services' ? 'active' : ''; ?>" href="admin.php?page=services&tab=services">Services</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?php echo $tab === 'timeslot' ? 'active' : ''; ?>" href="admin.php?page=services&tab=timeslot">Service Time</a>
-    </li>
-</ul>
+<nav class="module-section-nav" aria-label="Services sections">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-tabs mb-0">
+            <li class="nav-item">
+                <a class="nav-link <?php echo $tab === 'services' ? 'active' : ''; ?>" href="admin.php?page=services&tab=services">Services</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $tab === 'timeslot' ? 'active' : ''; ?>" href="admin.php?page=services&tab=timeslot">Service Time</a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <?php if ($tab === 'services'): ?>
 <div class="card">

@@ -341,19 +341,21 @@ if ($stmt) {
     <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<div class="mb-3">
-	<div class="btn-group" role="group">
-		<a class="btn btn-sm <?php echo $appointmentsTab === 'recent' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=recent" title="Recent appointments">
-			<i class="bi bi-clock-history me-1"></i> Recent
-		</a>
-		<a class="btn btn-sm <?php echo $appointmentsTab === 'general' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=general" title="Appointments calendar and list">
-			<i class="bi bi-calendar3 me-1"></i> Calendar & List
-		</a>
-		<a class="btn btn-sm <?php echo $appointmentsTab === 'followup' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=followup" title="Follow-up appointments">
-			<i class="bi bi-calendar-range me-1"></i> Follow-up
-		</a>
-	</div>
-</div>
+<nav class="module-section-nav" aria-label="Appointment sections">
+    <div class="module-section-nav__track">
+        <div class="btn-group" role="group">
+            <a class="btn btn-sm <?php echo $appointmentsTab === 'recent' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=recent" title="Recent appointments">
+                <i class="bi bi-clock-history me-1"></i> Recent
+            </a>
+            <a class="btn btn-sm <?php echo $appointmentsTab === 'general' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=general" title="Appointments calendar and list">
+                <i class="bi bi-calendar3 me-1"></i> Calendar & List
+            </a>
+            <a class="btn btn-sm <?php echo $appointmentsTab === 'followup' ? 'btn-primary' : 'btn-outline-primary'; ?>" href="doctor.php?page=appointments&tab=followup" title="Follow-up appointments">
+                <i class="bi bi-calendar-range me-1"></i> Follow-up
+            </a>
+        </div>
+    </div>
+</nav>
 
 <?php if ($appointmentsTab === 'recent'): ?>
     <div class="row">

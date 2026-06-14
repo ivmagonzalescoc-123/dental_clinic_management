@@ -622,20 +622,25 @@ $appointmentsViewFilters = [
 <?php endif; ?>
 
 
-<form method="GET" action="secretary.php" class="module-search-toolbar appointments-filter-toolbar mb-3">
-    <input type="hidden" name="page" value="appointments">
-    <label for="appointmentsViewFilter" class="small text-muted mb-0">View</label>
-    <select name="view" id="appointmentsViewFilter" class="form-select form-select-sm appointments-view-filter" onchange="this.form.submit()">
-        <?php foreach ($appointmentsViewFilters as $filterKey => $filterOpt): ?>
-            <option value="<?php echo htmlspecialchars($filterKey); ?>" <?php echo $view === $filterKey ? 'selected' : ''; ?>>
-                <?php echo htmlspecialchars($filterOpt['label']); ?> (<?php echo (int)$filterOpt['count']; ?>)
-            </option>
-        <?php endforeach; ?>
-    </select>
-    <?php if ($view !== 'all'): ?>
-        <a href="secretary.php?page=appointments&view=all" class="btn btn-sm btn-outline-secondary">Reset</a>
-    <?php endif; ?>
-</form>
+<nav class="module-section-nav" aria-label="Appointment views">
+    <div class="module-section-nav__track module-section-nav__scroll">
+        <ul class="nav nav-pills mb-0">
+            <?php foreach ($appointmentsViewFilters as $filterKey => $filterOpt): ?>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;view=<?php echo urlencode($filterKey); ?>">
+                        <?php echo htmlspecialchars($filterOpt['label']); ?>
+                        <span class="badge bg-light text-dark ms-1"><?php echo (int)$filterOpt['count']; ?></span>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</nav>
+<?php if ($view !== 'all'): ?>
+    <div class="mb-3">
+        <a href="secretary.php?page=appointments&amp;view=all" class="btn btn-sm btn-outline-secondary">Reset to all appointments</a>
+    </div>
+<?php endif; ?>
 
 <?php if ($view === 'reschedule'): ?>
 <div class="card border-0 mb-3">

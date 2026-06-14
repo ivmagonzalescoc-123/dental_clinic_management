@@ -12,12 +12,16 @@ contact_messages_ensure_table($conn);
     </button>
 </div>
 
-<ul class="nav nav-pills mb-3 contact-message-tabs" id="contactMessageTabs">
-    <li class="nav-item"><button type="button" class="nav-link active" data-status="all">All</button></li>
-    <li class="nav-item"><button type="button" class="nav-link" data-status="new">New <span class="badge bg-danger ms-1" id="contactNewCountBadge">0</span></button></li>
-    <li class="nav-item"><button type="button" class="nav-link" data-status="read">Read</button></li>
-    <li class="nav-item"><button type="button" class="nav-link" data-status="archived">Archived</button></li>
-</ul>
+<nav class="module-section-nav" aria-label="Inquiry status">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-pills mb-0 contact-message-tabs" id="contactMessageTabs">
+            <li class="nav-item"><button type="button" class="nav-link active" data-status="all">All</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-status="new">New <span class="badge bg-danger ms-1" id="contactNewCountBadge">0</span></button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-status="read">Read</button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-status="archived">Archived</button></li>
+        </ul>
+    </div>
+</nav>
 
 <div class="unified-table-search-toolbar patient-appt-history-search-toolbar mb-3">
     <div class="unified-table-search-wrap module-search-inline patient-appt-history-search-wrap">

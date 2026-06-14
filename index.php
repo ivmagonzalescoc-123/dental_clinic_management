@@ -184,6 +184,29 @@ $stats = [
             outline: none;
         }
 
+        /* Unified popup headers — blue gradient, white text */
+        .auth-panel > div:first-child,
+        .terms-panel > div:first-child {
+            background: linear-gradient(135deg, #1173c1, #0a4f88);
+            border-color: transparent !important;
+            border-radius: 1.25rem 1.25rem 0 0;
+        }
+        .auth-panel > div:first-child h2,
+        .terms-panel > div:first-child h2 {
+            color: #fff !important;
+        }
+        .auth-panel > div:first-child p,
+        .terms-panel > div:first-child p {
+            color: rgba(255, 255, 255, 0.82) !important;
+        }
+        .auth-panel > div:first-child [data-auth-close] {
+            color: rgba(255, 255, 255, 0.85) !important;
+        }
+        .auth-panel > div:first-child [data-auth-close]:hover {
+            background-color: rgba(255, 255, 255, 0.14) !important;
+            color: #fff !important;
+        }
+
         /* Terms & Conditions modal */
         .terms-overlay {
             position: fixed;

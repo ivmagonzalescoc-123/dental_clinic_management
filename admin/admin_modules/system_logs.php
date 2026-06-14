@@ -367,20 +367,24 @@ if ($view === 'user_logs') {
     </div>
 
     <div class="card-body border-bottom pb-2">
-        <ul class="nav nav-tabs card-header-tabs">
-            <li class="nav-item">
-                <a class="nav-link <?php echo $view === 'user_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=user_logs">Login Logs</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $view === 'active_users' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=active_users">Active Users</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $view === 'patient_sessions' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=patient_sessions">Patient Sessions</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $view === 'audit_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=audit_logs">Audit Logs</a>
-            </li>
-        </ul>
+        <nav class="module-section-nav module-section-nav--inset" aria-label="System log views">
+            <div class="module-section-nav__track module-section-nav__scroll">
+                <ul class="nav nav-tabs card-header-tabs mb-0">
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $view === 'user_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=user_logs">Login Logs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $view === 'active_users' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=active_users">Active Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $view === 'patient_sessions' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=patient_sessions">Patient Sessions</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $view === 'audit_logs' ? 'active' : ''; ?>" href="admin.php?page=system_logs&view=audit_logs">Audit Logs</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
     </div>
 
     <div class="card-body">

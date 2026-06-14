@@ -124,10 +124,10 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260614-header-mobile4" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260614-section-nav1" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260614-header-mobile4" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260614-dashboard3" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260614-section-nav1" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">

@@ -1,4 +1,4 @@
-@import url('app-toast.css?v=20260613-grey');
+@import url('app-toast.css?v=20260614-ux-enhance1');
 @import url('app-confirm.css');
 @import url('app-request.css');
 @import url('password-toggle.css');
@@ -106,6 +106,12 @@ body {
     background: none;
     box-shadow: none;
     outline: none;
+}
+
+.toggle-sidebar-btn:focus-visible {
+    outline: 2px solid rgba(17, 115, 193, 0.45);
+    outline-offset: 2px;
+    border-radius: 8px;
 }
 
 .header-search {
@@ -394,6 +400,11 @@ body.toggle-sidebar .footer {
     background-color: #e8f3fc !important;
     color: var(--sidebar-text) !important;
     box-shadow: none !important;
+}
+
+.sidebar-nav .nav-link:focus-visible {
+    outline: 2px solid rgba(17, 115, 193, 0.45);
+    outline-offset: 2px;
 }
 
 .sidebar-nav .nav-link.active {
@@ -811,10 +822,62 @@ a.text-info,
     overflow: hidden;
 }
 
-.modal-header[class*="bg-"] {
+/* Unified modal headers — blue gradient, white text (all Bootstrap modals) */
+.modal-header,
+.modal .modal-header,
+.app-confirm-modal .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
+    color: #ffffff;
+    border-bottom: 0;
     border-top-left-radius: var(--bs-modal-border-radius, 0.5rem);
     border-top-right-radius: var(--bs-modal-border-radius, 0.5rem);
+}
+
+.modal-header.bg-primary,
+.modal-header.bg-info,
+.modal-header.bg-success,
+.modal-header.bg-danger,
+.modal-header.bg-warning,
+.modal-header[class*="bg-"] {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%) !important;
+    color: #ffffff !important;
     border-bottom: 0;
+}
+
+.modal-header .modal-title,
+.modal-header h1,
+.modal-header h2,
+.modal-header h3,
+.modal-header h4,
+.modal-header h5,
+.modal-header h6,
+.modal-header .bi,
+.modal-header [class^="bi-"],
+.modal-header [class*=" bi-"],
+.modal-header small,
+.modal-header .text-white,
+.modal-header.text-dark,
+.modal-header.text-dark .modal-title {
+    color: #ffffff !important;
+}
+
+.modal-header .btn-close {
+    filter: brightness(0) invert(1);
+    opacity: 0.85;
+}
+
+.modal-header .btn-close:hover,
+.modal-header .btn-close:focus {
+    opacity: 1;
+}
+
+.modal-header .btn-close-white {
+    filter: none;
+    opacity: 0.85;
 }
 
 .nav-pills .nav-link.active,
@@ -1032,6 +1095,29 @@ table a:hover {
     bottom: 50px;
 }
 
+@media (max-width: 991.98px) {
+    .back-to-top {
+        right: 16px;
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        width: 46px;
+        height: 46px;
+    }
+
+    .back-to-top.show:hover,
+    .back-to-top.show {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.patient-portal .back-to-top {
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+
+    body.patient-portal .back-to-top.show:hover,
+    body.patient-portal .back-to-top.show {
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 /* ========== DROPDOWN MENU ========== */
 .dropdown-menu {
     border: 1px solid var(--border-color);
@@ -1127,8 +1213,15 @@ table a:hover {
 
 .unified-table-search-input:focus {
     border-color: #1173c1 !important;
-    box-shadow: 0 0 0 0.12rem rgba(17, 115, 193, 0.14) !important;
+    box-shadow: none !important;
+    outline: none !important;
     background: #fff;
+}
+
+.unified-table-search-input:focus-visible {
+    border-color: #1173c1 !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 .unified-table-search-clear {

@@ -52,13 +52,15 @@ if ($stmt) {
                         <?php foreach ($records as $rec): ?>
                             <tr>
                                 <td>#<?php echo htmlspecialchars($rec['record_id']); ?></td>
-                                <td><?php echo htmlspecialchars($rec['appointment_date']); ?> (ID <?php echo (int)$rec['appointment_id']; ?>)</td>
                                 <td>
+                                    <?php echo htmlspecialchars($rec['appointment_date']); ?> (ID <?php echo (int)$rec['appointment_id']; ?>)
                                     <?php if (!empty($rec['schedule_status'])): ?>
-                                        <span class="badge bg-<?php echo ($rec['schedule_status'] === 'scheduled' ? 'primary' : ($rec['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($rec['schedule_status'] === 'scheduled') ? 'followup' : htmlspecialchars(ucfirst($rec['schedule_status'])); ?></span>
-                                        <div class="small text-muted"><?php echo htmlspecialchars($rec['schedule_start'] ?? ''); ?></div>
-                                    <?php else: ?>
-                                        <span class="text-muted small">No schedule</span>
+                                        <div class="small mt-1">
+                                            <span class="badge bg-<?php echo ($rec['schedule_status'] === 'scheduled' ? 'primary' : ($rec['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($rec['schedule_status'] === 'scheduled') ? 'Follow-up' : htmlspecialchars(ucfirst($rec['schedule_status'])); ?></span>
+                                            <?php if (!empty($rec['schedule_start'])): ?>
+                                                <span class="text-muted"><?php echo htmlspecialchars($rec['schedule_start']); ?></span>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo htmlspecialchars($rec['first_name'] . ' ' . $rec['last_name']); ?></td>
@@ -114,9 +116,6 @@ if ($stmt) {
                                 <div id="histImagesRec" class="row g-2"></div>
                             </div>
 
-                            <div class="mb-3"><strong>Related Schedules</strong>
-                                <div id="histSchedulesRec" class="list-group small"></div>
-                            </div>
                             <div class="mb-3">
                                 <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
                                     <label class="form-label mb-0"><strong>Odontogram (read-only)</strong></label>
@@ -155,7 +154,6 @@ if ($stmt) {
         </style>
 
         <script>
-        const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
         function notifyDoctorRecord(message, type) {
             window.showToast(String(message || ''), type || 'info');
         }
@@ -343,7 +341,6 @@ if ($stmt) {
                 const j = await res.json();
                 if (!j.success) { notifyDoctorRecord('Could not load record', 'danger'); return; }
                 const rec = j.record;
-                const schedules = j.schedules || [];
                 if (!rec) { notifyDoctorRecord('No record found', 'warning'); return; }
 
                 document.getElementById('histPatientNameRec').textContent = rec._patient_name || 'Unknown patient';
@@ -413,175 +410,7 @@ if ($stmt) {
 
                 postHistoryOdontogramRec(rec.odontogram || null);
 
-                // schedules with expand/collapse and quick actions
-                try {
-                    const wrap = document.getElementById('histSchedulesRec');
-                    wrap.innerHTML = '';
-                    if (Array.isArray(schedules) && schedules.length) {
-                        schedules.forEach(s => {
-                            const id = s.schedule_id || Math.random().toString(36).substr(2,6);
-                            const start = s.scheduled_start ? s.scheduled_start : '(no start)';
-                            const end = s.scheduled_end ? (' — ' + s.scheduled_end) : '';
-                            const item = document.createElement('div');
-                            item.className = 'list-group-item';
-
-                            const header = document.createElement('div');
-                            header.className = 'd-flex w-100 justify-content-between align-items-center';
-                            header.innerHTML = `<div><strong>${(s.status||'').toUpperCase()}</strong> <span class="text-muted">${start}${end}</span></div>`;
-
-                            const toggleBtn = document.createElement('a');
-                            toggleBtn.setAttribute('data-bs-toggle','collapse');
-                            toggleBtn.href = '#sch-details-rec-' + id;
-                            toggleBtn.className = 'btn btn-sm btn-outline-secondary';
-                            toggleBtn.textContent = 'Details';
-                            header.appendChild(toggleBtn);
-                            item.appendChild(header);
-
-                            const details = document.createElement('div');
-                            details.className = 'collapse mt-2';
-                            details.id = 'sch-details-rec-' + id;
-                            let inner = `<div class="small text-muted">Created: ${s.created_at || 'N/A'}</div>`;
-                            if (s.priority) inner += `<div class="small text-muted">Priority: ${s.priority}</div>`;
-                            inner += `<div class="pt-2">Notes: ${s.notes || ''}</div>`;
-                            inner += '<div class="mt-2">';
-                            // actions
-                            inner += `<button class="btn btn-sm btn-danger me-1" data-action="cancel" data-sid="${s.schedule_id}">Cancel</button>`;
-                            if (<?php echo json_encode($_SESSION['role'] ?? ''); ?> === 'secretary' || <?php echo json_encode($_SESSION['role'] ?? ''); ?> === 'admin') {
-                                inner += `<button class="btn btn-sm btn-success me-1" data-action="arrive" data-sid="${s.schedule_id}">Mark Arrived</button>`;
-                            }
-                            inner += `<button class="btn btn-sm btn-warning me-1" data-action="reschedule" data-sid="${s.schedule_id}">Reschedule</button>`;
-                            inner += '</div>';
-                            details.innerHTML = inner;
-                            item.appendChild(details);
-
-                            item.addEventListener('click', async function(e){
-                                const btn = e.target.closest('button[data-action]');
-                                if (!btn) return;
-                                const act = btn.getAttribute('data-action');
-                                const sid = btn.getAttribute('data-sid');
-                                if (act === 'arrive') {
-                                    btn.disabled = true;
-                                    try {
-                                        const fd = new FormData(); fd.append('schedule_id', sid);
-                                        const r = await fetch('../assets/api/appointments/mark_schedule_arrived.php', { method: 'POST', body: fd });
-                                        const j = await r.json();
-                                        if (j.success) { btn.textContent = 'Arrived'; btn.classList.remove('btn-success'); btn.classList.add('btn-secondary'); }
-                                        else notifyDoctorRecord(j.message || 'Failed', 'danger');
-                                    } catch(e){ notifyDoctorRecord('Error', 'danger'); }
-                                    btn.disabled = false;
-                                } else if (act === 'cancel') {
-                                    if (!(await showConfirmModal({ title: 'Cancel Schedule', message: 'Cancel this schedule?', confirmText: 'Cancel', variant: 'danger' }))) return;
-                                    btn.disabled = true;
-                                    try {
-                                        const fd = new FormData(); fd.append('schedule_id', sid); fd.append('csrf_token', doctorCsrfToken);
-                                        const r = await fetch('../assets/api/appointments/cancel_schedule.php', { method: 'POST', body: fd });
-                                        const j = await r.json();
-                                        if (j.success) { header.querySelector('strong').textContent = 'CANCELLED'; }
-                                        else notifyDoctorRecord(j.message || 'Failed', 'danger');
-                                    } catch(e){ notifyDoctorRecord('Error', 'danger'); }
-                                    btn.disabled = false;
-                                } else if (act === 'reschedule') {
-                                    openRescheduleModal(s);
-                                }
-                            });
-
-                            wrap.appendChild(item);
-                        });
-                    } else {
-                        wrap.innerHTML = '<div class="text-muted small">No schedules found for this record.</div>';
-                    }
-                } catch (e) { console.warn('render schedules', e); }
-
                 bs.show();
             } catch (e) { console.error(e); notifyDoctorRecord('Error loading record', 'danger'); }
         }
-        </script>
-
-        <!-- Reschedule Modal (records) -->
-        <link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
-        <script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
-        <div class="modal fade" id="rescheduleModalRec" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Reschedule</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="rescheduleScheduleIdRec" />
-                        <div class="mb-2"><label class="form-label">Start</label><input id="rescheduleStartRec" class="form-control" type="datetime-local"/></div>
-                        <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEndRec" class="form-control" type="datetime-local"/></div>
-                        <div class="mb-2"><button id="rescheduleSuggestRec" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
-                        <div id="rescheduleSuggestionsRec" class="list-group"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button id="rescheduleSaveBtnRec" type="button" class="btn btn-primary">Save</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <script>
-        const resModalRec = new bootstrap.Modal(document.getElementById('rescheduleModalRec'));
-        let fpStartRec = null, fpEndRec = null;
-        function initRecPickers() {
-            try {
-                if (typeof flatpickr !== 'undefined') {
-                    fpStartRec = flatpickr('#rescheduleStartRec', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
-                    fpEndRec = flatpickr('#rescheduleEndRec', { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: true });
-                }
-            } catch (e) { console.warn('flatpickr rec init', e); }
-        }
-        initRecPickers();
-        function toLocalInputRec(dtStr) { if (!dtStr) return ''; return dtStr.replace(' ', 'T').replace(/:00$/,''); }
-        function toServerFormatRec(localVal) { if (!localVal) return ''; return localVal.replace('T',' '); }
-        function openRescheduleModal(schedule) {
-            document.getElementById('rescheduleScheduleIdRec').value = schedule.schedule_id || '';
-            const startLocal = toLocalInputRec(schedule.scheduled_start || '');
-            const endLocal = toLocalInputRec(schedule.scheduled_end || '');
-            if (fpStartRec && typeof fpStartRec.setDate === 'function') fpStartRec.setDate(startLocal);
-            else document.getElementById('rescheduleStartRec').value = startLocal;
-            if (fpEndRec && typeof fpEndRec.setDate === 'function') fpEndRec.setDate(endLocal);
-            else document.getElementById('rescheduleEndRec').value = endLocal;
-            document.getElementById('rescheduleSuggestionsRec').innerHTML = '';
-            resModalRec.show();
-        }
-        document.getElementById('rescheduleSuggestRec').addEventListener('click', async function(){
-            const sid = document.getElementById('rescheduleScheduleIdRec').value;
-            if (!sid) return notifyDoctorRecord('No schedule selected', 'warning');
-            const btn = this; btn.disabled = true;
-            try {
-                const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
-                const gs = await g.json();
-                if (!gs.success) return notifyDoctorRecord(gs.message || 'Could not resolve schedule', 'danger');
-                const user_id = gs.schedule.user_id || CURRENT_USER;
-                const duration = gs.schedule.duration || 30;
-                const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
-                const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
-                const j = await res.json();
-                const wrap = document.getElementById('rescheduleSuggestionsRec'); wrap.innerHTML = '';
-                if (!j.success) return notifyDoctorRecord(j.message || 'No suggestions', 'warning');
-                (j.slots || []).slice(0,10).forEach(slot => {
-                    const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action';
-                    a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
-                    a.addEventListener('click', function(e){
-                        e.preventDefault();
-                        const startLocal = slot.start.replace(' ', 'T').replace(/:00$/,'');
-                        const endLocal = slot.end ? slot.end.replace(' ', 'T').replace(/:00$/,'') : '';
-                        if (fpStartRec && typeof fpStartRec.setDate === 'function') fpStartRec.setDate(startLocal);
-                        else document.getElementById('rescheduleStartRec').value = startLocal;
-                        if (endLocal) {
-                          if (fpEndRec && typeof fpEndRec.setDate === 'function') fpEndRec.setDate(endLocal);
-                          else document.getElementById('rescheduleEndRec').value = endLocal;
-                        }
-                    });
-                    wrap.appendChild(a);
-                });
-            } catch(e){ console.error(e); notifyDoctorRecord('Error fetching suggestions', 'danger'); }
-            btn.disabled = false;
-        });
-        document.getElementById('rescheduleSaveBtnRec').addEventListener('click', async function(){
-            const sid = document.getElementById('rescheduleScheduleIdRec').value; const start = toServerFormatRec(document.getElementById('rescheduleStartRec').value); const end = toServerFormatRec(document.getElementById('rescheduleEndRec').value);
-            if (!sid || !start) return notifyDoctorRecord('Start datetime required', 'warning'); this.disabled = true; try { const fd = new FormData(); fd.append('schedule_id', sid); fd.append('scheduled_start', start); fd.append('scheduled_end', end); fd.append('csrf_token', doctorCsrfToken); const r = await fetch('../assets/api/appointments/reschedule_schedule.php', { method: 'POST', body: fd }); const j = await r.json(); if (!j.success) return notifyDoctorRecord(j.message || 'Failed to reschedule', 'danger'); notifyDoctorRecord('Rescheduled', 'success'); resModalRec.hide(); location.reload(); } catch(e){ console.error(e); notifyDoctorRecord('Error', 'danger'); } this.disabled = false; });
         </script>

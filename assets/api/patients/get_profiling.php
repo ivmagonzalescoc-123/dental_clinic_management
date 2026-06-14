@@ -30,7 +30,7 @@ try {
     }
 
     // Fetch patient profiling and details
-    $stmt = $conn->prepare('SELECT first_name, last_name, middle_name, date_of_birth, gender, phone_number, address, profiling FROM patients WHERE patient_id = ?');
+    $stmt = $conn->prepare('SELECT patient_id, first_name, last_name, middle_name, date_of_birth, gender, phone_number, email, address, profile_image, last_login_at, created_at, profiling FROM patients WHERE patient_id = ?');
     if (!$stmt) {
         throw new Exception('Prepare failed: ' . $conn->error);
     }
@@ -57,13 +57,18 @@ try {
     echo json_encode([
         'success' => true,
         'patient' => [
+            'patient_id' => (int)$row['patient_id'],
             'first_name' => $row['first_name'],
             'last_name' => $row['last_name'],
             'middle_name' => $row['middle_name'],
             'date_of_birth' => $row['date_of_birth'],
             'gender' => $row['gender'],
             'phone_number' => $row['phone_number'],
-            'address' => $row['address']
+            'email' => $row['email'],
+            'address' => $row['address'],
+            'profile_image' => $row['profile_image'],
+            'last_login_at' => $row['last_login_at'],
+            'created_at' => $row['created_at'],
         ],
         'profiling' => $profiling
     ]);

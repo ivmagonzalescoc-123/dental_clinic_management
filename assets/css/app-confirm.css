@@ -1,10 +1,12 @@
 .app-confirm-modal .modal-content {
     border: 0;
-    box-shadow: 0 16px 40px rgba(10, 30, 55, 0.22);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(10, 30, 55, 0.22);
+    overflow: hidden;
 }
 
 .app-confirm-modal .modal-header {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 0;
 }
 
 .app-confirm-modal .modal-body {

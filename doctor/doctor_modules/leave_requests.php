@@ -249,18 +249,22 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
 }
 ?>
 
-<ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-        <a class="nav-link <?php echo $scheduleView === 'calendar' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=calendar&month=<?php echo urlencode($selectedMonth); ?>">
-            <i class="bi bi-calendar3 me-1"></i> My Schedule
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?php echo $scheduleView === 'leave_requests' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=leave_requests&month=<?php echo urlencode($selectedMonth); ?>">
-            <i class="bi bi-calendar-x me-1"></i> Leave Requests
-        </a>
-    </li>
-</ul>
+<nav class="module-section-nav" aria-label="Schedule sections">
+    <div class="module-section-nav__track">
+        <ul class="nav nav-tabs mb-0">
+            <li class="nav-item">
+                <a class="nav-link <?php echo $scheduleView === 'calendar' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=calendar&month=<?php echo urlencode($selectedMonth); ?>">
+                    <i class="bi bi-calendar3 me-1"></i> My Schedule
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $scheduleView === 'leave_requests' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=leave_requests&month=<?php echo urlencode($selectedMonth); ?>">
+                    <i class="bi bi-calendar-x me-1"></i> Leave Requests
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
 
 <?php if ($scheduleView === 'calendar'): ?>
 <div class="card border-0">

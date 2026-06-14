@@ -6,7 +6,9 @@ security_start_session();
 check_session(['admin','secretary','doctor']);
 try {
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/env.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     security_ensure_auth_columns($conn);
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -82,15 +84,23 @@ try {
     $stmt->close();
 
     $patientName = trim($first_name . ' ' . ($middle_name !== '' ? $middle_name . ' ' : '') . $last_name);
-    $subject = 'Your Azucena Dental Clinic Patient Account';
-    $message = "Hello {$patientName},\n\n"
-        . "Your patient portal account has been created.\n\n"
-        . "Login email: {$email}\n"
-        . "Temporary password: {$generated_password}\n\n"
-        . "Please log in and change your password after your first visit.\n\n"
-        . "Azucena's Dental Clinic";
+    $subject = 'Patient Account - ' . email_clinic_name();
+    $message = email_patient_account_created_text($patientName, $email, $generated_password);
+    $htmlMessage = email_patient_account_created_html($patientName, $email, $generated_password);
 
-    $emailSent = reminder_send_email($email, $subject, $message);
+    $emailSent = reminder_send_email($email, $subject, $message, $htmlMessage);
+
+    $emailMode = app_email_mode();
+    if (!$emailSent && $emailMode === 'brevo' && function_exists('reminder_send_email_smtp')) {
+        $smtpHost = trim((string)env('SMTP_HOST', ''));
+        $smtpUser = trim((string)env('SMTP_USER', ''));
+        $smtpPass = (string)env('SMTP_PASS', '');
+        if ($smtpHost !== '' && $smtpUser !== '' && $smtpPass !== '') {
+            $from = trim((string)env('BREVO_EMAIL_FROM', env('SMTP_FROM_EMAIL', '')));
+            $fromName = trim((string)env('BREVO_EMAIL_FROM_NAME', env('SMTP_FROM_NAME', "Azucena's Dental Clinic")));
+            $emailSent = reminder_send_email_smtp($email, $subject, $message, $from, $fromName, $htmlMessage);
+        }
+    }
 
     $response = [
         'success' => true,
