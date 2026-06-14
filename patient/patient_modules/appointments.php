@@ -322,7 +322,6 @@ if ($patient_id) {
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
                 <h5 class="card-title mb-1">Make an Appointment</h5>
-                <div class="sub-title">Follow the 3 steps below: choose a doctor, select services, then pick an available date and time.</div>
             </div>
         </div>
     </div>
@@ -411,7 +410,6 @@ if ($patient_id) {
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
             <div>
                 <h6 class="mb-1">Appointment History</h6>
-                <small class="text-muted">Track your appointment request status below the booking form.</small>
             </div>
         </div>
 

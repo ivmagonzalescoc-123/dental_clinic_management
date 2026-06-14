@@ -79,19 +79,6 @@ function secretary_patient_format_datetime(?string $value): string
         </button>
     </div>
 
-    <div class="card-body border-bottom py-2">
-        <form method="GET" action="secretary.php" class="module-search-toolbar module-search-toolbar--bare" style="margin:0;">
-            <input type="hidden" name="page" value="manage_patients">
-            <div class="unified-table-search-wrap module-search-inline">
-                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
-                <input type="search" class="form-control unified-table-search-input" name="search" placeholder="Search name, email, or phone..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" aria-label="Search patients">
-            </div>
-            <?php if ($search !== ''): ?>
-                <a href="secretary.php?page=manage_patients" class="btn btn-link btn-sm text-muted text-decoration-none">Clear</a>
-            <?php endif; ?>
-        </form>
-    </div>
-
     <div class="card-body">
         <div class="table-responsive history-table-wrap">
             <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
