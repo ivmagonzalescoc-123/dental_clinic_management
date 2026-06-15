@@ -377,7 +377,6 @@ $reportRangeNav = [
     'custom' => 'Custom dates',
 ];
 
-$aiChatHistory = $_SESSION['ai_chat_history'] ?? [];
 ?>
 
 <div class="dental-dashboard-shell clinic-reports-shell" id="clinicReportPrintArea">
@@ -1332,19 +1331,6 @@ $aiChatHistory = $_SESSION['ai_chat_history'] ?? [];
     });
 
     sendBtn.addEventListener('click', sendMessage);
-
-    // Restore conversation from PHP session
-    (function () {
-        var history = <?php echo json_encode($aiChatHistory); ?>;
-        if (!history || !history.length) return;
-        messages.innerHTML = '';
-        history.forEach(function (msg) {
-            var text = msg.role === 'bot'
-                ? escHtml(msg.text).replace(/\n/g, '<br>')
-                : msg.text;
-            addMessage(text, msg.role);
-        });
-    })();
 
     function addMessage(text, type, extra) {
         var div = document.createElement('div');

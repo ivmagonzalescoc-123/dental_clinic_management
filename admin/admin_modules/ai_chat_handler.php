@@ -209,12 +209,6 @@ if ($answer !== '' && strlen($answer) > 4) {
 }
 
 if ($sql === '' || strtolower($sql) === 'null') {
-    if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
-    $_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
-    $_SESSION['ai_chat_history'][] = ['role' => 'bot',  'text' => $answer];
-    if (count($_SESSION['ai_chat_history']) > 60) {
-        $_SESSION['ai_chat_history'] = array_slice($_SESSION['ai_chat_history'], -60);
-    }
     ob_end_clean();
     echo json_encode(['answer' => $answer, 'rows' => [], 'row_count' => 0]);
     exit;
@@ -244,26 +238,6 @@ while ($row = $result->fetch_assoc()) {
     $rows[] = $row;
 }
 $result->close();
-
-$dataSummary = '';
-if (count($rows) === 1 && count($rows[0]) === 1) {
-    $val         = array_values($rows[0])[0];
-    $dataSummary = ' — ' . $val;
-} elseif (count($rows) > 0) {
-    $lines = [];
-    foreach (array_slice($rows, 0, 5) as $i => $row) {
-        $lines[] = ($i + 1) . '. ' . implode(' · ', array_map('strval', array_values($row)));
-    }
-    $dataSummary = "\n" . implode("\n", $lines);
-    if (count($rows) > 5) $dataSummary .= "\n+" . (count($rows) - 5) . ' more';
-}
-
-if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
-$_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
-$_SESSION['ai_chat_history'][] = ['role' => 'bot',  'text' => $answer . $dataSummary];
-if (count($_SESSION['ai_chat_history']) > 60) {
-    $_SESSION['ai_chat_history'] = array_slice($_SESSION['ai_chat_history'], -60);
-}
 
 ob_end_clean();
 echo json_encode([
