@@ -25,6 +25,10 @@ assets/uploads/
 archive/
 *.bak
 
+# Database dumps (may contain patient data)
+*.sql
+*.zip
+
 # PHP Dependencies (if using Composer)
 vendor/
 composer.lock

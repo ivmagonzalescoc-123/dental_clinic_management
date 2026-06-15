@@ -1,21 +1,45 @@
 <?php
+// Included by admin.php when action=ai_chat — session/auth/db already set up there.
 ob_start();
-error_reporting(0);
-ini_set('display_errors', '0');
 
-header('Content-Type: application/json');
-
-require_once dirname(dirname(dirname(__DIR__))) . '/config/env.php';
-require_once dirname(dirname(dirname(__DIR__))) . '/config/database.php';
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-if (empty($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+// ── DEBUG ── admin.php?action=ai_chat&debug=1
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     ob_end_clean();
-    http_response_code(403);
-    echo json_encode(['error' => 'Unauthorized']);
+    $groqKeyRaw = env('GROQ_API_KEY', '');
+    $groqKeyOk  = !empty($groqKeyRaw) && $groqKeyRaw !== 'your_groq_api_key_here';
+
+    $curlTest = ['supported' => false, 'reachable' => false, 'error' => null, 'http_code' => null];
+    if (function_exists('curl_init')) {
+        $curlTest['supported'] = true;
+        $ch = curl_init('https://api.groq.com/openai/v1/models');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_HTTPHEADER     => $groqKeyOk ? ['Authorization: Bearer ' . $groqKeyRaw] : [],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        curl_exec($ch);
+        $curlTest['http_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlTest['error']     = curl_error($ch) ?: null;
+        $curlTest['reachable'] = ($curlTest['http_code'] >= 200 && $curlTest['http_code'] < 500);
+        curl_close($ch);
+    }
+
+    echo json_encode([
+        'debug'           => true,
+        'php_version'     => PHP_VERSION,
+        'https'           => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'session'         => [
+            'status'      => session_status(),
+            'has_user_id' => isset($_SESSION['user_id']),
+            'user_id'     => $_SESSION['user_id'] ?? null,
+            'role'        => $_SESSION['role'] ?? null,
+        ],
+        'groq_key_loaded' => $groqKeyOk,
+        'groq_key_prefix' => $groqKeyOk ? substr($groqKeyRaw, 0, 8) . '...' : null,
+        'curl'            => $curlTest,
+        'env_file_exists' => file_exists(dirname(dirname(__DIR__)) . '/.env'),
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
@@ -26,7 +50,7 @@ if (!$groqKey || $groqKey === 'your_groq_api_key_here') {
     exit;
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input       = json_decode(file_get_contents('php://input'), true);
 $userMessage = trim($input['message'] ?? '');
 if ($userMessage === '') {
     ob_end_clean();
@@ -113,7 +137,7 @@ clinical_records(record_id, appointment_id, doctor_id, patient_id, status[in_pro
 SCHEMA;
 
 $payload = [
-    'model' => 'llama-3.3-70b-versatile',
+    'model'    => 'llama-3.3-70b-versatile',
     'messages' => [
         ['role' => 'system', 'content' => $systemPrompt . "\n\n" . $schema],
         ['role' => 'user',   'content' => $userMessage],
@@ -124,20 +148,20 @@ $payload = [
 
 $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
 curl_setopt_array($ch, [
-    CURLOPT_POST          => true,
-    CURLOPT_HTTPHEADER    => [
+    CURLOPT_POST           => true,
+    CURLOPT_HTTPHEADER     => [
         'Authorization: Bearer ' . $groqKey,
         'Content-Type: application/json',
     ],
-    CURLOPT_POSTFIELDS    => json_encode($payload),
+    CURLOPT_POSTFIELDS     => json_encode($payload),
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT       => 20,
+    CURLOPT_TIMEOUT        => 20,
 ]);
 
 $response  = curl_exec($ch);
 $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
-unset($ch);
+curl_close($ch);
 
 if ($curlError) {
     ob_end_clean();
@@ -161,7 +185,6 @@ $clean = preg_replace('/```json\s*/i', '', $clean);
 $clean = preg_replace('/```\s*/', '', $clean);
 $clean = trim($clean);
 
-// Extract first JSON object if there is surrounding text
 if (preg_match('/\{.*\}/s', $clean, $m)) {
     $clean = $m[0];
 }
@@ -176,7 +199,6 @@ if (!is_array($parsed) || !array_key_exists('answer', $parsed)) {
 $answer = trim((string)($parsed['answer'] ?? ''));
 $sql    = isset($parsed['sql']) ? trim((string)$parsed['sql']) : '';
 
-// Detect echoed question: if the answer is nearly the same as the question, reject it
 if ($answer !== '' && strlen($answer) > 4) {
     similar_text(strtolower($answer), strtolower($userMessage), $pct);
     if ($pct > 72) {
@@ -186,7 +208,6 @@ if ($answer !== '' && strlen($answer) > 4) {
     }
 }
 
-// No SQL — text-only answer (off-topic or non-data questions)
 if ($sql === '' || strtolower($sql) === 'null') {
     if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
     $_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
@@ -199,7 +220,6 @@ if ($sql === '' || strtolower($sql) === 'null') {
     exit;
 }
 
-// Safety: only allow SELECT
 $upperSql = strtoupper(ltrim($sql));
 if (strpos($upperSql, 'SELECT') !== 0 || preg_match('/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b/i', $sql)) {
     ob_end_clean();
@@ -209,7 +229,6 @@ if (strpos($upperSql, 'SELECT') !== 0 || preg_match('/\b(INSERT|UPDATE|DELETE|DR
 
 $result = $conn->query($sql);
 if (!$result) {
-    // SQL failed — still return the answer text so the user gets something useful
     ob_end_clean();
     echo json_encode([
         'answer'    => $answer,
@@ -226,21 +245,19 @@ while ($row = $result->fetch_assoc()) {
 }
 $result->close();
 
-// Build a plain-text data summary for session storage
 $dataSummary = '';
 if (count($rows) === 1 && count($rows[0]) === 1) {
-    $val = array_values($rows[0])[0];
+    $val         = array_values($rows[0])[0];
     $dataSummary = ' — ' . $val;
 } elseif (count($rows) > 0) {
     $lines = [];
     foreach (array_slice($rows, 0, 5) as $i => $row) {
-        $lines[] = $i + 1 . '. ' . implode(' · ', array_map('strval', array_values($row)));
+        $lines[] = ($i + 1) . '. ' . implode(' · ', array_map('strval', array_values($row)));
     }
     $dataSummary = "\n" . implode("\n", $lines);
-    if (count($rows) > 5) $dataSummary .= "\n+" . count($rows) - 5 . ' more';
+    if (count($rows) > 5) $dataSummary .= "\n+" . (count($rows) - 5) . ' more';
 }
 
-// Persist to session
 if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
 $_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
 $_SESSION['ai_chat_history'][] = ['role' => 'bot',  'text' => $answer . $dataSummary];

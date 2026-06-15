@@ -1,0 +1,306 @@
+<?php
+ob_start();
+error_reporting(0);
+ini_set('display_errors', '0');
+
+header('Content-Type: application/json');
+
+require_once dirname(dirname(__DIR__)) . '/config/env.php';
+require_once dirname(dirname(__DIR__)) . '/config/security.php';
+require_once dirname(dirname(__DIR__)) . '/config/database.php';
+
+security_start_session();
+
+// ── DEBUG MODE ── hit analytics_chat.php?debug=1 to see diagnostics
+if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+    ob_end_clean();
+
+    $groqKeyRaw = env('GROQ_API_KEY', '');
+    $groqKeyOk  = !empty($groqKeyRaw) && $groqKeyRaw !== 'your_groq_api_key_here';
+
+    // Test outbound cURL to Groq
+    $curlTest = ['supported' => false, 'reachable' => false, 'error' => null, 'http_code' => null];
+    if (function_exists('curl_init')) {
+        $curlTest['supported'] = true;
+        $ch = curl_init('https://api.groq.com/openai/v1/models');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 8,
+            CURLOPT_HTTPHEADER     => $groqKeyOk ? ['Authorization: Bearer ' . $groqKeyRaw] : [],
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+        curl_exec($ch);
+        $curlTest['http_code'] = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlTest['error']     = curl_error($ch) ?: null;
+        $curlTest['reachable'] = ($curlTest['http_code'] >= 200 && $curlTest['http_code'] < 500);
+        curl_close($ch);
+    }
+
+    echo json_encode([
+        'debug'        => true,
+        'php_version'  => PHP_VERSION,
+        'https'        => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'session' => [
+            'status'      => session_status(), // 1=disabled 2=active
+            'id'          => session_id() ?: null,
+            'has_user_id' => isset($_SESSION['user_id']),
+            'user_id'     => $_SESSION['user_id'] ?? null,
+            'role'        => $_SESSION['role'] ?? null,
+            'keys'        => array_keys($_SESSION),
+        ],
+        'groq_key_loaded' => $groqKeyOk,
+        'groq_key_prefix' => $groqKeyOk ? substr($groqKeyRaw, 0, 8) . '...' : null,
+        'curl'            => $curlTest,
+        'env_file_exists' => file_exists(dirname(dirname(__DIR__)) . '/.env'),
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+if (empty($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
+    ob_end_clean();
+    http_response_code(403);
+    echo json_encode([
+        'error'        => 'Unauthorized',
+        'debug_hint'   => 'Session is empty or role is not admin. Visit this URL with ?debug=1 to diagnose.',
+        'session_keys' => array_keys($_SESSION),
+        'has_user_id'  => isset($_SESSION['user_id']),
+        'role'         => $_SESSION['role'] ?? null,
+    ]);
+    exit;
+}
+
+$groqKey = env('GROQ_API_KEY', '');
+if (!$groqKey || $groqKey === 'your_groq_api_key_here') {
+    ob_end_clean();
+    echo json_encode(['error' => 'Groq API key not configured. Add GROQ_API_KEY to .env']);
+    exit;
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+$userMessage = trim($input['message'] ?? '');
+if ($userMessage === '') {
+    ob_end_clean();
+    echo json_encode(['error' => 'Message is required']);
+    exit;
+}
+
+$systemPrompt = <<<'PROMPT'
+You are a MySQL SELECT query generator for Azucena's Dental Clinic admin dashboard.
+
+TASK: Given a question, output ONLY a JSON object with two keys:
+- "sql": a valid MySQL SELECT query
+- "answer": a 1-sentence label describing what the query measures (NOT repeating the user's question)
+
+ABSOLUTE SQL RULES:
+1. ALWAYS assign a short alias to every table in FROM and JOIN.
+2. ALWAYS prefix EVERY column with its table alias. No bare column names ever.
+   CORRECT: FROM appointments a WHERE a.appointment_date = CURDATE()
+   WRONG:   FROM appointments WHERE appointment_date = CURDATE()
+3. appointment_date exists ONLY in the appointments table. When querying billing or patients by date, JOIN appointments first.
+4. ONLY SELECT statements. Never INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE.
+5. Limit result sets: add LIMIT 10 for list queries unless a specific number is requested.
+
+COLUMN → TABLE MAP (memorize — use these exact aliases):
+  appointments a   → a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency
+  patients p       → p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
+  users u          → u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
+  role r           → r.role_id, r.role_name
+  billing b        → b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status
+  services s       → s.service_id, s.service_name, s.initial_price
+  selected_services ss → ss.selected_service_id, ss.appointment_id, ss.service_id
+  payments py      → py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at
+  clinical_records cr  → cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
+
+DATE PATTERNS (always qualify with table alias):
+  Today        : a.appointment_date = CURDATE()
+  This week    : YEARWEEK(a.appointment_date, 1) = YEARWEEK(CURDATE(), 1)
+  This month   : MONTH(a.appointment_date) = MONTH(CURDATE()) AND YEAR(a.appointment_date) = YEAR(CURDATE())
+  Last 7 days  : a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+  Last 30 days : a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+  New patients : DATE(p.created_at) (NOT appointment_date — patients table has no appointment_date)
+
+ANSWER RULES:
+- The "answer" describes what was measured, e.g. "Total appointments scheduled for today." or "Top services booked this month."
+- NEVER echo or rephrase the user's question as the answer.
+- NEVER say "you asked" or reference the question.
+- Use ₱ for currency amounts.
+
+OFF-TOPIC: If not about clinic data → {"sql": null, "answer": "I can only answer questions about clinic appointments, patients, services, billing, and doctor activity."}
+
+EXAMPLES:
+Q: How many appointments today?
+A: {"sql":"SELECT COUNT(*) AS total FROM appointments a WHERE a.appointment_date = CURDATE()","answer":"Total appointments scheduled for today."}
+
+Q: Revenue this month?
+A: {"sql":"SELECT COALESCE(SUM(b.amount_paid),0) AS collected FROM billing b INNER JOIN appointments a ON a.appointment_id = b.appointment_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE())","answer":"Total revenue collected this month."}
+
+Q: Top services this month?
+A: {"sql":"SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings FROM selected_services ss INNER JOIN appointments a ON a.appointment_id = ss.appointment_id INNER JOIN services s ON s.service_id = ss.service_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE()) GROUP BY s.service_id ORDER BY bookings DESC LIMIT 5","answer":"Top 5 most booked services this month."}
+
+Q: Busiest doctor this week?
+A: {"sql":"SELECT u.first_name, u.last_name, COUNT(a.appointment_id) AS total FROM appointments a INNER JOIN users u ON u.user_id = a.user_id WHERE YEARWEEK(a.appointment_date,1)=YEARWEEK(CURDATE(),1) GROUP BY u.user_id ORDER BY total DESC LIMIT 1","answer":"Doctor with the most appointments this week."}
+
+Q: New patients this month?
+A: {"sql":"SELECT COUNT(*) AS new_patients FROM patients p WHERE MONTH(DATE(p.created_at))=MONTH(CURDATE()) AND YEAR(DATE(p.created_at))=YEAR(CURDATE())","answer":"New patients registered this month."}
+
+Q: No-shows last 30 days?
+A: {"sql":"SELECT COUNT(*) AS no_shows FROM appointments a WHERE a.status = 'no_show' AND a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)","answer":"No-show appointments in the last 30 days."}
+
+OUTPUT: Strict JSON only. No markdown. No code fences. No text outside the JSON object.
+PROMPT;
+
+$schema = <<<'SCHEMA'
+FULL SCHEMA REFERENCE:
+patients(patient_id, first_name, last_name, middle_name, date_of_birth, gender, phone_number, email, address, created_at)
+appointments(appointment_id, appointment_date, status[scheduled|confirmed|checked_in|in_progress|completed_by_doctor|awaiting_secretary_records|records_complete|completed|cancelled|no_show|rescheduled], patient_id, user_id, is_emergency, created_at)
+users(user_id, first_name, last_name, email, role_id, is_active)
+role(role_id, role_name[admin|doctor|secretary|patient])
+services(service_id, service_name, initial_price, is_active)
+selected_services(selected_service_id, appointment_id, service_id)
+billing(billing_id, appointment_id, total_amount, amount_paid, balance, status[unpaid|partial|paid])
+payments(payment_id, billing_id, amount, payment_method, paid_at)
+clinical_records(record_id, appointment_id, doctor_id, patient_id, status[in_progress|submitted|finalized])
+SCHEMA;
+
+$payload = [
+    'model' => 'llama-3.3-70b-versatile',
+    'messages' => [
+        ['role' => 'system', 'content' => $systemPrompt . "\n\n" . $schema],
+        ['role' => 'user',   'content' => $userMessage],
+    ],
+    'temperature' => 0.05,
+    'max_tokens'  => 600,
+];
+
+$ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
+curl_setopt_array($ch, [
+    CURLOPT_POST          => true,
+    CURLOPT_HTTPHEADER    => [
+        'Authorization: Bearer ' . $groqKey,
+        'Content-Type: application/json',
+    ],
+    CURLOPT_POSTFIELDS    => json_encode($payload),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT       => 20,
+]);
+
+$response  = curl_exec($ch);
+$httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+unset($ch);
+
+if ($curlError) {
+    ob_end_clean();
+    echo json_encode(['error' => 'Could not reach Groq: ' . $curlError]);
+    exit;
+}
+
+if ($httpCode !== 200) {
+    $errData = json_decode($response, true);
+    $msg = $errData['error']['message'] ?? 'Groq API error (HTTP ' . $httpCode . ')';
+    ob_end_clean();
+    echo json_encode(['error' => $msg]);
+    exit;
+}
+
+$aiResponse = json_decode($response, true);
+$content    = $aiResponse['choices'][0]['message']['content'] ?? '';
+
+$clean = trim($content);
+$clean = preg_replace('/```json\s*/i', '', $clean);
+$clean = preg_replace('/```\s*/', '', $clean);
+$clean = trim($clean);
+
+// Extract first JSON object if there is surrounding text
+if (preg_match('/\{.*\}/s', $clean, $m)) {
+    $clean = $m[0];
+}
+
+$parsed = json_decode($clean, true);
+if (!is_array($parsed) || !array_key_exists('answer', $parsed)) {
+    ob_end_clean();
+    echo json_encode(['error' => 'Could not parse AI response. Please try again.']);
+    exit;
+}
+
+$answer = trim((string)($parsed['answer'] ?? ''));
+$sql    = isset($parsed['sql']) ? trim((string)$parsed['sql']) : '';
+
+// Detect echoed question: if the answer is nearly the same as the question, reject it
+if ($answer !== '' && strlen($answer) > 4) {
+    similar_text(strtolower($answer), strtolower($userMessage), $pct);
+    if ($pct > 72) {
+        ob_end_clean();
+        echo json_encode(['error' => 'Could not generate a proper answer. Please rephrase your question.']);
+        exit;
+    }
+}
+
+// No SQL — text-only answer (off-topic or non-data questions)
+if ($sql === '' || strtolower($sql) === 'null') {
+    if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
+    $_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
+    $_SESSION['ai_chat_history'][] = ['role' => 'bot',  'text' => $answer];
+    if (count($_SESSION['ai_chat_history']) > 60) {
+        $_SESSION['ai_chat_history'] = array_slice($_SESSION['ai_chat_history'], -60);
+    }
+    ob_end_clean();
+    echo json_encode(['answer' => $answer, 'rows' => [], 'row_count' => 0]);
+    exit;
+}
+
+// Safety: only allow SELECT
+$upperSql = strtoupper(ltrim($sql));
+if (strpos($upperSql, 'SELECT') !== 0 || preg_match('/\b(INSERT|UPDATE|DELETE|DROP|ALTER|CREATE|TRUNCATE)\b/i', $sql)) {
+    ob_end_clean();
+    echo json_encode(['error' => 'Only SELECT queries are allowed.']);
+    exit;
+}
+
+$result = $conn->query($sql);
+if (!$result) {
+    // SQL failed — still return the answer text so the user gets something useful
+    ob_end_clean();
+    echo json_encode([
+        'answer'    => $answer,
+        'rows'      => [],
+        'row_count' => 0,
+        'sql_error' => $conn->error,
+    ]);
+    exit;
+}
+
+$rows = [];
+while ($row = $result->fetch_assoc()) {
+    $rows[] = $row;
+}
+$result->close();
+
+// Build a plain-text data summary for session storage
+$dataSummary = '';
+if (count($rows) === 1 && count($rows[0]) === 1) {
+    $val = array_values($rows[0])[0];
+    $dataSummary = ' — ' . $val;
+} elseif (count($rows) > 0) {
+    $lines = [];
+    foreach (array_slice($rows, 0, 5) as $i => $row) {
+        $lines[] = $i + 1 . '. ' . implode(' · ', array_map('strval', array_values($row)));
+    }
+    $dataSummary = "\n" . implode("\n", $lines);
+    if (count($rows) > 5) $dataSummary .= "\n+" . count($rows) - 5 . ' more';
+}
+
+// Persist to session
+if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
+$_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
+$_SESSION['ai_chat_history'][] = ['role' => 'bot',  'text' => $answer . $dataSummary];
+if (count($_SESSION['ai_chat_history']) > 60) {
+    $_SESSION['ai_chat_history'] = array_slice($_SESSION['ai_chat_history'], -60);
+}
+
+ob_end_clean();
+echo json_encode([
+    'answer'    => $answer,
+    'rows'      => $rows,
+    'row_count' => count($rows),
+]);

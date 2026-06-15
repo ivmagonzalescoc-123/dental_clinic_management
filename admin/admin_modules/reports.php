@@ -1429,21 +1429,30 @@ $aiChatHistory = $_SESSION['ai_chat_history'] ?? [];
         input.style.height = 'auto';
         addTyping();
 
-        fetch('../assets/api/ai/analytics_chat.php', {
+        fetch('admin.php?action=ai_chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: text })
         })
         .then(function (r) {
-            return r.text().then(function (text) {
-                try { return JSON.parse(text); }
-                catch (e) { throw new Error('Server returned an invalid response. Check PHP error logs.'); }
+            var status = r.status;
+            return r.text().then(function (raw) {
+                var data;
+                try { data = JSON.parse(raw); } catch (e) {
+                    throw new Error('[HTTP ' + status + '] Server returned non-JSON. Likely blocked by host.\n\nRaw: ' + raw.substring(0, 300));
+                }
+                data.__status = status;
+                return data;
             });
         })
         .then(function (data) {
             removeTyping();
             if (data.error) {
-                addMessage(escHtml(data.error), 'error');
+                var msg = '[HTTP ' + data.__status + '] ' + data.error;
+                if (data.debug_hint)   msg += '\n\nHint: ' + data.debug_hint;
+                if (data.session_keys) msg += '\nSession keys: [' + data.session_keys.join(', ') + ']';
+                if (data.role)         msg += '\nRole: ' + data.role;
+                addMessage(escHtml(msg), 'error');
             } else {
                 addMessage(renderResponse(data), 'bot');
             }

@@ -31,6 +31,12 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
     exit;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'ai_chat') {
+    header('Content-Type: application/json');
+    include 'admin_modules/ai_chat_handler.php';
+    exit;
+}
+
 $header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
 if ($header_display_name === '') {
     $header_display_name = (string)($_SESSION['email'] ?? 'User');
