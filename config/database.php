@@ -26,8 +26,20 @@ $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 
 // Check connection
 if ($conn->connect_error) {
-    error_log("Database Connection Failed: " . $conn->connect_error);
-    die("Connection Error: Unable to connect to database. Please try again later.");
+    $dbErr = $conn->connect_error;
+    error_log("Database Connection Failed: " . $dbErr);
+    // Return JSON if this is an AJAX/fetch request, plain text otherwise
+    $isAjax = (
+        (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false)
+        || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false)
+        || (!empty($_SERVER['HTTP_SEC_FETCH_MODE']) && $_SERVER['HTTP_SEC_FETCH_MODE'] === 'cors')
+    );
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        die(json_encode(['error' => 'Database connection failed. Check DB environment variables.', 'db_error' => $dbErr]));
+    }
+    die("<h2>Database Connection Error</h2><p>Unable to connect. Check environment variables.<br><code>" . htmlspecialchars($dbErr) . "</code></p>");
 }
 
 // Set charset to utf8mb4
