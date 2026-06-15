@@ -97,6 +97,20 @@ $stats = [
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'Arial', 'sans-serif'],
                     },
+                    colors: {
+                        sky: {
+                            50: '#f0f7ff',
+                            100: '#e0f2fe',
+                            200: '#b9e5fe',
+                            300: '#7cd4fd',
+                            400: '#36bffa',
+                            500: '#1173c1',
+                            600: '#0a4f88',
+                            700: '#0a406d',
+                            800: '#0d375a',
+                            900: '#112f4c',
+                        },
+                    },
                 },
             },
         };
@@ -134,7 +148,7 @@ $stats = [
             bottom: -4px;
             height: 2px;
             width: 0;
-            background-color: #0ea5e9;
+            background-color: #1173c1;
             transition: width 0.25s ease;
         }
         .nav-link:hover::after,

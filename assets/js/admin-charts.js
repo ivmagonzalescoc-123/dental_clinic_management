@@ -110,6 +110,37 @@
         }, 240);
     }
 
+    function buildGroupedBarOptions(labels, bookedValues, completedValues) {
+        return enhanceOptions({
+            chart: { type: 'bar' },
+            series: [
+                { name: 'Booked', data: bookedValues },
+                { name: 'Completed', data: completedValues }
+            ],
+            xaxis: {
+                categories: labels,
+                labels: { rotate: -45, style: { fontSize: '11px', colors: '#64748b' } },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                min: 0,
+                forceNiceScale: true,
+                labels: { formatter: function (v) { return Math.round(v); } }
+            },
+            colors: ['#94a3b8', '#0d9488'],
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    borderRadius: 6,
+                    columnWidth: '55%'
+                }
+            },
+            dataLabels: { enabled: false },
+            legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' }
+        }, 240);
+    }
+
     function buildHorizontalBarOptions(labels, values, seriesName) {
         var colors = labels.map(function (_, i) {
             return palette.categorical[i % palette.categorical.length];
@@ -302,6 +333,7 @@
         palette: palette,
         enhanceOptions: enhanceOptions,
         buildVerticalBarOptions: buildVerticalBarOptions,
+        buildGroupedBarOptions: buildGroupedBarOptions,
         buildHorizontalBarOptions: buildHorizontalBarOptions,
         buildDonutOptions: buildDonutOptions,
         buildMoneyBarOptions: buildMoneyBarOptions,

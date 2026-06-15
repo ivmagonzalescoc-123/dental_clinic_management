@@ -2,12 +2,12 @@
     display: inline-block;
     width: 1rem;
     height: 1rem;
-    margin-right: 0.5rem;
     border: 2px solid currentColor;
     border-right-color: transparent;
     border-radius: 50%;
     animation: app-spinner-spin 0.65s linear infinite;
-    vertical-align: -0.125em;
+    vertical-align: middle;
+    flex-shrink: 0;
 }
 
 @keyframes app-spinner-spin {
@@ -23,12 +23,9 @@ input[type="button"].is-action-loading,
 a.btn.is-action-loading {
     pointer-events: none;
     opacity: 0.88;
-}
-
-.btn.is-action-loading .app-spinner,
-button.is-action-loading .app-spinner,
-input.is-action-loading .app-spinner {
-    vertical-align: -0.125em;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
 }
 
 .app-page-loading {
@@ -41,6 +38,10 @@ input.is-action-loading .app-spinner {
     background: rgba(255, 255, 255, 0.42);
     backdrop-filter: blur(1px);
     pointer-events: all;
+}
+
+.app-page-loading__panel .app-spinner {
+    margin-right: 0;
 }
 
 .app-page-loading__panel {

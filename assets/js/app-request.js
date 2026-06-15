@@ -29,10 +29,7 @@
   }
 
   function buildLoadingHtml(text) {
-    return (
-      '<span class="app-spinner me-2" role="status" aria-hidden="true"></span>' +
-      '<span>' + String(text || 'Processing...') + '</span>'
-    );
+    return '<span class="app-spinner" role="status" aria-label="' + String(text || 'Loading') + '"></span>';
   }
 
   function ensurePageLoadingEl() {
@@ -82,10 +79,12 @@
         if (!target.dataset.actionLoadingPrevValue) {
           target.dataset.actionLoadingPrevValue = target.value;
         }
-        target.value = options.text || defaultLoadingText(target);
+        target.value = '';
       } else {
         if (!target.dataset.actionLoadingPrevHtml) {
           target.dataset.actionLoadingPrevHtml = target.innerHTML;
+          target.dataset.actionLoadingPrevMinWidth = target.style.minWidth;
+          target.style.minWidth = target.offsetWidth + 'px';
         }
         target.innerHTML = buildLoadingHtml(options.text || defaultLoadingText(target));
       }
@@ -109,7 +108,9 @@
       }
     } else if (target.dataset.actionLoadingPrevHtml) {
       target.innerHTML = target.dataset.actionLoadingPrevHtml;
+      target.style.minWidth = target.dataset.actionLoadingPrevMinWidth || '';
       delete target.dataset.actionLoadingPrevHtml;
+      delete target.dataset.actionLoadingPrevMinWidth;
     }
   }
 

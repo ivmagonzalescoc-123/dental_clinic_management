@@ -275,6 +275,7 @@ $completionRate = $totalAppointments > 0 ? round(($completedVisits / $totalAppoi
 $periodLabel = date('M d, Y', strtotime($startDate)) . ' – ' . date('M d, Y', strtotime($endDate));
 
 $dailyChartLabels = [];
+$dailyBookedValues = [];
 $dailyCompletedValues = [];
 $dailyMap = [];
 $dayStart = strtotime($startDate);
@@ -283,15 +284,17 @@ if ($dayStart && $dayEnd && $dayStart <= $dayEnd) {
     for ($d = $dayStart; $d <= $dayEnd; $d = strtotime('+1 day', $d)) {
         $key = date('Y-m-d', $d);
         $dailyChartLabels[] = date('M d', $d);
+        $dailyBookedValues[] = 0;
         $dailyCompletedValues[] = 0;
-        $dailyMap[$key] = count($dailyCompletedValues) - 1;
+        $dailyMap[$key] = count($dailyChartLabels) - 1;
     }
 }
 $dailySql = "
-    SELECT a.appointment_date AS dt, COUNT(*) AS total
+    SELECT a.appointment_date AS dt,
+           COUNT(*) AS total,
+           SUM(CASE WHEN a.status IN ('completed','records_complete') THEN 1 ELSE 0 END) AS completed
     FROM appointments a
-    WHERE a.appointment_date BETWEEN ? AND ?
-      AND a.status IN ('completed','records_complete'){$doctorClause}
+    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
     GROUP BY a.appointment_date
     ORDER BY a.appointment_date ASC
 ";
@@ -307,7 +310,8 @@ if ($dailyStmt) {
     while ($row = $dailyRes->fetch_assoc()) {
         $dt = (string)$row['dt'];
         if (isset($dailyMap[$dt])) {
-            $dailyCompletedValues[$dailyMap[$dt]] = (int)$row['total'];
+            $dailyBookedValues[$dailyMap[$dt]] = (int)$row['total'];
+            $dailyCompletedValues[$dailyMap[$dt]] = (int)$row['completed'];
         }
     }
     $dailyStmt->close();
@@ -372,6 +376,8 @@ $reportRangeNav = [
     'month' => 'This month',
     'custom' => 'Custom dates',
 ];
+
+$aiChatHistory = $_SESSION['ai_chat_history'] ?? [];
 ?>
 
 <div class="dental-dashboard-shell clinic-reports-shell" id="clinicReportPrintArea">
@@ -494,12 +500,12 @@ $reportRangeNav = [
                 <div class="card-body">
                     <div class="dental-chart-card__head">
                         <h5 class="card-title mb-0">Completed Visits per Day</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge completed visits chart">
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge appointments vs completed visits chart">
                             <i class="bi bi-arrows-fullscreen"></i>
                         </button>
                     </div>
                     <div class="dental-chart-frame">
-                        <div id="reportDailyChart" class="clinic-simple-chart" data-chart-title="Completed Visits per Day"></div>
+                        <div id="reportDailyChart" class="clinic-simple-chart" data-chart-title="Appointments vs Completed Visits"></div>
                     </div>
                 </div>
             </div>
@@ -535,7 +541,7 @@ $reportRangeNav = [
             </div>
         </div>
         <?php if ($billingCount > 0): ?>
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
                     <div class="dental-chart-card__head">
@@ -551,6 +557,21 @@ $reportRangeNav = [
             </div>
         </div>
         <?php endif; ?>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Top Services This Period</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportTopServicesMonthChart" aria-label="Enlarge top services chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportTopServicesMonthChart" class="clinic-simple-chart" data-chart-title="Top Services This Period"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row g-3">
@@ -764,7 +785,8 @@ $reportRangeNav = [
 <script>
 (function () {
     const dailyLabels = <?php echo json_encode($dailyChartLabels); ?>;
-    const dailyValues = <?php echo json_encode($dailyCompletedValues); ?>;
+    const dailyBooked = <?php echo json_encode($dailyBookedValues); ?>;
+    const dailyCompleted = <?php echo json_encode($dailyCompletedValues); ?>;
     const statusLabels = <?php echo json_encode($chartStatusLabels); ?>;
     const statusValues = <?php echo json_encode($chartStatusValues); ?>;
     const serviceLabels = <?php echo json_encode($chartServiceLabels); ?>;
@@ -775,45 +797,143 @@ $reportRangeNav = [
     function renderCharts() {
         if (typeof AdminCharts === 'undefined' || typeof ApexCharts === 'undefined') return;
 
-        if (dailyLabels.length && dailyValues.some(function (v) { return v > 0; })) {
-            AdminCharts.mount(
-                'reportDailyChart',
-                AdminCharts.buildVerticalBarOptions(dailyLabels, dailyValues, 'Completed visits', AdminCharts.palette.teal),
-                'Completed Visits per Day'
-            );
-        } else {
-            AdminCharts.renderNoData('reportDailyChart', 'completed visits');
-        }
+        try {
+            if (dailyLabels.length && (dailyBooked.some(function (v) { return v > 0; }) || dailyCompleted.some(function (v) { return v > 0; }))) {
+                var dailyEl = document.getElementById('reportDailyChart');
+                if (dailyEl && typeof ApexCharts !== 'undefined') {
+                    dailyEl.innerHTML = '';
+                    var dailyCard = dailyEl.closest('.dental-chart-card');
+                    if (dailyCard) {
+                        var dailyBtn = dailyCard.querySelector('[data-chart-expand]');
+                        if (dailyBtn) dailyBtn.style.display = '';
+                    }
+                    var dailyChart = new ApexCharts(dailyEl, {
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [
+                            { name: 'Booked', data: dailyBooked },
+                            { name: 'Completed', data: dailyCompleted }
+                        ],
+                        xaxis: {
+                            categories: dailyLabels,
+                            labels: { rotate: -45, style: { fontSize: '11px', colors: '#64748b' } },
+                            axisBorder: { show: false },
+                            axisTicks: { show: false }
+                        },
+                        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
+                        colors: ['#94a3b8', '#0d9488'],
+                        plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
+                        dataLabels: { enabled: false },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        tooltip: { theme: 'light', style: { fontSize: '12px' } }
+                    });
+                    dailyChart.render();
 
-        if (statusLabels.length) {
-            AdminCharts.mount(
-                'reportStatusChart',
-                AdminCharts.buildDonutOptions(statusLabels, statusValues),
-                'Appointment Outcomes'
-            );
-        } else {
-            AdminCharts.renderNoData('reportStatusChart', 'appointment outcomes');
-        }
+                    var dailyExpandBtn = document.querySelector('[data-chart-expand="reportDailyChart"]');
+                    if (dailyExpandBtn && !dailyExpandBtn._dailyExpandBound) {
+                        dailyExpandBtn._dailyExpandBound = true;
+                        dailyExpandBtn.addEventListener('click', function () {
+                            var modalEl = document.getElementById('adminChartExpandModal');
+                            var titleEl = document.getElementById('adminChartExpandTitle');
+                            var hostEl = document.getElementById('adminChartExpandHost');
+                            if (!modalEl || !hostEl) return;
+                            if (titleEl) titleEl.textContent = 'Appointments vs Completed Visits';
+                            hostEl.innerHTML = '';
+                            var expandedChart = new ApexCharts(hostEl, dailyChart.w.config);
+                            expandedChart.render();
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                            }
+                        });
+                    }
+                }
+            } else {
+                AdminCharts.renderNoData('reportDailyChart', 'visit data');
+            }
+        } catch (e) { console.error('Daily chart error:', e); }
 
-        if (serviceLabels.length) {
-            AdminCharts.mount(
-                'reportServicesChart',
-                AdminCharts.buildHorizontalBarOptions(serviceLabels, serviceValues, 'Bookings'),
-                'Top Services Booked'
-            );
-        } else {
-            AdminCharts.renderNoData('reportServicesChart', 'service bookings');
-        }
+        try {
+            if (statusLabels.length) {
+                AdminCharts.mount(
+                    'reportStatusChart',
+                    AdminCharts.buildDonutOptions(statusLabels, statusValues),
+                    'Appointment Outcomes'
+                );
+            } else {
+                AdminCharts.renderNoData('reportStatusChart', 'appointment outcomes');
+            }
+        } catch (e) { console.error('Status chart error:', e); }
 
-        if (document.getElementById('reportCollectionsChart') && (totalCollected > 0 || totalOutstanding > 0)) {
-            AdminCharts.mount(
-                'reportCollectionsChart',
-                AdminCharts.buildMoneyBarOptions(totalCollected, totalOutstanding),
-                'Collections vs Outstanding'
-            );
-        } else if (document.getElementById('reportCollectionsChart')) {
-            AdminCharts.renderNoData('reportCollectionsChart', 'billing amounts');
-        }
+        try {
+            if (serviceLabels.length) {
+                AdminCharts.mount(
+                    'reportServicesChart',
+                    AdminCharts.buildHorizontalBarOptions(serviceLabels, serviceValues, 'Bookings'),
+                    'Top Services Booked'
+                );
+            } else {
+                AdminCharts.renderNoData('reportServicesChart', 'service bookings');
+            }
+        } catch (e) { console.error('Services chart error:', e); }
+
+        try {
+            if (document.getElementById('reportCollectionsChart') && (totalCollected > 0 || totalOutstanding > 0)) {
+                AdminCharts.mount(
+                    'reportCollectionsChart',
+                    AdminCharts.buildMoneyBarOptions(totalCollected, totalOutstanding),
+                    'Collections vs Outstanding'
+                );
+            } else if (document.getElementById('reportCollectionsChart')) {
+                AdminCharts.renderNoData('reportCollectionsChart', 'billing amounts');
+            }
+        } catch (e) { console.error('Collections chart error:', e); }
+
+        try {
+            var topSvcMonthEl = document.getElementById('reportTopServicesMonthChart');
+            if (topSvcMonthEl && serviceLabels.length) {
+                topSvcMonthEl.innerHTML = '';
+                var topSvcMonthCard = topSvcMonthEl.closest('.dental-chart-card');
+                if (topSvcMonthCard) {
+                    var topSvcMonthBtn = topSvcMonthCard.querySelector('[data-chart-expand]');
+                    if (topSvcMonthBtn) topSvcMonthBtn.style.display = '';
+                }
+                var topSvcColors = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+                var topSvcMonthChart = new ApexCharts(topSvcMonthEl, {
+                    chart: { type: 'donut', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                    series: serviceValues,
+                    labels: serviceLabels,
+                    colors: topSvcColors.slice(0, serviceLabels.length),
+                    legend: { position: 'bottom', fontSize: '11px' },
+                    dataLabels: { enabled: true, formatter: function (val) { return Math.round(val) + '%'; }, style: { fontSize: '10px', fontWeight: 600 } },
+                    plotOptions: { pie: { donut: { size: '55%', labels: { show: true, name: { fontSize: '11px' }, value: { fontSize: '16px', fontWeight: 700, color: '#1e293b' }, total: { show: true, label: 'Total', fontSize: '11px', formatter: function (w) { return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0); } } } } } },
+                    stroke: { width: 2, colors: ['#fff'] },
+                    tooltip: { theme: 'light', style: { fontSize: '12px' } }
+                });
+                topSvcMonthChart.render();
+
+                var topSvcExpandBtn = document.querySelector('[data-chart-expand="reportTopServicesMonthChart"]');
+                if (topSvcExpandBtn && !topSvcExpandBtn._topSvcExpandBound) {
+                    topSvcExpandBtn._topSvcExpandBound = true;
+                    topSvcExpandBtn.addEventListener('click', function () {
+                        var modalEl = document.getElementById('adminChartExpandModal');
+                        var titleEl = document.getElementById('adminChartExpandTitle');
+                        var hostEl = document.getElementById('adminChartExpandHost');
+                        if (!modalEl || !hostEl) return;
+                        if (titleEl) titleEl.textContent = 'Top Services This Period';
+                        hostEl.innerHTML = '';
+                        var expandedChart = new ApexCharts(hostEl, topSvcMonthChart.w.config);
+                        expandedChart.render();
+                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                        }
+                    });
+                }
+            } else if (topSvcMonthEl) {
+                topSvcMonthEl.innerHTML = '<div class="dental-chart-empty"><i class="bi bi-pie-chart"></i><span>No service data for this period.</span></div>';
+                var noSvcCard = topSvcMonthEl.closest('.dental-chart-card');
+                if (noSvcCard) { var noBtn = noSvcCard.querySelector('[data-chart-expand]'); if (noBtn) noBtn.style.display = 'none'; }
+            }
+        } catch (e) { console.error('Top services month chart error:', e); }
 
         AdminCharts.bindExpandButtons();
     }
@@ -822,6 +942,521 @@ $reportRangeNav = [
         document.addEventListener('DOMContentLoaded', renderCharts);
     } else {
         renderCharts();
+    }
+})();
+</script>
+
+<style>
+/* === AI Chat Widget === */
+.ai-chat-wrapper {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1050;
+    width: 360px;
+    max-width: calc(100vw - 40px);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* FAB — the robot icon button */
+.ai-chat-fab {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #1a80d9, #0a4f8e);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 18px rgba(17,115,193,0.38), 0 2px 6px rgba(0,0,0,0.12);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    transition: transform 0.3s cubic-bezier(0.34,1.5,0.64,1), opacity 0.22s ease, box-shadow 0.2s;
+    position: relative;
+    z-index: 1;
+}
+.ai-chat-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(17,115,193,0.48);
+}
+.ai-chat-fab.hidden {
+    opacity: 0;
+    transform: scale(0);
+    pointer-events: none;
+}
+
+/* Panel — scales out from bottom-right corner (icon position) */
+.ai-chat-panel {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 460px;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 16px 48px rgba(15,23,42,0.18), 0 4px 14px rgba(15,23,42,0.08);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.06);
+    transform-origin: bottom right;
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.38s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.22s ease;
+}
+.ai-chat-panel.open {
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Header — white card style, dark legible text */
+.ai-chat-header {
+    background: #fff;
+    border-bottom: 1.5px solid #f0f4f8;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-shrink: 0;
+}
+.ai-chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+.ai-chat-header-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #1a80d9 0%, #0a4f8e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(17,115,193,0.28);
+}
+.ai-chat-header-text h6 {
+    margin: 0 0 2px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+}
+.ai-chat-subtitle {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.ai-chat-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.2);
+}
+.ai-chat-close {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: none;
+    color: #64748b;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s, color 0.18s;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.ai-chat-close:hover { background: #e2e8f0; color: #1e293b; }
+
+/* Messages list */
+.ai-chat-messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f8fafc;
+}
+.ai-chat-msg {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.55;
+    word-break: break-word;
+}
+.ai-chat-msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #1a80d9, #0a4f8e);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 8px rgba(17,115,193,0.22);
+}
+.ai-chat-msg.bot {
+    align-self: flex-start;
+    background: #fff;
+    color: #1e293b;
+    border: 1px solid #e8ecf1;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.ai-chat-msg.bot table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12px;
+}
+.ai-chat-msg.bot th, .ai-chat-msg.bot td {
+    padding: 5px 8px;
+    border: 1px solid #e8ecf1;
+    text-align: left;
+}
+.ai-chat-msg.bot th { background: #f1f5f9; font-weight: 600; color: #334155; }
+.ai-chat-msg.error {
+    align-self: flex-start;
+    background: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    border-bottom-left-radius: 4px;
+}
+
+/* Typing dots */
+.ai-chat-typing {
+    display: flex;
+    gap: 4px;
+    padding: 12px 14px;
+}
+.ai-chat-typing span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: aiTyping 1.2s infinite ease-in-out;
+}
+.ai-chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.ai-chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes aiTyping {
+    0%,60%,100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Input row */
+.ai-chat-input-wrap {
+    padding: 10px 12px;
+    border-top: 1.5px solid #f0f4f8;
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    background: #fff;
+    flex-shrink: 0;
+}
+.ai-chat-input {
+    flex: 1;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    min-height: 38px;
+    max-height: 70px;
+    line-height: 1.4;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    color: #1e293b;
+    background: #f8fafc;
+}
+.ai-chat-input:focus {
+    border-color: #1a80d9;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(26,128,217,0.1);
+}
+.ai-chat-send {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1a80d9, #0a4f8e);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(17,115,193,0.25);
+}
+.ai-chat-send:hover { opacity: 0.88; transform: scale(1.06); }
+.ai-chat-send:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+/* Response data rendering */
+.ai-metric {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1a80d9;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.ai-kv-list, .ai-row-list {
+    margin: 0 0 6px;
+    padding: 0;
+    list-style: none;
+}
+.ai-kv-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid #f0f4f8;
+    font-size: 12.5px;
+}
+.ai-kv-list li:last-child { border-bottom: none; }
+.ai-kv-label { color: #64748b; font-size: 11.5px; }
+.ai-kv-val { font-weight: 600; color: #1e293b; }
+.ai-row-list { counter-reset: none; padding-left: 0; }
+.ai-row-list li {
+    font-size: 12.5px;
+    color: #1e293b;
+    padding: 5px 0;
+    border-bottom: 1px solid #f0f4f8;
+    list-style: decimal inside;
+    list-style: none;
+}
+.ai-row-list li::before {
+    content: counter(ai-row) ".";
+    counter-increment: ai-row;
+    color: #94a3b8;
+    margin-right: 5px;
+    font-size: 11px;
+}
+.ai-row-list { counter-reset: ai-row; }
+.ai-row-list li:last-child { border-bottom: none; }
+.ai-dot { color: #cbd5e1; margin: 0 2px; }
+.ai-more { color: #94a3b8; font-style: italic; font-size: 11.5px; }
+.ai-answer-text {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.55;
+}
+</style>
+
+<div class="ai-chat-wrapper" id="aiChatWrapper">
+    <button type="button" class="ai-chat-fab" id="aiChatFab" title="AI Analytics Assistant">
+        <i class="bi bi-robot"></i>
+    </button>
+
+    <div class="ai-chat-panel" id="aiChatPanel">
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-left">
+                <div class="ai-chat-header-icon"><i class="bi bi-robot"></i></div>
+                <div class="ai-chat-header-text">
+                    <h6>Analytics Assistant</h6>
+                    <span class="ai-chat-subtitle"><span class="ai-chat-status-dot"></span>Powered by Groq AI</span>
+                </div>
+            </div>
+            <button type="button" class="ai-chat-close" id="aiChatClose">&times;</button>
+        </div>
+        <div class="ai-chat-messages" id="aiChatMessages">
+            <div class="ai-chat-msg bot">
+                Hi! I'm your clinic analytics assistant. Ask me anything about your data, for example:
+                <br><br>
+                <em>"Top services this month"</em><br>
+                <em>"How many appointments today?"</em><br>
+                <em>"Revenue this week"</em><br>
+                <em>"Which doctor is busiest?"</em>
+            </div>
+        </div>
+        <div class="ai-chat-input-wrap">
+            <textarea class="ai-chat-input" id="aiChatInput" rows="1" placeholder="Ask about your clinic data..."></textarea>
+            <button type="button" class="ai-chat-send" id="aiChatSend"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var fab = document.getElementById('aiChatFab');
+    var panel = document.getElementById('aiChatPanel');
+    var closeBtn = document.getElementById('aiChatClose');
+    var messages = document.getElementById('aiChatMessages');
+    var input = document.getElementById('aiChatInput');
+    var sendBtn = document.getElementById('aiChatSend');
+    var sending = false;
+
+    if (!fab || !panel) return;
+
+    fab.addEventListener('click', function () {
+        panel.classList.add('open');
+        fab.classList.add('hidden');
+        setTimeout(function () { input.focus(); }, 350);
+    });
+
+    closeBtn.addEventListener('click', function () {
+        panel.classList.remove('open');
+        fab.classList.remove('hidden');
+    });
+
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    input.addEventListener('input', function () {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 80) + 'px';
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    // Restore conversation from PHP session
+    (function () {
+        var history = <?php echo json_encode($aiChatHistory); ?>;
+        if (!history || !history.length) return;
+        messages.innerHTML = '';
+        history.forEach(function (msg) {
+            var text = msg.role === 'bot'
+                ? escHtml(msg.text).replace(/\n/g, '<br>')
+                : msg.text;
+            addMessage(text, msg.role);
+        });
+    })();
+
+    function addMessage(text, type, extra) {
+        var div = document.createElement('div');
+        div.className = 'ai-chat-msg ' + type;
+        if (type === 'bot') {
+            div.innerHTML = text;
+        } else {
+            div.textContent = text;
+        }
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    function addTyping() {
+        var div = document.createElement('div');
+        div.className = 'ai-chat-msg bot';
+        div.id = 'aiChatTyping';
+        div.innerHTML = '<div class="ai-chat-typing"><span></span><span></span><span></span></div>';
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    function removeTyping() {
+        var el = document.getElementById('aiChatTyping');
+        if (el) el.remove();
+    }
+
+    function escHtml(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function renderResponse(data) {
+        var rows = data.rows || [];
+        var answer = data.answer || '';
+        var html = '';
+
+        if (rows.length === 1 && Object.keys(rows[0]).length === 1) {
+            // Single metric — show as a large number
+            var val = Object.values(rows[0])[0];
+            html += '<div class="ai-metric">' + escHtml(String(val ?? '0')) + '</div>';
+        } else if (rows.length === 1) {
+            // Single row, multiple columns — key/value pairs
+            html += '<ul class="ai-kv-list">';
+            Object.entries(rows[0]).forEach(function (kv) {
+                html += '<li><span class="ai-kv-label">' + escHtml(kv[0]) + '</span>'
+                      + '<span class="ai-kv-val">' + escHtml(String(kv[1] ?? '—')) + '</span></li>';
+            });
+            html += '</ul>';
+        } else if (rows.length > 1) {
+            // Multiple rows — compact ordered list
+            var keys = Object.keys(rows[0]);
+            html += '<ol class="ai-row-list">';
+            rows.slice(0, 8).forEach(function (row) {
+                var parts = keys.map(function (k) { return escHtml(String(row[k] ?? '')); });
+                html += '<li>' + parts.join('<span class="ai-dot"> · </span>') + '</li>';
+            });
+            if (data.row_count > 8) {
+                html += '<li class="ai-more">+' + escHtml(String(data.row_count - 8)) + ' more</li>';
+            }
+            html += '</ol>';
+        }
+
+        if (answer) {
+            html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';
+        }
+
+        return html || escHtml(answer || 'No data found.');
+    }
+
+    function sendMessage() {
+        var text = input.value.trim();
+        if (!text || sending) return;
+
+        sending = true;
+        sendBtn.disabled = true;
+        addMessage(text, 'user');
+        input.value = '';
+        input.style.height = 'auto';
+        addTyping();
+
+        fetch('../assets/api/ai/analytics_chat.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text })
+        })
+        .then(function (r) {
+            return r.text().then(function (text) {
+                try { return JSON.parse(text); }
+                catch (e) { throw new Error('Server returned an invalid response. Check PHP error logs.'); }
+            });
+        })
+        .then(function (data) {
+            removeTyping();
+            if (data.error) {
+                addMessage(escHtml(data.error), 'error');
+            } else {
+                addMessage(renderResponse(data), 'bot');
+            }
+            sending = false;
+            sendBtn.disabled = false;
+            input.focus();
+        })
+        .catch(function (err) {
+            removeTyping();
+            addMessage(escHtml(err && err.message ? err.message : 'Unable to reach the assistant. Please try again.'), 'error');
+            sending = false;
+            sendBtn.disabled = false;
+        });
     }
 })();
 </script>

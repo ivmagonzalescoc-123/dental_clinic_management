@@ -7,8 +7,6 @@ $profile_role = $header_role_label ?? '';
     <a class="nav-link nav-profile header-dropdown__toggle d-flex align-items-center pe-0" href="#" role="button"
         data-portal-dropdown-toggle aria-haspopup="true" aria-expanded="false">
         <?php echo profile_render_avatar_markup($conn, '../', ['class' => 'rounded-circle header-profile-avatar', 'alt' => 'Profile']); ?>
-        <span class="d-none d-lg-block user-display-name"><?php echo htmlspecialchars($profile_name); ?></span>
-        <i class="bi bi-chevron-down header-dropdown__caret d-none d-lg-block" aria-hidden="true"></i>
     </a>
     <div class="header-dropdown__menu profile-menu" role="menu">
         <div class="profile-menu__header">

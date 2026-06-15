@@ -49,7 +49,7 @@ body {
 #header {
     background: #ffffff;
     border-bottom: 1px solid #e0e0e0;
-    padding: 10px 16px;
+    padding: 6px 14px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
     z-index: 100;
     width: 100%;
@@ -69,30 +69,32 @@ body {
 }
 
 #header .logo img {
-    width: 45px;
-    height: 45px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    margin-right: 15px;
+    margin-right: 10px;
 }
 
 #header .logo span {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
     display: block;
+    line-height: 1.2;
 }
 
 #header .logo small {
-    font-size: 12px;
+    font-size: 11px;
     color: #999999;
+    line-height: 1.2;
 }
 
 .toggle-sidebar-btn {
     cursor: pointer;
-    font-size: 24px;
+    font-size: 20px;
     color: #1173c1;
     display: inline-block;
-    padding: 8px 12px;
-    margin-left: 15px;
+    padding: 6px 10px;
+    margin-left: 10px;
     border: none;
     background: none;
     transition: all 0.3s ease;
@@ -132,7 +134,7 @@ body {
 
 .header-search .header-search-input,
 .header-search .unified-table-search-input {
-    min-height: 40px;
+    min-height: 34px;
 }
 
 /* Legacy aliases — keep for any old markup during transition */
@@ -193,10 +195,12 @@ body {
     position: relative;
     color: #1173c1 !important;
     text-decoration: none;
-    padding: 8px 15px;
+    padding: 6px 10px;
     margin: 0 5px;
     border-radius: 8px;
     transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
 }
 
 .header-nav .nav-link:hover,
@@ -277,7 +281,7 @@ body {
 .header-profile-avatar {
     width: 35px;
     height: 35px;
-    margin-right: 10px;
+    margin-right: 0;
     object-fit: cover;
 }
 
@@ -346,7 +350,7 @@ body {
     width: 260px;
     height: 100vh;
     background: var(--sidebar-bg);
-    padding-top: 90px;
+    padding-top: 78px;
     overflow-y: auto;
     border-right: 1px solid #e0e0e0;
     z-index: 99;
