@@ -21,12 +21,13 @@ if (!security_validate_csrf_token($csrfToken)) {
     exit;
 }
 
-$currentPassword = (string)($input['current_password'] ?? '');
-$newPassword = (string)($input['new_password'] ?? '');
-$confirmPassword = (string)($input['confirm_password'] ?? '');
+$currentPassword  = (string)($input['current_password'] ?? '');
+$newPassword      = (string)($input['new_password'] ?? '');
+$confirmPassword  = (string)($input['confirm_password'] ?? '');
+$clientSaysGoogle = !empty($input['is_google_account']);
 
-if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
-    echo json_encode(['success' => false, 'message' => 'All password fields are required']);
+if ($newPassword === '' || $confirmPassword === '') {
+    echo json_encode(['success' => false, 'message' => 'New password fields are required']);
     exit;
 }
 
@@ -49,7 +50,7 @@ if ($isPatient) {
         exit;
     }
 
-    $stmt = $conn->prepare('SELECT password_hash FROM patients WHERE patient_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT password_hash, google_id, password_updated_at FROM patients WHERE patient_id = ? LIMIT 1');
     if (!$stmt) {
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Database error']);
@@ -66,17 +67,24 @@ if ($isPatient) {
         exit;
     }
 
-    $stored = (string)($row['password_hash'] ?? '');
-    $ok = false;
-    if (security_is_password_hash($stored)) {
-        $ok = password_verify($currentPassword, $stored);
-    } else {
-        $ok = hash_equals($stored, $currentPassword);
-    }
-
-    if (!$ok) {
-        echo json_encode(['success' => false, 'message' => 'Current password is incorrect']);
-        exit;
+    // Skip current password only for Google accounts that have never set their own password
+    $isGoogleAccount = !empty($row['google_id']) && $row['password_updated_at'] === null;
+    if (!$isGoogleAccount) {
+        if ($currentPassword === '') {
+            echo json_encode(['success' => false, 'message' => 'Current password is required']);
+            exit;
+        }
+        $stored = (string)($row['password_hash'] ?? '');
+        $ok = false;
+        if (security_is_password_hash($stored)) {
+            $ok = password_verify($currentPassword, $stored);
+        } else {
+            $ok = hash_equals($stored, $currentPassword);
+        }
+        if (!$ok) {
+            echo json_encode(['success' => false, 'message' => 'Current password is incorrect']);
+            exit;
+        }
     }
 
     $newHash = security_hash_password($newPassword);

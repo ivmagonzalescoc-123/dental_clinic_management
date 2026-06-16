@@ -191,7 +191,7 @@ $ins = $conn->prepare(
         (first_name, last_name, middle_name, password_hash, email,
          phone_number, gender, date_of_birth, address,
          google_id, google_picture, created_at, must_change_password, password_updated_at)
-     VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, NOW())"
+     VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, NULL)"
 );
 
 if (!$ins) {

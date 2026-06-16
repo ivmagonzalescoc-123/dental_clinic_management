@@ -1,17 +1,41 @@
+<?php
+// Detect if this patient signed up via Google (no known password)
+// True only when: signed up via Google AND has never set their own password yet
+$_settingsIsGoogleAccount = false;
+$_settingsPatientId = (int)($_SESSION['patient_id'] ?? 0);
+if ($_settingsPatientId > 0 && isset($conn)) {
+    $_gChk = $conn->prepare("SELECT google_id, password_updated_at FROM patients WHERE patient_id = ? LIMIT 1");
+    if ($_gChk) {
+        $_gChk->bind_param('i', $_settingsPatientId);
+        $_gChk->execute();
+        $_gRow = $_gChk->get_result()->fetch_assoc();
+        $_gChk->close();
+        $_settingsIsGoogleAccount = !empty($_gRow['google_id']) && $_gRow['password_updated_at'] === null;
+    }
+}
+?>
 <div class="card border-0 shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">Account Settings</h5>
     </div>
     <div class="card-body">
+        <?php if ($_settingsIsGoogleAccount): ?>
+        <p class="text-muted">Your account uses Google Sign-In. Set a password below if you also want to log in with email and password.</p>
+        <?php else: ?>
         <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
+        <?php endif; ?>
         <div id="passwordChangeAlert" class="mt-3"></div>
         <form id="passwordChangeForm" class="mt-3 account-settings-form" autocomplete="off">
+            <?php if (!$_settingsIsGoogleAccount): ?>
             <?php
             $password_field_id = 'currentPassword';
             $password_field_label = 'Current Password';
             $password_field_attrs = 'required';
             include dirname(dirname(__DIR__)) . '/includes/password_field.php';
+            ?>
+            <?php endif; ?>
 
+            <?php
             $password_field_id = 'newPassword';
             $password_field_label = 'New Password';
             $password_field_attrs = 'required minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"';
@@ -97,10 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
         updatePasswordHints(newPasswordInput.value);
     }
 
+    const isGoogleAccount = <?php echo $_settingsIsGoogleAccount ? 'true' : 'false'; ?>;
+
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        const currentPassword = document.getElementById('currentPassword').value;
+        const currentPasswordEl = document.getElementById('currentPassword');
+        const currentPassword = currentPasswordEl ? currentPasswordEl.value : '';
         const newPassword = document.getElementById('newPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -123,6 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     current_password: currentPassword,
                     new_password: newPassword,
                     confirm_password: confirmPassword,
+                    is_google_account: isGoogleAccount,
                     csrf_token: csrfToken,
                 }),
             });
