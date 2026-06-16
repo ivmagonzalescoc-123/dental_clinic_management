@@ -23,6 +23,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 
 $year = date('Y');
 $csrf_token = security_generate_csrf_token();
+$googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
 $clinicLogo = 'assets/img/clinic-logo.png';
 $pageBackgroundImage = 'assets/img/landing-background.jpg';
 
@@ -90,6 +91,9 @@ $stats = [
     <link rel="stylesheet" href="assets/css/app-toast.css?v=20260614-short">
     <link rel="stylesheet" href="assets/css/app-request.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <?php if ($googleClientId !== ''): ?>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <?php endif; ?>
     <script>
         tailwind.config = {
             theme: {
@@ -736,6 +740,26 @@ $stats = [
                 <button type="submit" class="w-full rounded-xl bg-sky-500 px-4 py-3.5 text-sm font-semibold text-white hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                     Login to Dashboard
                 </button>
+
+                <?php if ($googleClientId !== ''): ?>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px bg-slate-200"></div>
+                    <span class="text-xs font-medium text-slate-400">or</span>
+                    <div class="flex-1 h-px bg-slate-200"></div>
+                </div>
+                <div class="flex justify-center">
+                    <button type="button" id="google-login-btn"
+                        class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
+                        title="Sign in with Google" aria-label="Sign in with Google">
+                        <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                    </button>
+                </div>
+                <?php endif; ?>
             </form>
 
             <footer class="border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8">
@@ -851,6 +875,26 @@ $stats = [
                 <button type="submit" class="block w-full rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-bold text-white hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 transition-colors">
                     Create Account
                 </button>
+
+                <?php if ($googleClientId !== ''): ?>
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-px bg-slate-200"></div>
+                    <span class="text-xs font-medium text-slate-400">or</span>
+                    <div class="flex-1 h-px bg-slate-200"></div>
+                </div>
+                <div class="flex justify-center">
+                    <button type="button" id="google-register-btn"
+                        class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
+                        title="Sign up with Google" aria-label="Sign up with Google">
+                        <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                        </svg>
+                    </button>
+                </div>
+                <?php endif; ?>
 
                 <p class="text-center text-sm text-slate-600">
                     Already have an account?
@@ -1411,6 +1455,64 @@ $stats = [
                 setAlert('An error occurred. Please try again.', 'error');
             }
         });
+
+        // ----- Google OAuth -----
+        const googleClientId = <?php echo json_encode($googleClientId); ?>;
+        let googleApiReady = false;
+
+        function handleGoogleCredential(response) {
+            if (!response || !response.credential) return;
+            setAlert('Signing in with Google…', 'info');
+            fetch('assets/api/auth/google_oauth_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    setAlert(data.message || 'Signed in successfully.', 'success');
+                    setTimeout(function() {
+                        window.location.href = data.redirect || 'patient/patient.php';
+                    }, 800);
+                } else {
+                    setAlert(data.message || 'Google sign-in failed. Please try again.', 'error');
+                }
+            })
+            .catch(function() {
+                setAlert('Google sign-in failed. Please try again.', 'error');
+            });
+        }
+
+        function triggerGoogleSignIn() {
+            if (!googleClientId || !googleApiReady) {
+                setAlert('Google sign-in is still loading. Please try again in a moment.', 'warning');
+                return;
+            }
+            google.accounts.id.prompt(function(notification) {
+                if (notification.isNotDisplayed()) {
+                    setAlert('Google sign-in could not open. Please allow popups or try a different browser.', 'warning');
+                }
+            });
+        }
+
+        if (googleClientId) {
+            const _gsiPoll = setInterval(function() {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    clearInterval(_gsiPoll);
+                    googleApiReady = true;
+                    google.accounts.id.initialize({
+                        client_id: googleClientId,
+                        callback: handleGoogleCredential,
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
+                }
+            }, 100);
+        }
+
+        document.getElementById('google-login-btn')?.addEventListener('click', triggerGoogleSignIn);
+        document.getElementById('google-register-btn')?.addEventListener('click', triggerGoogleSignIn);
 
         // Session timeout notice (redirected here from a protected page)
         if (new URLSearchParams(window.location.search).has('timeout')) {
