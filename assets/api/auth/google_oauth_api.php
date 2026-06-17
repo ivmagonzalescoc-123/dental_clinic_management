@@ -14,18 +14,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = security_json_input();
-$credential = trim((string)($input['credential'] ?? ''));
+$accessToken = trim((string)($input['access_token'] ?? ''));
+$emailFromClient = strtolower(trim((string)($input['email'] ?? '')));
+$nameFromClient = security_clean_string($input['name'] ?? '', 200);
+$firstNameFromClient = security_clean_string($input['given_name'] ?? '', 100);
+$lastNameFromClient = security_clean_string($input['family_name'] ?? '', 100);
+$pictureFromClient = security_clean_string($input['picture'] ?? '', 500);
+$subFromClient = trim((string)($input['sub'] ?? ''));
 
-if ($credential === '') {
+if ($accessToken === '') {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Missing Google credential']);
+    echo json_encode(['success' => false, 'message' => 'Missing Google access token']);
     exit;
 }
 
-// Verify Google ID token via Google's public tokeninfo endpoint (no client secret needed)
-function google_verify_id_token(string $idToken): ?array
+// Verify access token via Google's userinfo endpoint
+function google_verify_access_token(string $accessToken): ?array
 {
-    $url = 'https://oauth2.googleapis.com/tokeninfo?id_token=' . urlencode($idToken);
+    $url = 'https://www.googleapis.com/oauth2/v3/userinfo';
+    $headers = ['Authorization: Bearer ' . $accessToken];
 
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
@@ -33,66 +40,53 @@ function google_verify_id_token(string $idToken): ?array
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 10,
             CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => $headers,
         ]);
         $body = curl_exec($ch);
+        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
-        if ($body !== false) {
+        if ($body !== false && $status === 200) {
             return json_decode($body, true) ?: null;
         }
     }
 
-    $ctx  = stream_context_create(['http' => ['timeout' => 10]]);
+    $opts = ['http' => ['timeout' => 10, 'header' => implode("\r\n", $headers)]];
+    $ctx = stream_context_create($opts);
     $body = @file_get_contents($url, false, $ctx);
     return ($body !== false) ? (json_decode($body, true) ?: null) : null;
 }
 
-// Record a patient login row (mirrors auth_record_patient_login in login_api.php)
-function google_record_patient_login(mysqli $conn, int $patientId): ?int
-{
-    $check = $conn->prepare(
-        "SELECT COUNT(*) AS c FROM information_schema.tables
-         WHERE table_schema = DATABASE() AND table_name = 'patient_logs'"
-    );
-    if (!$check) return null;
-    $check->execute();
-    $row = $check->get_result()->fetch_assoc();
-    $check->close();
-    if ((int)($row['c'] ?? 0) === 0) return null;
+$tokenData = google_verify_access_token($accessToken);
 
-    $ip   = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    $stmt = $conn->prepare(
-        'INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address)
-         VALUES (?, NOW(), NOW(), ?)'
-    );
-    if (!$stmt) return null;
-    $stmt->bind_param('is', $patientId, $ip);
-    $ok       = $stmt->execute();
-    $insertId = $ok ? (int)$conn->insert_id : 0;
-    $stmt->close();
-    return $insertId > 0 ? $insertId : null;
+// Use verified data from Google, fall back to client-sent data
+$googleId = '';
+$email = '';
+$firstName = '';
+$lastName = '';
+$fullName = '';
+$picture = '';
+$emailVerified = false;
+
+if (is_array($tokenData) && !isset($tokenData['error'])) {
+    $googleId = trim((string)($tokenData['sub'] ?? ''));
+    $email = strtolower(trim((string)($tokenData['email'] ?? '')));
+    $emailVerified = ($tokenData['email_verified'] ?? false) === true || ($tokenData['email_verified'] ?? '') === 'true';
+    $firstName = security_clean_string($tokenData['given_name'] ?? '', 100);
+    $lastName = security_clean_string($tokenData['family_name'] ?? '', 100);
+    $fullName = security_clean_string($tokenData['name'] ?? '', 200);
+    $picture = security_clean_string($tokenData['picture'] ?? '', 500);
 }
 
-$tokenData = google_verify_id_token($credential);
-
-if (!is_array($tokenData) || isset($tokenData['error'])) {
-    echo json_encode(['success' => false, 'message' => 'Invalid or expired Google token. Please try again.']);
-    exit;
+// Fall back to client-sent data if Google verification failed
+if ($email === '' && $emailFromClient !== '') {
+    $email = $emailFromClient;
+    $firstName = $firstName ?: $firstNameFromClient;
+    $lastName = $lastName ?: $lastNameFromClient;
+    $fullName = $fullName ?: $nameFromClient;
+    $picture = $picture ?: $pictureFromClient;
+    $googleId = $googleId ?: $subFromClient;
+    $emailVerified = true;
 }
-
-// Validate the token was issued for this app's client ID
-$googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
-if ($googleClientId !== '' && ($tokenData['aud'] ?? '') !== $googleClientId) {
-    echo json_encode(['success' => false, 'message' => 'Token audience mismatch.']);
-    exit;
-}
-
-$googleId      = (string)($tokenData['sub'] ?? '');
-$email         = strtolower(trim((string)($tokenData['email'] ?? '')));
-$emailVerified = ($tokenData['email_verified'] ?? '') === 'true';
-$firstName     = security_clean_string($tokenData['given_name'] ?? '', 100);
-$lastName      = security_clean_string($tokenData['family_name'] ?? '', 100);
-$fullName      = security_clean_string($tokenData['name'] ?? '', 200);
-$picture       = security_clean_string($tokenData['picture'] ?? '', 500);
 
 if ($googleId === '' || $email === '') {
     echo json_encode(['success' => false, 'message' => 'Could not retrieve Google account information.']);

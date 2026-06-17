@@ -1623,13 +1623,29 @@ $aboutPoints = [
         // ----- Google OAuth -----
         const googleClientId = <?php echo json_encode($googleClientId); ?>;
         let googleApiReady = false;
+        let googleTokenClient = null;
 
         function handleGoogleCredential(response) {
-            if (!response || !response.credential) return;
-            fetch('assets/api/auth/google_oauth_api.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: response.credential })
+            if (!response || !response.access_token) return;
+            setAlert('Signing in with Google...', 'info');
+            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                headers: { 'Authorization': 'Bearer ' + response.access_token }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(userInfo) {
+                return fetch('assets/api/auth/google_oauth_api.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        access_token: response.access_token,
+                        email: userInfo.email || '',
+                        name: userInfo.name || '',
+                        given_name: userInfo.given_name || '',
+                        family_name: userInfo.family_name || '',
+                        picture: userInfo.picture || '',
+                        sub: userInfo.sub || ''
+                    })
+                });
             })
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -1648,27 +1664,22 @@ $aboutPoints = [
         }
 
         function triggerGoogleSignIn() {
-            if (!googleClientId || !googleApiReady) {
+            if (!googleClientId || !googleApiReady || !googleTokenClient) {
                 setAlert('Google sign-in is still loading. Please try again in a moment.', 'warning');
                 return;
             }
-            google.accounts.id.prompt(function(notification) {
-                if (notification.isNotDisplayed()) {
-                    setAlert('Google sign-in could not open. Please allow popups or try a different browser.', 'warning');
-                }
-            });
+            googleTokenClient.requestAccessToken({ prompt: 'consent' });
         }
 
         if (googleClientId) {
             const _gsiPoll = setInterval(function() {
-                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
                     clearInterval(_gsiPoll);
                     googleApiReady = true;
-                    google.accounts.id.initialize({
+                    googleTokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: googleClientId,
+                        scope: 'openid email profile',
                         callback: handleGoogleCredential,
-                        auto_select: false,
-                        cancel_on_tap_outside: true
                     });
                 }
             }, 100);
