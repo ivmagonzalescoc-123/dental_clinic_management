@@ -491,7 +491,7 @@ $aboutPoints = [
                     </span>
 
                     <h1 class="mt-6 font-display text-white" style="font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.15; font-weight: 600;">
-                        Your Smile Deserves the <br> <span style="color: #7db8f7;">Best Care</span>
+                        Your Smile Deserves the <br class="hidden sm:inline"> <span style="color: #7db8f7;">Best Care</span>
                     </h1>
 
                     <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
@@ -1626,13 +1626,25 @@ $aboutPoints = [
         let googleTokenClient = null;
 
         function handleGoogleCredential(response) {
-            if (!response || !response.access_token) return;
+            if (!response) {
+                setAlert('Google sign-in was cancelled.', 'warning');
+                return;
+            }
+            if (!response.access_token) {
+                console.error('Google OAuth response:', response);
+                setAlert('Google sign-in failed: no access token received.', 'error');
+                return;
+            }
             setAlert('Signing in with Google...', 'info');
             fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                 headers: { 'Authorization': 'Bearer ' + response.access_token }
             })
             .then(function(r) { return r.json(); })
             .then(function(userInfo) {
+                if (userInfo.error) {
+                    setAlert('Google sign-in failed: ' + (userInfo.error_description || userInfo.error), 'error');
+                    return null;
+                }
                 return fetch('assets/api/auth/google_oauth_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1647,8 +1659,9 @@ $aboutPoints = [
                     })
                 });
             })
-            .then(function(r) { return r.json(); })
+            .then(function(r) { return r ? r.json() : null; })
             .then(function(data) {
+                if (!data) return;
                 if (data.success) {
                     setAlert(data.message || 'Signed in successfully.', 'success');
                     setTimeout(function() {
@@ -1658,7 +1671,8 @@ $aboutPoints = [
                     setAlert(data.message || 'Google sign-in failed. Please try again.', 'error');
                 }
             })
-            .catch(function() {
+            .catch(function(err) {
+                console.error('Google sign-in error:', err);
                 setAlert('Google sign-in failed. Please try again.', 'error');
             });
         }
@@ -1680,9 +1694,20 @@ $aboutPoints = [
                         client_id: googleClientId,
                         scope: 'openid email profile',
                         callback: handleGoogleCredential,
+                        error_callback: function(err) {
+                            console.error('Google OAuth error:', err);
+                            setAlert('Google sign-in error: ' + (err.type || 'unknown'), 'error');
+                        }
                     });
                 }
             }, 100);
+
+            setTimeout(function() {
+                if (!googleApiReady) {
+                    clearInterval(_gsiPoll);
+                    setAlert('Google sign-in could not load. Please refresh the page.', 'error');
+                }
+            }, 10000);
         }
 
         document.getElementById('google-login-btn')?.addEventListener('click', triggerGoogleSignIn);
