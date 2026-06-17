@@ -810,20 +810,19 @@ if ($stmt) {
 <script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
 // Service map for resolving service IDs to names
-const serviceMap = {
+window.serviceMap = {
     <?php foreach ($services as $s): ?>
         "<?php echo $s['service_id']; ?>": "<?php echo htmlspecialchars(addslashes($s['service_name'])); ?>",
     <?php endforeach; ?>
 };
 
-// Current session role/user for client-side role checks
-const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
-const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
-const doctorCalendarCountsByDate = <?php echo json_encode($calendarCountsByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
-const doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
-let generalDateFilter = '';
-let generalMonthFilter = '';
-let generalSearchTerm = '';
+window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
+window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+window.doctorCalendarCountsByDate = <?php echo json_encode($calendarCountsByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+window.doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+window.generalDateFilter = '';
+window.generalMonthFilter = '';
+window.generalSearchTerm = '';
 
 function applyGeneralTableFilters(shouldScroll) {
     const table = document.getElementById('doctorGeneralAppointmentsTable');
@@ -1401,13 +1400,12 @@ async function openHistoryModal(appointmentId) {
 </div>
 
 <script>
-const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+window.doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 function notifyDoctor(message, type) {
     window.showToast(String(message || ''), type || 'info');
 }
-const resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
-// initialize flatpickr on modal inputs
-let fpStart = null, fpEnd = null;
+window.resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
+window.fpStart = null; window.fpEnd = null;
 function initReschedulePickers() {
     try {
         if (typeof flatpickr !== 'undefined') {
@@ -1587,8 +1585,8 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
 
 <script>
 // Finish Appointment Modal Logic
-let finishingAppointmentId = null;
-let uploadedPhotos = [];
+window.finishingAppointmentId = null;
+window.uploadedPhotos = [];
 
 function openFinishAppointmentModal(appointmentId) {
     finishingAppointmentId = appointmentId;
@@ -1724,8 +1722,8 @@ function removeUploadedPhoto(idx) {
 }
 
 // Submit Finish Appointment
-let finishAppointmentSubmitting = false;
-let finishAppointmentIdempotencyKey = null;
+window.finishAppointmentSubmitting = false;
+window.finishAppointmentIdempotencyKey = null;
 
 document.getElementById('submitFinishAppointmentBtn').addEventListener('click', async function() {
     if (!finishingAppointmentId) return;

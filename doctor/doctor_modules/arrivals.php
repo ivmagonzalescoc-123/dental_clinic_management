@@ -40,11 +40,11 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 function notifyDoctorArrival(message, type) {
     window.showToast(String(message || ''), type || 'info');
 }
-const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
-const DOC_TODAY    = <?= json_encode($today) ?>;
-const DOC_TOMORROW = <?= json_encode($tomorrow) ?>;
-const DOC_UID      = <?= json_encode($doctor_id) ?>;
-let currentDocDate = DOC_TODAY;
+window.doctorCsrfToken  = <?php echo json_encode($csrf_token ?? ''); ?>;
+window.DOC_TODAY        = <?= json_encode($today) ?>;
+window.DOC_TOMORROW     = <?= json_encode($tomorrow) ?>;
+window.DOC_UID          = <?= json_encode($doctor_id) ?>;
+window.currentDocDate   = window.DOC_TODAY;
 
 function switchDocTab(t) {
     currentDocDate = (t === 'today') ? DOC_TODAY : DOC_TOMORROW;

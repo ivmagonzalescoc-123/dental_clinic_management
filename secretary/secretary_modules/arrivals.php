@@ -36,10 +36,10 @@ $tomorrow = date('Y-m-d', strtotime('+1 day'));
 </div>
 
 <script>
-const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
-const ARR_TODAY    = <?= json_encode($today) ?>;
-const ARR_TOMORROW = <?= json_encode($tomorrow) ?>;
-let currentArrivalDate = ARR_TODAY;
+window.secretaryCsrfToken  = <?php echo json_encode($csrf_token ?? ''); ?>;
+window.ARR_TODAY           = <?= json_encode($today) ?>;
+window.ARR_TOMORROW        = <?= json_encode($tomorrow) ?>;
+window.currentArrivalDate  = window.ARR_TODAY;
 
 function switchArrivalTab(t) {
     currentArrivalDate = (t === 'today') ? ARR_TODAY : ARR_TOMORROW;
@@ -99,7 +99,8 @@ function renderArrTable(rows, date) {
     h += '</tr></thead><tbody>';
 
     rows.forEach(function(row) {
-        const done    = ['arrived', 'late', 'no_show', 'in_progress', 'served', 'completed'].includes(row.arrival_status);
+        const done    = ['arrived', 'late', 'no_show', 'in_progress', 'served', 'completed'].includes(row.arrival_status)
+                     || ['in_progress', 'awaiting_secretary_records', 'records_complete', 'completed'].includes(row.appointment_status);
         const canMark = isToday && !done;
         const ready   = isToday && ['arrived', 'late'].includes(row.arrival_status);
 

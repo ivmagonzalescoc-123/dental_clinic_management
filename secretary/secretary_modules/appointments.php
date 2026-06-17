@@ -1260,7 +1260,7 @@ $appointmentsViewFilters = [
 
 <!-- Initialize DataTable -->
 <script>
-    const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+    window.secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     function setDeclineAppointment(appointmentId) {
         document.getElementById('declineAppointmentId').value = appointmentId;
     }
@@ -1965,8 +1965,8 @@ $appointmentsViewFilters = [
 </div>
 
 <script>
-let resModalSec = null;
-let fpStartSec = null, fpEndSec = null;
+window.resModalSec = null;
+window.fpStartSec = null; window.fpEndSec = null;
 document.addEventListener('DOMContentLoaded', function() {
     try {
         if (typeof bootstrap !== 'undefined') {
@@ -2647,12 +2647,12 @@ function escapeHtml(text) {
 </style>
 
 <script>
-let currentRecordAppointmentId = null;
-let currentRecordPatientId = null;
-let secretaryOdontogramData = {};
-const SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
-const BILLING_SENIOR_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_senior_discount_percent()); ?>;
-const BILLING_PWD_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_pwd_discount_percent()); ?>;
+window.currentRecordAppointmentId = null;
+window.currentRecordPatientId = null;
+window.secretaryOdontogramData = {};
+window.SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
+window.BILLING_SENIOR_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_senior_discount_percent()); ?>;
+window.BILLING_PWD_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_pwd_discount_percent()); ?>;
 
 window.addEventListener('message', function(ev) {
     if (ev.data && ev.data.type === 'odontogram_update' && ev.data.toothState) {
@@ -2773,8 +2773,8 @@ function resolveMediaUrl(filePath) {
     return getAppRoot() + '/' + path;
 }
 
-let recordBillingCatalog = [];
-const recordBillingServiceIds = new Set();
+window.recordBillingCatalog = [];
+window.recordBillingServiceIds = new Set();
 
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
@@ -3101,8 +3101,8 @@ document.getElementById('addBillingChargeBtn')?.addEventListener('click', () => 
     addBillingChargeRow();
 });
 
-let secretaryRecordSubmitting = false;
-let secretaryRecordIdempotencyKey = null;
+window.secretaryRecordSubmitting = false;
+window.secretaryRecordIdempotencyKey = null;
 
 document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', async function() {
     if (secretaryRecordSubmitting) return;
@@ -3235,6 +3235,6 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
 </script>
 
 <script>
-const CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
-const CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
+window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
 </script>

@@ -101,7 +101,7 @@ try {
         $apptStatus = $row['appointment_status'] ?? '';
         if ($apptStatus === 'in_progress') {
             $paStatus = 'in_progress';
-        } elseif ($apptStatus === 'completed') {
+        } elseif (in_array($apptStatus, ['completed', 'awaiting_secretary_records', 'records_complete'], true)) {
             $paStatus = 'served';
         } elseif ($apptStatus === 'checked_in') {
             $paStatus = 'arrived';

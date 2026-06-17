@@ -1119,8 +1119,8 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php endif; ?>
 
 <script>
-const adminPatientCsrf = <?php echo json_encode($csrf_token, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
-let activePatientRecord = null;
+window.adminPatientCsrf = <?php echo json_encode($csrf_token, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+window.activePatientRecord = null;
 
 function notifyAdminPatients(message, type) {
     if (typeof window.portalNotify === 'function') {

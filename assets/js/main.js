@@ -110,6 +110,43 @@
   ;(function() {
     var isNavigating = false
 
+    /**
+     * Persistent body guard: removes any element appended to document.body
+     * that isn't part of the known page structure. This prevents orphaned
+     * elements (Flatpickr calendars, FullCalendar widgets, echarts tooltips,
+     * etc.) from accumulating below the footer after AJAX page switches.
+     */
+    function isRecognizedBodyChild(el) {
+      if (!el || el.nodeType !== 1) return true
+      var tag = el.tagName
+      if (tag === 'HEADER' || tag === 'MAIN' || tag === 'ASIDE' ||
+          tag === 'SCRIPT' || tag === 'STYLE' || tag === 'LINK' ||
+          tag === 'META' || tag === 'NOSCRIPT') return true
+      var id = el.id || ''
+      if (id === 'header' || id === 'main' || id === 'sidebar' ||
+          id === 'appToastHost' || id === 'appConfirmModal' ||
+          id === 'mediaLightboxModal' || id === 'idleToastContainer') return true
+      var cl = el.classList
+      if (cl.contains('footer') || cl.contains('back-to-top') ||
+          cl.contains('app-page-loading') || cl.contains('modal-backdrop') ||
+          cl.contains('modal') || cl.contains('app-toast-host') ||
+          cl.contains('toast-container')) return true
+      return false
+    }
+
+    var bodyGuard = new MutationObserver(function(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j]
+          if (node.nodeType === 1 && !isRecognizedBodyChild(node)) {
+            node.remove()
+          }
+        }
+      }
+    })
+    bodyGuard.observe(document.body, { childList: true })
+
     function getPortalFile() {
       var path = window.location.pathname
       var m = path.match(/\/(admin|doctor|secretary|patient)\.php/)
@@ -134,10 +171,18 @@
       var inlineScripts = Array.from(container.querySelectorAll('script:not([src])'))
 
       function runInline() {
-        // Patch EventTarget.prototype.addEventListener so any
-        // document.addEventListener('DOMContentLoaded', cb) call that happens
-        // during script injection fires cb immediately as a microtask instead
-        // of waiting for an event that already fired.
+        if (window.FullCalendar && !FullCalendar.__fcPatched) {
+          window.__fcInstances = window.__fcInstances || []
+          var _OrigCalendar = FullCalendar.Calendar
+          FullCalendar.Calendar = function(el, opts) {
+            var inst = new _OrigCalendar(el, opts)
+            window.__fcInstances.push(inst)
+            return inst
+          }
+          FullCalendar.Calendar.prototype = _OrigCalendar.prototype
+          FullCalendar.__fcPatched = true
+        }
+
         var origAddEL = EventTarget.prototype.addEventListener
         var dcQueue = []
         EventTarget.prototype.addEventListener = function(type, listener, opts) {
@@ -149,15 +194,11 @@
         }
 
         inlineScripts.forEach(function(old) {
-          var s = document.createElement('script')
-          s.textContent = old.textContent
-          document.body.appendChild(s)
+          try { ;(0, eval)(old.textContent) } catch(e) { console.error('[ajax script]', e) }
         })
 
-        // Restore original before callbacks run so they see the real API
         EventTarget.prototype.addEventListener = origAddEL
 
-        // Fire each collected DOMContentLoaded callback as a microtask
         dcQueue.forEach(function(cb) {
           Promise.resolve().then(function() {
             try { cb() } catch (e) { console.error('[ajax dcl]', e) }
@@ -165,14 +206,19 @@
         })
       }
 
-      // A script counts as already executed only when a copy lives OUTSIDE
-      // the injected container. Scripts that landed inside via innerHTML were
-      // never executed by the browser and must still be loaded.
+      function resolveScriptUrl(raw) {
+        try { return new URL(raw, window.location.href).href } catch(e) { return raw }
+      }
+
       var pending = extScripts.filter(function(el) {
         var src = el.getAttribute('src')
         if (!src) return false
-        var matches = Array.from(document.querySelectorAll('script[src="' + src + '"]'))
-        return !matches.some(function(s) { return !container.contains(s) })
+        var resolved = resolveScriptUrl(src)
+        return !Array.from(document.querySelectorAll('script[src]')).some(function(s) {
+          if (container.contains(s)) return false
+          var existingSrc = s.getAttribute('src') || s.src
+          return resolveScriptUrl(existingSrc) === resolved
+        })
       })
 
       if (!pending.length) {
@@ -180,7 +226,6 @@
         return
       }
 
-      // Chain-load each new external script in order, then run inline scripts
       pending.reduce(function(chain, el) {
         return chain.then(function() {
           return new Promise(function(resolve) {
@@ -215,9 +260,30 @@
       }
     }
 
+    function cleanupModalState() {
+      if (window.__fcInstances && window.__fcInstances.length) {
+        window.__fcInstances.forEach(function(cal) {
+          try { cal.destroy() } catch(e) {}
+        })
+        window.__fcInstances = []
+      }
+
+      if (window.bootstrap) {
+        document.querySelectorAll('.modal.show').forEach(function(el) {
+          var inst = bootstrap.Modal.getInstance(el)
+          if (inst) inst.hide()
+        })
+      }
+      document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove() })
+      document.body.classList.remove('modal-open')
+      document.body.style.removeProperty('overflow')
+      document.body.style.removeProperty('padding-right')
+    }
+
     function ajaxNavigate(url) {
       if (isNavigating) return
       isNavigating = true
+      cleanupModalState()
       setPageLoading(true)
 
       fetch(url, { credentials: 'same-origin' })
@@ -239,11 +305,13 @@
           updateActiveNav(page)
 
           history.pushState({ page: page }, '', url)
-          window.scrollTo(0, 0)
+          document.documentElement.scrollTop = 0
+          document.body.scrollTop = 0
           isNavigating = false
         })
         .catch(function() {
           setPageLoading(false)
+          cleanupModalState()
           window.location.href = url
           isNavigating = false
         })

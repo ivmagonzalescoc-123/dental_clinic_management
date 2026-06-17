@@ -523,12 +523,22 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
     font-size: 14px;
 }
 
+/* ========== PORTAL BODY — sticky footer via flex column ========== */
+.secretary-portal,
+.admin-portal,
+.doctor-portal,
+.patient-portal {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 /* ========== MAIN CONTENT ========== */
 #main {
+    flex: 1;
     margin-left: 260px;
     margin-top: 80px;
     padding: 20px;
-    min-height: calc(100vh - 80px);
     transition: margin-left 0.3s ease;
     width: calc(100% - 260px);
     box-sizing: border-box;
@@ -1117,6 +1127,9 @@ table a:hover {
     width: calc(100% - 260px);
     box-sizing: border-box;
     transition: margin-left 0.3s ease;
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
 }
 
 .footer span {
