@@ -56,6 +56,32 @@ function google_verify_access_token(string $accessToken): ?array
     return ($body !== false) ? (json_decode($body, true) ?: null) : null;
 }
 
+// Record a patient login row
+function google_record_patient_login(mysqli $conn, int $patientId): ?int
+{
+    $check = $conn->prepare(
+        "SELECT COUNT(*) AS c FROM information_schema.tables
+         WHERE table_schema = DATABASE() AND table_name = 'patient_logs'"
+    );
+    if (!$check) return null;
+    $check->execute();
+    $row = $check->get_result()->fetch_assoc();
+    $check->close();
+    if ((int)($row['c'] ?? 0) === 0) return null;
+
+    $ip   = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $stmt = $conn->prepare(
+        'INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address)
+         VALUES (?, NOW(), NOW(), ?)'
+    );
+    if (!$stmt) return null;
+    $stmt->bind_param('is', $patientId, $ip);
+    $ok       = $stmt->execute();
+    $insertId = $ok ? (int)$conn->insert_id : 0;
+    $stmt->close();
+    return $insertId > 0 ? $insertId : null;
+}
+
 $tokenData = google_verify_access_token($accessToken);
 
 // Use verified data from Google, fall back to client-sent data
