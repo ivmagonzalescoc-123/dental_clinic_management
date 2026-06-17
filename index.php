@@ -2,7 +2,6 @@
 require_once 'config/security.php';
 security_start_session();
 
-// Redirect logged-in users to their respective dashboard
 if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     $role = $_SESSION['role'] ?? '';
 
@@ -37,46 +36,96 @@ if (!preg_match('#^https?://#i', $pageBackgroundImage)) {
 
 $services = [
     [
-        'title' => 'General Dentistry',
-        'desc' => 'Checkups and cleanings',
-        'icon' => 'building',
-    ],
-    [
-        'title' => 'Cosmetic Dentistry',
-        'desc' => 'Whitening and veneers',
+        'title' => 'Teeth Whitening',
+        'desc' => 'Achieve a brighter, whiter smile with our professional-grade whitening treatments. Safe, effective, and long-lasting results.',
         'icon' => 'sparkles',
+        'duration' => '60 min',
+        'price' => 'From ₱2,500',
     ],
     [
-        'title' => 'Restorative Care',
-        'desc' => 'Crowns and implants',
-        'icon' => 'wrench',
+        'title' => 'Dental Implants',
+        'desc' => 'Restore missing teeth with permanent, natural-looking implants that blend seamlessly with your existing smile.',
+        'icon' => 'shield',
+        'duration' => '2–3 sessions',
+        'price' => 'From ₱25,000',
     ],
     [
         'title' => 'Orthodontics',
-        'desc' => 'Braces and aligners',
-        'icon' => 'scissors',
+        'desc' => 'Straighten your teeth with modern braces or clear aligners. We create custom treatment plans for every patient.',
+        'icon' => 'zap',
+        'duration' => '12–24 months',
+        'price' => 'From ₱35,000',
+    ],
+    [
+        'title' => 'Preventive Care',
+        'desc' => 'Regular cleanings, check-ups, and fluoride treatments to keep your teeth healthy and catch issues early.',
+        'icon' => 'heart',
+        'duration' => '45 min',
+        'price' => 'From ₱800',
+    ],
+    [
+        'title' => 'Porcelain Veneers',
+        'desc' => 'Transform your smile with ultra-thin porcelain veneers that correct chips, gaps, stains, and misshapen teeth.',
+        'icon' => 'award',
+        'duration' => '2 sessions',
+        'price' => 'From ₱8,000',
+    ],
+    [
+        'title' => 'Pediatric Dentistry',
+        'desc' => 'Gentle, child-friendly dental care in a welcoming environment that builds lifelong habits of oral health.',
+        'icon' => 'calendar',
+        'duration' => '30–45 min',
+        'price' => 'From ₱600',
     ],
 ];
 
-$aboutPoints = [
-    'Dedicated team of 2 experienced doctors',
-    'Latest dental technology and equipment',
-    'Comfortable, modern clinic environment',
-    'Compassionate patient care',
-];
-
-$heroPoints = [
-    'Active since 2023 with proven expertise',
-    'Advanced technology and techniques',
-    'Gentle, patient-focused care',
+$testimonials = [
+    [
+        'name' => 'Maria Santos',
+        'role' => 'Patient since 2019',
+        'avatar' => 'MS',
+        'rating' => 5,
+        'text' => 'Dr. Azucena and her team are absolutely amazing. I used to be terrified of the dentist, but they made me feel so comfortable. My smile has never looked better!',
+    ],
+    [
+        'name' => 'Jose Reyes',
+        'role' => 'Patient since 2021',
+        'avatar' => 'JR',
+        'rating' => 5,
+        'text' => 'Got my braces here and the entire process was smooth. The team is professional, friendly, and always ready to answer my questions. Highly recommend!',
+    ],
+    [
+        'name' => 'Ana Villanueva',
+        'role' => 'Patient since 2020',
+        'avatar' => 'AV',
+        'rating' => 5,
+        'text' => 'The teeth whitening treatment gave me incredible results. The clinic is spotless, modern, and the staff is so warm and welcoming. 10/10 experience.',
+    ],
+    [
+        'name' => 'Carlos Mendoza',
+        'role' => 'Patient since 2022',
+        'avatar' => 'CM',
+        'rating' => 5,
+        'text' => 'I brought my whole family here and everyone loves it. The pediatric care for my kids is gentle and fun. We won\'t go anywhere else!',
+    ],
 ];
 
 $stats = [
-    ['value' => '2023', 'label' => 'Serving since'],
-    ['value' => '2', 'label' => 'Experienced doctors'],
-    ['value' => 'Mon–Sat', 'label' => '8:00 AM – 5:00 PM'],
-    ['value' => '100%', 'label' => 'Patient-focused care'],
+    ['value' => '2,500+', 'label' => 'Happy Patients'],
+    ['value' => '15+', 'label' => 'Years Experience'],
+    ['value' => '98%', 'label' => 'Satisfaction Rate'],
+    ['value' => '12', 'label' => 'Expert Specialists'],
 ];
+
+$aboutPoints = [
+    'Gentle, patient-first approach',
+    'State-of-the-art digital X-rays',
+    'Pain-free anesthesia options',
+    'Flexible payment plans',
+    'English & Filipino speaking staff',
+    'Child-friendly environment',
+];
+
 ?>
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
@@ -87,7 +136,7 @@ $stats = [
     <title>Azucena's Dental Clinic | Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/app-toast.css?v=20260614-short">
     <link rel="stylesheet" href="assets/css/app-request.css">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -99,31 +148,38 @@ $stats = [
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', 'Arial', 'sans-serif'],
+                        sans: ['Nunito', 'system-ui', 'sans-serif'],
+                        display: ['Lora', 'Georgia', 'serif'],
                     },
                     colors: {
-                        sky: {
-                            50: '#f0f7ff',
-                            100: '#e0f2fe',
-                            200: '#b9e5fe',
-                            300: '#7cd4fd',
-                            400: '#36bffa',
-                            500: '#1173c1',
-                            600: '#0a4f88',
-                            700: '#0a406d',
-                            800: '#0d375a',
-                            900: '#112f4c',
+                        primary: {
+                            DEFAULT: '#1d6fd8',
+                            foreground: '#ffffff',
                         },
+                        secondary: {
+                            DEFAULT: '#e3eeff',
+                            foreground: '#0f1e35',
+                        },
+                        muted: {
+                            DEFAULT: '#edf2fb',
+                            foreground: '#5a6e8c',
+                        },
+                        card: {
+                            DEFAULT: '#ffffff',
+                            foreground: '#0f1e35',
+                        },
+                        background: '#f7f9fc',
+                        foreground: '#0f1e35',
+                        border: 'rgba(29, 111, 216, 0.12)',
                     },
                 },
             },
         };
     </script>
     <style>
-        /* Scroll-reveal animation */
         .reveal {
             opacity: 0;
-            transform: translateY(24px);
+            transform: translateY(28px);
             transition: opacity 0.6s ease, transform 0.6s ease;
         }
         .reveal.is-visible {
@@ -134,16 +190,16 @@ $stats = [
         .reveal-delay-2 { transition-delay: 0.2s; }
         .reveal-delay-3 { transition-delay: 0.3s; }
 
-        /* Soft floating accent behind hero card */
         @keyframes floatSlow {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
         }
         .float-slow { animation: floatSlow 6s ease-in-out infinite; }
 
-        /* Underline grow on nav hover */
         .nav-link {
             position: relative;
+            color: rgba(255,255,255,0.85);
+            transition: color 0.25s ease;
         }
         .nav-link::after {
             content: '';
@@ -152,15 +208,29 @@ $stats = [
             bottom: -4px;
             height: 2px;
             width: 0;
-            background-color: #1173c1;
+            background-color: #1d6fd8;
             transition: width 0.25s ease;
         }
         .nav-link:hover::after,
         .nav-link.active::after {
             width: 100%;
         }
+        nav[aria-label="Main"] .nav-link:hover {
+            color: #ffffff;
+        }
+        .header-scrolled .nav-link {
+            color: #0f1e35 !important;
+        }
+        .header-scrolled .nav-link:hover {
+            color: #1d6fd8 !important;
+        }
+        .header-scrolled .nav-link.active {
+            color: #1d6fd8 !important;
+        }
+        .header-scrolled .nav-link::after {
+            background-color: #1d6fd8;
+        }
 
-        /* Auth dialog */
         .auth-overlay {
             position: fixed;
             inset: 0;
@@ -174,7 +244,7 @@ $stats = [
         .auth-backdrop {
             position: absolute;
             inset: 0;
-            background-color: rgba(15, 23, 42, 0.55);
+            background-color: rgba(15, 30, 53, 0.55);
             backdrop-filter: blur(3px);
         }
         .auth-panel {
@@ -182,11 +252,45 @@ $stats = [
             z-index: 1;
             width: 100%;
             max-height: 92vh;
-            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
             border-radius: 1.25rem;
+            overflow: hidden;
             background-color: #fff;
-            box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35);
+            box-shadow: 0 25px 60px -15px rgba(15, 30, 53, 0.35);
             animation: authPanelIn 0.22s ease;
+        }
+        .auth-panel .auth-header {
+            flex-shrink: 0;
+        }
+        .auth-panel .auth-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        .auth-panel .auth-footer {
+            flex-shrink: 0;
+        }
+
+        /* Custom scrollbar for auth panels */
+        .auth-panel .auth-body::-webkit-scrollbar {
+            width: 6px;
+        }
+        .auth-panel .auth-body::-webkit-scrollbar-track {
+            background: #f0f4fb;
+            border-radius: 3px;
+        }
+        .auth-panel .auth-body::-webkit-scrollbar-thumb {
+            background: #1d6fd8;
+            border-radius: 3px;
+        }
+        .auth-panel .auth-body::-webkit-scrollbar-thumb:hover {
+            background: #0a4f88;
+        }
+        .auth-panel .auth-body {
+            scrollbar-width: thin;
+            scrollbar-color: #1d6fd8 #f0f4fb;
         }
         @keyframes authPanelIn {
             from { opacity: 0; transform: translateY(14px) scale(0.985); }
@@ -196,36 +300,36 @@ $stats = [
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
         .auth-field:focus {
-            border-color: rgb(14 165 233);
+            border-color: rgb(29, 111, 216);
             background-color: #fff;
             box-shadow: none;
             outline: none;
         }
 
-        /* Unified popup headers — blue gradient, white text */
-        .auth-panel > div:first-child,
+        .auth-panel .auth-header,
         .terms-panel > div:first-child {
-            background: linear-gradient(135deg, #1173c1, #0a4f88);
+            background: linear-gradient(135deg, #1d6fd8, #0a4f88);
             border-color: transparent !important;
             border-radius: 1.25rem 1.25rem 0 0;
         }
-        .auth-panel > div:first-child h2,
+        .auth-panel .auth-header h2,
         .terms-panel > div:first-child h2 {
             color: #fff !important;
         }
-        .auth-panel > div:first-child p,
+        .auth-panel .auth-header p,
         .terms-panel > div:first-child p {
             color: rgba(255, 255, 255, 0.82) !important;
         }
-        .auth-panel > div:first-child [data-auth-close] {
+        .auth-panel .auth-header [data-auth-close],
+        .terms-panel > div:first-child [data-auth-close] {
             color: rgba(255, 255, 255, 0.85) !important;
         }
-        .auth-panel > div:first-child [data-auth-close]:hover {
+        .auth-panel .auth-header [data-auth-close]:hover,
+        .terms-panel > div:first-child [data-auth-close]:hover {
             background-color: rgba(255, 255, 255, 0.14) !important;
             color: #fff !important;
         }
 
-        /* Terms & Conditions modal */
         .terms-overlay {
             position: fixed;
             inset: 0;
@@ -239,7 +343,7 @@ $stats = [
         .terms-backdrop {
             position: absolute;
             inset: 0;
-            background-color: rgba(15, 23, 42, 0.6);
+            background-color: rgba(15, 30, 53, 0.6);
             backdrop-filter: blur(3px);
         }
         .terms-panel {
@@ -252,19 +356,40 @@ $stats = [
             max-height: 88vh;
             border-radius: 1.25rem;
             background-color: #fff;
-            box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35);
+            box-shadow: 0 25px 60px -15px rgba(15, 30, 53, 0.35);
             animation: authPanelIn 0.22s ease;
         }
         .terms-content {
             overflow-y: auto;
             padding: 1.25rem 1.5rem;
+            overscroll-behavior: contain;
+        }
+
+        /* Custom scrollbar for terms panel */
+        .terms-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .terms-content::-webkit-scrollbar-track {
+            background: #f0f4fb;
+            border-radius: 3px;
+        }
+        .terms-content::-webkit-scrollbar-thumb {
+            background: #1d6fd8;
+            border-radius: 3px;
+        }
+        .terms-content::-webkit-scrollbar-thumb:hover {
+            background: #0a4f88;
+        }
+        .terms-content {
+            scrollbar-width: thin;
+            scrollbar-color: #1d6fd8 #f0f4fb;
         }
         .terms-content h3 {
             margin-top: 1.25rem;
             margin-bottom: 0.5rem;
             font-size: 0.95rem;
             font-weight: 700;
-            color: #0f172a;
+            color: #0f1e35;
         }
         .terms-content h3:first-child { margin-top: 0; }
         .terms-content p,
@@ -280,6 +405,13 @@ $stats = [
         }
         .terms-content li + li { margin-top: 0.35rem; }
 
+        .service-card:hover .service-icon-box {
+            background: #1d6fd8;
+        }
+        .service-card:hover .service-icon-box svg {
+            color: #fff;
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .reveal { opacity: 1; transform: none; transition: none; }
             .float-slow { animation: none; }
@@ -287,392 +419,364 @@ $stats = [
         }
     </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-white">
+<body class="font-sans antialiased text-foreground bg-background">
 
     <!-- Header -->
-    <header id="siteHeader" class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-sm transition-shadow">
-        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
-            <a href="index.php" class="flex items-center gap-2.5">
+    <header id="siteHeader" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style="background: transparent; backdrop-filter: none; border-bottom: none; box-shadow: none;">
+        <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 h-16 lg:h-20">
+            <a href="index.php" class="flex items-center gap-2 group">
                 <img
                     src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                     alt="Azucena's Dental Clinic logo"
-                    class="h-9 w-9 rounded-full object-cover sm:h-10 sm:w-10"
-                    width="40"
-                    height="40"
+                    class="h-8 w-8 rounded-full object-cover"
+                    width="32"
+                    height="32"
                 >
-                <span class="leading-tight">
-                    <span class="block text-sm font-bold text-slate-900 sm:text-base">Azucena's Dental Clinic</span>
-                    <span class="hidden text-[11px] font-medium uppercase tracking-wider text-sky-500 sm:block">Caring for your smile</span>
+                <span id="siteTitle" class="tracking-tight transition-colors duration-300 font-display text-lg font-semibold text-white">
+                    Azucena's Dental
                 </span>
             </a>
 
-            <nav class="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex" aria-label="Main">
-                <a href="#hero" class="nav-link hover:text-sky-500 transition-colors">Home</a>
-                <a href="#services" class="nav-link hover:text-sky-500 transition-colors">Services</a>
-                <a href="#about" class="nav-link hover:text-sky-500 transition-colors">About</a>
-                <a href="#contact" class="nav-link hover:text-sky-500 transition-colors">Contact</a>
-            </nav>
+            <ul class="hidden items-center gap-8 text-sm font-medium md:flex" aria-label="Main">
+                <li><a href="#services" class="nav-link transition-colors duration-200">Services</a></li>
+                <li><a href="#about" class="nav-link transition-colors duration-200">About</a></li>
+                <li><a href="#testimonials" class="nav-link transition-colors duration-200">Testimonials</a></li>
+                <li><a href="#contact" class="nav-link transition-colors duration-200">Contact</a></li>
+            </ul>
 
-            <div class="flex items-center gap-2">
-                <button type="button" data-auth-open="login" class="hidden rounded-lg border border-sky-200 px-4 py-2 text-sm font-semibold text-sky-600 hover:bg-sky-50 transition-colors sm:inline-flex">
+            <div class="hidden items-center gap-2 md:flex">
+                <button type="button" data-auth-open="login" id="navLoginBtn" class="rounded-full border px-5 py-2.5 text-sm font-semibold transition-all duration-200" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(8px);">
                     Login
                 </button>
-                <button type="button" data-auth-open="register" class="hidden rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-sky-200 hover:bg-sky-600 transition-colors sm:inline-flex">
+                <button type="button" data-auth-open="register" id="navRegisterBtn" class="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 sm:inline-flex">
                     Create Account
                 </button>
-                <button type="button" id="mobileMenuBtn" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 md:hidden" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
-                    <svg id="mobileMenuIconOpen" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
-                    <svg id="mobileMenuIconClose" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
             </div>
-        </div>
+
+            <button type="button" id="mobileMenuBtn" class="inline-flex h-10 w-10 items-center justify-center rounded-lg md:hidden transition-colors duration-300" style="color: #ffffff;" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
+                <svg id="mobileMenuIconOpen" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                <svg id="mobileMenuIconClose" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </nav>
 
         <!-- Mobile menu -->
-        <div id="mobileMenu" class="hidden border-t border-slate-100 bg-white md:hidden">
-            <nav class="mx-auto max-w-6xl space-y-1 px-4 py-3" aria-label="Mobile">
-                <a href="#hero" class="mobile-nav-link block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600">Home</a>
-                <a href="#services" class="mobile-nav-link block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600">Services</a>
-                <a href="#about" class="mobile-nav-link block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600">About</a>
-                <a href="#contact" class="mobile-nav-link block rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600">Contact</a>
-                <div class="flex gap-2 pt-2">
-                    <button type="button" data-auth-open="login" class="flex-1 rounded-lg border border-sky-200 px-4 py-2.5 text-center text-sm font-semibold text-sky-600">Login</button>
-                    <button type="button" data-auth-open="register" class="flex-1 rounded-lg bg-sky-500 px-4 py-2.5 text-center text-sm font-semibold text-white">Create Account</button>
-                </div>
-            </nav>
+        <div id="mobileMenu" class="hidden border-b md:hidden" style="background: #f7f9fc; border-color: rgba(29,111,216,0.1);">
+            <ul class="flex flex-col gap-4 px-6 pb-6 pt-4">
+                <li><a href="#services" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Services</a></li>
+                <li><a href="#about" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">About</a></li>
+                <li><a href="#testimonials" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Testimonials</a></li>
+                <li><a href="#contact" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Contact</a></li>
+                <li>
+                    <button type="button" data-auth-open="login" class="mobile-nav-link block w-full text-center bg-primary text-white px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Login</button>
+                </li>
+                <li>
+                    <button type="button" data-auth-open="register" class="mobile-nav-link block w-full text-center border border-primary text-primary px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Create Account</button>
+                </li>
+            </ul>
         </div>
     </header>
 
     <main>
         <!-- Hero -->
-        <section id="hero" class="relative overflow-hidden">
-            <div class="absolute inset-0 z-0" aria-hidden="true">
-                <img
-                    src="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>"
-                    alt=""
-                    class="h-full w-full object-cover object-center"
-                >
-                <div class="absolute inset-0 bg-gradient-to-r from-white via-white/92 to-white/65"></div>
-            </div>
+        <section id="hero" class="relative min-h-screen flex items-center overflow-hidden">
+            <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>');"></div>
+            <div class="absolute inset-0" style="background: linear-gradient(120deg, rgba(15,30,53,0.88) 0%, rgba(29,111,216,0.55) 100%);"></div>
 
-            <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.15fr,0.85fr] lg:py-28">
+            <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 w-full lg:grid-cols-[1.15fr,0.85fr] lg:py-28">
                 <div class="reveal is-visible">
-                    <span class="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-sky-600">
-                        <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"/></svg>
-                        Trusted dental care
+                    <span class="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); backdrop-filter: blur(4px);">
+                        <span class="h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
+                        <span class="text-white/90" style="font-weight: 500;">Now accepting new patients</span>
                     </span>
-                    <h1 class="mt-5 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl lg:text-[3.4rem] lg:leading-[1.1]">
-                        Transform Your <span class="text-sky-500">Smile!</span>
+
+                    <h1 class="mt-6 font-display text-white" style="font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.15; font-weight: 600;">
+                        Your Smile Deserves the <br> <span style="color: #7db8f7;">Best Care</span>
                     </h1>
-                    <p class="mt-5 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-                        Experience compassionate, state-of-the-art dental treatment in a comfortable environment. Your oral health is our priority.
+
+                    <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
+                        At Azucena's Dental Clinic, we combine compassionate care with modern technology to give you a healthy, beautiful smile you'll love for life.
                     </p>
 
-                    <div class="mt-8 flex flex-wrap gap-3">
-                        <button type="button" data-auth-open="register" class="group inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-200 hover:bg-sky-600 hover:shadow-sky-300 transition-all">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z"/></svg>
-                            Create Account
+                    <div class="mt-10 flex flex-wrap gap-4">
+                        <a href="#contact" class="group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200">
+                            Questions? Message us!
                             <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                        </button>
-                        <a href="#contact" class="inline-flex items-center gap-2 rounded-xl border-2 border-sky-500 bg-white/90 px-6 py-3.5 text-sm font-semibold text-sky-600 hover:bg-sky-50 transition-colors">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
-                            Inquire
+                        </a>
+                        <a href="#services" class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/20 transition-all duration-200">
+                            Our Services
                         </a>
                     </div>
 
-                    <ul class="mt-9 grid gap-3 sm:grid-cols-1">
-                        <?php foreach ($heroPoints as $point): ?>
-                        <li class="flex items-center gap-3 text-sm text-slate-700 sm:text-base">
-                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500 text-white shadow-sm shadow-sky-200">
-                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                            </span>
-                            <?php echo htmlspecialchars($point, ENT_QUOTES, 'UTF-8'); ?>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-
-                <!-- Hero side card -->
-                <div class="reveal is-visible reveal-delay-1 hidden lg:block">
-                    <div class="float-slow relative mx-auto max-w-sm">
-                        <div class="absolute -inset-4 rounded-3xl bg-sky-100/60 blur-2xl" aria-hidden="true"></div>
-                        <div class="relative rounded-3xl border border-sky-100 bg-white/95 p-7 shadow-xl shadow-sky-100/70 backdrop-blur">
-                            <div class="flex items-center gap-3">
-                                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500 text-white shadow-md shadow-sky-200">
-                                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
-                                </span>
-                                <div>
-                                    <p class="text-sm font-bold text-slate-900">Easy Online Booking</p>
-                                    <p class="text-xs text-slate-500">Schedule in minutes</p>
-                                </div>
-                            </div>
-                            <div class="mt-5 space-y-3.5">
-                                <div class="flex items-center justify-between rounded-xl bg-sky-50 px-4 py-3">
-                                    <span class="text-xs font-medium text-slate-600">Clinic Hours</span>
-                                    <span class="text-xs font-bold text-slate-900">Mon–Sat, 8AM–5PM</span>
-                                </div>
-                                <div class="flex items-center justify-between rounded-xl bg-sky-50 px-4 py-3">
-                                    <span class="text-xs font-medium text-slate-600">Location</span>
-                                    <span class="text-xs font-bold text-slate-900">Metz Arcade, CDO</span>
-                                </div>
-                                <div class="flex items-center justify-between rounded-xl bg-sky-50 px-4 py-3">
-                                    <span class="text-xs font-medium text-slate-600">Doctors</span>
-                                    <span class="text-xs font-bold text-slate-900">2 experienced dentists</span>
-                                </div>
-                            </div>
-                            <a href="#contact" class="mt-6 block rounded-xl bg-sky-500 py-3 text-center text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
-                                Inquire Now
-                            </a>
+                    <div class="mt-12 flex flex-wrap gap-8">
+                        <?php foreach ($stats as $stat): ?>
+                        <div class="text-white">
+                            <div class="font-display text-2xl" style="font-weight: 700; color: #7db8f7;"><?php echo htmlspecialchars($stat['value'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="mt-0.5 text-sm text-white/65"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></div>
                         </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <!-- Stats strip -->
-        <section class="border-y border-sky-100 bg-sky-500" aria-label="Clinic highlights">
-            <div class="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden px-4 py-8 sm:px-6 lg:grid-cols-4 lg:py-10">
-                <?php foreach ($stats as $i => $stat): ?>
-                <div class="reveal reveal-delay-<?php echo min($i, 3); ?> px-4 py-3 text-center">
-                    <p class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl"><?php echo htmlspecialchars($stat['value'], ENT_QUOTES, 'UTF-8'); ?></p>
-                    <p class="mt-1 text-xs font-medium uppercase tracking-wider text-sky-100"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></p>
-                </div>
-                <?php endforeach; ?>
-            </div>
+            <a href="#services" class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-white/90 transition-colors animate-bounce" aria-label="Scroll down">
+                <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+            </a>
         </section>
 
         <!-- Services -->
-        <section id="services" class="py-16 sm:py-24">
-            <div class="mx-auto max-w-6xl px-4 sm:px-6">
+        <section id="services" class="py-24 bg-background">
+            <div class="mx-auto max-w-6xl px-6">
                 <div class="reveal mx-auto max-w-2xl text-center">
-                    <span class="text-xs font-bold uppercase tracking-widest text-sky-500">What we offer</span>
-                    <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Our Services</h2>
-                    <p class="mt-4 text-slate-600">Comprehensive dental care for every member of your family, delivered with skill and compassion.</p>
+                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">What We Offer</span>
+                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 600;">Comprehensive Dental Services</h2>
+                    <p class="mt-4 text-muted-foreground leading-relaxed">From routine check-ups to advanced cosmetic treatments, we have everything you need for a lifetime of healthy smiles.</p>
                 </div>
 
-                <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <?php foreach ($services as $i => $service): ?>
-                    <article class="reveal reveal-delay-<?php echo min($i, 3); ?> group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-7 text-center shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-sky-200 hover:shadow-xl hover:shadow-sky-100">
-                        <div class="absolute inset-x-0 top-0 h-1 bg-sky-500 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true"></div>
-                        <div class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-sky-50 text-sky-500 transition-colors group-hover:bg-sky-500 group-hover:text-white">
-                            <?php if ($service['icon'] === 'building'): ?>
-                            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3.75 9h.75m-.75 3h.75m-.75 3h.75"/></svg>
-                            <?php elseif ($service['icon'] === 'sparkles'): ?>
-                            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
-                            <?php elseif ($service['icon'] === 'wrench'): ?>
-                            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.45m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.103-.071 2.218-.904 2.95l-1.102 1.102m-.233 5.108a2.548 2.548 0 11-3.586-3.586l5.653-4.655"/></svg>
+                    <div class="reveal reveal-delay-<?php echo min($i, 3); ?> service-card group relative rounded-2xl border border-border bg-card p-7 cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
+                        <div class="service-icon-box mb-5 flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-300" style="background: #e4f3ee;">
+                            <?php if ($service['icon'] === 'sparkles'): ?>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+                            <?php elseif ($service['icon'] === 'shield'): ?>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                            <?php elseif ($service['icon'] === 'zap'): ?>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                            <?php elseif ($service['icon'] === 'heart'): ?>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+                            <?php elseif ($service['icon'] === 'award'): ?>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0116.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.015 6.015 0 01-2.27.308 6.015 6.015 0 01-2.27-.308"/></svg>
                             <?php else: ?>
-                            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.848 8.25l1.536 1.536M12 3v2.25m0 13.5V21M5.106 5.106l1.06 1.06M18.894 5.106l-1.06 1.06M3 12h2.25m13.5 0H21M5.106 18.894l1.06-1.06M18.894 18.894l-1.06-1.06M9 12.75a3 3 0 106 0 3 3 0 00-6 0z"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1d6fd8;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                             <?php endif; ?>
                         </div>
-                        <h3 class="text-base font-bold text-slate-900"><?php echo htmlspecialchars($service['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
-                        <p class="mt-2 text-sm leading-relaxed text-slate-500"><?php echo htmlspecialchars($service['desc'], ENT_QUOTES, 'UTF-8'); ?></p>
-                    </article>
+
+                        <h3 class="text-card-foreground mb-2" style="font-size: 1.05rem; font-weight: 700;"><?php echo htmlspecialchars($service['title'], ENT_QUOTES, 'UTF-8'); ?></h3>
+                        <p class="text-muted-foreground text-sm leading-relaxed mb-4"><?php echo htmlspecialchars($service['desc'], ENT_QUOTES, 'UTF-8'); ?></p>
+
+                        <div class="flex items-center justify-between pt-4 border-t border-border">
+                            <span class="text-xs text-muted-foreground"><?php echo htmlspecialchars($service['duration'], ENT_QUOTES, 'UTF-8'); ?></span>
+                            <span class="text-primary text-sm" style="font-weight: 700;"><?php echo htmlspecialchars($service['price'], ENT_QUOTES, 'UTF-8'); ?></span>
+                        </div>
+                    </div>
                     <?php endforeach; ?>
                 </div>
             </div>
         </section>
 
         <!-- About -->
-        <section id="about" class="border-y border-slate-100 bg-slate-50/60 py-16 sm:py-24">
-            <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:gap-16">
-                <div class="reveal">
-                    <span class="text-xs font-bold uppercase tracking-widest text-sky-500">Who we are</span>
-                    <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">About Us</h2>
-                    <p class="mt-5 leading-relaxed text-slate-600">
-                        Azucena Dental Clinic has been actively serving our community since 2023. With a dedicated team of 2 experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism. Every patient deserves the best treatment possible.
-                    </p>
-                    <ul class="mt-8 grid gap-4 sm:grid-cols-2">
-                        <?php foreach ($aboutPoints as $point): ?>
-                        <li class="flex items-start gap-3 rounded-xl border border-slate-100 bg-white p-4 text-sm text-slate-700 shadow-sm">
-                            <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-sky-500 text-sky-500">
-                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                            </span>
-                            <?php echo htmlspecialchars($point, ENT_QUOTES, 'UTF-8'); ?>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-
-                <div class="reveal reveal-delay-1">
-                    <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-lg shadow-slate-200/60">
-                        <iframe
-                            title="Azucena Dental Clinic location - Metz Arcade, Cagayan de Oro City"
-                            class="h-80 w-full sm:h-96"
-                            loading="lazy"
-                            referrerpolicy="no-referrer-when-downgrade"
-                            src="https://maps.google.com/maps?q=Metz+Arcade,+Cagayan+de+Oro+City,+Philippines&amp;output=embed"
-                            allowfullscreen
-                        ></iframe>
-                        <div class="flex items-center gap-3 border-t border-slate-100 bg-white px-5 py-4">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-500">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                            </span>
-                            <p class="text-sm text-slate-600">
-                                <span class="block font-semibold text-slate-900">Metz Arcade</span>
-                                Cagayan de Oro City, Philippines
-                            </p>
+        <section id="about" class="py-24" style="background: #edf3fc;">
+            <div class="mx-auto max-w-6xl px-6">
+                <div class="grid items-center gap-16 lg:grid-cols-2">
+                    <div class="reveal">
+                        <div class="relative">
+                            <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(29,111,216,0.08); z-index: 0;"></div>
+                            <img
+                                src="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>"
+                                alt="Azucena's Dental Clinic"
+                                class="relative z-10 w-full rounded-3xl object-cover"
+                                style="height: 520px; object-position: top;"
+                            >
+                            <div class="absolute bottom-6 right-6 z-20 rounded-2xl border border-primary/12 bg-white px-5 py-4 shadow-xl">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-full" style="background: #e3eeff;">
+                                        <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0116.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.015 6.015 0 01-2.27.308 6.015 6.015 0 01-2.27-.308"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="text-card-foreground text-sm" style="font-weight: 700;">Board Certified</div>
+                                        <div class="text-muted-foreground text-xs">Philippine Dental Association</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <div class="reveal reveal-delay-1">
+                        <span class="inline-block text-primary text-sm mb-3 tracking-widest uppercase" style="font-weight: 600;">About Us</span>
+                        <h2 class="text-foreground mb-5" style="font-family: 'Lora', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 600;">Caring for Smiles With Heart & Expertise</h2>
+                        <p class="text-muted-foreground leading-relaxed mb-5">
+                            Azucena's Dental Clinic has been actively serving our community since 2023. With a dedicated team of experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism.
+                        </p>
+                        <p class="text-muted-foreground leading-relaxed mb-8">
+                            Our team of board-certified specialists is dedicated to staying at the forefront of dental medicine, using the latest technology and techniques to ensure every patient receives the best possible care.
+                        </p>
+
+                        <div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <?php foreach ($aboutPoints as $point): ?>
+                            <div class="flex items-start gap-2.5">
+                                <svg class="mt-0.5 h-5 w-5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span class="text-card-foreground text-sm" style="font-weight: 500;"><?php echo htmlspecialchars($point, ENT_QUOTES, 'UTF-8'); ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="flex flex-wrap gap-8">
+                            <?php foreach (array_slice($stats, 0, 3) as $stat): ?>
+                            <div>
+                                <div class="text-primary" style="font-family: 'Lora', Georgia, serif; font-size: 2rem; font-weight: 700;"><?php echo htmlspecialchars($stat['value'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="text-muted-foreground text-sm"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section id="testimonials" class="py-24 bg-background">
+            <div class="mx-auto max-w-6xl px-6">
+                <div class="reveal mx-auto max-w-2xl text-center">
+                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Patient Stories</span>
+                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 600;">What Our Patients Say</h2>
+                </div>
+
+                <div class="mt-12 grid gap-6 sm:grid-cols-2">
+                    <?php foreach ($testimonials as $i => $t): ?>
+                    <div class="reveal reveal-delay-<?php echo min($i, 3); ?> rounded-2xl border border-border bg-card p-8 transition-all duration-300 hover:border-primary/25 hover:shadow-md">
+                        <div class="mb-5 flex gap-1">
+                            <?php for ($s = 0; $s < $t['rating']; $s++): ?>
+                            <svg class="h-4 w-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            <?php endfor; ?>
+                        </div>
+                        <p class="text-card-foreground mb-6 leading-relaxed" style="font-size: 0.97rem;">
+                            &ldquo;<?php echo htmlspecialchars($t['text'], ENT_QUOTES, 'UTF-8'); ?>&rdquo;
+                        </p>
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm text-white" style="background: #1d6fd8; font-weight: 700;">
+                                <?php echo htmlspecialchars($t['avatar'], ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                            <div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 700;"><?php echo htmlspecialchars($t['name'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="text-muted-foreground text-xs"><?php echo htmlspecialchars($t['role'], ENT_QUOTES, 'UTF-8'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
 
         <!-- Contact -->
-        <section id="contact" class="py-16 sm:py-24">
-            <div class="mx-auto max-w-6xl px-4 sm:px-6">
-                <div class="reveal mx-auto max-w-2xl text-center">
-                    <span class="text-xs font-bold uppercase tracking-widest text-sky-500">Get in touch</span>
-                    <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Contact Us</h2>
-                    <p class="mt-4 text-slate-600">Questions about treatments or appointments? Send us a message and we'll get back to you.</p>
+        <section id="contact" class="py-24 bg-background">
+            <div class="mx-auto max-w-6xl px-6">
+                <div class="reveal mx-auto max-w-2xl text-center mb-16">
+                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Get in Touch</span>
+                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 600;">Contact Us</h2>
+                    <p class="mt-4 text-muted-foreground leading-relaxed">Questions about treatments or appointments? Reach out and we'll get back to you shortly.</p>
                 </div>
 
-                <div class="mt-12 grid gap-8 lg:grid-cols-[0.9fr,1.1fr]">
-                    <div class="reveal space-y-4">
-                        <div class="flex gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm shadow-sky-200">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                            </span>
+                <div class="grid items-start gap-12 lg:grid-cols-[1fr,1.2fr]">
+                    <!-- Left: clinic info -->
+                    <div class="reveal space-y-5">
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #e3eeff;">
+                                <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                            </div>
                             <div>
-                                <p class="font-semibold text-slate-900">Clinic Address</p>
-                                <p class="mt-1 text-sm text-slate-600">Metz Arcade, Cagayan de Oro City, Philippines</p>
+                                <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Address</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">Metz Arcade, Cagayan de Oro City, Philippines</div>
                             </div>
                         </div>
 
-                        <div class="flex gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm shadow-sky-200">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
-                            </span>
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #e3eeff;">
+                                <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
+                            </div>
                             <div>
-                                <p class="font-semibold text-slate-900">Phone</p>
-                                <p class="mt-1 text-sm text-slate-600">+63 (88) 000 0000</p>
+                                <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Phone</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">+63 (88) 000 0000</div>
                             </div>
                         </div>
 
-                        <div class="flex gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm shadow-sky-200">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                            </span>
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #e3eeff;">
+                                <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                            </div>
                             <div>
-                                <p class="font-semibold text-slate-900">Email</p>
-                                <p class="mt-1 text-sm text-slate-600">info@azucenadental.ph</p>
+                                <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Email</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">info@azucenadental.ph</div>
                             </div>
                         </div>
 
-                        <div class="flex gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                            <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-500 text-white shadow-sm shadow-sky-200">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </span>
-                            <div>
-                                <p class="font-semibold text-slate-900">Clinic Hours</p>
-                                <p class="mt-1 text-sm text-slate-600">Mon - Sat: 8:00 AM - 5:00 PM</p>
+                        <div class="flex items-start gap-4">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #e3eeff;">
+                                <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
+                            <div>
+                                <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Clinic Hours</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">Mon – Sat: 8:00 AM – 5:00 PM</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 overflow-hidden rounded-2xl border border-border" style="height: 200px;">
+                            <iframe
+                                title="Azucena Dental Clinic location"
+                                class="h-full w-full"
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="https://maps.google.com/maps?q=Metz+Arcade,+Cagayan+de+Oro+City,+Philippines&amp;output=embed"
+                                allowfullscreen
+                            ></iframe>
                         </div>
                     </div>
 
-                    <form id="contact-form" class="reveal reveal-delay-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-lg shadow-slate-200/50 sm:p-8" novalidate>
-                        <h3 class="text-lg font-bold text-slate-900">Send us a message</h3>
-                        <div id="contact-form-alert" class="hidden mt-4 rounded-xl border px-4 py-3 text-sm" role="alert"></div>
-                        <div class="mt-5 space-y-4">
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label for="contact-name" class="block text-sm font-medium text-slate-700">Full Name</label>
-                                    <input type="text" id="contact-name" name="name" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
+                    <!-- Right: message form -->
+                    <div class="reveal reveal-delay-1">
+                        <form id="contact-form" class="rounded-3xl border border-border bg-card p-6 shadow-lg sm:p-8" novalidate>
+                            <h3 class="text-lg font-bold text-card-foreground">Send us a message</h3>
+                            <p class="mt-1 text-sm text-muted-foreground">Fill out the form below and we'll get back to you within 24 hours.</p>
+                            <div id="contact-form-alert" class="mt-4 hidden rounded-xl border px-4 py-3 text-sm" role="alert"></div>
+                            <div class="mt-5 space-y-4">
+                                <div class="grid gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label for="contact-name" class="block text-sm font-medium text-card-foreground">Full Name</label>
+                                        <input type="text" id="contact-name" name="name" required placeholder="Maria Santos" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0f4fb;">
+                                    </div>
+                                    <div>
+                                        <label for="contact-phone" class="block text-sm font-medium text-card-foreground">Phone Number</label>
+                                        <input type="tel" id="contact-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="e.g. 0917 123 4567" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0f4fb;">
+                                    </div>
                                 </div>
                                 <div>
-                                    <label for="contact-phone" class="block text-sm font-medium text-slate-700">Phone Number</label>
-                                    <input type="tel" id="contact-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="e.g. 0917 123 4567" class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
+                                    <label for="contact-email" class="block text-sm font-medium text-card-foreground">Email</label>
+                                    <input type="email" id="contact-email" name="email" required placeholder="maria@email.com" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0f4fb;">
                                 </div>
+                                <div>
+                                    <label for="contact-message" class="block text-sm font-medium text-card-foreground">Message</label>
+                                    <textarea id="contact-message" name="message" rows="5" required class="mt-1.5 w-full resize-y rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0f4fb;" placeholder="How can we help you?"></textarea>
+                                </div>
+                                <button type="submit" id="contact-form-submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white hover:opacity-90 active:scale-[0.98] transition-all duration-200">
+                                    Send Message
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+                                </button>
                             </div>
-                            <div>
-                                <label for="contact-email" class="block text-sm font-medium text-slate-700">Email</label>
-                                <input type="email" id="contact-email" name="email" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none">
-                            </div>
-                            <div>
-                                <label for="contact-message" class="block text-sm font-medium text-slate-700">Message</label>
-                                <textarea id="contact-message" name="message" rows="5" required class="mt-1.5 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm transition-colors focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none resize-y" placeholder="How can we help you?"></textarea>
-                            </div>
-                            <button type="submit" id="contact-form-submit" class="w-full rounded-xl bg-sky-500 py-3.5 text-sm font-semibold text-white shadow-md shadow-sky-200 hover:bg-sky-600 transition-colors">
-                                Send Message
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA band -->
-        <section class="border-t border-sky-100 bg-gradient-to-r from-sky-500 to-sky-600">
-            <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-4 py-12 text-center sm:px-6 lg:flex-row lg:text-left">
-                <div class="reveal">
-                    <h2 class="text-2xl font-extrabold text-white sm:text-3xl">Ready to transform your smile?</h2>
-                    <p class="mt-2 text-sky-100">Create your account or send us an inquiry — your oral health is our priority.</p>
-                </div>
-                <div class="reveal reveal-delay-1 flex shrink-0 flex-wrap justify-center gap-3">
-                    <button type="button" data-auth-open="register" class="inline-flex items-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-sky-600 shadow-lg hover:bg-sky-50 transition-colors">
-                        Create Account
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
-                    </button>
-                    <a href="#contact" class="inline-flex items-center gap-2 rounded-xl border-2 border-white/80 px-7 py-3.5 text-sm font-bold text-white hover:bg-white/10 transition-colors">
-                        Inquire
-                    </a>
+                        </form>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-slate-50">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:py-14 lg:grid-cols-[1.2fr,0.8fr,1fr]">
-            <div>
-                <a href="index.php" class="flex items-center gap-2.5">
-                    <img
-                        src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
-                        alt="Azucena's Dental Clinic logo"
-                        class="h-10 w-10 rounded-full object-cover"
-                        width="40"
-                        height="40"
-                    >
-                    <span class="text-base font-bold text-slate-900">Azucena's Dental Clinic</span>
-                </a>
-                <p class="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">
-                    Compassionate, state-of-the-art dental treatment in a comfortable environment. Serving Cagayan de Oro City since 2023.
-                </p>
+    <footer class="bg-foreground py-10 text-white/70">
+        <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
+            <div class="flex items-center gap-2">
+                <img
+                    src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
+                    alt="Azucena's Dental Clinic logo"
+                    class="h-7 w-7 rounded-full object-cover"
+                    width="28"
+                    height="28"
+                >
+                <span class="font-display text-sm text-white" style="font-weight: 600;">Azucena's Dental Clinic</span>
             </div>
-            <div>
-                <p class="text-sm font-bold uppercase tracking-wider text-slate-900">Quick Links</p>
-                <ul class="mt-4 space-y-2.5 text-sm text-slate-500">
-                    <li><a href="#hero" class="hover:text-sky-500 transition-colors">Home</a></li>
-                    <li><a href="#services" class="hover:text-sky-500 transition-colors">Services</a></li>
-                    <li><a href="#about" class="hover:text-sky-500 transition-colors">About</a></li>
-                    <li><a href="#contact" class="hover:text-sky-500 transition-colors">Contact</a></li>
-                    <li><button type="button" data-auth-open="login" class="hover:text-sky-500 transition-colors">Patient Login</button></li>
-                    <li><button type="button" data-auth-open="register" class="hover:text-sky-500 transition-colors">Create Account</button></li>
-                </ul>
+            <p class="text-center text-sm">&copy; <?php echo $year; ?> Azucena's Dental Clinic. All rights reserved.</p>
+            <div class="flex gap-5 text-sm">
+                <a href="#hero" class="hover:text-white transition-colors">Home</a>
+                <a href="#services" class="hover:text-white transition-colors">Services</a>
+                <a href="#contact" class="hover:text-white transition-colors">Contact</a>
             </div>
-            <div>
-                <p class="text-sm font-bold uppercase tracking-wider text-slate-900">Visit Us</p>
-                <ul class="mt-4 space-y-3 text-sm text-slate-500">
-                    <li class="flex items-start gap-2.5">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
-                        Metz Arcade, Cagayan de Oro City, Philippines
-                    </li>
-                    <li class="flex items-start gap-2.5">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
-                        +63 (88) 000 0000
-                    </li>
-                    <li class="flex items-start gap-2.5">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                        info@azucenadental.ph
-                    </li>
-                    <li class="flex items-start gap-2.5">
-                        <svg class="mt-0.5 h-4 w-4 shrink-0 text-sky-500" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        Mon - Sat: 8:00 AM - 5:00 PM
-                    </li>
-                </ul>
-            </div>
-        </div>
-        <div class="border-t border-slate-200 py-5 text-center text-sm text-slate-500">
-            <p>&copy; <?php echo $year; ?> Azucena's Dental Clinic. All rights reserved.</p>
         </div>
     </footer>
 
@@ -682,7 +786,7 @@ $stats = [
 
         <!-- Login -->
         <section id="authPanelLogin" class="auth-panel hidden max-w-md" aria-label="Login">
-            <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
                     <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
@@ -695,6 +799,7 @@ $stats = [
                 </button>
             </div>
 
+            <div class="auth-body">
             <form id="login-form" class="space-y-5 px-6 py-6 sm:px-8" novalidate>
                 <div class="space-y-1.5">
                     <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label>
@@ -761,8 +866,9 @@ $stats = [
                 </div>
                 <?php endif; ?>
             </form>
+            </div>
 
-            <footer class="border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8">
+            <footer class="auth-footer border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8">
                 <p class="text-center text-[10px] leading-relaxed text-slate-500 sm:text-xs">
                     Secure portal access - compliant with the Philippine Data Privacy Act of 2012 (RA 10173)
                 </p>
@@ -771,7 +877,7 @@ $stats = [
 
         <!-- Create Account -->
         <section id="authPanelRegister" class="auth-panel hidden max-w-2xl" aria-label="Create account">
-            <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
                     <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
@@ -784,6 +890,7 @@ $stats = [
                 </button>
             </div>
 
+            <div class="auth-body">
             <form id="register-form" class="space-y-5 px-6 py-6 sm:px-8" novalidate>
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div>
@@ -901,11 +1008,12 @@ $stats = [
                     <button type="button" data-auth-switch="login" class="font-bold text-sky-600 hover:text-sky-700">Login here</button>
                 </p>
             </form>
+            </div>
         </section>
 
         <!-- Password recovery -->
         <section id="authPanelForgot" class="auth-panel hidden max-w-md" aria-label="Password recovery">
-            <div class="flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
                 <div class="flex items-center gap-3">
                     <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
                     <div>
@@ -918,6 +1026,7 @@ $stats = [
                 </button>
             </div>
 
+            <div class="auth-body">
             <form id="reset-form" class="space-y-4 px-6 py-6 sm:px-8">
                 <input type="email" id="reset-email" required placeholder="Email Address"
                     class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
@@ -947,6 +1056,7 @@ $stats = [
                     <button type="button" data-auth-switch="login" class="text-sm font-medium text-sky-500 hover:text-sky-600">Back to Login</button>
                 </p>
             </form>
+            </div>
         </section>
     </div>
 
@@ -1052,7 +1162,7 @@ $stats = [
     </div>
 
     <!-- Back to top -->
-    <button type="button" id="backToTopBtn" class="fixed bottom-6 right-6 z-40 hidden h-11 w-11 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg shadow-sky-300/60 hover:bg-sky-600 transition-colors" aria-label="Back to top">
+    <button type="button" id="backToTopBtn" class="fixed bottom-6 right-6 z-40 hidden h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:opacity-90 transition-colors" aria-label="Back to top">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
     </button>
 
@@ -1068,6 +1178,60 @@ $stats = [
                 window.showAppToast(String(message || ''), tone);
             }
         }
+
+        // ----- Header scroll behavior (Figma-style transparent → solid) -----
+        const siteHeader = document.getElementById('siteHeader');
+        const siteTitle = document.getElementById('siteTitle');
+        const navLoginBtn = document.getElementById('navLoginBtn');
+        const navRegisterBtn = document.getElementById('navRegisterBtn');
+        const backToTopBtn = document.getElementById('backToTopBtn');
+        const mobileMenuBtnEl = document.getElementById('mobileMenuBtn');
+
+        function onScroll() {
+            const y = window.scrollY || 0;
+            const scrolled = y > 40;
+
+            if (siteHeader) {
+                siteHeader.style.background = scrolled ? 'rgba(247,250,248,0.92)' : 'transparent';
+                siteHeader.style.backdropFilter = scrolled ? 'blur(12px)' : 'none';
+                siteHeader.style.borderBottom = scrolled ? '1px solid rgba(42,140,112,0.1)' : 'none';
+                siteHeader.style.boxShadow = scrolled ? '0 2px 24px rgba(42,140,112,0.06)' : 'none';
+                siteHeader.classList.toggle('header-scrolled', scrolled);
+            }
+
+            if (siteTitle) {
+                siteTitle.style.color = scrolled ? '#0f1e35' : '#ffffff';
+            }
+
+            if (navLoginBtn) {
+                if (scrolled) {
+                    navLoginBtn.style.background = '#1d6fd8';
+                    navLoginBtn.style.color = '#ffffff';
+                    navLoginBtn.style.border = 'none';
+                    navLoginBtn.style.backdropFilter = 'none';
+                } else {
+                    navLoginBtn.style.background = 'rgba(255,255,255,0.15)';
+                    navLoginBtn.style.color = '#ffffff';
+                    navLoginBtn.style.border = '1px solid rgba(255,255,255,0.35)';
+                    navLoginBtn.style.backdropFilter = 'blur(8px)';
+                }
+            }
+
+            if (mobileMenuBtnEl) {
+                mobileMenuBtnEl.style.color = scrolled ? '#0f1e35' : '#ffffff';
+            }
+
+            if (backToTopBtn) {
+                backToTopBtn.classList.toggle('hidden', y < 480);
+                backToTopBtn.classList.toggle('flex', y >= 480);
+            }
+        }
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+
+        backToTopBtn?.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
         // ----- Auth dialogs -----
         const authModal = document.getElementById('authModal');
@@ -1514,7 +1678,7 @@ $stats = [
         document.getElementById('google-login-btn')?.addEventListener('click', triggerGoogleSignIn);
         document.getElementById('google-register-btn')?.addEventListener('click', triggerGoogleSignIn);
 
-        // Session timeout notice (redirected here from a protected page)
+        // Session timeout notice
         if (new URLSearchParams(window.location.search).has('timeout')) {
             setAlert('Session expired.', 'warning');
             openAuthModal('login');
@@ -1522,44 +1686,25 @@ $stats = [
         }
 
         // ----- Mobile menu -----
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenuBtn2 = document.getElementById('mobileMenuBtn');
         const mobileMenu = document.getElementById('mobileMenu');
         const iconOpen = document.getElementById('mobileMenuIconOpen');
         const iconClose = document.getElementById('mobileMenuIconClose');
 
         function setMobileMenu(open) {
-            if (!mobileMenu || !mobileMenuBtn) return;
+            if (!mobileMenu || !mobileMenuBtn2) return;
             mobileMenu.classList.toggle('hidden', !open);
             iconOpen?.classList.toggle('hidden', open);
             iconClose?.classList.toggle('hidden', !open);
-            mobileMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            mobileMenuBtn2.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
 
-        mobileMenuBtn?.addEventListener('click', function() {
+        mobileMenuBtn2?.addEventListener('click', function() {
             setMobileMenu(mobileMenu.classList.contains('hidden'));
         });
 
         document.querySelectorAll('.mobile-nav-link').forEach(function(link) {
             link.addEventListener('click', function() { setMobileMenu(false); });
-        });
-
-        // ----- Header shadow on scroll + back-to-top visibility -----
-        const siteHeader = document.getElementById('siteHeader');
-        const backToTopBtn = document.getElementById('backToTopBtn');
-
-        function onScroll() {
-            const y = window.scrollY || 0;
-            siteHeader?.classList.toggle('shadow-md', y > 8);
-            if (backToTopBtn) {
-                backToTopBtn.classList.toggle('hidden', y < 480);
-                backToTopBtn.classList.toggle('flex', y >= 480);
-            }
-        }
-        window.addEventListener('scroll', onScroll, { passive: true });
-        onScroll();
-
-        backToTopBtn?.addEventListener('click', function() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
         // ----- Scroll reveal -----
@@ -1579,7 +1724,7 @@ $stats = [
         }
 
         // ----- Active nav highlight -----
-        const sections = ['hero', 'services', 'about', 'contact'];
+        const sections = ['hero', 'services', 'about', 'testimonials', 'contact'];
         const navLinks = document.querySelectorAll('nav[aria-label="Main"] .nav-link');
         if ('IntersectionObserver' in window && navLinks.length) {
             const navObserver = new IntersectionObserver(function(entries) {
