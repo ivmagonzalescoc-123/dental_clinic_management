@@ -434,7 +434,7 @@ $aboutPoints = [
                     height="32"
                 >
                 <span id="siteTitle" class="tracking-tight transition-colors duration-300 font-display text-lg font-semibold text-white">
-                    Azucena's Dental
+                    Azucena's Dental Clinic
                 </span>
             </a>
 
@@ -573,7 +573,7 @@ $aboutPoints = [
                         <div class="relative">
                             <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(29,111,216,0.08); z-index: 0;"></div>
                             <img
-                                src="assets/img/landing-background.jpg"
+                                src="assets/img/profile_picture.jpg"
                                 alt="Azucena's Dental Clinic"
                                 class="relative z-10 w-full rounded-3xl object-cover"
                                 style="height: 520px; object-position: top;"
@@ -803,7 +803,7 @@ $aboutPoints = [
             <div class="auth-body">
             <form id="login-form" class="space-y-5 px-6 py-6 sm:px-8" novalidate>
                 <div class="space-y-1.5">
-                    <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label>
+                    <!-- <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label> -->
                     <div class="relative">
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
@@ -814,7 +814,7 @@ $aboutPoints = [
                 </div>
 
                 <div class="space-y-1.5">
-                    <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label>
+                    <!-- <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label> -->
                     <div class="relative">
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
@@ -830,12 +830,12 @@ $aboutPoints = [
 
                 <div class="space-y-2">
                     <label class="block text-sm font-medium text-slate-700">Captcha</label>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <span id="loginCaptchaQuestion" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
-                        <button type="button" id="refreshLoginCaptchaBtn" class="text-sm font-semibold text-primary hover:text-primary">Refresh</button>
+                    <div class="flex items-center gap-2">
+                        <span id="loginCaptchaQuestion" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
+                        <button type="button" id="refreshLoginCaptchaBtn" class="shrink-0 text-sm font-semibold text-primary hover:text-primary">Refresh</button>
+                        <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Answer"
+                            class="auth-field min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-4 text-sm text-slate-900 placeholder:text-slate-400">
                     </div>
-                    <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Enter the captcha answer"
-                        class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-4 text-sm text-slate-900 placeholder:text-slate-400">
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">

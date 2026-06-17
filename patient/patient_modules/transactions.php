@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchMeta = document.getElementById('patientTransactionSearchMeta');
     let allTransactions = [];
 
+    accordion.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted small">Loading billing records...</p></div>';
+
     fetch('../assets/api/billing/get_transactions.php')
         .then(async (response) => {
             const data = await response.json().catch(() => null);
@@ -230,25 +232,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
         return card;
     }
+
+    function hasOutstandingBalance(billing) {
+        const balance = Number(billing && billing.balance != null ? billing.balance : 0);
+        return Number.isFinite(balance) && balance > 0.009;
+    }
+
+    function formatBalanceLabel(billing) {
+        return hasOutstandingBalance(billing) ? formatCurrency(billing.balance) : 'Paid';
+    }
+
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function formatCurrency(amount) {
+        const value = Number(amount);
+        if (!Number.isFinite(value)) return '₱0.00';
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
+    }
 });
-
-function hasOutstandingBalance(billing) {
-    const balance = Number(billing && billing.balance != null ? billing.balance : 0);
-    return Number.isFinite(balance) && balance > 0.009;
-}
-
-function formatBalanceLabel(billing) {
-    return hasOutstandingBalance(billing) ? formatCurrency(billing.balance) : 'Paid';
-}
-
-function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
-    return str.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-function formatCurrency(amount) {
-    const value = Number(amount);
-    if (!Number.isFinite(value)) return '₱0.00';
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(value);
-}
 </script>

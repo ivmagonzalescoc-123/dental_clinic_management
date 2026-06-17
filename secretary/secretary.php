@@ -176,31 +176,31 @@ switch ($role_key) {
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=dashboard">
+                <a class="nav-link collapsed" href="secretary.php?page=dashboard" data-tooltip="Dashboard" title="Dashboard">
                     <i class="bi bi-grid"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=manage_patients">
+                <a class="nav-link collapsed" href="secretary.php?page=manage_patients" data-tooltip="Patient Management" title="Patient Management">
                     <i class="bi bi-person"></i>
                     <span>Patient Management</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=appointments">
+                <a class="nav-link collapsed" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span>Appointments</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=doctor_schedule">
+                <a class="nav-link collapsed" href="secretary.php?page=doctor_schedule" data-tooltip="Doctor Schedule" title="Doctor Schedule">
                     <i class="bi bi-calendar2-check"></i>
                     <span>Doctor Schedule</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=arrivals">
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=arrivals" data-tooltip="Arrivals" title="Arrivals">
                     <i class="bi bi-person-check"></i>
                     <span class="ms-2">Arrivals</span>
                     <?php if ((int)$pendingCount > 0): ?>
@@ -209,19 +209,19 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=billing">
+                <a class="nav-link collapsed" href="secretary.php?page=billing" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-receipt"></i>
                     <span>Billing</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=services">
+                <a class="nav-link collapsed" href="secretary.php?page=services" data-tooltip="Services" title="Services">
                     <i class="bi bi-clipboard2-pulse"></i>
                     <span>Services</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages">
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
                     <i class="bi bi-envelope"></i>
                     <span class="ms-2">Contact Us</span>
                     <?php if ((int)$newContactCount > 0): ?>
@@ -339,23 +339,19 @@ switch ($role_key) {
     <!-- Active Navigation Highlight -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Get current page from URL
-            const params = new URLSearchParams(window.location.search);
-            const currentPage = params.get('page') || 'dashboard';
-            
-            // Get all sidebar nav links
-            const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
-            
-            // Remove active class from all links and add to current page
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                
-                // Check if this link matches current page
-                if (link.href.includes('page=' + currentPage)) {
-                    link.classList.add('active');
-                    link.classList.remove('collapsed');
-                }
-            });
+            var params = new URLSearchParams(window.location.search);
+            var currentPage = params.get('page') || 'dashboard';
+            if (typeof window.updateActiveNav === 'function') {
+                window.updateActiveNav(currentPage);
+            } else {
+                var navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+                navLinks.forEach(function(link) {
+                    link.classList.remove('active');
+                    if (link.href && link.href.includes('page=' + currentPage)) {
+                        link.classList.add('active');
+                    }
+                });
+            }
 
             const searchInput = document.getElementById('secretarySearch');
 

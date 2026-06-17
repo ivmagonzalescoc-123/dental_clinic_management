@@ -142,38 +142,38 @@ switch ($role_key) {
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=dashboard">
+                <a class="nav-link collapsed" href="admin.php?page=dashboard" data-tooltip="Dashboard" title="Dashboard">
                     <i class="bi bi-grid"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=manage_users">
+                <a class="nav-link collapsed" href="admin.php?page=manage_users" data-tooltip="Manage Users" title="Manage Users">
                     <i class="bi bi-person"></i>
                     <span>Manage Users</span>
                 </a>
             </li>
             
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=services">
+                <a class="nav-link collapsed" href="admin.php?page=services" data-tooltip="Services" title="Services">
                     <i class="bi bi-bag-heart"></i>
                     <span>Services</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=doctor_management&tab=schedule">
+                <a class="nav-link collapsed" href="admin.php?page=doctor_management&tab=schedule" data-tooltip="Doctor Management" title="Doctor Management">
                     <i class="bi bi-calendar2-check"></i>
                     <span>Doctor Management</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=reports">
+                <a class="nav-link collapsed" href="admin.php?page=reports" data-tooltip="Reports" title="Reports">
                     <i class="bi bi-bar-chart-line"></i>
                     <span>Reports</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=system_logs">
+                <a class="nav-link collapsed" href="admin.php?page=system_logs" data-tooltip="System Logs" title="System Logs">
                     <i class="bi bi-file-text"></i>
                     <span>System Logs</span>
                 </a>
@@ -282,23 +282,19 @@ switch ($role_key) {
     <!-- Active Navigation Highlight -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Get current page from URL
-            const params = new URLSearchParams(window.location.search);
-            const currentPage = params.get('page') || 'dashboard';
-            
-            // Get all sidebar nav links
-            const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
-            
-            // Remove active class from all links and add to current page
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                
-                // Check if this link matches current page
-                if (link.href.includes('page=' + currentPage)) {
-                    link.classList.add('active');
-                    link.classList.remove('collapsed');
-                }
-            });
+            var params = new URLSearchParams(window.location.search);
+            var currentPage = params.get('page') || 'dashboard';
+            if (typeof window.updateActiveNav === 'function') {
+                window.updateActiveNav(currentPage);
+            } else {
+                var navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+                navLinks.forEach(function(link) {
+                    link.classList.remove('active');
+                    if (link.href && link.href.includes('page=' + currentPage)) {
+                        link.classList.add('active');
+                    }
+                });
+            }
 
             const searchInput = document.getElementById('adminSearch');
 

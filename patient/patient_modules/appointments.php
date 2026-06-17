@@ -373,10 +373,6 @@ if ($patient_id) {
 
                         <input type="hidden" name="patient_id" value="<?php echo (int)$patient_id; ?>">
                         <input type="hidden" name="is_online_appointment" value="0">
-
-                        <button type="submit" class="btn btn-primary w-100">
-                            Request Appointment
-                        </button>
                     </div>
                     <div class="col-lg-7 order-lg-1 patient-appt-calendar-col">
                         <div class="calendar-panel" id="patientCalendarPanel">
@@ -404,6 +400,9 @@ if ($patient_id) {
                         </div>
                     </div>
                 </div>
+                <button type="submit" class="btn btn-primary mt-3" id="submitApptBtn" style="width: 180px; display: block; margin: 12px auto 0;">
+                    Request Appointment
+                </button>
             </form>
         </div>
 
@@ -1262,6 +1261,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 : 'TBD';
             const selectedReason = document.getElementById('reason') ? String(document.getElementById('reason').value || '').trim() : '';
 
+            const submitBtn = document.getElementById('submitApptBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Submitting...';
+            }
+
             const formData = new FormData(form);
             formData.append('csrf_token', appointmentCsrfToken);
             fetch('../assets/api/appointments/create_appointment.php', {
@@ -1270,6 +1275,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }).then(function(r) {
                 return r.json();
             }).then(function(resp) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Request Appointment';
+                }
                 if (resp.success) {
                     appendHistoryRow({
                         appointmentId: resp.appointment_id,
@@ -1296,6 +1305,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }).catch(function(err) {
                 console.error(err);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Request Appointment';
+                }
                 showAlert('Server error creating appointment.', 'danger');
             });
         });

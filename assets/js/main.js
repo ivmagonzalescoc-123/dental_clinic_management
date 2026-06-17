@@ -73,6 +73,14 @@
   /**
    * Sidebar toggle
    */
+  var body = select('body')
+  if (body && window.innerWidth > 991) {
+    var saved = localStorage.getItem('sidebar-collapsed')
+    if (saved === 'true') {
+      body.classList.add('toggle-sidebar')
+    }
+  }
+
   if (select('.toggle-sidebar-btn')) {
     on('click', '.toggle-sidebar-btn', function(e) {
       var body = select('body')
@@ -81,6 +89,9 @@
         return
       }
       body.classList.toggle('toggle-sidebar')
+      if (window.innerWidth > 991) {
+        localStorage.setItem('sidebar-collapsed', body.classList.contains('toggle-sidebar'))
+      }
     })
   }
 
@@ -92,6 +103,201 @@
     if (e.target.closest('#sidebar') || e.target.closest('.toggle-sidebar-btn')) return
     body.classList.remove('toggle-sidebar')
   })
+
+  /**
+   * AJAX sidebar navigation (desktop only)
+   */
+  ;(function() {
+    var isNavigating = false
+
+    function getPortalFile() {
+      var path = window.location.pathname
+      var m = path.match(/\/(admin|doctor|secretary|patient)\.php/)
+      return m ? m[1] + '.php' : null
+    }
+
+    function updateActiveNav(page) {
+      var navLinks = document.querySelectorAll('.sidebar-nav .nav-link')
+      navLinks.forEach(function(link) {
+        link.classList.remove('active')
+        var href = link.getAttribute('href') || ''
+        if (href.includes('page=' + page)) {
+          link.classList.add('active')
+        }
+      })
+    }
+
+    window.updateActiveNav = updateActiveNav
+
+    function reExecuteScripts(container) {
+      var extScripts = Array.from(container.querySelectorAll('script[src]'))
+      var inlineScripts = Array.from(container.querySelectorAll('script:not([src])'))
+
+      function runInline() {
+        // Patch EventTarget.prototype.addEventListener so any
+        // document.addEventListener('DOMContentLoaded', cb) call that happens
+        // during script injection fires cb immediately as a microtask instead
+        // of waiting for an event that already fired.
+        var origAddEL = EventTarget.prototype.addEventListener
+        var dcQueue = []
+        EventTarget.prototype.addEventListener = function(type, listener, opts) {
+          if (this === document && type === 'DOMContentLoaded') {
+            dcQueue.push(listener)
+            return
+          }
+          return origAddEL.call(this, type, listener, opts)
+        }
+
+        inlineScripts.forEach(function(old) {
+          var s = document.createElement('script')
+          s.textContent = old.textContent
+          document.body.appendChild(s)
+        })
+
+        // Restore original before callbacks run so they see the real API
+        EventTarget.prototype.addEventListener = origAddEL
+
+        // Fire each collected DOMContentLoaded callback as a microtask
+        dcQueue.forEach(function(cb) {
+          Promise.resolve().then(function() {
+            try { cb() } catch (e) { console.error('[ajax dcl]', e) }
+          })
+        })
+      }
+
+      // A script counts as already executed only when a copy lives OUTSIDE
+      // the injected container. Scripts that landed inside via innerHTML were
+      // never executed by the browser and must still be loaded.
+      var pending = extScripts.filter(function(el) {
+        var src = el.getAttribute('src')
+        if (!src) return false
+        var matches = Array.from(document.querySelectorAll('script[src="' + src + '"]'))
+        return !matches.some(function(s) { return !container.contains(s) })
+      })
+
+      if (!pending.length) {
+        runInline()
+        return
+      }
+
+      // Chain-load each new external script in order, then run inline scripts
+      pending.reduce(function(chain, el) {
+        return chain.then(function() {
+          return new Promise(function(resolve) {
+            var s = document.createElement('script')
+            s.src = el.getAttribute('src')
+            s.onload = resolve
+            s.onerror = resolve
+            document.head.appendChild(s)
+          })
+        })
+      }, Promise.resolve()).then(runInline)
+    }
+
+    var portalFile = getPortalFile()
+    if (!portalFile) return
+
+    function isSamePortal(href) {
+      if (!href || href === '#' || href.indexOf('javascript:') === 0) return false
+      if (href.indexOf('http://') === 0 || href.indexOf('https://') === 0) return false
+      if (href.indexOf(portalFile) !== -1) return true
+      if (href.indexOf('?') === 0 || href.indexOf('./') === 0 || href.indexOf('../') === 0) return true
+      return false
+    }
+
+    function setPageLoading(active) {
+      var mainEl = document.getElementById('main')
+      if (!mainEl) return
+      if (active) {
+        mainEl.classList.add('ajax-page-loading')
+      } else {
+        mainEl.classList.remove('ajax-page-loading')
+      }
+    }
+
+    function ajaxNavigate(url) {
+      if (isNavigating) return
+      isNavigating = true
+      setPageLoading(true)
+
+      fetch(url, { credentials: 'same-origin' })
+        .then(function(r) { return r.text() })
+        .then(function(html) {
+          setPageLoading(false)
+          var parser = new DOMParser()
+          var doc = parser.parseFromString(html, 'text/html')
+          var newMain = doc.querySelector('#main')
+          var currentMain = document.querySelector('#main')
+
+          if (newMain && currentMain) {
+            currentMain.innerHTML = newMain.innerHTML
+            reExecuteScripts(currentMain)
+          }
+
+          var params = new URLSearchParams(url.split('?')[1] || '')
+          var page = params.get('page') || 'dashboard'
+          updateActiveNav(page)
+
+          history.pushState({ page: page }, '', url)
+          window.scrollTo(0, 0)
+          isNavigating = false
+        })
+        .catch(function() {
+          setPageLoading(false)
+          window.location.href = url
+          isNavigating = false
+        })
+    }
+
+    window.ajaxNavigate = ajaxNavigate
+
+    document.addEventListener('click', function(e) {
+      if (window.innerWidth <= 991) return
+
+      var link = e.target.closest('a')
+      if (!link) return
+      if (link.target === '_blank') return
+      if (link.hasAttribute('data-no-ajax')) return
+
+      var href = link.getAttribute('href')
+      if (!isSamePortal(href)) return
+
+      e.preventDefault()
+
+      var fullUrl
+      if (href.indexOf('?') === 0 || href.indexOf('./') === 0 || href.indexOf('../') === 0) {
+        fullUrl = new URL(href, window.location.origin).href
+      } else {
+        fullUrl = href
+      }
+
+      ajaxNavigate(fullUrl)
+    })
+
+    document.addEventListener('submit', function(e) {
+      if (window.innerWidth <= 991) return
+      var form = e.target
+      if (form.method && form.method.toUpperCase() === 'POST') return
+      if (form.hasAttribute('data-no-ajax')) return
+
+      var action = form.getAttribute('action') || ''
+      if (!isSamePortal(action) && action !== '') return
+
+      e.preventDefault()
+
+      var formData = new FormData(form)
+      var params = new URLSearchParams(formData).toString()
+      var baseUrl = action || window.location.pathname
+      var url = baseUrl + (params ? '?' + params : '')
+
+      ajaxNavigate(url)
+    })
+
+    window.addEventListener('popstate', function() {
+      if (window.innerWidth <= 991) return
+      location.reload()
+    })
+  })()
 
   /**
    * Header search clear buttons (all portals)

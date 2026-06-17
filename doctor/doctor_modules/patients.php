@@ -354,7 +354,7 @@ $basePatientParams = [
                                         $rowParams['patient_id'] = $pId;
                                         $href = 'doctor.php?' . http_build_query($rowParams);
                                     ?>
-                                    <tr class="<?php echo $pId === $selectedPatientId ? 'table-primary' : ''; ?>" style="cursor:pointer;" onclick="window.location.href='<?php echo htmlspecialchars($href, ENT_QUOTES); ?>'">
+                                    <tr class="<?php echo $pId === $selectedPatientId ? 'table-primary' : ''; ?>" style="cursor:pointer;" onclick="ajaxNavigate('<?php echo htmlspecialchars($href, ENT_QUOTES); ?>')">
                                         <td>
                                             <div class="fw-semibold"><?php echo htmlspecialchars(format_patient_name($patient)); ?></div>
                                             <div class="small text-muted">

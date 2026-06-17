@@ -115,25 +115,25 @@ switch ($role_key) {
     <aside id="sidebar" class="sidebar">
         <ul class="sidebar-nav" id="sidebar-nav">
             <li class="nav-item">
-                <a class="nav-link collapsed" href="patient.php?page=dashboard">
+                <a class="nav-link collapsed" href="patient.php?page=dashboard" data-tooltip="Dashboard" title="Dashboard">
                     <i class="bi bi-grid"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="patient.php?page=appointments">
+                <a class="nav-link collapsed" href="patient.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span>Appointments</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="patient.php?page=services">
+                <a class="nav-link collapsed" href="patient.php?page=services" data-tooltip="Services" title="Services">
                     <i class="bi bi-receipt"></i>
                     <span>Services</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="patient.php?page=transactions">
+                <a class="nav-link collapsed" href="patient.php?page=transactions" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-cart"></i>
                     <span>Billing</span>
                 </a>
@@ -248,23 +248,19 @@ switch ($role_key) {
     <script>
         const patientCsrfToken = <?php echo json_encode($csrf_token); ?>;
         document.addEventListener('DOMContentLoaded', function() {
-            // Get current page from URL
-            const params = new URLSearchParams(window.location.search);
-            const currentPage = params.get('page') || 'dashboard';
-            
-            // Get all sidebar nav links
-            const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
-            
-            // Remove active class from all links and add to current page
-            navLinks.forEach(link => {
-                link.classList.remove('active');
-                
-                // Check if this link matches current page
-                if (link.href.includes('page=' + currentPage)) {
-                    link.classList.add('active');
-                    link.classList.remove('collapsed');
-                }
-            });
+            var params = new URLSearchParams(window.location.search);
+            var currentPage = params.get('page') || 'dashboard';
+            if (typeof window.updateActiveNav === 'function') {
+                window.updateActiveNav(currentPage);
+            } else {
+                var navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
+                navLinks.forEach(function(link) {
+                    link.classList.remove('active');
+                    if (link.href && link.href.includes('page=' + currentPage)) {
+                        link.classList.add('active');
+                    }
+                });
+            }
 
             document.querySelectorAll('.patient-mobile-nav-item').forEach(function (item) {
                 item.classList.toggle('active', item.getAttribute('data-page') === currentPage);
