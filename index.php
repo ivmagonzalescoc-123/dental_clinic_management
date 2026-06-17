@@ -24,13 +24,13 @@ $year = date('Y');
 $csrf_token = security_generate_csrf_token();
 $googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
 $clinicLogo = 'assets/img/clinic-logo.png';
-$pageBackgroundImage = 'assets/img/landing-background.jpg';
+$pageBackgroundImage = 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1400&h=900&fit=crop&auto=format';
 
 $pageBgSrc = $pageBackgroundImage;
 if (!preg_match('#^https?://#i', $pageBackgroundImage)) {
     $localFile = __DIR__ . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, ltrim($pageBackgroundImage, '/\\'));
     if (!is_file($localFile)) {
-        $pageBgSrc = 'assets/img/landing-background.jpg';
+        $pageBgSrc = 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1400&h=900&fit=crop&auto=format';
     }
 }
 
@@ -273,25 +273,6 @@ $aboutPoints = [
             flex-shrink: 0;
         }
 
-        /* Custom scrollbar for auth panels */
-        .auth-panel .auth-body::-webkit-scrollbar {
-            width: 6px;
-        }
-        .auth-panel .auth-body::-webkit-scrollbar-track {
-            background: #f0f4fb;
-            border-radius: 3px;
-        }
-        .auth-panel .auth-body::-webkit-scrollbar-thumb {
-            background: #1d6fd8;
-            border-radius: 3px;
-        }
-        .auth-panel .auth-body::-webkit-scrollbar-thumb:hover {
-            background: #0a4f88;
-        }
-        .auth-panel .auth-body {
-            scrollbar-width: thin;
-            scrollbar-color: #1d6fd8 #f0f4fb;
-        }
         @keyframes authPanelIn {
             from { opacity: 0; transform: translateY(14px) scale(0.985); }
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -364,26 +345,6 @@ $aboutPoints = [
             padding: 1.25rem 1.5rem;
             overscroll-behavior: contain;
         }
-
-        /* Custom scrollbar for terms panel */
-        .terms-content::-webkit-scrollbar {
-            width: 6px;
-        }
-        .terms-content::-webkit-scrollbar-track {
-            background: #f0f4fb;
-            border-radius: 3px;
-        }
-        .terms-content::-webkit-scrollbar-thumb {
-            background: #1d6fd8;
-            border-radius: 3px;
-        }
-        .terms-content::-webkit-scrollbar-thumb:hover {
-            background: #0a4f88;
-        }
-        .terms-content {
-            scrollbar-width: thin;
-            scrollbar-color: #1d6fd8 #f0f4fb;
-        }
         .terms-content h3 {
             margin-top: 1.25rem;
             margin-bottom: 0.5rem;
@@ -416,6 +377,46 @@ $aboutPoints = [
             .reveal { opacity: 1; transform: none; transition: none; }
             .float-slow { animation: none; }
             .auth-panel { animation: none; }
+        }
+
+        /* Back to top button — consistent across all browsers */
+        .back-to-top-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 40;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background-color: #1d6fd8;
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(29, 111, 216, 0.4);
+            transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            line-height: 1;
+        }
+        .back-to-top-btn:hover {
+            background-color: #0a4f88;
+            box-shadow: 0 6px 20px rgba(29, 111, 216, 0.5);
+            transform: translateY(-2px);
+        }
+        .back-to-top-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(29, 111, 216, 0.3);
+        }
+        .back-to-top-btn:focus-visible {
+            outline: 2px solid #1d6fd8;
+            outline-offset: 2px;
+        }
+        .back-to-top-btn.is-visible {
+            display: flex;
         }
     </style>
 </head>
@@ -572,7 +573,7 @@ $aboutPoints = [
                         <div class="relative">
                             <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(29,111,216,0.08); z-index: 0;"></div>
                             <img
-                                src="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>"
+                                src="assets/img/landing-background.jpg"
                                 alt="Azucena's Dental Clinic"
                                 class="relative z-10 w-full rounded-3xl object-cover"
                                 style="height: 520px; object-position: top;"
@@ -820,7 +821,7 @@ $aboutPoints = [
                         </span>
                         <input type="password" id="login-password" name="password" autocomplete="current-password" required placeholder="Enter your password"
                             class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400">
-                        <button type="button" data-toggle-password="login-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-sky-500 transition-colors" aria-label="Show password" aria-pressed="false">
+                        <button type="button" data-toggle-password="login-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
                             <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                         </button>
@@ -831,18 +832,18 @@ $aboutPoints = [
                     <label class="block text-sm font-medium text-slate-700">Captcha</label>
                     <div class="flex flex-wrap items-center gap-3">
                         <span id="loginCaptchaQuestion" class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
-                        <button type="button" id="refreshLoginCaptchaBtn" class="text-sm font-semibold text-sky-500 hover:text-sky-600">Refresh</button>
+                        <button type="button" id="refreshLoginCaptchaBtn" class="text-sm font-semibold text-primary hover:text-primary">Refresh</button>
                     </div>
                     <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Enter the captcha answer"
                         class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-4 text-sm text-slate-900 placeholder:text-slate-400">
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <button type="button" data-auth-switch="forgot" class="font-medium text-sky-500 hover:text-sky-600 transition-colors">Forgot Password</button>
-                    <button type="button" data-auth-switch="register" class="font-medium text-sky-500 hover:text-sky-600 transition-colors">Create Account</button>
+                    <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password</button>
+                    <button type="button" data-auth-switch="register" class="font-medium text-primary hover:text-primary transition-colors">Create Account</button>
                 </div>
 
-                <button type="submit" class="w-full rounded-xl bg-sky-500 px-4 py-3.5 text-sm font-semibold text-white hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="submit" class="w-full rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                     Login to Dashboard
                 </button>
 
@@ -949,7 +950,7 @@ $aboutPoints = [
                         <div class="relative">
                             <input type="password" id="reg-password" name="password" required minlength="8" autocomplete="new-password" placeholder="Create a password"
                                 class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 pr-12 text-sm placeholder:text-slate-400">
-                            <button type="button" data-toggle-password="reg-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-sky-500 transition-colors" aria-label="Show password" aria-pressed="false">
+                            <button type="button" data-toggle-password="reg-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
                                 <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                                 <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                             </button>
@@ -962,7 +963,7 @@ $aboutPoints = [
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm text-slate-600">
+                <div class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-slate-600">
                     <p class="font-medium text-slate-800">Password must have:</p>
                     <ul class="mt-2 list-disc space-y-1 pl-5">
                         <li>At least 8 characters</li>
@@ -972,14 +973,14 @@ $aboutPoints = [
                 </div>
 
                 <div class="flex items-start gap-2.5 text-sm text-slate-600">
-                    <input type="checkbox" id="reg-terms" class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-sky-500 focus:ring-sky-400">
+                    <input type="checkbox" id="reg-terms" class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary focus:ring-primary/40">
                     <span>
                         I agree to the
-                        <button type="button" id="openTermsModal" class="font-semibold text-sky-600 underline underline-offset-2 hover:text-sky-700 transition-colors">Terms and Conditions</button>
+                        <button type="button" id="openTermsModal" class="font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">Terms and Conditions</button>
                     </span>
                 </div>
 
-                <button type="submit" class="block w-full rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-bold text-white hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 transition-colors">
+                <button type="submit" class="block w-full rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors">
                     Create Account
                 </button>
 
@@ -1005,7 +1006,7 @@ $aboutPoints = [
 
                 <p class="text-center text-sm text-slate-600">
                     Already have an account?
-                    <button type="button" data-auth-switch="login" class="font-bold text-sky-600 hover:text-sky-700">Login here</button>
+                    <button type="button" data-auth-switch="login" class="font-bold text-primary hover:text-primary/80">Login here</button>
                 </p>
             </form>
             </div>
@@ -1030,7 +1031,7 @@ $aboutPoints = [
             <form id="reset-form" class="space-y-4 px-6 py-6 sm:px-8">
                 <input type="email" id="reset-email" required placeholder="Email Address"
                     class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-xl border border-sky-200 bg-sky-50 py-3 text-sm font-semibold text-sky-600 hover:bg-sky-100 transition-colors">
+                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-xl border border-primary/20 bg-primary/5 py-3 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors">
                     Send OTP
                 </button>
 
@@ -1040,20 +1041,20 @@ $aboutPoints = [
                     <div class="relative">
                         <input type="password" id="reset-password" required placeholder="New Password"
                             class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 pr-12 text-sm placeholder:text-slate-400">
-                        <button type="button" data-toggle-password="reset-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-sky-500 transition-colors" aria-label="Show password" aria-pressed="false">
+                        <button type="button" data-toggle-password="reset-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
                             <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                         </button>
                     </div>
                     <input type="password" id="reset-confirm" required placeholder="Confirm Password"
                         class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                    <button type="submit" class="w-full rounded-xl bg-sky-500 py-3 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                    <button type="submit" class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                         Reset Password
                     </button>
                 </div>
 
                 <p class="pt-1 text-center">
-                    <button type="button" data-auth-switch="login" class="text-sm font-medium text-sky-500 hover:text-sky-600">Back to Login</button>
+                    <button type="button" data-auth-switch="login" class="text-sm font-medium text-primary hover:text-primary">Back to Login</button>
                 </p>
             </form>
             </div>
@@ -1154,7 +1155,7 @@ $aboutPoints = [
                 <button type="button" data-terms-close class="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
                     Close
                 </button>
-                <button type="button" id="acceptTermsBtn" class="rounded-xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-sky-600 transition-colors">
+                <button type="button" id="acceptTermsBtn" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                     I Agree
                 </button>
             </div>
@@ -1162,8 +1163,8 @@ $aboutPoints = [
     </div>
 
     <!-- Back to top -->
-    <button type="button" id="backToTopBtn" class="fixed bottom-6 right-6 z-40 hidden h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:opacity-90 transition-colors" aria-label="Back to top">
-        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
+    <button type="button" id="backToTopBtn" class="back-to-top-btn" aria-label="Back to top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
     </button>
 
     <script src="assets/js/app-toast.js?v=20260614-short"></script>
@@ -1222,8 +1223,7 @@ $aboutPoints = [
             }
 
             if (backToTopBtn) {
-                backToTopBtn.classList.toggle('hidden', y < 480);
-                backToTopBtn.classList.toggle('flex', y >= 480);
+                backToTopBtn.classList.toggle('is-visible', y >= 480);
             }
         }
         window.addEventListener('scroll', onScroll, { passive: true });
@@ -1626,7 +1626,6 @@ $aboutPoints = [
 
         function handleGoogleCredential(response) {
             if (!response || !response.credential) return;
-            setAlert('Signing in with Google…', 'info');
             fetch('assets/api/auth/google_oauth_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
