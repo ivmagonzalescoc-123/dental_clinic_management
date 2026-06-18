@@ -48,7 +48,7 @@ if (!function_exists('wf_notify_appointment_created')) {
         $patientName = wf_lookup_patient_name($conn, $patientId);
         $title = 'New appointment request';
         $body = $patientName . ' booked an appointment on ' . $appointmentDate . '.';
-        $link = 'secretary.php?page=appointments&view=scheduled';
+        $link = 'secretary.php?page=appointments&view=all';
 
         if ($status === 'scheduled') {
             wf_notify_secretaries($conn, $title, $body, $link);
@@ -78,7 +78,7 @@ if (!function_exists('wf_notify_reschedule_requested')) {
         $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Reschedule request';
         $body = $patientName . ' requested to reschedule to ' . $requestedDate . '.';
-        $link = 'secretary.php?page=appointments&view=scheduled';
+        $link = 'secretary.php?page=appointments&view=reschedule';
         wf_notify_secretaries($conn, $title, $body, $link);
         wf_notify_user($conn, $doctorId, $title, $body, 'doctor.php?page=appointments');
         wf_notify_patient($conn, $patientId, 'Reschedule submitted', 'Your reschedule request is pending secretary approval.', 'patient.php?page=appointments');

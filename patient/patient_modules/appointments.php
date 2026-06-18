@@ -1338,5 +1338,124 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     filterAppointmentHistory('');
+
+    // Auto-refresh appointment history every 15 seconds
+    let lastHistoryHash = '';
+
+    function computeHistoryHash(appointments) {
+        return appointments.map(function(a) {
+            return a.appointment_id + ':' + a.appointment_date + ':' + a.status + ':' + (a.user_id || 0) + ':' + (a.start_time || '');
+        }).join('|');
+    }
+
+    function buildHistoryRow(a) {
+        var statusKey = (a.status || 'scheduled').toLowerCase();
+        var statusLabels = {
+            'scheduled': 'Scheduled', 'confirmed': 'Confirmed', 'checked_in': 'Checked In',
+            'in_progress': 'In Progress', 'completed': 'Completed', 'missed': 'Missed',
+            'cancelled': 'Cancelled', 'no_show': 'No Show', 'rescheduled': 'Rescheduled'
+        };
+        var statusBadges = {
+            'scheduled': 'secondary', 'confirmed': 'primary', 'checked_in': 'info',
+            'in_progress': 'warning', 'completed': 'success', 'missed': 'warning',
+            'cancelled': 'danger', 'no_show': 'danger', 'rescheduled': 'secondary'
+        };
+        var now = new Date();
+        var apptDate = a.appointment_date ? new Date(a.appointment_date + 'T00:00:00') : null;
+        var isMissed = ['scheduled', 'confirmed'].indexOf(statusKey) >= 0 && apptDate && apptDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (isMissed) { statusKey = 'missed'; }
+
+        var label = statusLabels[statusKey] || statusKey.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+        var badge = statusBadges[statusKey] || 'secondary';
+
+        var doctorName = ((a.doctor_first_name || '') + ' ' + (a.doctor_last_name || '')).trim() || 'To be assigned';
+        var slotLabel = 'TBD';
+        if (a.start_time && a.end_time) {
+            slotLabel = formatTime12(a.start_time) + ' - ' + formatTime12(a.end_time);
+        }
+        var dateLabel = a.appointment_date ? new Date(a.appointment_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
+
+        var hasPending = (a.pending_reschedule_count || 0) > 0;
+        var canResched = ['scheduled', 'confirmed', 'missed'].indexOf(statusKey) >= 0 && !hasPending;
+
+        var actionsHtml = '';
+        if (canResched) {
+            actionsHtml = '<button type="button" class="btn btn-sm btn-outline-warning patient-resched-btn" data-appointment-id="' + a.appointment_id + '" data-doctor-id="' + (a.user_id || 0) + '" data-current-date="' + (a.appointment_date || '') + '"><i class="bi bi-calendar2-week"></i> Request Reschedule</button>';
+        } else if (hasPending) {
+            actionsHtml = '<span class="badge bg-warning text-dark">Reschedule Pending Approval</span>';
+        } else {
+            actionsHtml = '<span class="text-muted small">-</span>';
+        }
+
+        return '<tr class="patient-appt-history-row">' +
+            '<td data-label="Appointment #">#' + a.appointment_id + '</td>' +
+            '<td data-label="Date">' + escapeHtml(dateLabel) + '</td>' +
+            '<td data-label="Doctor">' + escapeHtml(doctorName) + '</td>' +
+            '<td data-label="Time Slot">' + escapeHtml(slotLabel) + '</td>' +
+            '<td data-label="Reason">' + escapeHtml(a.reason || '') + '</td>' +
+            '<td data-label="Status"><span class="badge bg-' + badge + '">' + escapeHtml(label) + '</span></td>' +
+            '<td data-label="Actions">' + actionsHtml + '</td>' +
+            '</tr>';
+    }
+
+    function formatTime12(timeStr) {
+        if (!timeStr) return '';
+        var parts = timeStr.split(':');
+        var h = parseInt(parts[0], 10);
+        var m = parts[1] || '00';
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        if (h > 12) h -= 12;
+        if (h === 0) h = 12;
+        return h + ':' + m + ' ' + ampm;
+    }
+
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(String(str || '')));
+        return div.innerHTML;
+    }
+
+    function updateHistoryTable(appointments) {
+        if (!historyBody) return;
+        var html = '';
+        if (appointments.length === 0) {
+            html = '<tr id="patientApptHistoryEmpty"><td colspan="7" class="text-center py-4 history-empty">No appointment history yet.</td></tr>';
+        } else {
+            appointments.forEach(function(a) { html += buildHistoryRow(a); });
+        }
+        historyBody.innerHTML = html;
+
+        if (apptHistorySearchInput) {
+            filterAppointmentHistory(apptHistorySearchInput.value);
+        }
+    }
+
+    async function pollHistory() {
+        try {
+            var r = await fetch('../assets/api/appointments/get_patient_history.php');
+            if (!r.ok) return;
+            var data = await r.json();
+            if (!data.success || !Array.isArray(data.appointments)) return;
+
+            var newHash = computeHistoryHash(data.appointments);
+            if (newHash !== lastHistoryHash) {
+                lastHistoryHash = newHash;
+                updateHistoryTable(data.appointments);
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    // Initialize hash from current DOM
+    (function() {
+        var rows = getHistoryDataRows();
+        var parts = [];
+        rows.forEach(function(row) {
+            var cells = row.querySelectorAll('td');
+            parts.push((cells[0] ? cells[0].textContent.replace('#','') : '') + ':' + (cells[1] ? cells[1].textContent : '') + ':' + (cells[5] ? cells[5].textContent.trim() : ''));
+        });
+        lastHistoryHash = parts.join('|');
+    })();
+
+    setInterval(pollHistory, 15000);
 });
 </script>
