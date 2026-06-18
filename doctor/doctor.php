@@ -308,6 +308,8 @@ switch ($role_key) {
     <!-- Template Main JS File -->
     <script src="../assets/js/idempotency.js?v=20260606-idem"></script>
     <script src="../assets/js/app-toast.js?v=20260614-short"></script>
+    <script src="../assets/js/dental-cache.js"></script>
+    <script src="../assets/js/dental-ui.js"></script>
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>

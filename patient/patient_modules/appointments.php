@@ -979,12 +979,14 @@ document.addEventListener('DOMContentLoaded', function() {
             let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(String(DAYS_AHEAD));
             url += '&user_id=' + encodeURIComponent(doctorId);
 
-            const r = await fetch(url);
-            if (!r.ok) {
-                throw new Error('Network response was not ok');
+            var data;
+            if (Cache) {
+                data = await Cache.cachedFetch(url, { ttl: 60000 });
+            } else {
+                const r = await fetch(url);
+                if (!r.ok) throw new Error('Network response was not ok');
+                data = await r.json();
             }
-
-            const data = await r.json();
             if (!data.success || !Array.isArray(data.dates)) {
                 availabilityByDate = {};
                 renderCalendar();
@@ -1033,8 +1035,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedDuration > 0) {
                 url += '&duration=' + encodeURIComponent(String(selectedDuration));
             }
-            const r = await fetch(url);
-            const data = await r.json();
+            var data;
+            if (Cache) {
+                data = await Cache.cachedFetch(url, { ttl: 15000 });
+            } else {
+                const r = await fetch(url);
+                data = await r.json();
+            }
             timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
 
             if (!data.success || !Array.isArray(data.slots) || data.slots.length === 0) {
@@ -1192,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             submitPatientRescheduleBtn.disabled = true;
+            if (UI) UI.btnLoading(submitPatientRescheduleBtn, 'Submitting...');
             try {
                 const fd = new FormData();
                 fd.append('appointment_id', appointmentId);
@@ -1214,6 +1222,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (patientRescheduleModal) patientRescheduleModal.hide();
                 showBookingToast(j.message || 'Reschedule request submitted.', 'success');
+                if (Cache) Cache.invalidate('appointments');
 
                 const triggerBtn = document.querySelector('.patient-resched-btn[data-appointment-id="' + appointmentId + '"]');
                 if (triggerBtn) {
@@ -1227,6 +1236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showBookingToast('Server error while submitting request.', 'danger');
             } finally {
                 submitPatientRescheduleBtn.disabled = false;
+                if (UI) UI.btnRestore(submitPatientRescheduleBtn);
             }
         });
     }
@@ -1263,8 +1273,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const submitBtn = document.getElementById('submitApptBtn');
             if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Submitting...';
+                UI.btnLoading(submitBtn, 'Submitting...');
             }
 
             const formData = new FormData(form);
@@ -1276,10 +1285,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return r.json();
             }).then(function(resp) {
                 if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Request Appointment';
+                    UI.btnRestore(submitBtn);
                 }
                 if (resp.success) {
+                    Cache.invalidate('appointments');
                     appendHistoryRow({
                         appointmentId: resp.appointment_id,
                         date: selectedDate,
@@ -1306,8 +1315,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }).catch(function(err) {
                 console.error(err);
                 if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = 'Request Appointment';
+                    UI.btnRestore(submitBtn);
                 }
                 showAlert('Server error creating appointment.', 'danger');
             });
@@ -1339,8 +1347,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     filterAppointmentHistory('');
 
-    // Auto-refresh appointment history every 15 seconds
-    let lastHistoryHash = '';
+    // Auto-refresh: lightweight change detection every 3s, full fetch only when changed
+    var Cache = window.DentalCache;
+    var UI = window.DentalUI;
+    var lastHistoryHash = '';
+    var lastSignature = '';
+    var pollTimer = null;
 
     function computeHistoryHash(appointments) {
         return appointments.map(function(a) {
@@ -1432,15 +1444,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function pollHistory() {
         try {
-            var r = await fetch('../assets/api/appointments/get_patient_history.php');
-            if (!r.ok) return;
-            var data = await r.json();
+            var data = await Cache.cachedFetch('../assets/api/appointments/get_patient_history.php', {
+                ttl: 10000, // cache for 10 seconds
+                force: true // always fetch fresh on change
+            });
             if (!data.success || !Array.isArray(data.appointments)) return;
 
             var newHash = computeHistoryHash(data.appointments);
             if (newHash !== lastHistoryHash) {
                 lastHistoryHash = newHash;
                 updateHistoryTable(data.appointments);
+            }
+        } catch (e) { /* silent */ }
+    }
+
+    async function checkForChanges() {
+        try {
+            var url = '../assets/api/appointments/check_patient_changes.php?last=' + encodeURIComponent(lastSignature);
+            var data = await Cache.cachedFetch(url, { ttl: 2000, force: true });
+            if (data.sig) lastSignature = data.sig;
+            if (data.changed) {
+                Cache.invalidate('get_patient_history');
+                await pollHistory();
             }
         } catch (e) { /* silent */ }
     }
@@ -1456,6 +1481,7 @@ document.addEventListener('DOMContentLoaded', function() {
         lastHistoryHash = parts.join('|');
     })();
 
-    setInterval(pollHistory, 15000);
+    // Fast polling: check for changes every 3 seconds
+    pollTimer = setInterval(checkForChanges, 3000);
 });
 </script>

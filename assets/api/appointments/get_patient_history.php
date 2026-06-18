@@ -31,6 +31,8 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
     KEY idx_arr_patient_status (patient_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
+$conn->query("ALTER TABLE appointments ADD INDEX IF NOT EXISTS idx_patient_date (patient_id, appointment_date DESC)");
+
 $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
                       a.user_id, a.timeslot_id,
                       u.first_name AS doctor_first_name, u.last_name AS doctor_last_name,
