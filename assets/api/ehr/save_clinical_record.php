@@ -159,7 +159,7 @@ try {
         $files = $_FILES['images'];
         $count = is_array($files['name']) ? count($files['name']) : 0;
         $baseDir = __DIR__ . '/../../uploads/clinical_images/' . $appointment_id . '/';
-        if (!is_dir($baseDir)) @mkdir($baseDir, 0777, true);
+        if (!is_dir($baseDir)) @mkdir($baseDir, 0755, true);
         for ($i = 0; $i < $count; $i++) {
             $err = $files['error'][$i];
             if ($err !== UPLOAD_ERR_OK) continue;
@@ -184,7 +184,7 @@ try {
         $files = $_FILES['tooth_images'];
         $count = is_array($files['name']) ? count($files['name']) : 0;
         $baseDir = __DIR__ . '/../../uploads/clinical_images/' . $appointment_id . '/';
-        if (!is_dir($baseDir)) @mkdir($baseDir, 0777, true);
+        if (!is_dir($baseDir)) @mkdir($baseDir, 0755, true);
         for ($i = 0; $i < $count; $i++) {
             $err = $files['error'][$i];
             if ($err !== UPLOAD_ERR_OK) continue;
