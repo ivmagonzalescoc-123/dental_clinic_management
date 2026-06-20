@@ -36,14 +36,18 @@
     }
   }
 
+  var docListenersAttached = false;
+
   function initDropdowns() {
     var toggles = document.querySelectorAll('[data-portal-dropdown-toggle]');
     for (var i = 0; i < toggles.length; i++) {
-      (function (toggle) {
-        var item = toggle.closest('.header-dropdown');
+      var toggle = toggles[i];
+      if (toggle._dropdownBound) continue;
+      toggle._dropdownBound = true;
+      (function (t) {
+        var item = t.closest('.header-dropdown');
         if (!item) return;
-
-        toggle.addEventListener('click', function (event) {
+        t.addEventListener('click', function (event) {
           event.preventDefault();
           event.stopPropagation();
           if (isMobileHeader() && typeof window.closePortalHeaderSearch === 'function') {
@@ -57,26 +61,29 @@
             closeDropdown(item);
           }
         });
-      })(toggles[i]);
+      })(toggle);
     }
 
-    document.addEventListener('click', function (event) {
-      if (event.target.closest && event.target.closest('.header-dropdown')) return;
-      closeAll(null);
-    });
-
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape' || event.key === 'Esc') {
+    if (!docListenersAttached) {
+      docListenersAttached = true;
+      document.addEventListener('click', function (event) {
+        if (event.target.closest && event.target.closest('.header-dropdown')) return;
         closeAll(null);
-        if (typeof window.closePortalHeaderSearch === 'function') {
-          window.closePortalHeaderSearch();
-        }
-      }
-    });
+      });
 
-    window.addEventListener('resize', function () {
-      closeAll(null);
-    });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' || event.key === 'Esc') {
+          closeAll(null);
+          if (typeof window.closePortalHeaderSearch === 'function') {
+            window.closePortalHeaderSearch();
+          }
+        }
+      });
+
+      window.addEventListener('resize', function () {
+        closeAll(null);
+      });
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -84,4 +91,5 @@
   } else {
     initDropdowns();
   }
+  window.addEventListener('page-loaded', initDropdowns);
 })();

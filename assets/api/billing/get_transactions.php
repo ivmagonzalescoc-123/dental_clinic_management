@@ -52,13 +52,11 @@ try {
         SELECT
             a.appointment_id,
             a.appointment_date,
-            cr.recommended_services,
-            cr.materials_used,
-            cr.odontogram,
+            cr.record_id,
             b.billing_id,
             b.total_amount,
             b.amount_paid,
-            b.balance,
+            (b.total_amount - b.amount_paid) AS balance,
             b.status AS billing_status
         FROM appointments a
         LEFT JOIN clinical_records cr ON a.appointment_id = cr.appointment_id
@@ -105,7 +103,7 @@ try {
 
         if ($billing_id > 0) {
             billing_sync_from_payments($conn, $billing_id);
-            $b_stmt = $conn->prepare('SELECT total_amount, amount_paid, balance, status FROM billing WHERE billing_id = ? LIMIT 1');
+            $b_stmt = $conn->prepare('SELECT total_amount, amount_paid, (total_amount - amount_paid) AS balance, status FROM billing WHERE billing_id = ? LIMIT 1');
             if ($b_stmt) {
                 $b_stmt->bind_param('i', $billing_id);
                 $b_stmt->execute();
@@ -137,43 +135,54 @@ try {
         }
 
         if (empty($line_items)) {
-            $services = json_decode($appt['recommended_services'] ?? '[]', true);
-            if (is_array($services)) {
-                foreach ($services as $service_id) {
-                    if (!is_numeric($service_id)) {
-                        continue;
-                    }
-                    $service = $all_service_details[(int)$service_id] ?? null;
-                    if ($service) {
+            $recordId = (int)($appt['record_id'] ?? 0);
+            if ($recordId > 0) {
+                $svcStmt = $conn->prepare('SELECT s.service_id, s.service_name, s.initial_price, s.description FROM clinical_record_services crs LEFT JOIN services s ON s.service_id = crs.service_id WHERE crs.record_id = ?');
+                if ($svcStmt) {
+                    $svcStmt->bind_param('i', $recordId);
+                    $svcStmt->execute();
+                    $svcRes = $svcStmt->get_result();
+                    while ($svcRow = $svcRes->fetch_assoc()) {
                         $line_items[] = [
                             'type' => 'Service',
-                            'description' => (string)$service['service_name'],
+                            'description' => (string)$svcRow['service_name'],
                             'tooth_no' => 'N/A',
-                            'remark' => (string)($service['description'] ?: 'Service Rendered'),
-                            'charge' => (float)$service['initial_price'],
+                            'remark' => (string)($svcRow['description'] ?: 'Service Rendered'),
+                            'charge' => (float)$svcRow['initial_price'],
                         ];
                     }
+                    $svcStmt->close();
                 }
-            }
 
-            $materials = json_decode($appt['materials_used'] ?? '[]', true);
-            if (is_array($materials)) {
-                foreach ($materials as $material) {
-                    if (!is_array($material)) {
-                        continue;
+                $matStmt = $conn->prepare('SELECT material_name, quantity, cost FROM treatment_materials WHERE record_id = ?');
+                if ($matStmt) {
+                    $matStmt->bind_param('i', $recordId);
+                    $matStmt->execute();
+                    $matRes = $matStmt->get_result();
+                    while ($matRow = $matRes->fetch_assoc()) {
+                        $line_items[] = [
+                            'type' => 'Material',
+                            'description' => (string)$matRow['material_name'],
+                            'tooth_no' => 'N/A',
+                            'remark' => 'Quantity: ' . (string)$matRow['quantity'],
+                            'charge' => (float)$matRow['quantity'] * (float)$matRow['cost'],
+                        ];
                     }
-                    $line_items[] = [
-                        'type' => 'Material',
-                        'description' => (string)($material['name'] ?? 'Unknown Material'),
-                        'tooth_no' => 'N/A',
-                        'remark' => 'Quantity: ' . (string)($material['qty'] ?? 1),
-                        'charge' => (float)($material['qty'] ?? 1) * (float)($material['price'] ?? 0),
-                    ];
+                    $matStmt->close();
                 }
             }
         }
 
-        $odontogram_findings = transactions_parse_odontogram_findings($appt['odontogram'] ?? '{}');
+        $recordIdForOdonto = (int)($appt['record_id'] ?? 0);
+        $odontogram_findings = [];
+        if ($recordIdForOdonto > 0) {
+            $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
+            $toothStmt->bind_param('i', $recordIdForOdonto);
+            $toothStmt->execute();
+            $toothRes = $toothStmt->get_result();
+            while ($trow = $toothRes->fetch_assoc()) $odontogram_findings[] = $trow;
+            $toothStmt->close();
+        }
 
         $response_data[] = [
             'appointment_id' => $appointment_id,

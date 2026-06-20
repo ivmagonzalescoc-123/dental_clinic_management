@@ -49,8 +49,10 @@ if (!function_exists('odontogram_normalize_data')) {
             }
 
             $fdi = (string)$key;
-            if (ctype_digit($fdi) && (int)$fdi <= 32 && isset($universalToFdi[(int)$fdi])) {
-                $fdi = $universalToFdi[(int)$fdi];
+            if (!in_array($fdi, $allFdi, true)) {
+                if (ctype_digit($fdi) && (int)$fdi <= 32 && isset($universalToFdi[(int)$fdi])) {
+                    $fdi = $universalToFdi[(int)$fdi];
+                }
             }
             if (!in_array($fdi, $allFdi, true)) {
                 continue;

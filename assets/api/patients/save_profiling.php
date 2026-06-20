@@ -9,7 +9,6 @@ if (!in_array($role, ['doctor','admin','secretary'])) {
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
     exit;
 }
-// Read JSON body
 $body = file_get_contents('php://input');
 $data = json_decode($body, true);
 if (!$data || !isset($data['patient_id'])) {
@@ -20,43 +19,67 @@ if (!$data || !isset($data['patient_id'])) {
 $patient_id = (int)$data['patient_id'];
 $profiling = isset($data['profiling']) ? $data['profiling'] : null;
 try {
-    // Ensure column exists
-    $colRes = $conn->query("SHOW COLUMNS FROM patients LIKE 'profiling'");
-    if (!$colRes || $colRes->num_rows === 0) {
-        $conn->query("ALTER TABLE patients ADD COLUMN profiling JSON DEFAULT NULL");
-    }
-
-    // Create audit table if missing
-    $conn->query("CREATE TABLE IF NOT EXISTS patient_profiling_audit (
-        audit_id INT AUTO_INCREMENT PRIMARY KEY,
-        patient_id INT NOT NULL,
-        profiling JSON,
-        changed_by INT NULL,
-        changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX(patient_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
     if ($profiling !== null && !is_array($profiling)) {
         throw new Exception('Profiling must be an object');
     }
     $profiling = filter_background_profiling_data(is_array($profiling) ? $profiling : []);
 
-    $json = $profiling !== null ? json_encode($profiling, JSON_UNESCAPED_UNICODE) : null;
-    $ust = $conn->prepare('UPDATE patients SET profiling = ? WHERE patient_id = ?');
-    $ust->bind_param('si', $json, $patient_id);
-    if (!$ust->execute()) throw new Exception('Update failed: ' . $ust->error);
-    $ust->close();
+    $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patient_id AND record_id IS NULL");
 
-    // Insert audit row
-    $audit_stmt = $conn->prepare('INSERT INTO patient_profiling_audit (patient_id, profiling, changed_by) VALUES (?, ?, ?)');
-    $changed_by = $_SESSION['user_id'] ?? null;
-    $audit_stmt->bind_param('isi', $patient_id, $json, $changed_by);
-    $audit_stmt->execute();
-    $audit_stmt->close();
+    if (!empty($profiling)) {
+        $p_race = $profiling['race'] ?? null;
+        $p_occupation = $profiling['occupation'] ?? null;
+        $p_medical_history = $profiling['medical_history'] ?? null;
+        $p_medications = $profiling['medications'] ?? null;
+        $p_allergies = $profiling['allergies'] ?? null;
+        $p_smoking = $profiling['smoking'] ?? null;
+        $p_alcohol = $profiling['alcohol'] ?? null;
+        $p_hypertensive = (int)($profiling['hypertensive'] ?? 0);
+        $p_diabetic = (int)($profiling['diabetic'] ?? 0);
+        $p_asthmatic = (int)($profiling['asthmatic'] ?? 0);
+        $p_heart_disease = (int)($profiling['heart_disease'] ?? 0);
+        $p_hiv_positive = (int)($profiling['hiv_positive'] ?? 0);
+        $p_bleeding_disorder = $profiling['bleeding_disorder'] ?? null;
+        $p_asa = $profiling['asa'] ?? null;
+        $p_pregnancy_status = $profiling['pregnancy_status'] ?? null;
+        $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?? null;
+        $p_dental_anxiety = $profiling['dental_anxiety'] ?? null;
+        $p_emergency_contact = $profiling['emergency_contact'] ?? null;
+        $p_emergency_phone = $profiling['emergency_phone'] ?? null;
+        $p_background_notes = $profiling['background_notes'] ?? null;
+
+        $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        if (!$stmt) throw new Exception('Insert prepare failed: ' . $conn->error);
+        $stmt->bind_param(
+            'isssssssiiiiissssssss',
+            $patient_id,
+            $p_race,
+            $p_occupation,
+            $p_medical_history,
+            $p_medications,
+            $p_allergies,
+            $p_smoking,
+            $p_alcohol,
+            $p_hypertensive,
+            $p_diabetic,
+            $p_asthmatic,
+            $p_heart_disease,
+            $p_hiv_positive,
+            $p_bleeding_disorder,
+            $p_asa,
+            $p_pregnancy_status,
+            $p_previous_dental_treatment,
+            $p_dental_anxiety,
+            $p_emergency_contact,
+            $p_emergency_phone,
+            $p_background_notes
+        );
+        if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);
+        $stmt->close();
+    }
 
     echo json_encode(['success'=>true,'message'=>'Profiling saved']);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['success'=>false,'message'=>$e->getMessage()]);
 }
-?>

@@ -62,4 +62,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         initToggleableClinicalRadios(document);
     });
+    window.addEventListener('page-loaded', function () {
+        initToggleableClinicalRadios(document);
+    });
 })(window);

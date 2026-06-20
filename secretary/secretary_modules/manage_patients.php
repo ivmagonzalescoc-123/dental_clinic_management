@@ -528,6 +528,8 @@ function fillProfileForm(patient) {
 function openPatientProfileModal(patient, activeTab) {
     activePatientRecord = Object.assign({}, patient);
     const modalEl = document.getElementById('patientProfileModal');
+    if (!modalEl) return;
+    if (typeof bootstrap === 'undefined' || !bootstrap.Modal) return;
     const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     document.getElementById('patientProfileModalTitle').textContent = patientDisplayName(patient);
     renderPatientModalAvatar(patient);
@@ -554,7 +556,7 @@ function openPatientProfileModal(patient, activeTab) {
                 ? 'patient-tab-background'
                 : (activeTab === 'account' ? 'patient-tab-account' : 'patient-tab-profile');
             const tabTrigger = document.getElementById(tabId);
-            if (tabTrigger) {
+            if (tabTrigger && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                 bootstrap.Tab.getOrCreateInstance(tabTrigger).show();
             }
             modal.show();
@@ -656,9 +658,11 @@ document.getElementById('addPatientForm').addEventListener('submit', function (e
                     ? (result.message || 'Patient already exists.')
                     : (result.message || 'Patient account created successfully.');
                 notifySecretaryPatients(message, tone);
-                bootstrap.Modal.getInstance(document.getElementById('addPatientModal'))?.hide();
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    bootstrap.Modal.getInstance(document.getElementById('addPatientModal'))?.hide();
+                }
                 if (!result.already_exists) {
-                    setTimeout(function () { location.reload(); }, 1200);
+                    notifySecretaryPatients('Patient created. Refresh the list to see changes.', 'info');
                 }
             } else {
                 notifySecretaryPatients(result.message || 'Unable to create patient.', 'danger');

@@ -135,7 +135,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.success) {
                 showAlert('Password updated successfully.', 'success');
                 form.reset();
-                setTimeout(function () { window.location.href = 'admin.php?page=dashboard'; }, 700);
             } else {
                 showAlert(data.message || 'Failed to update password.', 'danger');
             }

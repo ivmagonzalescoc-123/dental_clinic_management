@@ -3,42 +3,38 @@
  * Runs on the patient appointment modal/page
  */
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Only run on appointment booking page
+function initPatientServiceSelectorIfPresent() {
     if (document.getElementById('createApptForm') && document.getElementById('serviceSelector')) {
         initializePatientServiceSelector();
     }
-});
+}
+
+document.addEventListener('DOMContentLoaded', initPatientServiceSelectorIfPresent);
+window.addEventListener('page-loaded', initPatientServiceSelectorIfPresent);
 
 async function initializePatientServiceSelector() {
     const form = document.getElementById('createApptForm');
     const doctorSelect = document.getElementById('user_id');
     const serviceSelector = document.getElementById('serviceSelector');
+    if (!form || !doctorSelect || !serviceSelector) return;
+
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
     const timeslotHint = document.getElementById('patientTimeslotHint');
     
-    // Create a temporary appointment ID (0 for new appointment)
     let currentAppointmentId = 0;
     let serviceManager = null;
     
-    // Initialize service manager on doctor selection
     async function initializeServiceManager() {
-        if (serviceManager) {
-            return; // Already initialized
-        }
-        
         serviceManager = new AppointmentServiceManager({
             appointmentId: currentAppointmentId,
             mode: 'patient',
             csrfToken: csrfToken,
             onServicesChanged: function(data) {
                 console.log('Services updated:', data);
-                // Trigger timeslot recalculation if needed
                 updateTimeslotRequirements(data.totalDuration);
             }
         });
         
-        // Load services
         const success = await serviceManager.loadServices();
         if (success) {
             serviceManager.renderServiceSelector('serviceSelector', 'patient');
@@ -47,26 +43,20 @@ async function initializePatientServiceSelector() {
         }
     }
     
-    // Handle doctor selection
-    if (doctorSelect) {
-        doctorSelect.addEventListener('change', async function() {
-            if (this.value) {
-                await initializeServiceManager();
-            } else {
-                // Reset if no doctor selected
-                serviceSelector.innerHTML = '<small class="text-muted">Please select a doctor first</small>';
-            }
-        });
-    }
+    doctorSelect.removeEventListener('change', doctorSelect._patientServiceHandler);
+    doctorSelect._patientServiceHandler = async function() {
+        if (this.value) {
+            await initializeServiceManager();
+        } else {
+            serviceSelector.innerHTML = '<small class="text-muted">Please select a doctor first</small>';
+        }
+    };
+    doctorSelect.addEventListener('change', doctorSelect._patientServiceHandler);
     
-    /**
-     * Update timeslot requirements based on service duration
-     */
     function updateTimeslotRequirements(totalDuration) {
-        const timeslotDuration = 20; // minutes
+        const timeslotDuration = 20;
         const requiredSlots = Math.ceil(totalDuration / timeslotDuration);
         
-        // You can use this to show message or adjust UI
         console.log(`Required timeslots: ${requiredSlots} (${totalDuration} minutes)`);
         
         if (timeslotHint) {
@@ -78,8 +68,10 @@ async function initializePatientServiceSelector() {
         }
     }
 
-    window.addEventListener('patient-service-duration-changed', function(event) {
+    window.removeEventListener('patient-service-duration-changed', window._patientServiceDurationHandler);
+    window._patientServiceDurationHandler = function(event) {
         const totalDuration = Number(event?.detail?.totalDuration || 0);
         updateTimeslotRequirements(totalDuration);
-    });
+    };
+    window.addEventListener('patient-service-duration-changed', window._patientServiceDurationHandler);
 }

@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!security_validate_csrf_token($csrf)) {
         $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
         $_SESSION['message_type'] = 'danger';
-        header('Location: ../../admin.php?page=manage_users&type=patients');
+        header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
     }
 
@@ -28,14 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($first_name) || empty($last_name) || empty($email) || empty($date_of_birth)) {
         $_SESSION['message'] = 'All required fields must be filled!';
         $_SESSION['message_type'] = 'danger';
-        header('Location: ../../admin.php?page=manage_users&type=patients');
+        header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION['message'] = 'Invalid email address!';
         $_SESSION['message_type'] = 'danger';
-        header('Location: ../../admin.php?page=manage_users&type=patients');
+        header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
     }
 
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['message'] = 'Email already exists!';
         $_SESSION['message_type'] = 'danger';
         $check_stmt->close();
-        header('Location: ../../admin.php?page=manage_users&type=patients');
+        header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
     }
     $check_stmt->close();
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$stmt) {
         $_SESSION['message'] = 'Database error: ' . $conn->error;
         $_SESSION['message_type'] = 'danger';
-        header('Location: ../../admin.php?page=manage_users&type=patients');
+        header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
     }
 
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt->close();
     $conn->close();
-    header('Location: ../../admin.php?page=manage_users&type=patients');
+    header('Location: ../../../admin.php?page=manage_users&type=patients');
     exit;
 }
 ?>

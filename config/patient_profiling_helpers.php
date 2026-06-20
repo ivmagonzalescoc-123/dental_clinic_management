@@ -2,8 +2,8 @@
 /**
  * Patient background profiling vs per-visit clinical exam data.
  *
- * - patients.profiling          = static patient background (demographics, chronic conditions)
- * - clinical_records.profiling  = visit clinical exam snapshot for that appointment
+ * - patient_profiling table = static patient background (demographics, chronic conditions)
+ * - visit_clinical data is stored in patient_profiling per record
  */
 
 if (!function_exists('visit_clinical_field_keys')) {
@@ -134,10 +134,6 @@ if (!function_exists('filter_background_profiling_data')) {
 if (!function_exists('ensure_clinical_records_profiling_column')) {
     function ensure_clinical_records_profiling_column($conn): void
     {
-        $colRes = $conn->query("SHOW COLUMNS FROM clinical_records LIKE 'profiling'");
-        if (!$colRes || $colRes->num_rows === 0) {
-            $conn->query('ALTER TABLE clinical_records ADD COLUMN profiling JSON DEFAULT NULL');
-        }
     }
 }
 

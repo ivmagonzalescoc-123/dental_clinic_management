@@ -83,13 +83,12 @@ if (!security_validate_csrf_token($csrf)) {
 
 $appointmentId = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
 $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
-$odontogram = isset($_POST['odontogram']) && $_POST['odontogram'] !== '' ? $_POST['odontogram'] : null;
-if ($odontogram !== null) {
-    $decodedOdonto = json_decode($odontogram, true);
+$odontogramRaw = isset($_POST['odontogram']) && $_POST['odontogram'] !== '' ? $_POST['odontogram'] : null;
+$odontogramData = null;
+if ($odontogramRaw !== null) {
+    $decodedOdonto = json_decode($odontogramRaw, true);
     if (is_array($decodedOdonto)) {
-        $odontogram = json_encode(odontogram_normalize_data($decodedOdonto), JSON_UNESCAPED_UNICODE);
-    } else {
-        $odontogram = null;
+        $odontogramData = odontogram_normalize_data($decodedOdonto);
     }
 }
 $doctorId = $_SESSION['user_id'];
@@ -190,15 +189,61 @@ try {
     $stmt->close();
     
     if ($existingCr) {
-        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, odontogram = IFNULL(?, odontogram), doctor_notes = IFNULL(?, doctor_notes), status = ?, submitted_by = ?, submitted_at = NOW() WHERE appointment_id = ?');
-        $stmt->bind_param('iisssii', $doctorId, $patientId, $odontogram, $notes, $crStatus, $doctorId, $appointmentId);
+        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = IFNULL(?, doctor_notes), status = ?, submitted_by = ?, submitted_at = NOW() WHERE appointment_id = ?');
+        $stmt->bind_param('iisssi', $doctorId, $patientId, $notes, $crStatus, $doctorId, $appointmentId);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, odontogram, doctor_notes, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
-        $stmt->bind_param('iiisssi', $appointmentId, $doctorId, $patientId, $odontogram, $notes, $crStatus, $doctorId);
+        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->bind_param('iiisss', $appointmentId, $doctorId, $patientId, $notes, $crStatus, $doctorId);
         $stmt->execute();
         $stmt->close();
+    }
+
+    $crCheck = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ?');
+    $crCheck->bind_param('i', $appointmentId);
+    $crCheck->execute();
+    $crRes = $crCheck->get_result();
+    $crRow = $crRes ? $crRes->fetch_assoc() : null;
+    $crCheck->close();
+    $recordId = $crRow ? (int)$crRow['record_id'] : 0;
+
+    if ($recordId > 0 && is_array($odontogramData) && !empty($odontogramData)) {
+        $conn->query("DELETE FROM tooth_status WHERE record_id = $recordId");
+
+        $codeToTypeId = [];
+        $codeRes = $conn->query('SELECT status_type_id, code FROM tooth_status_type');
+        if ($codeRes) {
+            while ($crow = $codeRes->fetch_assoc()) {
+                $codeToTypeId[$crow['code']] = (int)$crow['status_type_id'];
+            }
+        }
+
+        $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+        foreach ($odontogramData as $fdiKey => $toothData) {
+            if (!is_array($toothData)) continue;
+            $toothNum = (int)$fdiKey;
+            if ($toothNum <= 0) continue;
+            $surfaces = $toothData['surfaces'] ?? [];
+            if (empty($surfaces)) {
+                $comment = trim((string)($toothData['comment'] ?? ''));
+                if ($comment !== '') {
+                    $tsStmt->bind_param('iiiss', $recordId, $toothNum, 0, '', $comment);
+                    $tsStmt->execute();
+                }
+                continue;
+            }
+            foreach ($surfaces as $surfaceName => $codes) {
+                $codeList = is_array($codes) ? $codes : [$codes];
+                foreach ($codeList as $code) {
+                    $code = (string)$code;
+                    $typeId = $codeToTypeId[$code] ?? 0;
+                    $tsStmt->bind_param('iiiss', $recordId, $toothNum, $typeId, $surfaceName, $code);
+                    $tsStmt->execute();
+                }
+            }
+        }
+        $tsStmt->close();
     }
     
     // 2. Handle file uploads (photos)

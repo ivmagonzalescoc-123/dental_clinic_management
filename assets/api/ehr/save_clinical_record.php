@@ -7,7 +7,6 @@ include_once __DIR__ . '/../appointments/availability_guard.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 header('Content-Type: application/json');
 
-// Only doctors may save clinical records
 check_session(['doctor']);
 capabilities_require_json('clinical.save');
 $doctor_id = $_SESSION['user_id'] ?? 0;
@@ -19,69 +18,49 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!function_exists('normalize_positive_int_list')) {
-    function normalize_positive_int_list($values)
-    {
-        if (!is_array($values)) {
-            return [];
-        }
+    function normalize_positive_int_list($values) {
+        if (!is_array($values)) return [];
         $out = [];
         foreach ($values as $value) {
             $id = (int)$value;
-            if ($id > 0) {
-                $out[$id] = $id;
-            }
+            if ($id > 0) $out[$id] = $id;
         }
         return array_values($out);
     }
 }
 
 if (!function_exists('extract_service_ids_from_node')) {
-    function extract_service_ids_from_node($node, &$bucket)
-    {
+    function extract_service_ids_from_node($node, &$bucket) {
         if (is_array($node)) {
             if (array_key_exists('service_id', $node)) {
                 $sid = (int)$node['service_id'];
-                if ($sid > 0) {
-                    $bucket[$sid] = $sid;
-                }
+                if ($sid > 0) $bucket[$sid] = $sid;
             }
             foreach ($node as $child) {
-                if (is_array($child)) {
-                    extract_service_ids_from_node($child, $bucket);
-                }
+                if (is_array($child)) extract_service_ids_from_node($child, $bucket);
             }
         }
     }
 }
 
 $appointment_id = (int)($_POST['appointment_id'] ?? 0);
-$schedule_id = isset($_POST['schedule_id']) ? (int)$_POST['schedule_id'] : null;
 $recommended_services_raw = isset($_POST['recommended_services']) ? $_POST['recommended_services'] : '[]';
 $recommended_services_decoded = json_decode($recommended_services_raw, true);
-$recommended_services = normalize_positive_int_list(
-    is_array($recommended_services_decoded) ? $recommended_services_decoded : []
-);
+$recommended_services = normalize_positive_int_list(is_array($recommended_services_decoded) ? $recommended_services_decoded : []);
 
 $treatment_plan_raw = isset($_POST['treatment_plan']) ? trim((string)$_POST['treatment_plan']) : '';
 $treatment_plan = null;
 if ($treatment_plan_raw !== '') {
     $decodedTreatment = json_decode($treatment_plan_raw, true);
-    if (json_last_error() === JSON_ERROR_NONE) {
-        $treatment_plan = $decodedTreatment;
-    } else {
-        // Accept plain text treatment notes in addition to structured JSON payloads.
-        $treatment_plan = $treatment_plan_raw;
-    }
+    $treatment_plan = (json_last_error() === JSON_ERROR_NONE) ? $decodedTreatment : $treatment_plan_raw;
 }
 
 $materials_used = isset($_POST['materials_used']) ? json_decode($_POST['materials_used'], true) : null;
-if (!is_array($materials_used)) {
-    $materials_used = null;
-}
+if (!is_array($materials_used)) $materials_used = null;
+
 $odontogram = isset($_POST['odontogram']) ? json_decode($_POST['odontogram'], true) : null;
-if (is_array($odontogram)) {
-    $odontogram = odontogram_normalize_data($odontogram);
-}
+if (is_array($odontogram)) $odontogram = odontogram_normalize_data($odontogram);
+
 $doctor_notes = $_POST['doctor_notes'] ?? '';
 $follow_up_date = null;
 $submit_and_finalize = isset($_POST['finalize']) && $_POST['finalize'] == '1';
@@ -89,9 +68,7 @@ $submit_and_finalize = isset($_POST['finalize']) && $_POST['finalize'] == '1';
 $doctorFirstName = trim((string)($_SESSION['first_name'] ?? ''));
 $doctorLastName = trim((string)($_SESSION['last_name'] ?? ''));
 $doctorDisplayName = trim($doctorFirstName . ' ' . $doctorLastName);
-if ($doctorDisplayName === '') {
-    $doctorDisplayName = 'doctor #' . (int)$doctor_id;
-}
+if ($doctorDisplayName === '') $doctorDisplayName = 'doctor #' . (int)$doctor_id;
 
 if ($appointment_id <= 0) {
     http_response_code(400);
@@ -102,7 +79,6 @@ if ($appointment_id <= 0) {
 try {
     $conn->begin_transaction();
 
-    // Get appointment and patient
     $stmt = $conn->prepare('SELECT appointment_id, patient_id, user_id FROM appointments WHERE appointment_id = ?');
     $stmt->bind_param('i', $appointment_id);
     $stmt->execute();
@@ -113,47 +89,14 @@ try {
     if (!$appt) throw new Exception('Appointment not found');
     $patient_id = (int)$appt['patient_id'];
 
-    // Read profiling payload from POST (if any)
     $profiling_json = isset($_POST['profiling']) ? $_POST['profiling'] : null;
 
-    // Ensure patients table has profiling_locked column
-    $colResP = $conn->query("SHOW COLUMNS FROM patients LIKE 'profiling_locked'");
-    if (!$colResP || $colResP->num_rows === 0) {
-        $conn->query("ALTER TABLE patients ADD COLUMN profiling_locked TINYINT(1) DEFAULT 0");
-    }
-
-    // Ensure clinical_records has a `profiling` column to snapshot profiling at time of record
-    $colResCR = $conn->query("SHOW COLUMNS FROM clinical_records LIKE 'profiling'");
-    if (!$colResCR || $colResCR->num_rows === 0) {
-        $conn->query("ALTER TABLE clinical_records ADD COLUMN profiling JSON DEFAULT NULL");
-    }
-
-    // Fetch current patient profiling & lock status
-    $pstmt = $conn->prepare('SELECT profiling, profiling_locked FROM patients WHERE patient_id = ? LIMIT 1');
-    $pstmt->bind_param('i', $patient_id);
-    $pstmt->execute();
-    $pres = $pstmt->get_result();
-    $prow = $pres ? $pres->fetch_assoc() : null;
-    $pstmt->close();
-    $patient_has_profiling = ($prow && !empty($prow['profiling']));
-    $patient_locked = ($prow && !empty($prow['profiling_locked']));
-
-    // Upsert clinical_records
     $treatment_service_map = [];
     if (is_array($treatment_plan)) {
         extract_service_ids_from_node($treatment_plan, $treatment_service_map);
     }
-
     $service_ids = array_values(array_unique(array_merge($recommended_services, array_values($treatment_service_map))));
 
-    $treatment_payload = $treatment_plan;
-
-    $json_recommended = !empty($recommended_services) ? json_encode($recommended_services, JSON_UNESCAPED_UNICODE) : null;
-    $json_treatment = ($treatment_payload !== null) ? json_encode($treatment_payload, JSON_UNESCAPED_UNICODE) : null;
-    $json_materials = $materials_used ? json_encode($materials_used, JSON_UNESCAPED_UNICODE) : null;
-    $json_odontogram = $odontogram ? json_encode($odontogram, JSON_UNESCAPED_UNICODE) : null;
-    $json_profiling = $profiling_json ? $profiling_json : null;
-    // Handle uploaded images (optional)
     $uploaded_images = [];
     if (!empty($_FILES['images'])) {
         $files = $_FILES['images'];
@@ -161,62 +104,39 @@ try {
         $baseDir = __DIR__ . '/../../uploads/clinical_images/' . $appointment_id . '/';
         if (!is_dir($baseDir)) @mkdir($baseDir, 0755, true);
         for ($i = 0; $i < $count; $i++) {
-            $err = $files['error'][$i];
-            if ($err !== UPLOAD_ERR_OK) continue;
+            if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
             $tmp = $files['tmp_name'][$i];
             if (!is_uploaded_file($tmp)) continue;
             $info = @getimagesize($tmp);
-            if (!$info) continue; // not an image
-            $maxSize = 5 * 1024 * 1024; // 5MB
-            if (filesize($tmp) > $maxSize) continue;
+            if (!$info) continue;
+            if (filesize($tmp) > 5 * 1024 * 1024) continue;
             $ext = image_type_to_extension($info[2]);
             $fname = time() . '_' . bin2hex(random_bytes(6)) . $ext;
-            $dest = $baseDir . $fname;
-            if (@move_uploaded_file($tmp, $dest)) {
-                // web-accessible path
-                $webPath = 'assets/uploads/clinical_images/' . $appointment_id . '/' . $fname;
-                $uploaded_images[] = $webPath;
+            if (@move_uploaded_file($tmp, $baseDir . $fname)) {
+                $uploaded_images[] = 'assets/uploads/clinical_images/' . $appointment_id . '/' . $fname;
             }
         }
     }
-    // Also accept tooth-specific images under 'tooth_images' (x-rays / tooth photos)
     if (!empty($_FILES['tooth_images'])) {
         $files = $_FILES['tooth_images'];
         $count = is_array($files['name']) ? count($files['name']) : 0;
         $baseDir = __DIR__ . '/../../uploads/clinical_images/' . $appointment_id . '/';
         if (!is_dir($baseDir)) @mkdir($baseDir, 0755, true);
         for ($i = 0; $i < $count; $i++) {
-            $err = $files['error'][$i];
-            if ($err !== UPLOAD_ERR_OK) continue;
+            if ($files['error'][$i] !== UPLOAD_ERR_OK) continue;
             $tmp = $files['tmp_name'][$i];
             if (!is_uploaded_file($tmp)) continue;
             $info = @getimagesize($tmp);
-            if (!$info) continue; // not an image
-            $maxSize = 5 * 1024 * 1024; // 5MB
-            if (filesize($tmp) > $maxSize) continue;
+            if (!$info) continue;
+            if (filesize($tmp) > 5 * 1024 * 1024) continue;
             $ext = image_type_to_extension($info[2]);
             $fname = time() . '_' . bin2hex(random_bytes(6)) . $ext;
-            $dest = $baseDir . $fname;
-            if (@move_uploaded_file($tmp, $dest)) {
-                $webPath = 'assets/uploads/clinical_images/' . $appointment_id . '/' . $fname;
-                $uploaded_images[] = $webPath;
+            if (@move_uploaded_file($tmp, $baseDir . $fname)) {
+                $uploaded_images[] = 'assets/uploads/clinical_images/' . $appointment_id . '/' . $fname;
             }
         }
     }
-    $json_images = !empty($uploaded_images) ? json_encode(array_values($uploaded_images), JSON_UNESCAPED_UNICODE) : null;
 
-    // Ensure clinical_records has an `images` column (add if missing)
-    $colRes = $conn->query("SHOW COLUMNS FROM clinical_records LIKE 'images'");
-    if (!$colRes || $colRes->num_rows === 0) {
-        $conn->query("ALTER TABLE clinical_records ADD COLUMN images JSON DEFAULT NULL");
-    }
-    // Ensure clinical_records has a `tooth_image` column to store primary tooth/xray path
-    $colRes2 = $conn->query("SHOW COLUMNS FROM clinical_records LIKE 'tooth_image'");
-    if (!$colRes2 || $colRes2->num_rows === 0) {
-        $conn->query("ALTER TABLE clinical_records ADD COLUMN tooth_image VARCHAR(255) DEFAULT NULL");
-    }
-
-    // Check if record exists
     $stmt = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ?');
     $stmt->bind_param('i', $appointment_id);
     $stmt->execute();
@@ -224,44 +144,162 @@ try {
     $existing = $res ? $res->fetch_assoc() : null;
     $stmt->close();
 
+    $status = $submit_and_finalize ? 'submitted' : 'in_progress';
+    $submitted_flag = $submit_and_finalize ? 1 : 0;
+
     if ($existing) {
-        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, recommended_services = ?, treatment_plan = ?, materials_used = ?, odontogram = ?, images = ?, doctor_notes = ?, follow_up_date = ?, status = ?, profiling = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at) WHERE appointment_id = ?');
-        $status = $submit_and_finalize ? 'submitted' : 'in_progress';
-        $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iisssssssssiii', $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag, $appointment_id);
+        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = ?, follow_up_date = ?, status = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at), primary_image = IFNULL(?, primary_image) WHERE appointment_id = ?');
+        $primary_image = !empty($uploaded_images) ? $uploaded_images[0] : null;
+        $stmt->bind_param('iisssii si', $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image, $appointment_id);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, recommended_services, treatment_plan, materials_used, odontogram, images, doctor_notes, follow_up_date, status, profiling, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL))');
-        $status = $submit_and_finalize ? 'submitted' : 'in_progress';
-        $submitted_flag = $submit_and_finalize ? 1 : 0;
-        $stmt->bind_param('iiisssssssssii', $appointment_id, $doctor_id, $patient_id, $json_recommended, $json_treatment, $json_materials, $json_odontogram, $json_images, $doctor_notes, $follow_up_date, $status, $json_profiling, $doctor_id, $submitted_flag);
+        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, follow_up_date, status, submitted_by, submitted_at, primary_image) VALUES (?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL), ?)');
+        $primary_image = !empty($uploaded_images) ? $uploaded_images[0] : null;
+        $stmt->bind_param('iiisssi s', $appointment_id, $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image);
         $stmt->execute();
         $stmt->close();
     }
 
-    // If patient-level profiling provided and patient has no profiling yet, save it to patients (silent auto-lock)
-    if ($profiling_json !== null && !$patient_has_profiling) {
-        $up = $conn->prepare('UPDATE patients SET profiling = ?, profiling_locked = 1 WHERE patient_id = ?');
-        if ($up) {
-            $up->bind_param('si', $profiling_json, $patient_id);
-            $up->execute();
-            $up->close();
+    $recStmt = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ?');
+    $recStmt->bind_param('i', $appointment_id);
+    $recStmt->execute();
+    $recRes = $recStmt->get_result();
+    $recRow = $recRes ? $recRes->fetch_assoc() : null;
+    $recStmt->close();
+    $record_id = $recRow ? (int)$recRow['record_id'] : 0;
+
+    if ($record_id > 0) {
+        if (!empty($uploaded_images)) {
+            $conn->query("DELETE FROM clinical_record_images WHERE record_id = $record_id");
+            $imgStmt = $conn->prepare('INSERT INTO clinical_record_images (record_id, file_path, file_type, uploaded_by) VALUES (?, ?, ?, ?)');
+            foreach ($uploaded_images as $idx => $imgPath) {
+                $fileType = 'photo';
+                $imgStmt->bind_param('issi', $record_id, $imgPath, $fileType, $doctor_id);
+                $imgStmt->execute();
+            }
+            $imgStmt->close();
+        }
+
+        $conn->query("DELETE FROM clinical_record_services WHERE record_id = $record_id");
+        if (!empty($service_ids)) {
+            $svcStmt = $conn->prepare('INSERT INTO clinical_record_services (record_id, service_id) VALUES (?, ?)');
+            foreach ($service_ids as $sid) {
+                $svcStmt->bind_param('ii', $record_id, $sid);
+                $svcStmt->execute();
+            }
+            $svcStmt->close();
+        }
+
+        $conn->query("DELETE FROM treatment_plans WHERE record_id = $record_id");
+        if (is_array($treatment_plan) && !empty($treatment_plan)) {
+            $flatItems = [];
+            function flatten_tp_node($node, &$flat) {
+                if (!is_array($node)) return;
+                if (isset($node['service_id']) || isset($node['description'])) {
+                    $flat[] = [
+                        'service_id' => isset($node['service_id']) ? (int)$node['service_id'] : null,
+                        'tooth_number' => isset($node['tooth_number']) ? (int)$node['tooth_number'] : null,
+                        'description' => (string)($node['description'] ?? ''),
+                        'status' => (string)($node['status'] ?? 'planned'),
+                    ];
+                }
+                foreach ($node as $child) {
+                    if (is_array($child)) flatten_tp_node($child, $flat);
+                }
+            }
+            flatten_tp_node($treatment_plan, $flatItems);
+            $tpStmt = $conn->prepare('INSERT INTO treatment_plans (record_id, service_id, tooth_number, description, status) VALUES (?, ?, ?, ?, ?)');
+            foreach ($flatItems as $tp) {
+                $tpStmt->bind_param('iiiss', $record_id, $tp['service_id'], $tp['tooth_number'], $tp['description'], $tp['status']);
+                $tpStmt->execute();
+            }
+            $tpStmt->close();
+        } elseif (is_string($treatment_plan) && $treatment_plan !== '') {
+            $tpStmt = $conn->prepare('INSERT INTO treatment_plans (record_id, description, status) VALUES (?, ?, ?)');
+            $planned = 'planned';
+            $tpStmt->bind_param('iss', $record_id, $treatment_plan, $planned);
+            $tpStmt->execute();
+            $tpStmt->close();
+        }
+
+        $conn->query("DELETE FROM treatment_materials WHERE record_id = $record_id");
+        if ($materials_used && is_array($materials_used)) {
+            $matStmt = $conn->prepare('INSERT INTO treatment_materials (record_id, material_name, quantity, unit, cost) VALUES (?, ?, ?, ?, ?)');
+            foreach ($materials_used as $m) {
+                $matName = (string)($m['name'] ?? $m['material_name'] ?? '');
+                $qty = (float)($m['qty'] ?? $m['quantity'] ?? 1);
+                $unit = (string)($m['unit'] ?? '');
+                $cost = isset($m['price']) ? (float)$m['price'] : (isset($m['cost']) ? (float)$m['cost'] : null);
+                $matStmt->bind_param('isdsd', $record_id, $matName, $qty, $unit, $cost);
+                $matStmt->execute();
+            }
+            $matStmt->close();
+        }
+
+        if (is_array($odontogram) && !empty($odontogram)) {
+            $conn->query("DELETE FROM tooth_status WHERE record_id = $record_id");
+
+            $codeToTypeId = [];
+            $codeRes = $conn->query('SELECT status_type_id, code FROM tooth_status_type');
+            if ($codeRes) {
+                while ($crow = $codeRes->fetch_assoc()) {
+                    $codeToTypeId[$crow['code']] = (int)$crow['status_type_id'];
+                }
+            }
+
+            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+            foreach ($odontogram as $fdiKey => $toothData) {
+                if (!is_array($toothData)) continue;
+                $toothNum = (int)$fdiKey;
+                if ($toothNum <= 0) continue;
+                $surfaces = $toothData['surfaces'] ?? [];
+                if (empty($surfaces)) {
+                    $comment = trim((string)($toothData['comment'] ?? ''));
+                    if ($comment !== '') {
+                        $tsStmt->bind_param('iiiss', $record_id, $toothNum, 0, '', $comment);
+                        $tsStmt->execute();
+                    }
+                    continue;
+                }
+                foreach ($surfaces as $surfaceName => $codes) {
+                    $codeList = is_array($codes) ? $codes : [$codes];
+                    foreach ($codeList as $code) {
+                        $code = (string)$code;
+                        $typeId = $codeToTypeId[$code] ?? 0;
+                        $tsStmt->bind_param('iiiss', $record_id, $toothNum, $typeId, $surfaceName, $code);
+                        $tsStmt->execute();
+                    }
+                }
+            }
+            $tsStmt->close();
+        }
+
+        if ($profiling_json !== null) {
+            $profData = json_decode($profiling_json, true);
+            if (is_array($profData)) {
+                $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patient_id AND record_id = $record_id");
+                $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                $pfStmt->bind_param('iisssssssiiiiisssssss',
+                    $patient_id, $record_id,
+                    $profData['race'] ?? null, $profData['occupation'] ?? null,
+                    $profData['medical_history'] ?? null, $profData['medications'] ?? null,
+                    $profData['allergies'] ?? null, $profData['smoking'] ?? null,
+                    $profData['alcohol'] ?? null,
+                    (int)($profData['hypertensive'] ?? 0), (int)($profData['diabetic'] ?? 0),
+                    (int)($profData['asthmatic'] ?? 0), (int)($profData['heart_disease'] ?? 0),
+                    (int)($profData['hiv_positive'] ?? 0),
+                    $profData['bleeding_disorder'] ?? null, $profData['asa'] ?? null,
+                    $profData['pregnancy_status'] ?? null, $profData['previous_dental_treatment'] ?? null,
+                    $profData['dental_anxiety'] ?? null, $profData['emergency_contact'] ?? null,
+                    $profData['emergency_phone'] ?? null, $profData['background_notes'] ?? null
+                );
+                $pfStmt->execute();
+                $pfStmt->close();
+            }
         }
     }
 
-    // If there are uploaded images, set the primary tooth_image to the first uploaded path
-    if (!empty($uploaded_images)) {
-        $first = $uploaded_images[0];
-        $ust_img = $conn->prepare('UPDATE clinical_records SET tooth_image = ? WHERE appointment_id = ?');
-        if ($ust_img) {
-            $ust_img->bind_param('si', $first, $appointment_id);
-            $ust_img->execute();
-            $ust_img->close();
-        }
-    }
-
-    // Keep appointment-level service links in selected_services (appointments.service_id is removed).
     $existingServiceIds = [];
     $findExistingServices = $conn->prepare('SELECT service_id FROM selected_services WHERE appointment_id = ?');
     if ($findExistingServices) {
@@ -270,15 +308,11 @@ try {
         $existingServiceRes = $findExistingServices->get_result();
         while ($existingServiceRes && ($existingServiceRow = $existingServiceRes->fetch_assoc())) {
             $sid = (int)($existingServiceRow['service_id'] ?? 0);
-            if ($sid > 0) {
-                $existingServiceIds[$sid] = $sid;
-            }
+            if ($sid > 0) $existingServiceIds[$sid] = $sid;
         }
         $findExistingServices->close();
     }
 
-    // Keep the originally selected appointment services in addition to any clinical recommendations.
-    // This ensures base checkup/service pricing is always part of billing.
     if (!empty($existingServiceIds)) {
         $service_ids = normalize_positive_int_list(array_merge($service_ids, array_values($existingServiceIds)));
     }
@@ -305,7 +339,6 @@ try {
         }
     }
 
-    // If finalized/submitted, update appointment status and queue, and create billing
     if ($submit_and_finalize) {
         $status = 'completed';
         $ust = $conn->prepare("UPDATE appointments SET status = ?, notes = CONCAT(IFNULL(notes,''), ?) WHERE appointment_id = ?");
@@ -314,9 +347,7 @@ try {
         $ust->execute();
         $ust->close();
 
-        // Calculate billing: sum of services + materials total + optional doctor fee
         $total = 0.0;
-        // Services from recommended services + structured treatment plan service references.
         if (!empty($service_ids)) {
             foreach ($service_ids as $sid) {
                 $sstmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ?');
@@ -329,7 +360,6 @@ try {
                 $sstmt->close();
             }
         }
-        // Materials
         if ($materials_used && is_array($materials_used)) {
             foreach ($materials_used as $m) {
                 $qty = isset($m['qty']) ? (float)$m['qty'] : 0;
@@ -337,11 +367,9 @@ try {
                 $total += $qty * $price;
             }
         }
-        // Doctor fee (optional POST param)
         $doctor_fee = isset($_POST['doctor_fee']) ? (float)$_POST['doctor_fee'] : 0.0;
         if ($doctor_fee > 0) $total += $doctor_fee;
 
-        // Insert or update billing record. If a billing exists for this appointment, update it instead of inserting.
         $bcheck = $conn->prepare('SELECT billing_id FROM billing WHERE appointment_id = ? LIMIT 1');
         if ($bcheck) {
             $bcheck->bind_param('i', $appointment_id);
@@ -365,7 +393,6 @@ try {
                 $bstmt->close();
             }
         } else {
-            // fallback: try to insert
             $bstmt = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, created_at) VALUES (?, ?, ?, NOW())');
             if ($bstmt) {
                 $bstmt->bind_param('iid', $appointment_id, $patient_id, $total);
@@ -384,22 +411,13 @@ try {
         'billing_amount' => isset($total) ? $total : null,
         'schedule_id' => null,
         'followup_appointment_id' => null,
-        // Do not prompt suggested scheduling after profiling submission
         'needs_scheduling' => false
     ]);
 } catch (Exception $e) {
     $conn->rollback();
     http_response_code(500);
-    // Log error for debugging
     $logDir = __DIR__ . '/../../../../logs';
-    if (!is_dir($logDir)) {
-        @mkdir($logDir, 0777, true);
-    }
-    $logFile = $logDir . '/save_clinical_record_error.log';
-    $logEntry = date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n";
-    @file_put_contents($logFile, $logEntry, FILE_APPEND);
-
+    if (!is_dir($logDir)) @mkdir($logDir, 0777, true);
+    @file_put_contents($logDir . '/save_clinical_record_error.log', date('Y-m-d H:i:s') . " - " . $e->getMessage() . "\n" . $e->getTraceAsString() . "\n\n", FILE_APPEND);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-
-?>

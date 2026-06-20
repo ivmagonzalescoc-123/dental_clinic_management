@@ -58,7 +58,7 @@ if ($appointment_id > 0) {
 
 // 2) Clinical record recommended_services and materials_used
 if ($appointment_id > 0) {
-    $cr = $conn->prepare('SELECT recommended_services, materials_used, doctor_notes FROM clinical_records WHERE appointment_id = ? LIMIT 1');
+    $cr = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ? LIMIT 1');
     if ($cr) {
         $cr->bind_param('i', $appointment_id);
         $cr->execute();
@@ -66,68 +66,35 @@ if ($appointment_id > 0) {
         $rec = $rr ? $rr->fetch_assoc() : null;
         $cr->close();
 
-        if ($rec) {
-            // recommended_services may be JSON array of ids or array of objects
-            if (!empty($rec['recommended_services'])) {
-                $rs = json_decode($rec['recommended_services'], true);
-                if (is_array($rs) && count($rs) > 0) {
-                    // if numeric array of ids
-                    $ids = array_filter($rs, function($v){ return is_numeric($v); });
-                    if (!empty($ids)) {
-                        // fetch service names/prices for these ids
-                        $in = implode(',', array_map('intval', $ids));
-                        $q = 'SELECT service_id, service_name, initial_price FROM services WHERE service_id IN (' . $in . ')';
-                        $qres = $conn->query($q);
-                        if ($qres) {
-                            while ($srow = $qres->fetch_assoc()) {
-                                $amt = (float)($srow['initial_price'] ?? 0.0);
-                                $items[] = [ 'description' => ($srow['service_name'] ?? 'Service'), 'amount' => $amt ];
-                                $items_total += $amt;
-                            }
-                        }
-                    } else {
-                        // assume array of objects with name/price
-                        foreach ($rs as $obj) {
-                            if (is_array($obj)) {
-                                $amt = (float)($obj['initial_price'] ?? $obj['price'] ?? 0.0);
-                                $items[] = [ 'description' => ($obj['service_name'] ?? $obj['name'] ?? 'Service'), 'amount' => $amt ];
-                                $items_total += $amt;
-                            }
-                        }
-                    }
+        if ($rec && isset($rec['record_id'])) {
+            $recId = (int)$rec['record_id'];
+
+            $svcStmt = $conn->prepare('SELECT s.service_name, s.initial_price FROM clinical_record_services crs LEFT JOIN services s ON s.service_id = crs.service_id WHERE crs.record_id = ?');
+            if ($svcStmt) {
+                $svcStmt->bind_param('i', $recId);
+                $svcStmt->execute();
+                $svcRes = $svcStmt->get_result();
+                while ($srow = $svcRes->fetch_assoc()) {
+                    $amt = (float)($srow['initial_price'] ?? 0.0);
+                    $items[] = ['description' => ($srow['service_name'] ?? 'Service'), 'amount' => $amt];
+                    $items_total += $amt;
                 }
+                $svcStmt->close();
             }
 
-            // materials_used: array or object map
-            if (!empty($rec['materials_used'])) {
-                $mu = json_decode($rec['materials_used'], true);
-                if ($mu) {
-                    // materials could be object with numeric arrays inside (see SQL sample)
-                    if (isset($mu[0]) && is_array($mu[0])) {
-                        // array of materials
-                        foreach ($mu as $m) {
-                            if (!is_array($m)) continue;
-                            $qty = (float)($m['qty'] ?? 1);
-                            $price = (float)($m['price'] ?? 0);
-                            $line = $qty * $price;
-                            $items[] = [ 'description' => ($m['name'] ?? 'Material') . ' (x' . ($qty) . ')', 'amount' => $line ];
-                            $items_total += $line;
-                        }
-                    } else {
-                        // object map of arrays per tooth etc.
-                        foreach ($mu as $entry) {
-                            if (!is_array($entry)) continue;
-                            foreach ($entry as $m) {
-                                if (!is_array($m)) continue;
-                                $qty = (float)($m['qty'] ?? 1);
-                                $price = (float)($m['price'] ?? 0);
-                                $line = $qty * $price;
-                                $items[] = [ 'description' => ($m['name'] ?? 'Material') . ' (x' . ($qty) . ')', 'amount' => $line ];
-                                $items_total += $line;
-                            }
-                        }
-                    }
+            $matStmt = $conn->prepare('SELECT material_name, quantity, cost FROM treatment_materials WHERE record_id = ?');
+            if ($matStmt) {
+                $matStmt->bind_param('i', $recId);
+                $matStmt->execute();
+                $matRes = $matStmt->get_result();
+                while ($mrow = $matRes->fetch_assoc()) {
+                    $qty = (float)($mrow['quantity'] ?? 1);
+                    $price = (float)($mrow['cost'] ?? 0);
+                    $line = $qty * $price;
+                    $items[] = ['description' => ($mrow['material_name'] ?? 'Material') . ' (x' . ($qty) . ')', 'amount' => $line];
+                    $items_total += $line;
                 }
+                $matStmt->close();
             }
         }
     }
@@ -135,9 +102,9 @@ if ($appointment_id > 0) {
 
 // 3) If items_total < billing total, add a consultation/other fee line to show remainder
 $billing_subtotal = (float)($billing['subtotal_amount'] ?? 0.0);
-$billing_discount = (float)($billing['discount_amount'] ?? 0.0);
 $billing_discount_type = (string)($billing['discount_type'] ?? 'none');
 $billing_discount_percent = (float)($billing['discount_percent'] ?? 0.0);
+$billing_discount = $billing_subtotal * $billing_discount_percent / 100;
 $billing_total = (float)($billing['total_amount'] ?? 0.0);
 if ($billing_subtotal <= 0) {
     $billing_subtotal = $billing_total + $billing_discount;

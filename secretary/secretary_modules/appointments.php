@@ -1265,7 +1265,7 @@ $appointmentsViewFilters = [
         document.getElementById('declineAppointmentId').value = appointmentId;
     }
     
-    document.addEventListener('DOMContentLoaded', function() {
+    function initSecretaryAppointments() {
         function showSecretaryActionFeedback(message, type = 'info') {
             if (typeof window.showToast === 'function') {
                 window.showToast(String(message || ''), type || 'info');
@@ -1927,7 +1927,10 @@ $appointmentsViewFilters = [
                 }
             });
         }
-    });
+    }
+
+    document.addEventListener('DOMContentLoaded', initSecretaryAppointments);
+    window.addEventListener('page-loaded', initSecretaryAppointments);
 </script>
 
 <!-- Reschedule Modal (secretary) -->
@@ -1967,13 +1970,16 @@ $appointmentsViewFilters = [
 <script>
 window.resModalSec = null;
 window.fpStartSec = null; window.fpEndSec = null;
-document.addEventListener('DOMContentLoaded', function() {
+function initRescheduleModalSec() {
     try {
-        if (typeof bootstrap !== 'undefined') {
-            resModalSec = new bootstrap.Modal(document.getElementById('rescheduleModalSec'));
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const el = document.getElementById('rescheduleModalSec');
+            if (el) resModalSec = new bootstrap.Modal(el);
         }
     } catch (e) { console.warn('bootstrap modal init deferred', e); }
-});
+}
+document.addEventListener('DOMContentLoaded', initRescheduleModalSec);
+window.addEventListener('page-loaded', initRescheduleModalSec);
 function initSecPickers() {
     try {
         if (typeof flatpickr !== 'undefined') {

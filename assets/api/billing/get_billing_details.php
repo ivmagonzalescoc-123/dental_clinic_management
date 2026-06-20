@@ -25,8 +25,8 @@ billing_migrate_billing_columns($conn);
 billing_sync_from_payments($conn, $billingId);
 
 $stmt = $conn->prepare('
-    SELECT b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status, b.created_at,
-           b.subtotal_amount, b.discount_type, b.discount_percent, b.discount_amount, b.discount_notes,
+    SELECT b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.status, b.created_at,
+           b.subtotal_amount, b.discount_type, b.discount_percent, b.discount_notes,
            a.appointment_date, p.first_name, p.last_name, p.email, p.phone_number
     FROM billing b
     INNER JOIN appointments a ON a.appointment_id = b.appointment_id
@@ -102,7 +102,10 @@ if ($inv) {
 }
 
 $paidTotal = (float)($billing['amount_paid'] ?? 0);
-$balance = (float)($billing['balance'] ?? max(0, (float)$billing['total_amount'] - $paidTotal));
+$balance = max(0, (float)$billing['total_amount'] - $paidTotal);
+$billing['balance'] = $balance;
+$discountAmount = (float)($billing['subtotal_amount'] ?? 0) * (float)($billing['discount_percent'] ?? 0) / 100;
+$billing['discount_amount'] = $discountAmount;
 
 echo json_encode([
     'success' => true,

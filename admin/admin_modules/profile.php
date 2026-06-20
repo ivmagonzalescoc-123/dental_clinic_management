@@ -112,10 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!resp.ok || !data.success) {
                 showAlert(data.message || 'Unable to update profile.', 'danger');
             } else {
-                showAlert('Profile updated successfully. Reloading...', 'success');
-                setTimeout(function () {
-                    window.location.href = 'admin.php?page=profile';
-                }, 700);
+                showAlert('Profile updated successfully.', 'success');
             }
         } catch (err) {
             showAlert('Unable to update profile right now. Please try again.', 'danger');

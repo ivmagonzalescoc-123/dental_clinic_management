@@ -22,7 +22,6 @@ if ($record_id > 0) {
     $stmt = $conn->prepare('SELECT * FROM clinical_records WHERE appointment_id = ?');
     $stmt->bind_param('i', $appointment_id);
 } elseif ($patient_id > 0) {
-    // fetch the most recent clinical record for this patient
     $stmt = $conn->prepare('SELECT * FROM clinical_records WHERE patient_id = ? ORDER BY COALESCE(submitted_at, record_id) DESC LIMIT 1');
     $stmt->bind_param('i', $patient_id);
 } else {
@@ -35,7 +34,6 @@ $res = $stmt->get_result();
 $rec = $res ? $res->fetch_assoc() : null;
 $stmt->close();
 
-// If no record found by appointment_id, try falling back to latest by patient for convenience
 if (!$rec && $appointment_id > 0) {
     $a = $conn->prepare('SELECT patient_id, appointment_date FROM appointments WHERE appointment_id = ? LIMIT 1');
     $a->bind_param('i', $appointment_id);
@@ -51,10 +49,7 @@ if (!$rec && $appointment_id > 0) {
         $r2 = $stmt2->get_result();
         $rec = $r2 ? $r2->fetch_assoc() : null;
         $stmt2->close();
-        // attach appointment date as context
-        if ($rec) {
-            $rec['_appointment_date'] = $aRow['appointment_date'];
-        }
+        if ($rec) $rec['_appointment_date'] = $aRow['appointment_date'];
     }
 }
 
@@ -63,49 +58,105 @@ if (!$rec) {
     exit;
 }
 
-// Hide odontogram for secretary
-if ($role === 'secretary') {
-    unset($rec['odontogram']);
-}
+if ($role === 'secretary') unset($rec['odontogram']);
 
-// Also fetch appointment and patient basic info for display
 $appt_stmt = $conn->prepare('SELECT a.appointment_date, p.first_name, p.last_name, p.email, p.phone_number FROM appointments a JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ? LIMIT 1');
-$appt_stmt->bind_param('i', $appointment_id);
-$appt_stmt->execute();
-$appt_res = $appt_stmt->get_result();
-$appt_row = $appt_res ? $appt_res->fetch_assoc() : null;
-$appt_stmt->close();
-if ($appt_row) {
-    $rec['_appointment_date'] = $appt_row['appointment_date'];
-    $rec['_patient_name'] = trim(($appt_row['first_name'] ?? '') . ' ' . ($appt_row['last_name'] ?? ''));
-    $rec['_patient_email'] = $appt_row['email'] ?? '';
-    $rec['_patient_phone'] = $appt_row['phone_number'] ?? '';
+if ($appointment_id > 0) {
+    $appt_stmt->bind_param('i', $appointment_id);
+    $appt_stmt->execute();
+    $appt_res = $appt_stmt->get_result();
+    $appt_row = $appt_res ? $appt_res->fetch_assoc() : null;
+    $appt_stmt->close();
+    if ($appt_row) {
+        $rec['_appointment_date'] = $appt_row['appointment_date'];
+        $rec['_patient_name'] = trim(($appt_row['first_name'] ?? '') . ' ' . ($appt_row['last_name'] ?? ''));
+        $rec['_patient_email'] = $appt_row['email'] ?? '';
+        $rec['_patient_phone'] = $appt_row['phone_number'] ?? '';
+    }
 }
 
-// Attach patient-level profiling (if available)
+if (isset($rec['record_id']) && $rec['record_id']) {
+    $recId = (int)$rec['record_id'];
+
+    $cstmt = $conn->prepare('SELECT crs.service_id, s.service_name, s.initial_price FROM clinical_record_services crs LEFT JOIN services s ON s.service_id = crs.service_id WHERE crs.record_id = ?');
+    $cstmt->bind_param('i', $recId);
+    $cstmt->execute();
+    $cres = $cstmt->get_result();
+    $svcIds = [];
+    while ($crow = $cres->fetch_assoc()) $svcIds[] = (int)$crow['service_id'];
+    $cstmt->close();
+    $rec['recommended_services'] = $svcIds;
+
+    $tpstmt = $conn->prepare('SELECT * FROM treatment_plans WHERE record_id = ?');
+    $tpstmt->bind_param('i', $recId);
+    $tpstmt->execute();
+    $tpres = $tpstmt->get_result();
+    $treatments = [];
+    while ($tprow = $tpres->fetch_assoc()) $treatments[] = $tprow;
+    $tpstmt->close();
+    $rec['treatment_plan'] = $treatments;
+
+    $mtstmt = $conn->prepare('SELECT * FROM treatment_materials WHERE record_id = ?');
+    $mtstmt->bind_param('i', $recId);
+    $mtstmt->execute();
+    $mtres = $mtstmt->get_result();
+    $materials = [];
+    while ($mtrow = $mtres->fetch_assoc()) $materials[] = $mtrow;
+    $mtstmt->close();
+    $rec['materials_used'] = $materials;
+
+    $imgStmt = $conn->prepare('SELECT file_path FROM clinical_record_images WHERE record_id = ?');
+    $imgStmt->bind_param('i', $recId);
+    $imgStmt->execute();
+    $imgRes = $imgStmt->get_result();
+    $images = [];
+    while ($imgRow = $imgRes->fetch_assoc()) $images[] = $imgRow['file_path'];
+    $imgStmt->close();
+    $rec['images'] = $images;
+}
+
+$odontogram = null;
+if (isset($rec['record_id']) && $rec['record_id']) {
+    $recIdForOdonto = (int)$rec['record_id'];
+    $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status_type_id, ts.tooth_surface, ts.status, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
+    $toothStmt->bind_param('i', $recIdForOdonto);
+    $toothStmt->execute();
+    $toothRes = $toothStmt->get_result();
+    $rawToothRows = [];
+    while ($trow = $toothRes->fetch_assoc()) $rawToothRows[] = $trow;
+    $toothStmt->close();
+    $odontogramFormatted = [];
+    foreach ($rawToothRows as $trow) {
+        $toothNum = (int)$trow['tooth_selected'];
+        $code = (string)($trow['code'] ?? '');
+        $surface = (string)($trow['tooth_surface'] ?? 'O');
+        if ($toothNum <= 0) continue;
+        if (!isset($odontogramFormatted[$toothNum])) {
+            $odontogramFormatted[$toothNum] = ['comment' => '', 'surfaces' => []];
+        }
+        if ($surface !== '' && $code !== '') {
+            if (!isset($odontogramFormatted[$toothNum]['surfaces'][$surface])) {
+                $odontogramFormatted[$toothNum]['surfaces'][$surface] = [];
+            }
+            $odontogramFormatted[$toothNum]['surfaces'][$surface][] = $code;
+        }
+    }
+    $odontogram = empty($odontogramFormatted) ? null : $odontogramFormatted;
+}
+$rec['odontogram'] = $odontogram;
+
 if (isset($rec['patient_id']) && $rec['patient_id']) {
-    $pstmt = $conn->prepare('SELECT profiling FROM patients WHERE patient_id = ? LIMIT 1');
+    $pstmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
     if ($pstmt) {
         $pstmt->bind_param('i', $rec['patient_id']);
         $pstmt->execute();
         $pres = $pstmt->get_result();
         $prow = $pres ? $pres->fetch_assoc() : null;
         $pstmt->close();
-        if ($prow && isset($prow['profiling']) && $prow['profiling'] !== null) {
-            $decoded = json_decode($prow['profiling'], true);
-            if (is_array($decoded)) {
-                $rec['patient_profiling'] = filter_background_profiling_data($decoded);
-            }
+        if ($prow) {
+            $rec['patient_profiling'] = $prow;
+            $rec['profiling'] = $prow;
         }
-    }
-}
-
-// Ensure JSON/text fields are decoded or present
-$toDecode = ['recommended_services','treatment_plan','materials_used','odontogram','images','profiling'];
-foreach ($toDecode as $f) {
-    if (isset($rec[$f]) && $rec[$f] !== null) {
-        $decoded = json_decode($rec[$f], true);
-        $rec[$f] = ($decoded !== null) ? $decoded : $rec[$f];
     }
 }
 
@@ -114,22 +165,15 @@ if (isset($rec['profiling']) && is_array($rec['profiling'])) {
     $rec['profiling'] = $rec['visit_clinical'];
 }
 
-// If recommended_services is an array of IDs, fetch service details and replace with objects
 if (isset($rec['recommended_services']) && is_array($rec['recommended_services']) && count($rec['recommended_services']) > 0) {
-    // sanitize and cast to ints
     $ids = array_values(array_map('intval', $rec['recommended_services']));
-    // build IN list safely as ints
     $inList = implode(',', $ids);
     if ($inList !== '') {
-        $sSql = "SELECT service_id, service_name, initial_price FROM services WHERE service_id IN ($inList)";
-        $sRes = $conn->query($sSql);
+        $sRes = $conn->query("SELECT service_id, service_name, initial_price FROM services WHERE service_id IN ($inList)");
         $svcMap = [];
         if ($sRes) {
-            while ($sr = $sRes->fetch_assoc()) {
-                $svcMap[(int)$sr['service_id']] = $sr;
-            }
+            while ($sr = $sRes->fetch_assoc()) $svcMap[(int)$sr['service_id']] = $sr;
         }
-        // preserve original ordering
         $full = [];
         foreach ($ids as $id) {
             if (isset($svcMap[$id])) $full[] = $svcMap[$id];
@@ -139,10 +183,7 @@ if (isset($rec['recommended_services']) && is_array($rec['recommended_services']
     }
 }
 
-// radiographs_notes and tooth_image may be stored as plain fields - ensure they exist
 if (!isset($rec['radiographs_notes'])) $rec['radiographs_notes'] = null;
-if (!isset($rec['tooth_image'])) $rec['tooth_image'] = null;
+if (!isset($rec['primary_image'])) $rec['primary_image'] = null;
 
 echo json_encode(['success'=>true,'record'=>$rec]);
-
-?>

@@ -153,75 +153,120 @@ try {
     $conn->begin_transaction();
 
     ensure_clinical_records_profiling_column($conn);
-    $visitClinicalJson = json_encode($visitClinicalData, JSON_UNESCAPED_UNICODE);
 
     $submittedAt = date('Y-m-d H:i:s');
     $recordStatus = 'finalized';
 
-    $existingStmt = $conn->prepare('SELECT record_id, odontogram FROM clinical_records WHERE appointment_id = ? LIMIT 1');
+    $existingStmt = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ? LIMIT 1');
     $existingStmt->bind_param('i', $appointmentId);
     $existingStmt->execute();
     $existing = $existingStmt->get_result()->fetch_assoc();
     $existingStmt->close();
 
-    if (empty($odontogramData) && $existing && !empty($existing['odontogram'])) {
-        $decodedExisting = json_decode($existing['odontogram'], true);
-        if (is_array($decodedExisting)) {
-            $odontogramData = odontogram_normalize_data($decodedExisting);
-        }
-    }
-    $odontogramJson = json_encode($odontogramData);
-
     if ($existing) {
         $clinicalRecordId = (int)$existing['record_id'];
-        $upd = $conn->prepare('
-            UPDATE clinical_records
-            SET doctor_id = ?, patient_id = ?, summary = ?, odontogram = ?, doctor_notes = ?,
-                treatment_plan = ?, follow_up_date = ?, status = ?, submitted_by = ?, submitted_at = ?,
-                profiling = ?
-            WHERE record_id = ?
-        ');
-        $upd->bind_param(
-            'iissssssissi',
-            $doctorId,
-            $patientId,
-            $summary,
-            $odontogramJson,
-            $doctorNotes,
-            $treatmentPlan,
-            $followUpDateDb,
-            $recordStatus,
-            $secretaryId,
-            $submittedAt,
-            $visitClinicalJson,
-            $clinicalRecordId
-        );
+        $upd = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, summary = ?, doctor_notes = ?, follow_up_date = ?, status = ?, submitted_by = ?, submitted_at = ? WHERE record_id = ?');
+        $upd->bind_param('iissssisi', $doctorId, $patientId, $summary, $doctorNotes, $followUpDateDb, $recordStatus, $secretaryId, $submittedAt, $clinicalRecordId);
         $upd->execute();
         $upd->close();
     } else {
-        $ins = $conn->prepare('
-            INSERT INTO clinical_records
-            (appointment_id, doctor_id, patient_id, summary, odontogram, doctor_notes, treatment_plan, follow_up_date, status, submitted_by, submitted_at, profiling)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ');
-        $ins->bind_param(
-            'iiissssssiss',
-            $appointmentId,
-            $doctorId,
-            $patientId,
-            $summary,
-            $odontogramJson,
-            $doctorNotes,
-            $treatmentPlan,
-            $followUpDateDb,
-            $recordStatus,
-            $secretaryId,
-            $submittedAt,
-            $visitClinicalJson
-        );
+        $ins = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, summary, doctor_notes, follow_up_date, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins->bind_param('iiisssssi', $appointmentId, $doctorId, $patientId, $summary, $doctorNotes, $followUpDateDb, $recordStatus, $secretaryId, $submittedAt);
         $ins->execute();
         $clinicalRecordId = (int)$conn->insert_id;
         $ins->close();
+    }
+
+    if ($clinicalRecordId > 0) {
+        if (!empty($odontogramData)) {
+            $conn->query("DELETE FROM tooth_status WHERE record_id = $clinicalRecordId");
+
+            $codeToTypeId = [];
+            $codeRes = $conn->query('SELECT status_type_id, code FROM tooth_status_type');
+            if ($codeRes) {
+                while ($crow = $codeRes->fetch_assoc()) {
+                    $codeToTypeId[$crow['code']] = (int)$crow['status_type_id'];
+                }
+            }
+
+            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+            foreach ($odontogramData as $fdiKey => $td) {
+                if (!is_array($td)) continue;
+                $toothNum = (int)$fdiKey;
+                if ($toothNum <= 0) continue;
+                $surfaces = $td['surfaces'] ?? [];
+                if (empty($surfaces)) {
+                    $comment = trim((string)($td['comment'] ?? ''));
+                    if ($comment !== '') {
+                        $tsStmt->bind_param('iiiss', $clinicalRecordId, $toothNum, 0, '', $comment);
+                        $tsStmt->execute();
+                    }
+                    continue;
+                }
+                foreach ($surfaces as $surfaceName => $codes) {
+                    $codeList = is_array($codes) ? $codes : [$codes];
+                    foreach ($codeList as $code) {
+                        $code = (string)$code;
+                        $typeId = $codeToTypeId[$code] ?? 0;
+                        $tsStmt->bind_param('iiiss', $clinicalRecordId, $toothNum, $typeId, $surfaceName, $code);
+                        $tsStmt->execute();
+                    }
+                }
+            }
+            $tsStmt->close();
+        }
+
+        if ($treatmentPlan !== null) {
+            $conn->query("DELETE FROM treatment_plans WHERE record_id = $clinicalRecordId");
+            $tpStmt = $conn->prepare('INSERT INTO treatment_plans (record_id, description, status) VALUES (?, ?, ?)');
+            $tpDesc = is_string($treatmentPlan) ? $treatmentPlan : json_encode($treatmentPlan);
+            $planned = 'planned';
+            $tpStmt->bind_param('iss', $clinicalRecordId, $tpDesc, $planned);
+            $tpStmt->execute();
+            $tpStmt->close();
+        }
+
+        if (!empty($visitClinicalData)) {
+            $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patientId AND record_id = $clinicalRecordId");
+            $pf_race = $visitClinicalData['race'] ?? null;
+            $pf_occupation = $visitClinicalData['occupation'] ?? null;
+            $pf_medical_history = $visitClinicalData['medical_history'] ?? null;
+            $pf_medications = $visitClinicalData['medications'] ?? null;
+            $pf_allergies = $visitClinicalData['allergies'] ?? null;
+            $pf_smoking = $visitClinicalData['smoking'] ?? null;
+            $pf_alcohol = $visitClinicalData['alcohol'] ?? null;
+            $pf_hypertensive = (int)($visitClinicalData['hypertensive'] ?? 0);
+            $pf_diabetic = (int)($visitClinicalData['diabetic'] ?? 0);
+            $pf_asthmatic = (int)($visitClinicalData['asthmatic'] ?? 0);
+            $pf_heart_disease = (int)($visitClinicalData['heart_disease'] ?? 0);
+            $pf_hiv_positive = (int)($visitClinicalData['hiv_positive'] ?? 0);
+            $pf_bleeding_disorder = $visitClinicalData['bleeding_disorder'] ?? null;
+            $pf_asa = $visitClinicalData['asa'] ?? null;
+            $pf_pregnancy_status = $visitClinicalData['pregnancy_status'] ?? null;
+            $pf_previous_dental_treatment = $visitClinicalData['previous_dental_treatment'] ?? null;
+            $pf_dental_anxiety = $visitClinicalData['dental_anxiety'] ?? null;
+            $pf_emergency_contact = $visitClinicalData['emergency_contact'] ?? null;
+            $pf_emergency_phone = $visitClinicalData['emergency_phone'] ?? null;
+            $pf_background_notes = $visitClinicalData['background_notes'] ?? null;
+
+            $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $pfStmt->bind_param('iisssssssiiiiissssssss',
+                $patientId, $clinicalRecordId,
+                $pf_race, $pf_occupation,
+                $pf_medical_history, $pf_medications,
+                $pf_allergies, $pf_smoking,
+                $pf_alcohol,
+                $pf_hypertensive, $pf_diabetic,
+                $pf_asthmatic, $pf_heart_disease,
+                $pf_hiv_positive,
+                $pf_bleeding_disorder, $pf_asa,
+                $pf_pregnancy_status, $pf_previous_dental_treatment,
+                $pf_dental_anxiety, $pf_emergency_contact,
+                $pf_emergency_phone, $pf_background_notes
+            );
+            $pfStmt->execute();
+            $pfStmt->close();
+        }
     }
 
     $delRx = $conn->prepare('DELETE FROM prescriptions WHERE appointment_id = ?');
@@ -347,13 +392,17 @@ try {
 
     $followUpAppointmentId = null;
     if ($followUpDateDb !== null) {
-        $followUpAppointmentId = workflow_create_followup_appointment(
-            $conn,
-            $appointmentId,
-            $patientId,
-            $doctorId,
-            $followUpDateDb
-        );
+        try {
+            $followUpAppointmentId = workflow_create_followup_appointment(
+                $conn,
+                $appointmentId,
+                $patientId,
+                $doctorId,
+                $followUpDateDb
+            );
+        } catch (Exception $e) {
+            error_log('Follow-up scheduling failed: ' . $e->getMessage());
+        }
     }
 
     $recordsCompletedAt = date('Y-m-d H:i:s');

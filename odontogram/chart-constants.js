@@ -122,8 +122,10 @@ export function migrateToothState(raw) {
   const out = {};
   for (const [key, entry] of Object.entries(raw)) {
     let fdi = String(key);
-    if (/^\d+$/.test(fdi) && parseInt(fdi, 10) <= 32 && UNIVERSAL_TO_FDI[parseInt(fdi, 10)]) {
-      fdi = UNIVERSAL_TO_FDI[parseInt(fdi, 10)];
+    if (!ALL_FDI_TEETH.includes(fdi)) {
+      if (/^\d+$/.test(fdi) && parseInt(fdi, 10) <= 32 && UNIVERSAL_TO_FDI[parseInt(fdi, 10)]) {
+        fdi = UNIVERSAL_TO_FDI[parseInt(fdi, 10)];
+      }
     }
     if (!ALL_FDI_TEETH.includes(fdi)) continue;
     out[fdi] = migrateLegacyEntry(entry);

@@ -290,6 +290,7 @@
       document.addEventListener('DOMContentLoaded', wrapConfirmModalForAutoLoading);
     }
     window.addEventListener('load', wrapConfirmModalForAutoLoading);
+    window.addEventListener('page-loaded', wrapConfirmModalForAutoLoading);
   }
 
   window.setActionLoading = setActionLoading;

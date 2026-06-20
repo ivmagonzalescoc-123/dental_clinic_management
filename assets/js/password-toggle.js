@@ -108,4 +108,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     initPasswordToggles(document);
   });
+  window.addEventListener('page-loaded', function () {
+    initPasswordToggles(document);
+  });
 })();

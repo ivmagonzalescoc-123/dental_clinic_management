@@ -308,6 +308,7 @@
           document.documentElement.scrollTop = 0
           document.body.scrollTop = 0
           isNavigating = false
+          window.dispatchEvent(new CustomEvent('page-loaded', { detail: { page: page } }))
         })
         .catch(function() {
           setPageLoading(false)

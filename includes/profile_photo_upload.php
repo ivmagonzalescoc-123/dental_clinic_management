@@ -43,7 +43,7 @@ $profile_avatar_markup = profile_render_avatar_markup($conn, '..', [
 </div>
 <?php if ($profile_can_upload_photo): ?>
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+function initProfilePhotoUpload() {
     const form = document.getElementById('profilePhotoForm');
     const input = document.getElementById('profilePhotoInput');
     const previewWrap = document.querySelector('.profile-photo-preview-wrap');
@@ -52,7 +52,11 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!form || !input || !previewWrap || !saveBtn) return;
 
     function showPhotoAlert(message, type) {
-        window.showToast(String(message || ''), type || 'info');
+        if (typeof window.showToast === 'function') {
+            window.showToast(String(message || ''), type || 'info');
+        } else if (alertBox) {
+            alertBox.innerHTML = '<div class="alert alert-' + (type || 'info') + ' alert-dismissible fade show">' + String(message || '') + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+        }
     }
 
     const maxBytes = <?php echo (int)profile_photo_max_bytes(); ?>;
@@ -128,9 +132,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         node.src = data.profile_image_url + '?t=' + Date.now();
                     }
                 });
-                setTimeout(function () {
-                    window.location.href = <?php echo json_encode($profile_reload_url); ?>;
-                }, 700);
             }
         } catch (err) {
             showPhotoAlert('Network error while uploading photo.', 'danger');
@@ -139,6 +140,8 @@ document.addEventListener('DOMContentLoaded', function () {
             saveBtn.textContent = 'Upload Photo';
         }
     });
-});
+}
+document.addEventListener('DOMContentLoaded', initProfilePhotoUpload);
+window.addEventListener('page-loaded', initProfilePhotoUpload);
 </script>
 <?php endif; ?>

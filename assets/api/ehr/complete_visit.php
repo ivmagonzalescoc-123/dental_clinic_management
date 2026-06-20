@@ -60,17 +60,39 @@ try {
     }
     
     // Record tooth status for each tooth updated
+    $crCheck = $conn->prepare('SELECT record_id FROM clinical_records WHERE appointment_id = ?');
+    $crCheck->bind_param('i', $appointmentId);
+    $crCheck->execute();
+    $crRes = $crCheck->get_result();
+    $crRow = $crRes ? $crRes->fetch_assoc() : null;
+    $crCheck->close();
+    $recordId = $crRow ? (int)$crRow['record_id'] : 0;
+
+    if ($recordId <= 0) {
+        $insCr = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+        $crStatus = 'submitted';
+        $insCr->bind_param('iiisss', $appointmentId, $doctor_id, $patientId, $notes, $crStatus, $doctor_id);
+        $insCr->execute();
+        $recordId = (int)$conn->insert_id;
+        $insCr->close();
+    }
+
+    $codeToTypeId = [];
+    $codeRes = $conn->query('SELECT status_type_id, code FROM tooth_status_type');
+    if ($codeRes) {
+        while ($crow = $codeRes->fetch_assoc()) {
+            $codeToTypeId[$crow['code']] = (int)$crow['status_type_id'];
+        }
+    }
+
     foreach ($toothData as $toothId => $toothStatus) {
         if (!empty($toothStatus)) {
             $toothId = (int)$toothId;
-            // Insert or update tooth status
-            $stmt = $conn->prepare('
-                INSERT INTO tooth_status (tooth_selected, status) 
-                VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE status = VALUES(status)
-            ');
+            $statusCode = (string)$toothStatus;
+            $typeId = $codeToTypeId[$statusCode] ?? 0;
+            $stmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, status) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status_type_id = VALUES(status_type_id), status = VALUES(status), record_id = VALUES(record_id)');
             if ($stmt) {
-                $stmt->bind_param('is', $toothId, $toothStatus);
+                $stmt->bind_param('iiis', $recordId, $toothId, $typeId, $statusCode);
                 $stmt->execute();
                 $stmt->close();
             }

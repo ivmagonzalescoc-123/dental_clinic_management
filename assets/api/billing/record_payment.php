@@ -72,7 +72,7 @@ if ($cached !== null) {
 try {
     $conn->begin_transaction();
 
-    $stmt = $conn->prepare('SELECT total_amount, balance, status FROM billing WHERE billing_id = ? LIMIT 1 FOR UPDATE');
+    $stmt = $conn->prepare('SELECT total_amount, (total_amount - amount_paid) AS balance, status FROM billing WHERE billing_id = ? LIMIT 1 FOR UPDATE');
     if (!$stmt) {
         throw new Exception('Unable to load billing record');
     }
@@ -90,7 +90,7 @@ try {
 
     billing_sync_from_payments($conn, $billingId);
 
-    $stmt = $conn->prepare('SELECT balance, status, amount_paid FROM billing WHERE billing_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT (total_amount - amount_paid) AS balance, status, amount_paid FROM billing WHERE billing_id = ? LIMIT 1');
     $stmt->bind_param('i', $billingId);
     $stmt->execute();
     $billing = $stmt->get_result()->fetch_assoc();
@@ -136,7 +136,7 @@ try {
     }
     $conn->commit();
 
-    $stmt = $conn->prepare('SELECT amount_paid, balance, status FROM billing WHERE billing_id = ? LIMIT 1');
+    $stmt = $conn->prepare('SELECT amount_paid, (total_amount - amount_paid) AS balance, status FROM billing WHERE billing_id = ? LIMIT 1');
     $stmt->bind_param('i', $billingId);
     $stmt->execute();
     $updated = $stmt->get_result()->fetch_assoc();

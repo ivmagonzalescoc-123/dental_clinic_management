@@ -1276,7 +1276,15 @@ $aboutPoints = [
 
         document.querySelectorAll('[data-auth-switch]').forEach(function(btn) {
             btn.addEventListener('click', function() {
-                openAuthModal(btn.getAttribute('data-auth-switch'));
+                const target = btn.getAttribute('data-auth-switch');
+                if (target === 'forgot') {
+                    const loginEmail = document.getElementById('login-email');
+                    const resetEmail = document.getElementById('reset-email');
+                    if (loginEmail && resetEmail && loginEmail.value.trim()) {
+                        resetEmail.value = loginEmail.value.trim();
+                    }
+                }
+                openAuthModal(target);
             });
         });
 

@@ -10,10 +10,10 @@ check_session(['admin', 'secretary']);
 $role = strtolower((string)($_SESSION['role'] ?? ''));
 if ($role === 'admin') {
     capabilities_require_web('manage_users', '../../admin.php?page=manage_users&type=patients');
-    $redirectUrl = '../../admin.php?page=manage_users&type=patients';
+    $redirectUrl = '../../../admin.php?page=manage_users&type=patients';
 } elseif ($role === 'secretary') {
     capabilities_require_web('patient.manage', '../../secretary/secretary.php?page=manage_patients');
-    $redirectUrl = '../../secretary/secretary.php?page=manage_patients';
+    $redirectUrl = '../../../secretary/secretary.php?page=manage_patients';
 } else {
     http_response_code(403);
     exit;

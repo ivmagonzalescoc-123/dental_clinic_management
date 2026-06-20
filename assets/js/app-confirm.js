@@ -164,4 +164,5 @@
   } else {
     initConfirmForms();
   }
+  window.addEventListener('page-loaded', initConfirmForms);
 })();
