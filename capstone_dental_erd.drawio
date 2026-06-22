@@ -1,0 +1,1177 @@
+<mxfile host="app.diagrams.net" modified="2026-06-22T00:00:00.000Z" agent="MiMoCode" version="21.0.0" type="device">
+  <diagram id="capstone-dental-erd" name="ERD">
+    <mxGraphModel dx="3200" dy="2400" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4000" pageHeight="3000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ============================================ -->
+        <!-- AUTHENTICATION & USERS                       -->
+        <!-- ============================================ -->
+
+        <!-- role -->
+        <mxCell id="t_role" value="role" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="220" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_role_pk" value="PK role_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_role">
+          <mxGeometry y="26" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_role roleName" value="role_name ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_role">
+          <mxGeometry y="52" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_role description" value="description TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_role">
+          <mxGeometry y="78" width="220" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- users -->
+        <mxCell id="t_users" value="users" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="100" width="240" height="380" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_pk" value="PK user_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_first" value="first_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_last" value="last_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_mid" value="middle_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_email" value="email VARCHAR(150) UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_phone" value="phone_number VARCHAR(30)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_dob" value="date_of_birth DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_gender" value="gender VARCHAR(20)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="208" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_addr" value="address TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="234" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_role" value="FK role_id → role" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_users">
+          <mxGeometry y="260" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_added" value="FK added_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_users">
+          <mxGeometry y="286" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_active" value="is_active TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="312" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_users_work" value="work_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_users">
+          <mxGeometry y="338" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- patients -->
+        <mxCell id="t_patients" value="patients" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="550" width="240" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_pk" value="PK patient_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_first" value="first_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_last" value="last_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_mid" value="middle_name VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_email" value="email VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_phone" value="phone_number VARCHAR(30)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_dob" value="date_of_birth DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_gender" value="gender VARCHAR(20)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="208" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_addr" value="address TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="234" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_added" value="FK added_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_patients">
+          <mxGeometry y="260" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pat_active" value="is_active TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_patients">
+          <mxGeometry y="286" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- password_resets -->
+        <mxCell id="t_pwresets" value="password_resets" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="960" width="240" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_pk" value="PK reset_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_type" value="user_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_uid" value="user_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_email" value="email VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_token" value="token_hash CHAR(64)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_otp" value="otp_hash CHAR(64)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pw_exp" value="expires_at DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pwresets">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- DOCTOR MANAGEMENT                            -->
+        <!-- ============================================ -->
+
+        <!-- specialization -->
+        <mxCell id="t_spec" value="specialization" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="100" width="220" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_spec_pk" value="PK specialization_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_spec">
+          <mxGeometry y="26" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_spec_name" value="specialization_name VARCHAR" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_spec">
+          <mxGeometry y="52" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_spec_desc" value="description TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_spec">
+          <mxGeometry y="78" width="220" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- dentist_specialization -->
+        <mxCell id="t_dspec" value="dentist_specialization" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="300" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dspec_pk" value="PK doctor_specialized_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dspec">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dspec_uid" value="FK user_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_dspec">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dspec_sid" value="FK specialization_id → specialization" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_dspec">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dspec_uq" value="UQ (user_id, specialization_id)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;fontStyle=2;fontColor=#999999;" vertex="1" parent="t_dspec">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- doctor_availability -->
+        <mxCell id="t_davail" value="doctor_availability" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="100" width="240" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_pk" value="PK availability_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_davail">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_uid" value="FK user_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_davail">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_wd" value="weekday TINYINT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_davail">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_st" value="start_time TIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_davail">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_et" value="end_time TIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_davail">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_davail_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_davail">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- doctor_leaves -->
+        <mxCell id="t_dleave" value="doctor_leaves" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="360" width="240" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_pk" value="PK leave_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dleave">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_uid" value="FK user_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_dleave">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_start" value="leave_start_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dleave">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_end" value="leave_end_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dleave">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_reason" value="reason VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dleave">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_dleave_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_dleave">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- SERVICES & SCHEDULING                        -->
+        <!-- ============================================ -->
+
+        <!-- services -->
+        <mxCell id="t_svc" value="services" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="100" width="240" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_pk" value="PK service_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_name" value="service_name VARCHAR(200)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_price" value="initial_price DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_desc" value="description TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_added" value="FK added_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_svc">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_active" value="is_active TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_sched" value="requires_schedule TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_svc_dur" value="default_duration_minutes INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_svc">
+          <mxGeometry y="208" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- timeslot -->
+        <mxCell id="t_slot" value="timeslot" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1400" y="420" width="240" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_pk" value="PK timeslot_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_doc" value="FK doctor_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_slot">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_date" value="slot_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_st" value="start_time TIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_et" value="end_time TIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slot_uq" value="UQ (doctor_id, slot_date, start_time)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;fontStyle=2;fontColor=#999999;" vertex="1" parent="t_slot">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- timeslot_service -->
+        <mxCell id="t_slot_svc" value="timeslot_service" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="100" width="240" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slotsvc_pk" value="PK id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot_svc">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slotsvc_sid" value="FK service_id → services" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_slot_svc">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slotsvc_dur" value="duration_minutes INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot_svc">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slotsvc_buf" value="buffer_minutes INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot_svc">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_slotsvc_limit" value="slots_per_day_limit INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_slot_svc">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- APPOINTMENTS                                 -->
+        <!-- ============================================ -->
+
+        <!-- appointments -->
+        <mxCell id="t_appt" value="appointments" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="550" width="280" height="360" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_pk" value="PK appointment_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="26" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_date" value="appointment_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="52" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_slot" value="FK timeslot_id → timeslot" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_appt">
+          <mxGeometry y="78" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_patient" value="FK patient_id → patients" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_appt">
+          <mxGeometry y="104" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_doc" value="FK user_id → users (doctor)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_appt">
+          <mxGeometry y="130" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_resched" value="FK rescheduled_from → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_appt">
+          <mxGeometry y="156" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_reason" value="reason VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="182" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="208" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_online" value="is_online_appointment TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="234" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_emerg" value="is_emergency TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="260" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_notes" value="notes TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="286" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_cbd" value="completed_by_doctor_at DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="312" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_appt_src" value="secretary_records_completed_at DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_appt">
+          <mxGeometry y="338" width="280" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- selected_services -->
+        <mxCell id="t_selsvc" value="selected_services" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="960" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_selsvc_pk" value="PK selected_service_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_selsvc">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_selsvc_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_selsvc">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_selsvc_svc" value="FK service_id → services" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_selsvc">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_selsvc_notes" value="notes TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_selsvc">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_reschedule_requests -->
+        <mxCell id="t_arr" value="appointment_reschedule_requests" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="550" width="280" height="280" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_pk" value="PK request_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_arr">
+          <mxGeometry y="26" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_arr">
+          <mxGeometry y="52" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_pat" value="FK patient_id → patients" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_arr">
+          <mxGeometry y="78" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_doc" value="FK requested_doctor_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_arr">
+          <mxGeometry y="104" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_date" value="requested_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_arr">
+          <mxGeometry y="130" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_slot" value="requested_timeslot_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_arr">
+          <mxGeometry y="156" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_arr">
+          <mxGeometry y="182" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_rev" value="FK reviewed_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_arr">
+          <mxGeometry y="208" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_arr_note" value="request_note VARCHAR(500)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_arr">
+          <mxGeometry y="234" width="280" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- APPOINTMENT MEDIA & NOTES                    -->
+        <!-- ============================================ -->
+
+        <!-- appointment_media -->
+        <mxCell id="t_apmedia" value="appointment_media" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="890" width="260" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_pk" value="PK media_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_name" value="file_name VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_path" value="file_path VARCHAR(500)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_type" value="file_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_size" value="file_size INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_order" value="media_order INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_tooth" value="tooth_number INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="208" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apmedia_ub" value="FK uploaded_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_apmedia">
+          <mxGeometry y="234" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_doctor_notes -->
+        <mxCell id="t_apnotes" value="appointment_doctor_notes" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="890" width="260" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apnotes_pk" value="PK note_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apnotes">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apnotes_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_apnotes">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apnotes_doc" value="FK doctor_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_apnotes">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apnotes_text" value="note_text TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apnotes">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_apnotes_cat" value="created_at DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_apnotes">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- CLINICAL RECORDS                             -->
+        <!-- ============================================ -->
+
+        <!-- clinical_records -->
+        <mxCell id="t_cr" value="clinical_records" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1160" width="260" height="320" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_pk" value="PK record_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_cr">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_doc" value="FK doctor_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_cr">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_pat" value="FK patient_id → patients" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_cr">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_sub" value="FK submitted_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_cr">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_summary" value="summary TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_notes" value="doctor_notes TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_fu" value="follow_up_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="208" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="234" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_subat" value="submitted_at DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="260" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cr_img" value="primary_image VARCHAR(500)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_cr">
+          <mxGeometry y="286" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- ODONTOGRAM                                   -->
+        <!-- ============================================ -->
+
+        <!-- tooth -->
+        <mxCell id="t_tooth" value="tooth" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="1160" width="200" height="120" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tooth_pk" value="PK tooth_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tooth">
+          <mxGeometry y="26" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tooth_num" value="tooth_number VARCHAR(10)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tooth">
+          <mxGeometry y="52" width="200" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tooth_ul" value="upper_lower TINYINT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tooth">
+          <mxGeometry y="78" width="200" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- tooth_status_type -->
+        <mxCell id="t_tst" value="tooth_status_type" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="1340" width="220" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tst_pk" value="PK status_type_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tst">
+          <mxGeometry y="26" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tst_label" value="label VARCHAR(120)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tst">
+          <mxGeometry y="52" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tst_cat" value="category ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tst">
+          <mxGeometry y="78" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tst_code" value="code VARCHAR(50) UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tst">
+          <mxGeometry y="104" width="220" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tst_desc" value="description VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tst">
+          <mxGeometry y="130" width="220" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- tooth_status -->
+        <mxCell id="t_ts" value="tooth_status" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1360" y="1340" width="280" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_pk" value="PK tooth_status_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_ts">
+          <mxGeometry y="26" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_ts">
+          <mxGeometry y="52" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_tooth" value="FK tooth_selected → tooth" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_ts">
+          <mxGeometry y="78" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_type" value="FK status_type_id → tooth_status_type" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_ts">
+          <mxGeometry y="104" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_surface" value="tooth_surface VARCHAR(50)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_ts">
+          <mxGeometry y="130" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_ts">
+          <mxGeometry y="156" width="280" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_ts_uq" value="UQ (record_id, tooth_selected, tooth_surface, status)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=11;fontStyle=2;fontColor=#999999;" vertex="1" parent="t_ts">
+          <mxGeometry y="182" width="280" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_record_images -->
+        <mxCell id="t_crimg" value="clinical_record_images" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1340" width="240" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crimg_pk" value="PK image_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_crimg">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crimg_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_crimg">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crimg_path" value="file_path VARCHAR(500)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_crimg">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crimg_type" value="file_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_crimg">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crimg_ub" value="FK uploaded_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_crimg">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_record_services -->
+        <mxCell id="t_crsvc" value="clinical_record_services" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1580" width="240" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crsvc_pk" value="PK id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_crsvc">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crsvc_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_crsvc">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crsvc_svc" value="FK service_id → services" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_crsvc">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_crsvc_notes" value="notes TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_crsvc">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- treatment_plans -->
+        <mxCell id="t_tp" value="treatment_plans" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1540" width="260" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_pk" value="PK treatment_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tp">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_tp">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_svc" value="FK service_id → services" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_tp">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_tooth" value="tooth_number INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tp">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_desc" value="description TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tp">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tp">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tp_cost" value="estimated_cost DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tp">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- treatment_materials -->
+        <mxCell id="t_tmat" value="treatment_materials" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1820" width="260" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_pk" value="PK material_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tmat">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_tmat">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_name" value="material_name VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tmat">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_qty" value="quantity DECIMAL(10,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tmat">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_unit" value="unit VARCHAR(50)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tmat">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_tmat_cost" value="cost DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_tmat">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- prescriptions -->
+        <mxCell id="t_rx" value="prescriptions" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="740" y="1540" width="260" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_pk" value="PK prescription_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_rx">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_date" value="prescription_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_med" value="medicine_name VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_dose" value="dosage VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_brand" value="medicine_brand VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_rx_dur" value="duration VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_rx">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- patient_profiling -->
+        <mxCell id="t_pp" value="patient_profiling" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="1780" width="240" height="380" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_pk" value="PK profiling_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_pat" value="FK patient_id → patients" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_pp">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_rec" value="FK record_id → clinical_records" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_pp">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_race" value="race VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_occ" value="occupation VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_mh" value="medical_history TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_meds" value="medications TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="182" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_allergy" value="allergies VARCHAR(500)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="208" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_hyp" value="is_hypertensive TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="234" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_diab" value="is_diabetic TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="260" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_asth" value="is_asthmatic TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="286" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_hiv" value="is_hiv_positive TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="312" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pp_bg" value="background_notes TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pp">
+          <mxGeometry y="338" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- BILLING                                      -->
+        <!-- ============================================ -->
+
+        <!-- billing -->
+        <mxCell id="t_bill" value="billing" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="420" width="260" height="320" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_pk" value="PK billing_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_appt" value="FK appointment_id → appointments UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bill">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_user" value="FK user_id → users (patient)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bill">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_proc" value="FK processed_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bill">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_total" value="total_amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_paid" value="amount_paid DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_sub" value="subtotal_amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_dtype" value="discount_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="208" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_dpc" value="discount_percent DECIMAL(5,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="234" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="260" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bill_notes" value="discount_notes VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bill">
+          <mxGeometry y="286" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_line_items -->
+        <mxCell id="t_bli" value="billing_line_items" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2020" y="420" width="260" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_pk" value="PK item_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bli">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_bill" value="FK billing_id → billing" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bli">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_appt" value="FK appointment_id → appointments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bli">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_svc" value="FK service_id → services" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bli">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_desc" value="description VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bli">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_amt" value="amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bli">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bli_type" value="item_type ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bli">
+          <mxGeometry y="182" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_installments -->
+        <mxCell id="t_bi" value="billing_installments" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2020" y="700" width="260" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bi_pk" value="PK installment_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bi">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bi_bill" value="FK billing_id → billing UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bi">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bi_total" value="total_amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bi">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bi_dp" value="down_payment_percent DECIMAL(5,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bi">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bi_terms" value="num_terms INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bi">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_installment_terms -->
+        <mxCell id="t_bit" value="billing_installment_terms" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2020" y="940" width="260" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_pk" value="PK term_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bit">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_inst" value="FK installment_id → billing_installments" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_bit">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_num" value="term_number INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bit">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_due" value="due_date DATE" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bit">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_amt" value="amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bit">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_bit_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_bit">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- payments -->
+        <mxCell id="t_pay" value="payments" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="800" width="260" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_pk" value="PK payment_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pay">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_bill" value="FK billing_id → billing" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_pay">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_amt" value="amount DECIMAL(12,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pay">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_method" value="payment_method VARCHAR(50)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pay">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_or" value="or_number VARCHAR(50)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pay">
+          <mxGeometry y="130" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pay_rec" value="FK recorded_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_pay">
+          <mxGeometry y="156" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- invoices -->
+        <mxCell id="t_inv" value="invoices" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="1700" y="1060" width="260" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_inv_pk" value="PK invoice_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_inv">
+          <mxGeometry y="26" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_inv_bill" value="FK billing_id → billing UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_inv">
+          <mxGeometry y="52" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_inv_num" value="invoice_number VARCHAR(30) UQ" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_inv">
+          <mxGeometry y="78" width="260" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_inv_issued" value="FK issued_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_inv">
+          <mxGeometry y="104" width="260" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- NOTIFICATIONS & SYSTEM                       -->
+        <!-- ============================================ -->
+
+        <!-- notifications -->
+        <mxCell id="t_notif" value="notifications" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2340" y="100" width="240" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_notif_pk" value="PK notification_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_notif">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_notif_uid" value="FK user_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_notif">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_notif_title" value="title VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_notif">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_notif_body" value="body TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_notif">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_notif_read" value="is_read TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_notif">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- patient_notifications -->
+        <mxCell id="t_pnotif" value="patient_notifications" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2340" y="340" width="240" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pnotif_pk" value="PK patient_notification_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pnotif">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pnotif_pat" value="FK patient_id → patients" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_pnotif">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pnotif_title" value="title VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pnotif">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pnotif_body" value="body TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pnotif">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_pnotif_read" value="is_read TINYINT(1)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_pnotif">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- system_logs -->
+        <mxCell id="t_logs" value="system_logs" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2340" y="580" width="240" height="220" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_pk" value="PK system_log_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_logs">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_uid" value="FK user_id → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_logs">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_action" value="action VARCHAR(120)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_logs">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_ent" value="entity_type VARCHAR(100)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_logs">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_eid" value="entity_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_logs">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_logs_details" value="details TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_logs">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- contact_messages -->
+        <mxCell id="t_contact" value="contact_messages" style="swimlane;fontStyle=1;align=center;startSize=26;html=1;" vertex="1" parent="1">
+          <mxGeometry x="2340" y="860" width="240" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_pk" value="PK message_id INT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_contact">
+          <mxGeometry y="26" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_name" value="full_name VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_contact">
+          <mxGeometry y="52" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_email" value="email VARCHAR(150)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_contact">
+          <mxGeometry y="78" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_msg" value="message TEXT" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_contact">
+          <mxGeometry y="104" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_status" value="status ENUM" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;" vertex="1" parent="t_contact">
+          <mxGeometry y="130" width="240" height="26" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_contact_read" value="FK read_by → users" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;fontColor=#0066CC;" vertex="1" parent="t_contact">
+          <mxGeometry y="156" width="240" height="26" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================ -->
+        <!-- RELATIONSHIPS (edges)                        -->
+        <!-- ============================================ -->
+
+        <!-- users.role_id → role.role_id -->
+        <mxCell id="e_users_role" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_users_role" target="t_role_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- users.added_by → users.user_id -->
+        <mxCell id="e_users_added" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_users_added" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- patients.added_by → users.user_id -->
+        <mxCell id="e_pat_added" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_pat_added" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- dentist_specialization.user_id → users.user_id -->
+        <mxCell id="e_dspec_uid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_dspec_uid" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- dentist_specialization.specialization_id → specialization.specialization_id -->
+        <mxCell id="e_dspec_sid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_dspec_sid" target="t_spec_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- doctor_availability.user_id → users.user_id -->
+        <mxCell id="e_davail_uid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_davail_uid" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- doctor_leaves.user_id → users.user_id -->
+        <mxCell id="e_dleave_uid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_dleave_uid" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- services.added_by → users.user_id -->
+        <mxCell id="e_svc_added" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_svc_added" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- timeslot.doctor_id → users.user_id -->
+        <mxCell id="e_slot_doc" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_slot_doc" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- timeslot_service.service_id → services.service_id -->
+        <mxCell id="e_slotsvc_svc" value="" style="endArrow=ERone;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_slotsvc_sid" target="t_svc_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointments.user_id → users.user_id -->
+        <mxCell id="e_appt_doc" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_appt_doc" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointments.patient_id → patients.patient_id -->
+        <mxCell id="e_appt_pat" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_appt_patient" target="t_pat_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointments.timeslot_id → timeslot.timeslot_id -->
+        <mxCell id="e_appt_slot" value="" style="endArrow=ERzeroOne;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_appt_slot" target="t_slot_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- selected_services.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_selsvc_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_selsvc_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- selected_services.service_id → services.service_id -->
+        <mxCell id="e_selsvc_svc" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_selsvc_svc" target="t_svc_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_reschedule_requests.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_arr_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_arr_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_reschedule_requests.patient_id → patients.patient_id -->
+        <mxCell id="e_arr_pat" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_arr_pat" target="t_pat_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_media.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_apmedia_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_apmedia_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- appointment_doctor_notes.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_apnotes_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_apnotes_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_records.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_cr_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_cr_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_records.doctor_id → users.user_id -->
+        <mxCell id="e_cr_doc" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_cr_doc" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_records.patient_id → patients.patient_id -->
+        <mxCell id="e_cr_pat" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_cr_pat" target="t_pat_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- tooth_status.record_id → clinical_records.record_id -->
+        <mxCell id="e_ts_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_ts_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- tooth_status.tooth_selected → tooth.tooth_id -->
+        <mxCell id="e_ts_tooth" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_ts_tooth" target="t_tooth_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- tooth_status.status_type_id → tooth_status_type.status_type_id -->
+        <mxCell id="e_ts_type" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_ts_type" target="t_tst_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_record_images.record_id → clinical_records.record_id -->
+        <mxCell id="e_crimg_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_crimg_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_record_services.record_id → clinical_records.record_id -->
+        <mxCell id="e_crsvc_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_crsvc_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- clinical_record_services.service_id → services.service_id -->
+        <mxCell id="e_crsvc_svc" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_crsvc_svc" target="t_svc_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- treatment_plans.record_id → clinical_records.record_id -->
+        <mxCell id="e_tp_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_tp_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- treatment_materials.record_id → clinical_records.record_id -->
+        <mxCell id="e_tmat_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_tmat_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- prescriptions.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_rx_appt" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_rx_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- patient_profiling.patient_id → patients.patient_id -->
+        <mxCell id="e_pp_pat" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_pp_pat" target="t_pat_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- patient_profiling.record_id → clinical_records.record_id -->
+        <mxCell id="e_pp_rec" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_pp_rec" target="t_cr_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- billing.appointment_id → appointments.appointment_id -->
+        <mxCell id="e_bill_appt" value="" style="endArrow=ERone;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_bill_appt" target="t_appt_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- billing.user_id → users.user_id -->
+        <mxCell id="e_bill_user" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_bill_user" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_line_items.billing_id → billing.billing_id -->
+        <mxCell id="e_bli_bill" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_bli_bill" target="t_bill_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_installments.billing_id → billing.billing_id -->
+        <mxCell id="e_bi_bill" value="" style="endArrow=ERone;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="e_bi_bill_src" target="t_bill_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- billing_installment_terms.installment_id → billing_installments.installment_id -->
+        <mxCell id="e_bit_inst" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_bit_inst" target="t_bi_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- payments.billing_id → billing.billing_id -->
+        <mxCell id="e_pay_bill" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_pay_bill" target="t_bill_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- invoices.billing_id → billing.billing_id -->
+        <mxCell id="e_inv_bill" value="" style="endArrow=ERone;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_inv_bill" target="t_bill_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- notifications.user_id → users.user_id -->
+        <mxCell id="e_notif_uid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_notif_uid" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- patient_notifications.patient_id → patients.patient_id -->
+        <mxCell id="e_pnotif_pat" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERmandOne;startFill=0;startSize=12;" edge="1" source="t_pnotif_pat" target="t_pat_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- system_logs.user_id → users.user_id -->
+        <mxCell id="e_logs_uid" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_logs_uid" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- contact_messages.read_by → users.user_id -->
+        <mxCell id="e_contact_read" value="" style="endArrow=ERmany;endFill=0;endSize=12;startArrow=ERzeroOne;startFill=0;startSize=12;" edge="1" source="t_contact_read" target="t_users_pk" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

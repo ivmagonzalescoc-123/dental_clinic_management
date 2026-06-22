@@ -86,6 +86,16 @@ if ($hasLegacyLegend) {
 ensure_clinical_records_profiling_column($conn);
 sync_log('clinical_records.profiling ensured');
 
+$uqCheck = $conn->query("SHOW INDEX FROM tooth_status WHERE Key_name = 'uq_tooth_status_record_tooth'");
+if ($uqCheck && $uqCheck->num_rows > 0) {
+    sync_log('Fixing tooth_status unique key to include tooth_surface and status...');
+    $conn->query('ALTER TABLE tooth_status DROP INDEX uq_tooth_status_record_tooth');
+    $conn->query('ALTER TABLE tooth_status ADD UNIQUE KEY uq_tooth_status_record_tooth_surface (record_id, tooth_selected, tooth_surface, status)');
+    sync_log('  OK tooth_status unique key updated');
+} else {
+    sync_log('tooth_status unique key already includes tooth_surface');
+}
+
 billing_ensure_tables($conn);
 sync_log('billing tables/columns ensured');
 

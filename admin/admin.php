@@ -178,6 +178,12 @@ switch ($role_key) {
                     <span>System Logs</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=backups" data-tooltip="Backups" title="Backups">
+                    <i class="bi bi-database"></i>
+                    <span>Backups</span>
+                </a>
+            </li>
 
         </ul>
     </aside>
@@ -237,6 +243,9 @@ switch ($role_key) {
                                     break;
                                 case "settings":
                                     include "admin_modules/settings.php";
+                                    break;
+                                case "backups":
+                                    include "admin_modules/backups.php";
                                     break;
                                 default:
                                     include "admin_modules/dashboard.php";

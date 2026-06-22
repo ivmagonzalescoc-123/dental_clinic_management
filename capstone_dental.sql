@@ -540,24 +540,6 @@ CREATE TABLE `backup` (
   `file_size` decimal(12,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-CREATE OR REPLACE VIEW `billing_summary` AS
-SELECT
-  b.billing_id,
-  b.appointment_id,
-  b.user_id,
-  b.total_amount,
-  b.amount_paid,
-  (b.total_amount - b.amount_paid) AS balance,
-  b.subtotal_amount,
-  b.discount_type,
-  b.discount_percent,
-  (b.subtotal_amount * b.discount_percent / 100) AS discount_amount,
-  b.discount_notes,
-  b.status,
-  b.processed_by,
-  b.created_at
-FROM billing b;
-
 ALTER TABLE `role`
   ADD PRIMARY KEY (`role_id`);
 
@@ -661,7 +643,7 @@ ALTER TABLE `tooth_status_type`
 
 ALTER TABLE `tooth_status`
   ADD PRIMARY KEY (`tooth_status_id`),
-  ADD UNIQUE KEY `uq_tooth_status_record_tooth` (`record_id`, `tooth_selected`),
+  ADD UNIQUE KEY `uq_tooth_status_record_tooth_surface` (`record_id`, `tooth_selected`, `tooth_surface`, `status`),
   ADD KEY `fk_tooth_status_tooth` (`tooth_selected`),
   ADD KEY `fk_tooth_status_type` (`status_type_id`),
   ADD KEY `fk_tooth_status_record` (`record_id`);
