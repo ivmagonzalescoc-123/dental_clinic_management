@@ -2008,3 +2008,350 @@ table a:hover {
     0%   { background-position: 200% center; }
     100% { background-position: 0%   center; }
 }
+
+/* ========================================
+   UNIFIED MODULE CONTENT BUTTONS & TYPOGRAPHY
+   Matches landing page professional style
+   Excludes: sidebar, header, navbar, modals
+   ======================================== */
+
+/* -- Font consistency for all module content -- */
+.section .card,
+.section .table-responsive,
+.section .module-section-nav {
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+}
+.section h5, .section h6, .card-title {
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+}
+
+/* -- Unified button base for module content -- */
+#main .section .btn,
+#main .card-body .btn,
+#main .module-section-nav .btn {
+    border-radius: 8px;
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 7px 16px;
+    letter-spacing: 0.01em;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border-width: 1.5px;
+}
+#main .section .btn:hover,
+#main .card-body .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+#main .section .btn:active,
+#main .card-body .btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+/* -- Primary buttons -- */
+#main .section .btn-primary,
+#main .card-body .btn-primary {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+#main .section .btn-primary:hover,
+#main .card-body .btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
+}
+
+/* -- Outline primary buttons -- */
+#main .section .btn-outline-primary,
+#main .card-body .btn-outline-primary {
+    background: transparent;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+#main .section .btn-outline-primary:hover,
+#main .card-body .btn-outline-primary:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* -- Success buttons -- */
+#main .section .btn-success,
+#main .card-body .btn-success {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+#main .section .btn-success:hover,
+#main .card-body .btn-success:hover {
+    background: #15803d;
+    border-color: #15803d;
+    color: #fff;
+}
+#main .section .btn-outline-success,
+#main .card-body .btn-outline-success {
+    background: transparent;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+#main .section .btn-outline-success:hover,
+#main .card-body .btn-outline-success:hover {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+}
+
+/* -- Danger buttons -- */
+#main .section .btn-danger,
+#main .card-body .btn-danger {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+#main .section .btn-danger:hover,
+#main .card-body .btn-danger:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    color: #fff;
+}
+#main .section .btn-outline-danger,
+#main .card-body .btn-outline-danger {
+    background: transparent;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+#main .section .btn-outline-danger:hover,
+#main .card-body .btn-outline-danger:hover {
+    background: #dc3545;
+    border-color: #dc3545;
+    color: #fff;
+}
+
+/* -- Warning buttons -- */
+#main .section .btn-warning,
+#main .card-body .btn-warning {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #fff;
+}
+#main .section .btn-warning:hover,
+#main .card-body .btn-warning:hover {
+    background: #d97706;
+    border-color: #d97706;
+    color: #fff;
+}
+#main .section .btn-outline-warning,
+#main .card-body .btn-outline-warning {
+    background: transparent;
+    border-color: #f59e0b;
+    color: #b45309;
+}
+#main .section .btn-outline-warning:hover,
+#main .card-body .btn-outline-warning:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
+    color: #fff;
+}
+
+/* -- Info buttons -- */
+#main .section .btn-info,
+#main .card-body .btn-info {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+#main .section .btn-info:hover,
+#main .card-body .btn-info:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+    color: #fff;
+}
+#main .section .btn-outline-info,
+#main .card-body .btn-outline-info {
+    background: transparent;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+#main .section .btn-outline-info:hover,
+#main .card-body .btn-outline-info:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+/* -- Secondary buttons -- */
+#main .section .btn-secondary,
+#main .card-body .btn-secondary {
+    background: #64748b;
+    border-color: #64748b;
+    color: #fff;
+}
+#main .section .btn-secondary:hover,
+#main .card-body .btn-secondary:hover {
+    background: #475569;
+    border-color: #475569;
+    color: #fff;
+}
+#main .section .btn-outline-secondary,
+#main .card-body .btn-outline-secondary {
+    background: transparent;
+    border-color: #64748b;
+    color: #64748b;
+}
+#main .section .btn-outline-secondary:hover,
+#main .card-body .btn-outline-secondary:hover {
+    background: #64748b;
+    border-color: #64748b;
+    color: #fff;
+}
+
+/* -- Button sizing: sm inside tables and inline actions -- */
+#main .section .btn-sm,
+#main .card-body .btn-sm {
+    padding: 5px 12px;
+    font-size: 12.5px;
+    border-radius: 6px;
+}
+
+/* -- Badge consistency -- */
+#main .section .badge,
+#main .card-body .badge {
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: 0.02em;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+/* -- Table text consistency -- */
+#main .section .table,
+#main .card-body .table {
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-size: 13.5px;
+    color: var(--sidebar-text);
+}
+#main .section .table th,
+#main .card-body .table th {
+    font-weight: 700;
+    font-size: 12.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+    border-bottom-width: 2px;
+    border-color: var(--border-color);
+}
+
+/* -- Card headers -- */
+#main .section .card-header,
+#main .card-body .card-header {
+    background: #fff;
+    border-bottom: 2px solid var(--border-color);
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+}
+#main .section .card-header h6,
+#main .section .card-header h5 {
+    font-weight: 700;
+    color: var(--sidebar-text);
+}
+
+/* -- Form controls -- */
+#main .section .form-control,
+#main .section .form-select,
+#main .card-body .form-control,
+#main .card-body .form-select {
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-size: 13.5px;
+    border-radius: 8px;
+    border-color: var(--border-color);
+    padding: 8px 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+#main .section .form-control:focus,
+#main .section .form-select:focus,
+#main .card-body .form-control:focus,
+#main .card-body .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(17, 115, 193, 0.15);
+}
+
+/* -- Alert consistency -- */
+#main .section .alert,
+#main .card-body .alert {
+    border-radius: 10px;
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-size: 13.5px;
+    border-width: 1px;
+}
+
+/* -- Pagination nav pills -- */
+#main .section .nav-pills .nav-link,
+#main .card-body .nav-pills .nav-link {
+    border-radius: 8px;
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 7px 16px;
+    transition: all 0.2s ease;
+    color: var(--sidebar-text);
+}
+#main .section .nav-pills .nav-link.active,
+#main .card-body .nav-pills .nav-link.active {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+/* -- Modal content consistency (for dialogs opened from module) -- */
+.modal .modal-content {
+    border-radius: 14px;
+    border: none;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+.modal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+}
+.modal .modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+.modal .btn {
+    border-radius: 8px;
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-weight: 600;
+    font-size: 13.5px;
+    padding: 8px 20px;
+}
+
+/* -- Consistent module section headings -- */
+#main .section h5 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--sidebar-text);
+}
+#main .section h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* -- Dropdown menu consistency -- */
+.dropdown-menu {
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    font-family: 'Mothwing', 'Segoe UI', Roboto, sans-serif;
+    font-size: 13.5px;
+    padding: 6px;
+}
+.dropdown-item {
+    border-radius: 6px;
+    padding: 8px 14px;
+    transition: background 0.15s ease;
+}
+.dropdown-item:hover {
+    background: rgba(17, 115, 193, 0.08);
+    color: var(--primary-color);
+}

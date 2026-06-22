@@ -95,6 +95,48 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 }
 
 // Payments removed: no payment methods
+
+// --- Dashboard Stats ---
+$thisMonth = date('Y-m');
+$pendingCount = 0;
+$overdueCount = 0;
+$collectThisMonth = 0.0;
+
+foreach ($billings as $b) {
+    $status = strtolower((string)($b['status'] ?? 'unpaid'));
+    $balance = (float)($b['balance'] ?? ((float)($b['total_amount'] ?? 0) - (float)($b['amount_paid'] ?? 0)));
+    $apptDate = (string)($b['appointment_date'] ?? '');
+
+    if ($status !== 'paid' && $balance > 0) {
+        $pendingCount++;
+        $collectThisMonth += $balance;
+    }
+    if ($status !== 'paid' && $apptDate !== '' && $apptDate < $today && $balance > 0) {
+        $overdueCount++;
+    }
+}
+
+// Monthly collection data for chart (last 6 months)
+$monthlyData = [];
+for ($i = 5; $i >= 0; $i--) {
+    $mDate = date('Y-m', strtotime("-{$i} months"));
+    $mLabel = date('M Y', strtotime("-{$i} months"));
+    $mTotal = 0.0;
+    foreach ($billings as $b) {
+        $bCreated = substr((string)($b['created_at'] ?? ''), 0, 7);
+        if ($bCreated === $mDate) {
+            $mTotal += (float)($b['total_amount'] ?? 0);
+        }
+    }
+    $monthlyData[] = ['label' => $mLabel, 'total' => $mTotal];
+}
+// Ensure at least a baseline so the chart always shows a line
+$hasAnyData = false;
+foreach ($monthlyData as $md) { if ($md['total'] > 0) { $hasAnyData = true; break; } }
+if (!$hasAnyData) {
+    $monthlyData[0]['total'] = 0;
+    $monthlyData[count($monthlyData) - 1]['total'] = 0;
+}
 ?>
 
 <!-- Alert Messages -->
@@ -109,19 +151,60 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 
 <!-- Billing Summary Cards -->
 <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
-                <h6 class="card-title text-muted">Total Billings</h6>
-                <h3 class="mb-0">₱<?php
+                <div class="mb-2"><i class="bi bi-receipt text-primary" style="font-size:1.6rem;"></i></div>
+                <h6 class="text-muted mb-1">Total Billings</h6>
+                <h4 class="mb-0 fw-bold">₱<?php
                 $totalSum = 0;
                 foreach ($billings as $b)
                     $totalSum += (float) $b['total_amount'];
                 echo number_format($totalSum, 2);
-                ?></h3>
+                ?></h4>
                 <small class="text-muted"><?php echo count($billings); ?> invoices</small>
             </div>
         </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-2"><i class="bi bi-person-exclamation text-warning" style="font-size:1.6rem;"></i></div>
+                <h6 class="text-muted mb-1">Pending Payments</h6>
+                <h4 class="mb-0 fw-bold"><?php echo $pendingCount; ?></h4>
+                <small class="text-muted">patients with balance</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-2"><i class="bi bi-cash-stack text-success" style="font-size:1.6rem;"></i></div>
+                <h6 class="text-muted mb-1">To Collect</h6>
+                <h4 class="mb-0 fw-bold">₱<?php echo number_format($collectThisMonth, 2); ?></h4>
+                <small class="text-muted">outstanding balance</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="mb-2"><i class="bi bi-exclamation-triangle text-danger" style="font-size:1.6rem;"></i></div>
+                <h6 class="text-muted mb-1">Overdue</h6>
+                <h4 class="mb-0 fw-bold"><?php echo $overdueCount; ?></h4>
+                <small class="text-muted">past due date</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monthly Collection Chart -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header">
+        <h6 class="mb-0"><i class="bi bi-graph-up"></i> Monthly Billings Overview</h6>
+    </div>
+    <div class="card-body">
+        <canvas id="billingChart" height="80"></canvas>
     </div>
 </div>
 
@@ -564,4 +647,32 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
 
         filterBillingTable();
     });
+</script>
+
+<script>
+(function() {
+    if (typeof ApexCharts === 'undefined') return;
+    var el = document.getElementById('billingChart');
+    if (!el) return;
+
+    var labels = <?php echo json_encode(array_column($monthlyData, 'label')); ?>;
+    var totals = <?php echo json_encode(array_map(fn($d) => round($d['total'], 2), $monthlyData)); ?>;
+
+    var opts = {
+        chart: { type: 'area', height: 260, toolbar: { show: false } },
+        series: [{ name: 'Billings', data: totals }],
+        legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: '#6c757d' } },
+        xaxis: { categories: labels, axisBorder: { show: true }, axisTicks: { show: true } },
+        stroke: { curve: 'smooth', width: 3 },
+        colors: ['#1173c1'],
+        fill: { type: 'solid', opacity: 0 },
+        dataLabels: { enabled: false },
+        yaxis: { min: 0, forceNiceScale: true, show: true },
+        grid: { show: true, strokeDashArray: 4, borderColor: '#e9ecef' },
+        tooltip: {
+            y: { formatter: function(val) { return '₱' + val.toLocaleString(undefined, {minimumFractionDigits:2}); } }
+        }
+    };
+    new ApexCharts(el, opts).render();
+})();
 </script>

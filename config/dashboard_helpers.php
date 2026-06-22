@@ -155,22 +155,23 @@ if (!function_exists('dashboard_render_appt_chart_script')) {
         $labelsJson = json_encode($chartLabels);
         $valuesJson = json_encode($seriesValues);
         $colorJson = json_encode($color);
-        $typeJson = json_encode($chartType);
         echo <<<HTML
 <script>
 (function () {
     if (typeof ApexCharts === 'undefined') return;
-    const el = document.getElementById('{$safeId}');
+    var el = document.getElementById('{$safeId}');
     if (!el) return;
-    const opts = {
-        chart: { type: {$typeJson}, height: 260, toolbar: { show: false } },
+    var opts = {
+        chart: { type: 'area', height: 260, toolbar: { show: false } },
         series: [{ name: 'Appointments', data: {$valuesJson} }],
-        xaxis: { categories: {$labelsJson} },
+        legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: '#6c757d' } },
+        xaxis: { categories: {$labelsJson}, axisBorder: { show: true }, axisTicks: { show: true } },
         stroke: { curve: 'smooth', width: 3 },
         colors: [{$colorJson}],
+        fill: { type: 'solid', opacity: 0 },
         dataLabels: { enabled: false },
-        yaxis: { min: 0, forceNiceScale: true },
-        grid: { strokeDashArray: 4 }
+        yaxis: { min: 0, forceNiceScale: true, show: true },
+        grid: { show: true, strokeDashArray: 4, borderColor: '#e9ecef' }
     };
     new ApexCharts(el, opts).render();
 })();

@@ -3,7 +3,6 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 
 $patient_id = $_SESSION['patient_id'] ?? 0;
 
-// Fetch services — same price/duration logic as manage_services.php & get_timeslots.php
 $services = [];
 $svcSql = "SELECT s.service_id,
                   s.service_name,
@@ -30,38 +29,105 @@ if ($svcRes) {
 ?>
 
 <div class="card border-0">
-	<div class="card-header d-flex justify-content-between align-items-center">
+	<div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
 		<h5 class="card-title mb-0">Services</h5>
+		<span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2">
+			<?php echo count($services); ?> service<?php echo count($services) === 1 ? '' : 's'; ?>
+		</span>
 	</div>
 	<div class="card-body">
-		<div class="services-grid d-grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(220px,1fr));">
-			<?php if (empty($services)): ?>
-				<div class="text-muted">No services available.</div>
-			<?php else: foreach ($services as $s): ?>
-				<div class="service-card card p-3 shadow-sm" data-service-id="<?php echo htmlspecialchars($s['service_id']); ?>">
-					<div class="service-name fw-bold mb-2"><?php echo htmlspecialchars($s['service_name']); ?></div>
-					<div class="service-price mb-2">Starting Price ₱<?php echo htmlspecialchars(number_format((float)$s['initial_price'],2)); ?></div>
-					<div class="service-time text-muted small mb-2">
-						Estimated Time:
-						<?php if (!empty($s['service_duration_minutes'])): ?>
-							<?php echo htmlspecialchars((string)((int)$s['service_duration_minutes'])); ?> min
-						<?php else: ?>
-							TBD
-						<?php endif; ?>
-					</div>
-					<div class="service-desc text-muted small" style="min-height:40px"><?php echo htmlspecialchars($s['description'] ?? ''); ?></div>
-				</div>
-			<?php endforeach; endif; ?>
+		<div class="unified-table-search-toolbar mb-3">
+			<div class="unified-table-search-wrap">
+				<i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+				<input type="search" id="patientServicesSearch" class="form-control unified-table-search-input"
+					placeholder="Search service name or description..." autocomplete="off" aria-label="Search services">
+				<button type="button" class="unified-table-search-clear" id="patientServicesSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+			</div>
+			<div id="patientServicesSearchMeta" class="patient-appt-history-search-meta"></div>
 		</div>
+
+		<?php if (empty($services)): ?>
+			<div class="text-center text-muted py-4">No services available.</div>
+		<?php else: ?>
+			<div class="table-responsive">
+				<table class="table table-hover align-middle mb-0" id="patientServicesTable" data-skip-table-search="1">
+					<thead>
+						<tr>
+							<th>Service</th>
+							<th>Starting Price</th>
+							<th>Est. Duration</th>
+							<th>Description</th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ($services as $s): ?>
+							<?php
+							$duration = (int)($s['service_duration_minutes'] ?? 0);
+							$searchBlob = strtolower(trim(
+								($s['service_name'] ?? '') . ' ' .
+								($s['description'] ?? '') . ' ' .
+								number_format((float)($s['initial_price'] ?? 0), 2)
+							));
+							?>
+							<tr data-search="<?php echo htmlspecialchars($searchBlob, ENT_QUOTES, 'UTF-8'); ?>">
+								<td class="fw-semibold"><?php echo htmlspecialchars($s['service_name']); ?></td>
+								<td class="text-primary fw-semibold">₱<?php echo number_format((float)$s['initial_price'], 2); ?></td>
+								<td>
+									<?php if ($duration > 0): ?>
+										<span class="badge bg-light text-dark border"><?php echo $duration; ?> min</span>
+									<?php else: ?>
+										<span class="text-muted">TBD</span>
+									<?php endif; ?>
+								</td>
+								<td class="text-muted small" style="max-width: 420px;">
+									<?php echo htmlspecialchars($s['description'] ?? '—'); ?>
+								</td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
 	</div>
 </div>
 
-<style>
-	.service-card { border-radius:8px; }
-	.service-card:hover { transform: translateY(-4px); }
-	.service-price {
-		color: #0d6efd;
-		font-weight: 700;
-	}
-</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	var searchInput = document.getElementById('patientServicesSearch');
+	var clearBtn = document.getElementById('patientServicesSearchClear');
+	var meta = document.getElementById('patientServicesSearchMeta');
+	var rows = Array.from(document.querySelectorAll('#patientServicesTable tbody tr'));
+	if (!searchInput || rows.length === 0) return;
 
+	var total = rows.length;
+
+	function updateList() {
+		var term = (searchInput.value || '').trim().toLowerCase();
+		var visible = 0;
+
+		rows.forEach(function (row) {
+			var haystack = row.getAttribute('data-search') || '';
+			var show = term === '' || haystack.indexOf(term) !== -1;
+			row.style.display = show ? '' : 'none';
+			if (show) visible++;
+		});
+
+		if (clearBtn) clearBtn.style.display = term ? '' : 'none';
+		if (meta) {
+			meta.textContent = term
+				? ('Showing ' + visible + ' of ' + total + ' services')
+				: ('Showing all ' + total + ' services');
+		}
+	}
+
+	searchInput.addEventListener('input', updateList);
+	if (clearBtn) {
+		clearBtn.addEventListener('click', function () {
+			searchInput.value = '';
+			searchInput.focus();
+			updateList();
+		});
+	}
+	updateList();
+});
+</script>
