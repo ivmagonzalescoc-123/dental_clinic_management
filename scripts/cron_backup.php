@@ -8,6 +8,7 @@
  */
 
 header('Content-Type: application/json');
+@set_time_limit(300);
 
 require_once __DIR__ . '/../config/env.php';
 load_env();
@@ -15,45 +16,39 @@ load_env();
 $secretKey = trim((string)env('CRON_SECRET_KEY', ''));
 $providedKey = trim((string)($_GET['key'] ?? $_SERVER['HTTP_X_CRON_KEY'] ?? ''));
 
-$isAdminTrigger = false;
-if (session_status() === PHP_SESSION_NONE) session_start();
-if (($_SESSION['role'] ?? '') === 'admin' && isset($_GET['admin_run'])) {
-    $isAdminTrigger = true;
-}
-
-if (!$isAdminTrigger) {
-    if ($secretKey === '') {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'CRON_SECRET_KEY not configured']);
-        exit;
-    }
-    if ($providedKey === '' || !hash_equals($secretKey, $providedKey)) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Invalid cron key']);
-        exit;
-    }
-}
-
-$lockFile = __DIR__ . '/../scripts/.backup_lock';
-if (is_file($lockFile) && (time() - filemtime($lockFile)) < 300 && !$isAdminTrigger) {
-    echo json_encode(['success' => true, 'status' => 'skipped', 'message' => 'Ran recently, skipping']);
+if ($secretKey === '') {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'CRON_SECRET_KEY not configured in .env']);
     exit;
 }
-@touch($lockFile);
+
+if ($providedKey === '' || !hash_equals($secretKey, $providedKey)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Invalid key']);
+    exit;
+}
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config/system_logs.php';
 
 $backupDir = dirname(__DIR__) . '/backups';
-if (!is_dir($backupDir)) @mkdir($backupDir, 0755, true);
+if (!is_dir($backupDir)) {
+    $mkdirResult = @mkdir($backupDir, 0755, true);
+    if (!$mkdirResult) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Cannot create backups directory', 'path' => $backupDir, 'error' => error_get_last()]);
+        exit;
+    }
+}
 
 $date = date('Y-m-d_H-i-s');
 $fileName = "capstone_dental_backup_{$date}.sql";
 $filePath = $backupDir . '/' . $fileName;
 
-$handle = @fopen($filePath, 'w');
+$handle = fopen($filePath, 'w');
 if (!$handle) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Cannot create backup file']);
+    echo json_encode(['success' => false, 'message' => 'Cannot create backup file', 'path' => $filePath, 'dir_writable' => is_writable($backupDir), 'error' => error_get_last()]);
     exit;
 }
 
@@ -120,9 +115,8 @@ fclose($handle);
 $fileSize = filesize($filePath);
 $fileSizeKB = round($fileSize / 1024, 2);
 
-$adminId = $isAdminTrigger ? (int)($_SESSION['user_id'] ?? 0) : null;
 $conn->query("INSERT INTO backup (user_id, backup_date, file_name, file_path, file_size) VALUES (" .
-    ($adminId !== null ? "$adminId" : "NULL") .
+    "NULL" .
     ", NOW(), '" . $conn->real_escape_string($fileName) .
     "', '" . $conn->real_escape_string('backups/' . $fileName) .
     "', $fileSizeKB)");
@@ -138,10 +132,16 @@ if ($oldBackups) {
     $conn->query("DELETE FROM backup WHERE backup_date < '$cutoff'");
 }
 
+if (function_exists('log_system_event')) {
+    log_system_event($conn, 'cron.backup.create', 'backup', null,
+        "Scheduled backup: $fileName ($fileSizeKB KB, $rowCount rows, " . count($tableNames) . " tables)", null);
+}
+
 echo json_encode([
     'success' => true,
     'message' => 'Backup completed',
     'file' => $fileName,
+    'path' => $filePath,
     'size_kb' => $fileSizeKB,
     'rows' => $rowCount,
     'tables' => count($tableNames),

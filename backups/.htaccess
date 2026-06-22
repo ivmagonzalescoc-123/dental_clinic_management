@@ -1,2 +1,4 @@
-# Deny all direct access to backup files
-Require all denied
+# Allow access to backup files
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
