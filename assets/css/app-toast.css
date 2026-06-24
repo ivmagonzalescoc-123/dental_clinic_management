@@ -43,7 +43,7 @@
 }
 
 .app-toast-success {
-    background: linear-gradient(135deg, #14532d 0%, #166534 100%) !important;
+    background: linear-gradient(135deg, #0c4a6e 0%, #1173c1 100%) !important;
     color: #ffffff !important;
     border: none !important;
 }
@@ -61,7 +61,7 @@
 }
 
 .app-toast-info {
-    background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%) !important;
+    background: linear-gradient(135deg, #1e3a5f 0%, #1173c1 100%) !important;
     color: #ffffff !important;
     border: none !important;
 }
@@ -74,29 +74,32 @@
     width: 28px;
     height: 28px;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: 0;
     font-weight: 700;
     line-height: 1;
 }
+.app-toast-icon svg {
+    display: block;
+}
 
 .app-toast-icon--success {
-    background: #22c55e;
-    color: #ffffff;
+    background: #ffffff;
+    color: #1173c1;
 }
 
 .app-toast-icon--danger {
-    background: #ef4444;
-    color: #ffffff;
+    background: #ffffff;
+    color: #dc3545;
 }
 
 .app-toast-icon--warning {
-    background: #f59e0b;
-    color: #ffffff;
+    background: #ffffff;
+    color: #f59e0b;
 }
 
 .app-toast-icon--info {
-    background: #0ea5e9;
-    color: #ffffff;
+    background: #ffffff;
+    color: #1173c1;
 }
 
 .app-toast-body {
