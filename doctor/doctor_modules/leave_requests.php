@@ -156,8 +156,9 @@ if ($doctorStmt) {
 }
 
 $availabilityWeekdays = [];
+$availabilityTimes = [];
 if ($conn->query("SHOW TABLES LIKE 'doctor_availability'")->num_rows > 0) {
-    $availStmt = $conn->prepare('SELECT weekday FROM doctor_availability WHERE user_id = ?');
+    $availStmt = $conn->prepare('SELECT weekday, start_time, end_time FROM doctor_availability WHERE user_id = ? AND status = "active"');
     if ($availStmt) {
         $availStmt->bind_param('i', $doctorId);
         $availStmt->execute();
@@ -166,6 +167,10 @@ if ($conn->query("SHOW TABLES LIKE 'doctor_availability'")->num_rows > 0) {
             $weekday = (int)($a['weekday'] ?? -1);
             if ($weekday >= 0 && $weekday <= 6) {
                 $availabilityWeekdays[$weekday] = true;
+                $availabilityTimes[$weekday] = [
+                    'start' => (string)($a['start_time'] ?? ''),
+                    'end' => (string)($a['end_time'] ?? ''),
+                ];
             }
         }
         $availStmt->close();
@@ -296,7 +301,7 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
         </div>
 
         <div class="table-responsive">
-            <table class="table table-bordered doctor-availability-calendar mb-0" data-skip-table-search="1">
+            <table class="table table-bordered dr-cal-table mb-0" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>Sun</th>
@@ -331,45 +336,46 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
                             $isPendingLeave = !empty($pendingLeaveByDate[$dateStr]);
                             $isAvailable = !$isClosed && (($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true);
 
-                            $cellClass = 'calendar-cell';
-                            $markHtml = '';
-                            $popoverText = '';
+                            $cellClass = 'dr-cal-cell';
+                            $marksHtml = '';
+                            $today = date('Y-m-d');
+                            $isToday = ($dateStr === $today);
 
+                            if ($isToday) $cellClass .= ' dr-cal-today';
                             if ($isClosed) {
-                                $cellClass .= ' cell-closed';
-                                $markHtml = '<span class="mark mark-closed">Clinic Closed</span>';
+                                $cellClass .= ' dr-cal-closed';
+                                $marksHtml = '<div class="dr-cal-closed-label">Closed</div>';
                             } elseif ($isApprovedLeave) {
-                                $cellClass .= ' cell-leave';
-                                $markHtml = '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="top" data-bs-content="{{POPOVER}}">On Leave</button>';
-                            } elseif ($isPendingLeave) {
-                                $cellClass .= ' cell-pending';
-                                $markHtml = '<button type="button" class="mark mark-pending mark-btn" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="top" data-bs-content="{{POPOVER}}">Leave Pending</button>';
-                            } elseif ($isAvailable) {
-                                $cellClass .= ' cell-available';
-                                $markHtml = '<span class="mark mark-available">Available</span>';
-                            } else {
-                                $markHtml = '<span class="mark mark-nosched">No Availability</span>';
-                            }
-
-                            if (!empty($leaveDetailsByDate[$dateStr])) {
-                                $lines = [];
-                                foreach ($leaveDetailsByDate[$dateStr] as $detail) {
-                                    $reasonText = (string)($detail['reason'] ?? '');
-                                    // Strip "Filed by Secretary" prefix if present
-                                    $cleanReason = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
-                                    $line = (string)($detail['status'] ?? 'Leave') . ': ' . (string)($detail['start'] ?? '') . ' to ' . (string)($detail['end'] ?? '');
-                                    if ($cleanReason !== '') {
-                                        $line .= ' (' . $cleanReason . ')';
-                                    }
-                                    $lines[] = $line;
+                                $cellClass .= ' dr-cal-leave';
+                                $reasonText = '';
+                                if (!empty($leaveDetailsByDate[$dateStr])) {
+                                    $reasonText = trim((string)($leaveDetailsByDate[$dateStr][0]['reason'] ?? ''));
+                                    $reasonText = preg_replace('/^\[Filed by Secretary.*?\]\s*/', '', $reasonText);
                                 }
-                                $popoverText = htmlspecialchars(implode("\n", $lines), ENT_QUOTES, 'UTF-8');
-                                $markHtml = str_replace('{{POPOVER}}', $popoverText, $markHtml);
+                                $marksHtml = '<div class="dr-cal-leave-label"><i class="bi bi-pause-circle"></i> Leave' . ($reasonText !== '' ? ' - ' . htmlspecialchars($reasonText) : '') . '</div>';
+                            } elseif ($isPendingLeave) {
+                                $cellClass .= ' dr-cal-pending';
+                                $marksHtml = '<div class="dr-cal-pending-label"><i class="bi bi-clock"></i> Pending</div>';
+                            } elseif ($isAvailable) {
+                                $marksHtml = '<div class="dr-cal-hours"><i class="bi bi-clock"></i> ';
+                                if (!empty($availabilityTimes[$weekday])) {
+                                    $startLabel = date('g:i A', strtotime($availabilityTimes[$weekday]['start']));
+                                    $endLabel = date('g:i A', strtotime($availabilityTimes[$weekday]['end']));
+                                    $marksHtml .= $startLabel . ' - ' . $endLabel;
+                                } else {
+                                    $marksHtml .= '8:00 AM - 5:00 PM';
+                                }
+                                $marksHtml .= '</div>';
+                            } else {
+                                $cellClass .= ' dr-cal-nosched';
+                                $marksHtml = '<div class="dr-cal-nosched-label">No Availability</div>';
                             }
 
                             echo '<td class="' . htmlspecialchars($cellClass) . '">';
-                            echo '<div class="calendar-day">' . (int)$dayNum . '</div>';
-                            echo '<div class="calendar-marks">' . $markHtml . '</div>';
+                            echo '<div class="dr-cal-day">' . (int)$dayNum;
+                            if ($isToday) echo '<span class="dr-cal-today-dot"></span>';
+                            echo '</div>';
+                            echo '<div class="dr-cal-marks">' . $marksHtml . '</div>';
                             echo '</td>';
 
                             $dayNum++;
@@ -381,12 +387,11 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
             </table>
         </div>
 
-        <div class="d-flex flex-wrap gap-2 mt-3 small">
-            <span class="legend-chip legend-available">Green: Available</span>
-            <span class="legend-chip legend-leave">Red: Approved Leave</span>
-            <span class="legend-chip legend-pending">Amber: Pending Leave</span>
-            <span class="legend-chip legend-closed">Yellow: Clinic Closed</span>
-            <span class="legend-chip legend-nosched">Gray: No Availability</span>
+        <div class="d-flex flex-wrap gap-3 mt-3 small">
+            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#eff6ff;border:1px solid #93c5fd;"></span> Your Hours</span>
+            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fee2e2;border:1px solid #fca5a5;"></span> Leave</span>
+            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fef3c7;border:1px solid #fcd34d;"></span> Pending Leave</span>
+            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span> Closed</span>
         </div>
     </div>
 </div>
@@ -495,167 +500,75 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
 <?php endif; ?>
 
 <style>
-.doctor-availability-calendar th {
+.dr-cal-table th {
     text-align: center;
     background: #f8fafc;
-}
-
-.doctor-availability-calendar .calendar-cell {
-    height: 104px;
-    vertical-align: top;
-    background: #ffffff;
-}
-
-.doctor-availability-calendar .calendar-cell.cell-available {
-    background: #f0fdf4;
-}
-
-.doctor-availability-calendar .calendar-cell.cell-leave {
-    background: #fff1f2;
-}
-
-.doctor-availability-calendar .calendar-cell.cell-pending {
-    background: #fffbeb;
-}
-
-.doctor-availability-calendar .calendar-cell.cell-closed {
-    background: #fefce8;
-}
-
-.doctor-availability-calendar .calendar-day {
+    font-size: 0.78rem;
     font-weight: 700;
-    font-size: 0.98rem;
-    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    padding: 8px 4px;
 }
-
-.doctor-availability-calendar .calendar-marks {
+.dr-cal-cell {
+    vertical-align: top;
+    padding: 6px;
+    min-height: 100px;
+    background: #fff;
+    transition: background 0.15s ease;
+}
+.dr-cal-cell:hover {
+    background: #f8fbff;
+}
+.dr-cal-today {
+    background: #f0f7ff !important;
+    box-shadow: inset 0 0 0 2px #1173c1;
+}
+.dr-cal-today:hover {
+    background: #e8f2ff !important;
+}
+.dr-cal-closed { background: #fafafa; }
+.dr-cal-leave { background: #fff5f5; }
+.dr-cal-pending { background: #fffbeb; }
+.dr-cal-nosched { background: #f9fafb; }
+.dr-cal-empty { background: #f9fafb; }
+.dr-cal-day {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #1e293b;
+    margin-bottom: 4px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 4px;
 }
-
-.mark {
-    display: inline-block;
-    width: fit-content;
-    max-width: 100%;
-    border-radius: 6px;
-    font-size: 0.72rem;
-    padding: 3px 8px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.dr-cal-today-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #1173c1;
 }
-
-.mark-btn {
-    border: none;
-    cursor: pointer;
-}
-
-.mark-available {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.mark-leave {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.mark-pending {
-    background: #fde68a;
-    color: #92400e;
-}
-
-.mark-closed {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.mark-nosched {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.schedule-stat-chip {
-    border-radius: 999px;
-    padding: 8px 12px;
-    font-size: 0.84rem;
+.dr-cal-hours {
+    font-size: 0.68rem;
     font-weight: 600;
-    text-align: center;
+    color: #1173c1;
+    background: #eff6ff;
+    border-radius: 6px;
+    padding: 2px 6px;
+    display: inline-block;
+    margin-bottom: 4px;
 }
-
-.schedule-stat-available {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.schedule-stat-leave {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.schedule-stat-pending {
-    background: #fde68a;
-    color: #92400e;
-}
-
-.legend-chip {
-    border-radius: 999px;
-    padding: 4px 10px;
-}
-
-.legend-available {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.legend-leave {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.legend-pending {
-    background: #fde68a;
-    color: #92400e;
-}
-
-.legend-closed {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.legend-nosched {
-    background: #e5e7eb;
-    color: #374151;
-}
-
+.dr-cal-closed-label { font-size: 0.68rem; font-weight: 600; color: #94a3b8; }
+.dr-cal-leave-label { font-size: 0.68rem; font-weight: 600; color: #dc2626; }
+.dr-cal-pending-label { font-size: 0.68rem; font-weight: 600; color: #d97706; }
+.dr-cal-nosched-label { font-size: 0.68rem; font-weight: 600; color: #94a3b8; }
+.schedule-stat-chip { border-radius: 999px; padding: 8px 12px; font-size: 0.84rem; font-weight: 600; text-align: center; }
+.schedule-stat-available { background: #dcfce7; color: #166534; }
+.schedule-stat-leave { background: #fee2e2; color: #991b1b; }
+.schedule-stat-pending { background: #fde68a; color: #92400e; }
 @media (max-width: 768px) {
-    .doctor-availability-calendar .calendar-cell {
-        height: 86px;
-    }
-
-    .doctor-availability-calendar .calendar-day {
-        font-size: 0.86rem;
-    }
-
-    .mark {
-        font-size: 0.66rem;
-        padding: 2px 6px;
-    }
+    .dr-cal-cell { min-height: 70px; padding: 4px; }
+    .dr-cal-day { font-size: 0.8rem; }
+    .dr-appt-chip { font-size: 0.56rem; padding: 1px 4px; }
+    .dr-cal-hours { font-size: 0.6rem; }
 }
 </style>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    if (typeof bootstrap === 'undefined' || typeof bootstrap.Popover === 'undefined') {
-        return;
-    }
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (el) {
-        new bootstrap.Popover(el, {
-            html: false,
-            sanitize: true,
-            boundary: 'viewport'
-        });
-    });
-});
-</script>

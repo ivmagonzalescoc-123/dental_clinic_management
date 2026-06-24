@@ -970,28 +970,33 @@ $appointmentsViewFilters = [
 
 <style>
 .secretary-booking-calendar {
-    border: 1px solid #dce4ef;
+    border: 1px solid #dbe7e4;
     border-radius: 14px;
     background: #f4f8ff;
-    padding: 12px;
+    padding: 14px;
 }
 .secretary-booking-calendar .selected-date-chip {
     display: inline-flex;
     align-items: center;
-    font-size: 0.82rem;
-    font-weight: 700;
-    padding: 0.35rem 0.8rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    background: #d1fae5;
+    color: #065f46;
     border-radius: 999px;
-    background: #e0f2fe;
-    color: #075985;
+    padding: 0.35rem 0.8rem;
 }
 .secretary-booking-calendar .calendar-legend {
-    margin-top: 8px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    font-size: 0.8rem;
+    gap: 12px;
+    margin-top: 10px;
+    font-size: 0.82rem;
     color: #334155;
+}
+.secretary-booking-calendar .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 .secretary-booking-calendar .legend-dot {
     width: 10px;
@@ -1003,9 +1008,14 @@ $appointmentsViewFilters = [
 .secretary-booking-calendar .legend-open { background: #16a34a; }
 .secretary-booking-calendar .legend-busy { background: #f59e0b; }
 .secretary-booking-calendar .legend-closed { background: #dc2626; }
+
 #bookCalendar .fc-toolbar-title {
     font-size: 1rem;
     font-weight: 700;
+    color: #0f172a;
+}
+#bookCalendar .fc-button {
+    border-radius: 10px;
 }
 #bookCalendar .fc-daygrid-day-frame {
     border-radius: 8px;
@@ -1014,9 +1024,6 @@ $appointmentsViewFilters = [
 #bookCalendar .fc-daygrid-day-number {
     font-weight: 700;
     color: #1f3b5a;
-}
-#bookCalendar .fc-button {
-    border-radius: 10px;
 }
 #bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame {
     background: rgba(22, 163, 74, 0.1);
@@ -1029,7 +1036,7 @@ $appointmentsViewFilters = [
     background: rgba(220, 38, 38, 0.12);
 }
 #bookCalendar .fc-daygrid-day.book-day-selected {
-    box-shadow: inset 0 0 0 2px #0369a1;
+    box-shadow: inset 0 0 0 2px #0f766e;
 }
 #bookCalendar .fc-daygrid-day.book-day-open,
 #bookCalendar .fc-daygrid-day.book-day-busy {
@@ -1041,10 +1048,7 @@ $appointmentsViewFilters = [
 }
 #bookCalendar .fc-daygrid-day.book-day-open:hover,
 #bookCalendar .fc-daygrid-day.book-day-busy:hover {
-    box-shadow: inset 0 0 0 2px rgba(3, 105, 161, 0.35);
-}
-#bookCalendar .fc-daygrid-day.book-day-open:hover .fc-daygrid-day-frame,
-#bookCalendar .fc-daygrid-day.book-day-busy:hover .fc-daygrid-day-frame {
+    box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.35);
     transform: translateY(-1px);
 }
 #bookCalendar .book-day-badge {
@@ -1052,20 +1056,18 @@ $appointmentsViewFilters = [
     margin-top: 4px;
     padding: 2px 6px;
     border-radius: 999px;
-    font-size: 0.66rem;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+    color: #334155;
 }
 #bookCalendar .book-day-badge.state-open {
-    background: #dcfce7;
     color: #166534;
 }
 #bookCalendar .book-day-badge.state-busy {
-    background: #fef3c7;
     color: #92400e;
 }
 #bookCalendar .book-day-badge.state-closed {
-    background: #fee2e2;
     color: #991b1b;
 }
 

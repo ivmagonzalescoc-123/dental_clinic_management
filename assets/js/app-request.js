@@ -39,7 +39,13 @@
     pageLoadingEl.setAttribute('aria-live', 'polite');
     pageLoadingEl.innerHTML =
       '<div class="app-page-loading__panel">' +
-        '<span class="app-spinner" role="status" aria-hidden="true"></span>' +
+        '<div class="app-page-loading__dots">' +
+          '<span class="app-page-loading__dot"></span>' +
+          '<span class="app-page-loading__dot"></span>' +
+          '<span class="app-page-loading__dot"></span>' +
+          '<span class="app-page-loading__dot"></span>' +
+          '<span class="app-page-loading__dot"></span>' +
+        '</div>' +
         '<span class="app-page-loading-text">Processing...</span>' +
       '</div>';
     return pageLoadingEl;

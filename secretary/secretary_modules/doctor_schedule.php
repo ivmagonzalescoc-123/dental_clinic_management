@@ -9,19 +9,11 @@ $csrf_token = security_generate_csrf_token();
 security_ensure_work_type_column($conn);
 
 if (!function_exists('secretary_doctor_has_schedule_on_weekday')) {
-    function secretary_doctor_has_schedule_on_weekday($doctor, $availabilityByDoctor, $weekday)
-    {
+    function secretary_doctor_has_schedule_on_weekday($doctor, $availabilityByDoctor, $weekday) {
         $weekday = (int)$weekday;
-        if ($weekday === 0) {
-            return false;
-        }
-
+        if ($weekday === 0) return false;
         $workType = strtolower((string)($doctor['work_type'] ?? 'regular'));
-        if ($workType !== 'part_time') {
-            // Regular doctors are available Monday-Saturday.
-            return true;
-        }
-
+        if ($workType !== 'part_time') return true;
         $uid = (int)($doctor['user_id'] ?? 0);
         return !empty($availabilityByDoctor[$uid][$weekday]);
     }
@@ -32,18 +24,9 @@ $messageType = 'info';
 $secretaryId = (int)($_SESSION['user_id'] ?? 0);
 
 $selectedMonth = trim((string)($_GET['month'] ?? date('Y-m')));
-if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
-    $selectedMonth = date('Y-m');
-}
+if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) $selectedMonth = date('Y-m');
 $monthStart = $selectedMonth . '-01';
 $monthEnd = date('Y-m-t', strtotime($monthStart));
-
-$selectedDoctor = (int)($_GET['doctor_id'] ?? 0);
-$viewFilter = trim((string)($_GET['view_filter'] ?? 'all'));
-$allowedViewFilter = ['all', 'leave', 'available'];
-if (!in_array($viewFilter, $allowedViewFilter, true)) {
-    $viewFilter = 'all';
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
@@ -57,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $startDate = trim((string)($_POST['leave_start_date'] ?? ''));
             $endDate = trim((string)($_POST['leave_end_date'] ?? ''));
             $reasonInput = trim((string)($_POST['reason'] ?? ''));
-
             $startOk = DateTime::createFromFormat('Y-m-d', $startDate);
             $endOk = DateTime::createFromFormat('Y-m-d', $endDate);
 
@@ -82,76 +64,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $doctorExists = (bool)$doctorCheck->get_result()->fetch_assoc();
                     $doctorCheck->close();
                 }
-
                 if (!$doctorExists) {
                     $message = 'Selected doctor does not exist.';
                     $messageType = 'danger';
                 } else {
-                    $check = $conn->prepare(
-                        "SELECT leave_id
-                         FROM doctor_leaves
-                         WHERE user_id = ?
-                           AND status IN ('pending', 'approved')
-                           AND NOT (leave_end_date < ? OR leave_start_date > ?)
-                         LIMIT 1"
-                    );
-
+                    $check = $conn->prepare("SELECT leave_id FROM doctor_leaves WHERE user_id = ? AND status IN ('pending','approved') AND NOT (leave_end_date < ? OR leave_start_date > ?) LIMIT 1");
                     if ($check) {
                         $check->bind_param('iss', $doctorId, $startDate, $endDate);
                         $check->execute();
                         $exists = $check->get_result()->fetch_assoc();
                         $check->close();
-
                         if ($exists) {
                             $message = 'This doctor already has a pending or approved leave overlapping that range.';
                             $messageType = 'warning';
                         } else {
-            // Look up the secretary's full name
-            $secretaryName = '';
-            $nameStmt = $conn->prepare("SELECT CONCAT(first_name, ' ', last_name) AS full_name FROM users WHERE user_id = ? LIMIT 1");
-            if ($nameStmt) {
-                $nameStmt->bind_param('i', $secretaryId);
-                $nameStmt->execute();
-                $nameRes = $nameStmt->get_result();
-                if ($nameRow = $nameRes->fetch_assoc()) {
-                    $secretaryName = trim((string)($nameRow['full_name'] ?? ''));
-                }
-                $nameStmt->close();
-            }
-            if ($secretaryName === '') {
-                $secretaryName = 'Secretary (User #' . $secretaryId . ')';
-            }
-
-            if (mb_strlen($reasonInput) > 220) {
-                $reasonInput = mb_substr($reasonInput, 0, 220);
-            }
-            $reason = '[Filed by Secretary: ' . $secretaryName . '] ' . $reasonInput;
-            if (mb_strlen($reason) > 255) {
-                $reason = mb_substr($reason, 0, 255);
-            }
-
-                            $ins = $conn->prepare(
-                                "INSERT INTO doctor_leaves (user_id, leave_start_date, leave_end_date, reason, status)
-                                 VALUES (?, ?, ?, ?, 'pending')"
-                            );
+                            $reason = $reasonInput;
+                            $ins = $conn->prepare('INSERT INTO doctor_leaves (user_id, leave_start_date, leave_end_date, reason, status) VALUES (?, ?, ?, ?, "pending")');
                             if ($ins) {
                                 $ins->bind_param('isss', $doctorId, $startDate, $endDate, $reason);
-                                if ($ins->execute()) {
-                                    $message = 'Leave request submitted. Admin must approve or decline it.';
-                                    $messageType = 'success';
-                                } else {
-                                    $message = 'Unable to submit leave request. Please try again.';
-                                    $messageType = 'danger';
-                                }
+                                $ins->execute();
                                 $ins->close();
+                                $message = 'Leave request submitted for admin approval.';
+                                $messageType = 'success';
                             } else {
-                                $message = 'Unable to prepare leave request.';
+                                $message = 'Failed to submit leave request.';
                                 $messageType = 'danger';
                             }
                         }
-                    } else {
-                        $message = 'Unable to validate overlapping leave requests.';
-                        $messageType = 'danger';
                     }
                 }
             }
@@ -160,262 +99,83 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $doctors = [];
-$doctorMap = [];
-$dq = $conn->query("SELECT user_id, first_name, last_name, COALESCE(work_type, 'regular') AS work_type FROM users WHERE role_id = 2 ORDER BY first_name ASC, last_name ASC");
-if ($dq) {
-    while ($row = $dq->fetch_assoc()) {
-        $id = (int)$row['user_id'];
-        $name = trim((string)($row['first_name'] ?? '') . ' ' . (string)($row['last_name'] ?? ''));
-        $row['display_name'] = $name;
-        $doctors[] = $row;
-        $doctorMap[$id] = $row;
-    }
+$docRes = $conn->query("SELECT user_id, first_name, last_name, CONCAT(first_name, ' ', last_name) AS display_name, work_type FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY last_name, first_name");
+if ($docRes) {
+    while ($dr = $docRes->fetch_assoc()) $doctors[] = $dr;
 }
+$doctorMap = [];
+foreach ($doctors as $d) $doctorMap[(int)$d['user_id']] = $d;
 
 $availabilityByDoctor = [];
-if ($conn->query("SHOW TABLES LIKE 'doctor_availability'")->num_rows > 0) {
-    $aq = $conn->query('SELECT user_id, weekday FROM doctor_availability');
-    if ($aq) {
-        while ($r = $aq->fetch_assoc()) {
-            $uid = (int)$r['user_id'];
-            $weekday = (int)$r['weekday'];
-            if (!isset($availabilityByDoctor[$uid])) {
-                $availabilityByDoctor[$uid] = [];
-            }
-            $availabilityByDoctor[$uid][$weekday] = true;
-        }
+$availRes = $conn->query("SELECT user_id, weekday, start_time, end_time FROM doctor_availability WHERE status = 'active'");
+if ($availRes) {
+    while ($ar = $availRes->fetch_assoc()) {
+        $uid = (int)$ar['user_id'];
+        $wd = (int)$ar['weekday'];
+        $availabilityByDoctor[$uid][$wd] = [
+            'start' => (string)$ar['start_time'],
+            'end' => (string)$ar['end_time'],
+        ];
     }
-}
-
-$leaveRows = [];
-$leaveStmt = $conn->prepare(
-    "SELECT dl.leave_id, dl.user_id, dl.leave_start_date, dl.leave_end_date, dl.reason, dl.status, dl.created_at,
-            u.first_name, u.last_name
-     FROM doctor_leaves dl
-     INNER JOIN users u ON u.user_id = dl.user_id
-     WHERE u.role_id = 2
-       AND dl.leave_start_date <= ?
-       AND dl.leave_end_date >= ?
-     ORDER BY dl.leave_start_date ASC, dl.created_at DESC"
-);
-if ($leaveStmt) {
-    $leaveStmt->bind_param('ss', $monthEnd, $monthStart);
-    $leaveStmt->execute();
-    $lr = $leaveStmt->get_result();
-    while ($row = $lr->fetch_assoc()) {
-        $leaveRows[] = $row;
-    }
-    $leaveStmt->close();
-}
-
-$doctorSummary = [];
-foreach ($doctors as $d) {
-    $doctorSummary[(int)$d['user_id']] = [
-        'name' => (string)$d['display_name'],
-        'approved_days' => 0,
-        'pending_days' => 0,
-    ];
 }
 
 $approvedLeaveByDateDoctor = [];
 $pendingLeaveByDateDoctor = [];
 $leaveDetailsByDateDoctor = [];
-foreach ($leaveRows as $lv) {
-    $uid = (int)$lv['user_id'];
-    $status = (string)$lv['status'];
 
-    $from = max($monthStart, (string)$lv['leave_start_date']);
-    $to = min($monthEnd, (string)$lv['leave_end_date']);
-    if ($from > $to) {
-        continue;
-    }
-
-    $cursor = new DateTime($from);
-    $end = new DateTime($to);
-    while ($cursor <= $end) {
-        $d = $cursor->format('Y-m-d');
-
-        if ($status === 'approved') {
-            if (!isset($approvedLeaveByDateDoctor[$d])) {
-                $approvedLeaveByDateDoctor[$d] = [];
+$leaveRes = $conn->query("SELECT dl.user_id, dl.leave_start_date, dl.leave_end_date, dl.reason, dl.status, u.first_name, u.last_name
+                          FROM doctor_leaves dl INNER JOIN users u ON u.user_id = dl.user_id
+                          WHERE u.role_id = 2 AND dl.status IN ('pending','approved') AND dl.leave_end_date >= '$monthStart' AND dl.leave_start_date <= '$monthEnd'");
+if ($leaveRes) {
+    while ($lv = $leaveRes->fetch_assoc()) {
+        $uid = (int)$lv['user_id'];
+        $status = (string)$lv['status'];
+        $start = new DateTime((string)$lv['leave_start_date']);
+        $end = new DateTime((string)$lv['leave_end_date']);
+        $cursor = clone $start;
+        while ($cursor <= $end) {
+            $d = $cursor->format('Y-m-d');
+            if ($d >= $monthStart && $d <= $monthEnd) {
+                if ($status === 'approved') $approvedLeaveByDateDoctor[$d][$uid] = true;
+                else $pendingLeaveByDateDoctor[$d][$uid] = true;
+                $leaveDetailsByDateDoctor[$d][$uid][] = [
+                    'status' => $status,
+                    'start' => $lv['leave_start_date'],
+                    'end' => $lv['leave_end_date'],
+                    'reason' => trim((string)($lv['reason'] ?? '')),
+                    'name' => trim((string)($lv['first_name'] . ' ' . $lv['last_name'])),
+                ];
             }
-            $approvedLeaveByDateDoctor[$d][$uid] = true;
-            if (!isset($leaveDetailsByDateDoctor[$d])) {
-                $leaveDetailsByDateDoctor[$d] = [];
-            }
-            if (!isset($leaveDetailsByDateDoctor[$d][$uid])) {
-                $leaveDetailsByDateDoctor[$d][$uid] = [];
-            }
-            $leaveDetailsByDateDoctor[$d][$uid][] = [
-                'status' => $status,
-                'start' => (string)($lv['leave_start_date'] ?? ''),
-                'end' => (string)($lv['leave_end_date'] ?? ''),
-                'reason' => (string)($lv['reason'] ?? ''),
-            ];
-            if (isset($doctorSummary[$uid])) {
-                $doctorSummary[$uid]['approved_days']++;
-            }
-        }
-
-        if ($status === 'pending') {
-            if (!isset($pendingLeaveByDateDoctor[$d])) {
-                $pendingLeaveByDateDoctor[$d] = [];
-            }
-            $pendingLeaveByDateDoctor[$d][$uid] = true;
-            if (isset($doctorSummary[$uid])) {
-                $doctorSummary[$uid]['pending_days']++;
-            }
-        }
-
-        $cursor->modify('+1 day');
-    }
-}
-
-$calendarStats = [];
-$monthDate = new DateTime($monthStart);
-$calendarEnd = new DateTime($monthEnd);
-while ($monthDate <= $calendarEnd) {
-    $d = $monthDate->format('Y-m-d');
-    $weekday = (int)$monthDate->format('w');
-
-    $approvedCount = 0;
-    $pendingCount = 0;
-    $availableCount = 0;
-    $noScheduleCount = 0;
-
-    foreach ($doctors as $doc) {
-        $uid = (int)$doc['user_id'];
-        $isApprovedLeave = !empty($approvedLeaveByDateDoctor[$d][$uid]);
-        $isPendingLeave = !empty($pendingLeaveByDateDoctor[$d][$uid]);
-        $hasSchedule = secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
-
-        if ($isApprovedLeave) {
-            $approvedCount++;
-            continue;
-        }
-
-        if ($isPendingLeave) {
-            $pendingCount++;
-        }
-
-        if ($hasSchedule) {
-            $availableCount++;
-        } else {
-            $noScheduleCount++;
+            $cursor->modify('+1 day');
         }
     }
-
-    $calendarStats[$d] = [
-        'approved_leave_count' => $approvedCount,
-        'pending_leave_count' => $pendingCount,
-        'available_count' => $availableCount,
-        'no_schedule_count' => $noScheduleCount,
-    ];
-
-    $monthDate->modify('+1 day');
-}
-
-$recentLeaves = [];
-$recentStmt = $conn->prepare(
-    "SELECT dl.leave_id, dl.user_id, dl.leave_start_date, dl.leave_end_date, dl.reason, dl.status, dl.created_at,
-            u.first_name, u.last_name
-     FROM doctor_leaves dl
-     INNER JOIN users u ON u.user_id = dl.user_id
-     WHERE u.role_id = 2
-     ORDER BY dl.created_at DESC
-     LIMIT 20"
-);
-if ($recentStmt) {
-    $recentStmt->execute();
-    $rr = $recentStmt->get_result();
-    while ($r = $rr->fetch_assoc()) {
-        $recentLeaves[] = $r;
-    }
-    $recentStmt->close();
 }
 
 $firstWeekday = (int)date('w', strtotime($monthStart));
 $daysInMonth = (int)date('t', strtotime($monthStart));
 $monthLabel = date('F Y', strtotime($monthStart));
+$today = date('Y-m-d');
 
-if (!function_exists('secretary_leave_popover_html')) {
-    function secretary_leave_popover_html(array $items, $doctorName)
-    {
-        if (empty($items)) {
-            return '';
-        }
-
-        $parts = [];
-        foreach ($items as $item) {
-            $status = ucfirst((string)($item['status'] ?? 'leave'));
-            $start = (string)($item['start'] ?? '');
-            $end = (string)($item['end'] ?? '');
-            $reason = trim((string)($item['reason'] ?? ''));
-            // Strip "Filed by Secretary" prefix if present
-            $cleanReason = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reason) ?? $reason;
-            $line = $status . ': ' . $start . ' to ' . $end;
-            if ($cleanReason !== '') {
-                $line .= ' (' . $cleanReason . ')';
-            }
-            $parts[] = $line;
-        }
-
-        return htmlspecialchars($doctorName . "\n" . implode("\n", $parts), ENT_QUOTES, 'UTF-8');
-    }
+$recentLeaves = [];
+$recentStmt = $conn->prepare("SELECT dl.leave_id, dl.user_id, dl.leave_start_date, dl.leave_end_date, dl.reason, dl.status, dl.created_at, u.first_name, u.last_name
+                              FROM doctor_leaves dl INNER JOIN users u ON u.user_id = dl.user_id WHERE u.role_id = 2 ORDER BY dl.created_at DESC LIMIT 10");
+if ($recentStmt) {
+    $recentStmt->execute();
+    $rr = $recentStmt->get_result();
+    while ($r = $rr->fetch_assoc()) $recentLeaves[] = $r;
+    $recentStmt->close();
 }
-
-if (!function_exists('secretary_present_note')) {
-    function secretary_present_note(array $doctor, $weekday)
-    {
-        $weekday = (int)$weekday;
-        $workType = strtolower((string)($doctor['work_type'] ?? 'regular'));
-        if ($workType === 'part_time') {
-            return 'Part-time availability day';
-        }
-        if ($weekday === 0) {
-            return 'Clinic closed';
-        }
-        return 'Regular schedule day';
-    }
-}
-
-if (!function_exists('secretary_present_popover_html')) {
-    function secretary_present_popover_html(array $items, $dateStr)
-    {
-        if (empty($items)) {
-            return '';
-        }
-
-        $dateLabel = date('M d, Y', strtotime((string)$dateStr));
-        $parts = [];
-        foreach ($items as $item) {
-            $name = trim((string)($item['name'] ?? 'Doctor'));
-            $workType = strtolower((string)($item['work_type'] ?? 'regular'));
-            $typeLabel = $workType === 'part_time' ? 'Part-time' : 'Regular';
-            $note = trim((string)($item['note'] ?? ''));
-
-            $line = $name . ' - ' . $typeLabel;
-            if ($note !== '') {
-                $line .= ' (' . $note . ')';
-            }
-            $parts[] = $line;
-        }
-
-        return htmlspecialchars('Present on ' . $dateLabel . "\n" . implode("\n", $parts), ENT_QUOTES, 'UTF-8');
-    }
-}
-
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h5 class="mb-0"><i class="bi bi-calendar2-check me-2"></i>Doctor Availability Calendar</h5>
-    <span class="text-muted small">Secretaries can monitor doctor schedules and submit leave requests for admin approval.</span>
+    <h5 class="mb-0"><i class="bi bi-calendar2-check me-2"></i>Doctor Schedule</h5>
+    <span class="text-muted small">Click a doctor name to view their hours</span>
 </div>
 
 <?php if ($message !== ''): ?>
     <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
         <?php echo htmlspecialchars($message); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 <?php endif; ?>
 
@@ -424,33 +184,24 @@ if (!function_exists('secretary_present_popover_html')) {
         <form class="card border-0 mb-3" method="GET" action="secretary.php">
             <div class="card-body row g-2 align-items-end">
                 <input type="hidden" name="page" value="doctor_schedule">
-                <div class="col-md-3">
-                    <label class="form-label">Month</label>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold">Month</label>
                     <input type="month" class="form-control" name="month" value="<?php echo htmlspecialchars($selectedMonth); ?>">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Doctor Focus</label>
+                    <label class="form-label small fw-semibold">Filter by Doctor</label>
                     <select name="doctor_id" class="form-select">
                         <option value="0">All Doctors</option>
                         <?php foreach ($doctors as $doc): ?>
-                            <?php $did = (int)$doc['user_id']; ?>
-                            <option value="<?php echo $did; ?>" <?php echo $selectedDoctor === $did ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars((string)$doc['display_name']); ?>
+                            <option value="<?php echo (int)$doc['user_id']; ?>" <?php echo (int)($_GET['doctor_id'] ?? 0) === (int)$doc['user_id'] ? 'selected' : ''; ?>>
+                                Dr. <?php echo htmlspecialchars((string)$doc['last_name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Day Filter</label>
-                    <select name="view_filter" class="form-select">
-                        <option value="all" <?php echo $viewFilter === 'all' ? 'selected' : ''; ?>>All Days</option>
-                        <option value="leave" <?php echo $viewFilter === 'leave' ? 'selected' : ''; ?>>Leave Days</option>
-                        <option value="available" <?php echo $viewFilter === 'available' ? 'selected' : ''; ?>>Available Days</option>
-                    </select>
-                </div>
-                <div class="col-md-2 d-flex gap-2">
-                    <button class="btn btn-primary w-100" type="submit"><i class="bi bi-funnel"></i></button>
-                    <a class="btn btn-outline-secondary w-100" href="secretary.php?page=doctor_schedule">Reset</a>
+                <div class="col-md-4 d-flex gap-2">
+                    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
+                    <a class="btn btn-outline-secondary" href="secretary.php?page=doctor_schedule">Reset</a>
                 </div>
             </div>
         </form>
@@ -458,373 +209,341 @@ if (!function_exists('secretary_present_popover_html')) {
         <div class="card border-0 mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <strong><?php echo htmlspecialchars($monthLabel); ?></strong>
-                <div class="small text-muted">
-                    <?php if ($selectedDoctor > 0 && isset($doctorMap[$selectedDoctor])): ?>
-                        Focus: <?php echo htmlspecialchars((string)$doctorMap[$selectedDoctor]['display_name']); ?>
-                    <?php else: ?>
-                        Showing all doctors
-                    <?php endif; ?>
-                </div>
+                <span class="text-muted small">
+                    <?php
+                    $filteredDoc = (int)($_GET['doctor_id'] ?? 0);
+                    echo $filteredDoc > 0 && isset($doctorMap[$filteredDoc])
+                        ? 'Dr. ' . htmlspecialchars((string)$doctorMap[$filteredDoc]['last_name'])
+                        : count($doctors) . ' doctors';
+                    ?>
+                </span>
             </div>
             <div class="card-body p-2">
-                <div class="table-responsive">
-                    <table class="table table-bordered calendar-table mb-0" data-skip-table-search="1">
-                        <thead>
-                            <tr>
-                                <th>Sun</th>
-                                <th>Mon</th>
-                                <th>Tue</th>
-                                <th>Wed</th>
-                                <th>Thu</th>
-                                <th>Fri</th>
-                                <th>Sat</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $dayNum = 1;
-                            $started = false;
-                            while ($dayNum <= $daysInMonth):
-                                echo '<tr>';
-                                for ($w = 0; $w < 7; $w++):
-                                    if (!$started && $w === $firstWeekday) {
-                                        $started = true;
-                                    }
+                <table class="table table-bordered dr-schedule-table mb-0" data-skip-table-search="1">
+                    <thead>
+                        <tr>
+                            <?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $day): ?>
+                                <th><?php echo $day; ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $dayNum = 1;
+                        $started = false;
+                        while ($dayNum <= $daysInMonth):
+                            echo '<tr>';
+                            for ($w = 0; $w < 7; $w++):
+                                if (!$started && $w === $firstWeekday) $started = true;
+                                if (!$started || $dayNum > $daysInMonth) {
+                                    echo '<td class="dr-cell dr-cell-empty"></td>';
+                                    continue;
+                                }
+                                $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
+                                $weekday = (int)date('w', strtotime($dateStr));
+                                $isToday = ($dateStr === $today);
+                                $isClosed = ($weekday === 0);
 
-                                    if (!$started || $dayNum > $daysInMonth) {
-                                        echo '<td class="bg-light"></td>';
-                                        continue;
-                                    }
+                                echo '<td class="dr-cell' . ($isToday ? ' dr-cell-today' : '') . ($isClosed ? ' dr-cell-closed' : '') . '">';
+                                echo '<div class="dr-day-num">' . (int)$dayNum;
+                                if ($isToday) echo '<span class="dr-today-dot"></span>';
+                                echo '</div>';
+                                echo '<div class="dr-doctors-list">';
 
-                                    $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
-                                    $weekday = (int)date('w', strtotime($dateStr));
-                                    $isClinicClosed = ($weekday === 0); // Sunday
-                                    $stats = $calendarStats[$dateStr] ?? [
-                                        'approved_leave_count' => 0,
-                                        'pending_leave_count' => 0,
-                                        'available_count' => 0,
-                                        'no_schedule_count' => 0,
-                                    ];
+                                if ($isClosed) {
+                                    echo '<span class="dr-chip dr-chip-closed">Closed</span>';
+                                } else {
+                                    $filteredDoc = (int)($_GET['doctor_id'] ?? 0);
+                                    foreach ($doctors as $doc) {
+                                        $uid = (int)$doc['user_id'];
+                                        if ($filteredDoc > 0 && $uid !== $filteredDoc) continue;
 
-                                    $cellClass = 'calendar-cell';
-                                    if ($selectedDoctor > 0) {
-                                        $selectedDoctorData = $doctorMap[$selectedDoctor] ?? ['user_id' => $selectedDoctor, 'work_type' => 'regular'];
-                                        $isLeave = !empty($approvedLeaveByDateDoctor[$dateStr][$selectedDoctor]) || !empty($pendingLeaveByDateDoctor[$dateStr][$selectedDoctor]);
-                                        $hasSched = secretary_doctor_has_schedule_on_weekday($selectedDoctorData, $availabilityByDoctor, $weekday);
-                                        if ($isClinicClosed) {
-                                            $cellClass .= ' cell-closed';
-                                        } elseif ($isLeave) {
-                                            $cellClass .= ' cell-leave';
+                                        $isApproved = !empty($approvedLeaveByDateDoctor[$dateStr][$uid]);
+                                        $isPending = !empty($pendingLeaveByDateDoctor[$dateStr][$uid]);
+                                        $hasSched = secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
+
+                                        if ($isApproved) {
+                                            $reason = '';
+                                            if (!empty($leaveDetailsByDateDoctor[$dateStr][$uid])) {
+                                                $reason = trim((string)($leaveDetailsByDateDoctor[$dateStr][$uid][0]['reason'] ?? ''));
+                                                $reason = preg_replace('/^\[Filed by Secretary.*?\]\s*/', '', $reason);
+                                            }
+                                            echo '<span class="dr-chip dr-chip-leave" data-doctor-id="' . $uid . '" data-date="' . htmlspecialchars($dateStr) . '" title="On Leave' . ($reason !== '' ? ': ' . htmlspecialchars($reason) : '') . '">';
+                                            echo htmlspecialchars(trim((string)$doc['last_name']));
+                                            echo '</span>';
                                         } elseif ($hasSched) {
-                                            $cellClass .= ' cell-available';
-                                        }
-
-                                        if ($viewFilter === 'leave' && !$isLeave) {
-                                            $cellClass .= ' cell-muted';
-                                        }
-                                        if ($viewFilter === 'available' && ($isLeave || !$hasSched)) {
-                                            $cellClass .= ' cell-muted';
+                                            $times = $availabilityByDoctor[$uid][$weekday] ?? null;
+                                            $workType = strtolower((string)$doc['work_type']);
+                                            if ($times) {
+                                                $hours = date('g:i A', strtotime($times['start'])) . ' - ' . date('g:i A', strtotime($times['end']));
+                                            } elseif ($workType === 'part_time') {
+                                                $hours = '';
+                                            } else {
+                                                $hours = '8:00 AM - 5:00 PM';
+                                            }
+                                            echo '<span class="dr-chip dr-chip-available" data-doctor-id="' . $uid . '" data-date="' . htmlspecialchars($dateStr) . '" data-hours="' . htmlspecialchars($hours) . '" data-work-type="' . htmlspecialchars((string)$doc['work_type']) . '">';
+                                            echo htmlspecialchars(trim((string)$doc['last_name']));
+                                            echo '</span>';
                                         }
                                     }
-
-                                    echo '<td class="' . htmlspecialchars($cellClass) . '">';
-                                    echo '<div class="calendar-day">' . (int)$dayNum . '</div>';
-                                    echo '<div class="calendar-marks">';
-                                    if ($selectedDoctor > 0) {
-                                        $docName = 'Dr. ' . trim((string)($doctorMap[$selectedDoctor]['last_name'] ?? $doctorMap[$selectedDoctor]['first_name'] ?? 'Doctor'));
-                                        $isApproved = !empty($approvedLeaveByDateDoctor[$dateStr][$selectedDoctor]);
-                                        $hasSched = secretary_doctor_has_schedule_on_weekday($doctorMap[$selectedDoctor] ?? [], $availabilityByDoctor, $weekday);
-
-                                        if ($isClinicClosed) {
-                                            echo '<div class="mark mark-closed">Clinic Closed</div>';
-                                        } elseif ($isApproved) {
-                                            $popover = secretary_leave_popover_html($leaveDetailsByDateDoctor[$dateStr][$selectedDoctor] ?? [], $docName);
-                                            echo '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="leave-popover" data-bs-content="' . $popover . '">' . htmlspecialchars($docName) . '</button>';
-                                        } elseif ($hasSched) {
-                                            $presentPopover = secretary_present_popover_html([
-                                                [
-                                                    'name' => $docName,
-                                                    'work_type' => (string)($doctorMap[$selectedDoctor]['work_type'] ?? 'regular'),
-                                                    'note' => secretary_present_note($doctorMap[$selectedDoctor] ?? [], $weekday),
-                                                ],
-                                            ], $dateStr);
-                                            echo '<button type="button" class="mark mark-present mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="present-popover" data-bs-content="' . $presentPopover . '">' . htmlspecialchars($docName) . '</button>';
-                                        }
-                                    } else {
-                                        if ($isClinicClosed) {
-                                            echo '<div class="mark mark-closed">Clinic Closed</div>';
-                                        } else {
-                                            $leaveDoctors = [];
-                                            $presentCount = 0;
-                                            $presentDoctors = [];
-                                            foreach ($doctors as $doc) {
-                                                $uid = (int)$doc['user_id'];
-                                                $isApprovedLeave = !empty($approvedLeaveByDateDoctor[$dateStr][$uid]);
-                                                $hasSched = secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
-                                                if ($isApprovedLeave) {
-                                                    $leaveDoctors[] = [
-                                                        'uid' => $uid,
-                                                        'name' => 'Dr. ' . trim((string)($doc['last_name'] ?? $doc['first_name'] ?? 'Doctor')),
-                                                    ];
-                                                } elseif ($hasSched) {
-                                                    $presentCount++;
-                                                    $presentDoctors[] = [
-                                                        'name' => 'Dr. ' . trim((string)($doc['last_name'] ?? $doc['first_name'] ?? 'Doctor')),
-                                                        'work_type' => (string)($doc['work_type'] ?? 'regular'),
-                                                        'note' => secretary_present_note($doc, $weekday),
-                                                    ];
-                                                }
-                                            }
-
-                                            if (!empty($leaveDoctors)) {
-                                                $leaveSlice = array_slice($leaveDoctors, 0, 2);
-                                                foreach ($leaveSlice as $leaveDoc) {
-                                                    $popover = secretary_leave_popover_html($leaveDetailsByDateDoctor[$dateStr][$leaveDoc['uid']] ?? [], $leaveDoc['name']);
-                                                    echo '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="leave-popover" data-bs-content="' . $popover . '">' . htmlspecialchars($leaveDoc['name']) . '</button>';
-                                                }
-                                                $remaining = count($leaveDoctors) - count($leaveSlice);
-                                                if ($remaining > 0) {
-                                                    $remainingDetails = [];
-                                                    foreach (array_slice($leaveDoctors, count($leaveSlice)) as $remDoc) {
-                                                        $remItems = $leaveDetailsByDateDoctor[$dateStr][$remDoc['uid']] ?? [];
-                                                        if (!empty($remItems)) {
-                                                            $firstItem = $remItems[0];
-                                                            $remainingDetails[] = $remDoc['name'] . ': ' . (string)($firstItem['start'] ?? '') . ' to ' . (string)($firstItem['end'] ?? '');
-                                                        } else {
-                                                            $remainingDetails[] = $remDoc['name'];
-                                                        }
-                                                    }
-                                                    $remainingPopover = htmlspecialchars(implode("\n", $remainingDetails), ENT_QUOTES, 'UTF-8');
-                                                    echo '<button type="button" class="mark mark-leave mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="leave-popover" data-bs-content="' . $remainingPopover . '">+' . (int)$remaining . ' more</button>';
-                                                }
-                                            }
-                                            if ($presentCount > 0) {
-                                                $presentPopover = secretary_present_popover_html($presentDoctors, $dateStr);
-                                                echo '<button type="button" class="mark mark-present mark-btn" data-bs-toggle="popover" data-bs-trigger="focus" data-bs-placement="top" data-bs-custom-class="present-popover" data-bs-content="' . $presentPopover . '">Present ' . (int)$presentCount . '</button>';
-                                            }
-                                        }
-                                    }
-                                    echo '</div>';
-
-                                    echo '</td>';
-                                    $dayNum++;
-                                endfor;
-                                echo '</tr>';
-                            endwhile;
-                            ?>
-                        </tbody>
-                    </table>
-                </div>
+                                }
+                                echo '</div></td>';
+                                $dayNum++;
+                            endfor;
+                            echo '</tr>';
+                        endwhile;
+                        ?>
+                    </tbody>
+                </table>
             </div>
         </div>
 
         <div class="card border-0 mb-3">
             <div class="card-body py-2">
-                <div class="d-flex flex-wrap gap-2 align-items-center small">
-                    <strong class="me-1">Legend:</strong>
-                    <span class="legend-chip legend-leave">Red: Leave</span>
-                    <span class="legend-chip legend-present">Green: Present/Available</span>
-                    <span class="legend-chip legend-closed">Yellow: Clinic Closed</span>
+                <div class="d-flex flex-wrap gap-3 align-items-center small">
+                    <strong>Legend:</strong>
+                    <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#dcfce7;border:1px solid #86efac;"></span> Available</span>
+                    <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fee2e2;border:1px solid #fca5a5;"></span> On Leave</span>
+                    <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fef3c7;border:1px solid #fcd34d;"></span> Pending Leave</span>
+                    <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span> Closed</span>
                 </div>
             </div>
         </div>
-
     </div>
 
     <div class="col-lg-4">
         <div class="card border-0 mb-3">
-            <div class="card-header"><strong>File Leave Request for Doctor</strong></div>
+            <div class="card-header"><strong><i class="bi bi-person-plus me-1"></i>File Leave Request</strong></div>
             <div class="card-body">
-                <form method="POST" action="secretary.php?page=doctor_schedule&month=<?php echo urlencode($selectedMonth); ?>&doctor_id=<?php echo (int)$selectedDoctor; ?>&view_filter=<?php echo urlencode($viewFilter); ?>">
+                <form method="POST">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     <input type="hidden" name="action" value="request_leave_for_doctor">
-
                     <div class="mb-2">
-                        <label class="form-label">Doctor</label>
+                        <label class="form-label small">Doctor</label>
                         <select class="form-select" name="doctor_id" required>
                             <option value="">Select doctor</option>
                             <?php foreach ($doctors as $doc): ?>
-                                <?php $did = (int)$doc['user_id']; ?>
-                                <option value="<?php echo $did; ?>" <?php echo $selectedDoctor === $did ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars((string)$doc['display_name']); ?>
+                                <option value="<?php echo (int)$doc['user_id']; ?>">
+                                    Dr. <?php echo htmlspecialchars((string)$doc['last_name']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" class="form-control" name="leave_start_date" required min="<?php echo date('Y-m-d'); ?>">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small">Start Date</label>
+                            <input type="date" class="form-control" name="leave_start_date" min="<?php echo $today; ?>" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small">End Date</label>
+                            <input type="date" class="form-control" name="leave_end_date" min="<?php echo $today; ?>" required>
+                        </div>
                     </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">End Date</label>
-                        <input type="date" class="form-control" name="leave_end_date" required min="<?php echo date('Y-m-d'); ?>">
+                    <div class="mb-3">
+                        <label class="form-label small">Reason</label>
+                        <textarea class="form-control" name="reason" rows="2" placeholder="Optional reason"></textarea>
                     </div>
-
-                    <div class="mb-2">
-                        <label class="form-label">Reason</label>
-                        <textarea class="form-control" name="reason" rows="3" maxlength="220" placeholder="(optional)"></textarea>
-                    </div>
-
-                    <button class="btn btn-primary w-100" type="submit">Submit Leave Request</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Submit Request</button>
                 </form>
             </div>
         </div>
 
         <div class="card border-0">
-            <div class="card-header"><strong>Recent Leave Requests</strong></div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    <?php if (empty($recentLeaves)): ?>
-                        <div class="p-3 text-muted small">No leave requests found.</div>
-                    <?php else: ?>
-                        <?php foreach ($recentLeaves as $lv): ?>
-                            <?php
-                                $status = (string)($lv['status'] ?? '');
-                                $badge = $status === 'approved' ? 'success' : ($status === 'pending' ? 'warning text-dark' : 'secondary');
-                            ?>
-                            <?php
-                                $reasonText = (string)($lv['reason'] ?? '');
-                                $isFiledBySecretary = false;
-                                $filedByName = '';
-                                if (preg_match('/^\[Filed by Secretary\s*[#:]\s*(.*?)\]\s*/', $reasonText, $matches)) {
-                                    $isFiledBySecretary = true;
-                                    $filedByName = trim($matches[1]);
-                                    $displayReasonText = preg_replace('/^\[Filed by Secretary\s*[#:]\s*.*?\]\s*/', '', $reasonText) ?? $reasonText;
-                                } else {
-                                    $displayReasonText = $reasonText;
-                                }
-                            ?>
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <strong><?php echo htmlspecialchars(trim((string)($lv['first_name'] ?? '') . ' ' . (string)($lv['last_name'] ?? ''))); ?></strong>
-                                    <span class="badge bg-<?php echo $badge; ?>"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
-                                </div>
-                                <div class="small text-muted"><?php echo htmlspecialchars((string)$lv['leave_start_date']); ?> to <?php echo htmlspecialchars((string)$lv['leave_end_date']); ?></div>
-                                <div class="small">
-                                    <?php if ($isFiledBySecretary): ?>
-                                        <span class="text-success fw-bold" style="background:none;padding:0;">Filed by <?php echo htmlspecialchars($filedByName); ?></span>
-                                    <?php endif; ?>
-                                    <?php echo htmlspecialchars($displayReasonText); ?>
-                                </div>
+            <div class="card-header"><strong><i class="bi bi-clock-history me-1"></i>Recent Leave Requests</strong></div>
+            <div class="card-body" style="max-height:340px;overflow-y:auto;">
+                <?php if (empty($recentLeaves)): ?>
+                    <div class="text-muted small">No leave requests yet.</div>
+                <?php else: ?>
+                    <?php foreach ($recentLeaves as $lv):
+                        $status = strtolower((string)$lv['status']);
+                        $badge = match($status) { 'approved' => 'success', 'pending' => 'warning', 'rejected' => 'danger', default => 'secondary' };
+                        $displayReason = trim((string)($lv['reason'] ?? ''));
+                        $isFiled = (bool)preg_match('/Filed by Secretary/i', $displayReason);
+                        $cleanReason = preg_replace('/^\[Filed by Secretary.*?\]\s*/', '', $displayReason);
+                    ?>
+                        <div class="border-bottom pb-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="small">Dr. <?php echo htmlspecialchars((string)$lv['last_name']); ?></strong>
+                                <span class="badge bg-<?php echo $badge; ?>"><?php echo htmlspecialchars(ucfirst($status)); ?></span>
                             </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
+                            <div class="text-muted small"><?php echo htmlspecialchars($lv['leave_start_date']); ?> to <?php echo htmlspecialchars($lv['leave_end_date']); ?></div>
+                            <?php if ($isFiled): ?>
+                                <div class="small text-success fw-semibold">Filed by Secretary</div>
+                            <?php endif; ?>
+                            <?php if ($cleanReason !== ''): ?>
+                                <div class="small text-muted"><?php echo htmlspecialchars($cleanReason); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Doctor Hours Modal -->
+<div class="modal fade" id="doctorHoursModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2">
+                <h6 class="modal-title" id="doctorHoursTitle">Doctor Hours</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="doctorHoursDate" class="text-muted small mb-2"></div>
+                <div id="doctorHoursName" class="fw-bold mb-2" style="font-size:1.1rem;"></div>
+                <div id="doctorHoursTime" class="mb-2"></div>
+                <div id="doctorHoursType" class="small text-muted"></div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.calendar-table th {
+.dr-schedule-table th {
     text-align: center;
     background: #f8fafc;
-}
-.calendar-cell {
-    height: 112px;
-    vertical-align: top;
-    background: #ffffff;
-}
-.calendar-cell.cell-leave {
-    background: #fff9fa;
-}
-.calendar-cell.cell-available {
-    background: #f8fffb;
-}
-.calendar-cell.cell-closed {
-    background: #fffcf2;
-}
-.calendar-cell.cell-muted {
-    opacity: 0.35;
-}
-.calendar-day {
+    font-size: 0.78rem;
     font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    padding: 8px 4px;
 }
-.calendar-marks {
+.dr-cell {
+    vertical-align: top;
+    padding: 6px;
+    min-height: 90px;
+    background: #fff;
+    transition: background 0.15s ease;
+}
+.dr-cell-today {
+    background: #f0f7ff !important;
+    box-shadow: inset 0 0 0 2px #1173c1;
+}
+.dr-cell-closed {
+    background: #fafafa;
+}
+.dr-cell-empty {
+    background: #f9fafb;
+}
+.dr-day-num {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #1e293b;
+    margin-bottom: 4px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 4px;
 }
-.mark {
+.dr-today-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #1173c1;
     display: inline-block;
-    width: fit-content;
-    max-width: 100%;
-    border-radius: 999px;
-    font-size: 0.72rem;
+}
+.dr-doctors-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+.dr-chip {
+    display: inline-block;
     padding: 2px 8px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.mark-btn {
-    border: none;
-    cursor: pointer;
-}
-.mark-leave {
-    background: #fee2e2;
-    color: #991b1b;
-}
-.mark-present {
-    background: #dcfce7;
-    color: #166534;
-}
-.mark-closed {
-    background: #fef3c7;
-    color: #92400e;
-}
-.legend-chip {
     border-radius: 999px;
-    padding: 4px 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    letter-spacing: 0.01em;
 }
-.legend-leave {
-    background: #fee2e2;
-    color: #991b1b;
+.dr-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
-.legend-present {
+.dr-chip-available {
     background: #dcfce7;
     color: #166534;
 }
-.legend-closed {
+.dr-chip-available:hover {
+    background: #bbf7d0;
+}
+.dr-chip-leave {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.dr-chip-leave:hover {
+    background: #fecaca;
+}
+.dr-chip-pending {
     background: #fef3c7;
     color: #92400e;
 }
-.leave-popover .popover-body {
-    white-space: pre-line;
-    font-size: 0.82rem;
+.dr-chip-pending:hover {
+    background: #fde68a;
 }
-.present-popover .popover-body {
-    white-space: pre-line;
-    font-size: 0.82rem;
+.dr-chip-closed {
+    background: #f1f5f9;
+    color: #94a3b8;
+    cursor: default;
+}
+.dr-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #475569;
+}
+.dr-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
 }
 @media (max-width: 768px) {
-    .calendar-cell {
-        height: 88px;
-    }
-    .calendar-day {
-        font-size: 0.9rem;
-    }
-    .mark {
-        font-size: 0.68rem;
-        padding: 2px 6px;
-    }
+    .dr-cell { min-height: 68px; padding: 4px; }
+    .dr-day-num { font-size: 0.8rem; }
+    .dr-chip { font-size: 0.62rem; padding: 1px 5px; }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof bootstrap === 'undefined' || typeof bootstrap.Popover === 'undefined') {
-        return;
-    }
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function(el) {
-        new bootstrap.Popover(el, {
-            html: false,
-            sanitize: true,
-            boundary: 'viewport'
+    var modal = document.getElementById('doctorHoursModal');
+    if (!modal) return;
+    var bsModal = null;
+
+    document.querySelectorAll('.dr-chip-available, .dr-chip-leave, .dr-chip-pending').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            var doctorId = parseInt(this.dataset.doctorId || '0');
+            var date = this.dataset.date || '';
+            var hours = this.dataset.hours || '';
+            var workType = this.dataset.workType || 'regular';
+            var name = this.textContent.trim();
+            var isLeave = this.classList.contains('dr-chip-leave');
+            var isPending = this.classList.contains('dr-chip-pending');
+
+            document.getElementById('doctorHoursTitle').textContent = 'Dr. ' + name;
+            document.getElementById('doctorHoursDate').textContent = date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
+
+            if (isLeave) {
+                document.getElementById('doctorHoursTime').innerHTML = '<span class="badge bg-danger" style="font-size:0.9rem;padding:6px 14px;">On Leave</span>';
+                document.getElementById('doctorHoursType').textContent = 'Not available for appointments';
+            } else if (isPending) {
+                document.getElementById('doctorHoursTime').innerHTML = '<span class="badge bg-warning text-dark" style="font-size:0.9rem;padding:6px 14px;">Pending Leave</span>';
+                document.getElementById('doctorHoursType').textContent = 'Leave request under review';
+            } else if (hours) {
+                document.getElementById('doctorHoursTime').innerHTML = '<div style="font-size:1.3rem;font-weight:700;color:#1173c1;">' + hours + '</div>';
+                document.getElementById('doctorHoursType').textContent = workType === 'part_time' ? 'Part-time schedule' : 'Regular schedule';
+            } else {
+                document.getElementById('doctorHoursTime').innerHTML = '<div style="font-size:1.3rem;font-weight:700;color:#1173c1;">8:00 AM - 5:00 PM</div>';
+                document.getElementById('doctorHoursType').textContent = 'Regular schedule';
+            }
+
+            if (!bsModal) bsModal = new bootstrap.Modal(modal);
+            bsModal.show();
         });
     });
 });
