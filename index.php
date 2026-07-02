@@ -289,26 +289,26 @@ $aboutPoints = [
 
         .auth-panel .auth-header,
         .terms-panel > div:first-child {
-            background: linear-gradient(135deg, #1d6fd8, #0a4f88);
+            background: #ffffff;
             border-color: transparent !important;
             border-radius: 1.25rem 1.25rem 0 0;
         }
         .auth-panel .auth-header h2,
         .terms-panel > div:first-child h2 {
-            color: #fff !important;
+            color: #1e293b !important;
         }
         .auth-panel .auth-header p,
         .terms-panel > div:first-child p {
-            color: rgba(255, 255, 255, 0.82) !important;
+            color: #64748b !important;
         }
         .auth-panel .auth-header [data-auth-close],
         .terms-panel > div:first-child [data-auth-close] {
-            color: rgba(255, 255, 255, 0.85) !important;
+            color: #64748b !important;
         }
         .auth-panel .auth-header [data-auth-close]:hover,
         .terms-panel > div:first-child [data-auth-close]:hover {
-            background-color: rgba(255, 255, 255, 0.14) !important;
-            color: #fff !important;
+            background-color: #f1f5f9 !important;
+            color: #1e293b !important;
         }
 
         .terms-overlay {

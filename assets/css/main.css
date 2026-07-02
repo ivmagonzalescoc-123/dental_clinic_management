@@ -1710,6 +1710,27 @@ table a:hover {
         width: 260px;
     }
 
+    /* Reset desktop collapsed styles on mobile so labels show */
+    body.toggle-sidebar .sidebar-nav .nav-link {
+        justify-content: flex-start;
+        padding: 10px 14px !important;
+        margin: 2px 8px !important;
+        position: static;
+    }
+    body.toggle-sidebar .sidebar-nav .nav-link i {
+        margin-right: 10px;
+        font-size: 16px;
+    }
+    body.toggle-sidebar .sidebar-nav .nav-link span {
+        display: inline !important;
+    }
+    body.toggle-sidebar .sidebar-nav .nav-link .badge {
+        display: inline-flex !important;
+    }
+    body.toggle-sidebar .sidebar-nav .nav-link::after {
+        display: none !important;
+    }
+
     body.toggle-sidebar::before {
         content: '';
         position: fixed;
