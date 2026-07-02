@@ -1987,10 +1987,10 @@ $reportNavQuery = array_merge(
                 <br><br>
                 <em>"Top services this month"</em><br>
                 <em>"How many appointments today?"</em><br>
-                <em>"Revenue this week"</em><br>
+                <em>"Total payments made today"</em><br>
                 <em>"Which doctor is busiest?"</em><br>
                 <em>"Patient age demographics"</em><br>
-                <em>"What services are trending?"</em>
+                <em>"Outstanding balance"</em>
             </div>
         </div>
         <div class="ai-chat-input-wrap">
@@ -2174,10 +2174,11 @@ $reportNavQuery = array_merge(
 .ai-chat-msg.bot th { background: #f1f5f9; font-weight: 600; color: #334155; }
 .ai-chat-msg.error {
     align-self: flex-start;
-    background: #fef2f2;
-    color: #991b1b;
-    border: 1px solid #fecaca;
+    background: #fff7ed;
+    color: #9a3412;
+    border: 1px solid #fed7aa;
     border-bottom-left-radius: 4px;
+    font-size: 13px;
 }
 .ai-chat-typing {
     display: flex;
@@ -2372,8 +2373,13 @@ $reportNavQuery = array_merge(
         var answer = data.answer || '';
         var html = '';
 
+        if (rows.length === 0 && answer) {
+            html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';
+            return html;
+        }
+
         if (rows.length === 0) {
-            html += '<p class="ai-answer-text"><i class="bi bi-info-circle"></i> No records found for this query. ' + escHtml(answer) + '</p>';
+            html += '<p class="ai-answer-text"><i class="bi bi-info-circle"></i> No records found for this query.</p>';
             return html;
         }
 
@@ -2428,7 +2434,7 @@ $reportNavQuery = array_merge(
             return r.text().then(function (raw) {
                 var data;
                 try { data = JSON.parse(raw); } catch (e) {
-                    throw new Error('[HTTP ' + status + '] Server returned non-JSON.\n\nRaw: ' + raw.substring(0, 300));
+                    throw new Error('The system is currently busy. Please try again in a moment.');
                 }
                 data.__status = status;
                 return data;
@@ -2437,7 +2443,7 @@ $reportNavQuery = array_merge(
         .then(function (data) {
             removeTyping();
             if (data.error) {
-                var msg = '[HTTP ' + data.__status + '] ' + data.error;
+                var msg = data.error;
                 addMessage(escHtml(msg), 'error');
             } else {
                 addMessage(renderResponse(data), 'bot');
@@ -2448,7 +2454,7 @@ $reportNavQuery = array_merge(
         })
         .catch(function (err) {
             removeTyping();
-            addMessage(escHtml(err && err.message ? err.message : 'Unable to reach the assistant.'), 'error');
+            addMessage(escHtml('The system is currently busy. Please try again in a moment.'), 'error');
             sending = false;
             sendBtn.disabled = false;
         });
