@@ -9,6 +9,7 @@ $range = $_GET['range'] ?? '30d';
 $startDate = $_GET['start_date'] ?? '';
 $endDate = $_GET['end_date'] ?? date('Y-m-d');
 $doctorId = isset($_GET['doctor_id']) && $_GET['doctor_id'] !== '' ? (int)$_GET['doctor_id'] : 0;
+$reportType = $_GET['report_type'] ?? 'sales';
 
 $today = date('Y-m-d');
 if ($range === '7d') {
@@ -93,13 +94,6 @@ $cancelled = reports_count_appts(
     $baseParams
 );
 
-$awaitingRecords = reports_count_appts(
-    $conn,
-    "SELECT COUNT(*) FROM appointments a WHERE a.status = 'awaiting_secretary_records'{$doctorClause}",
-    $doctorId > 0 ? 'i' : '',
-    $doctorId > 0 ? [$doctorId] : []
-);
-
 $newPatients = dashboard_scalar_int(
     $conn,
     'SELECT COUNT(*) FROM patients WHERE DATE(created_at) BETWEEN ? AND ?',
@@ -114,95 +108,8 @@ $patientsSeen = reports_count_appts(
     $baseParams
 );
 
-$statusBreakdown = [];
-$statusSql = "
-    SELECT a.status, COUNT(*) AS total
-    FROM appointments a
-    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
-    GROUP BY a.status
-    ORDER BY total DESC
-";
-$statusStmt = $conn->prepare($statusSql);
-if ($statusStmt) {
-    $bind = [$baseTypes];
-    foreach ($baseParams as $k => $v) {
-        $bind[] = &$baseParams[$k];
-    }
-    call_user_func_array([$statusStmt, 'bind_param'], $bind);
-    $statusStmt->execute();
-    $res = $statusStmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $statusBreakdown[] = $row;
-    }
-    $statusStmt->close();
-}
-$statusMax = 1;
-foreach ($statusBreakdown as $row) {
-    $statusMax = max($statusMax, (int)$row['total']);
-}
-
-$topServices = [];
-$svcSql = "
-    SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings
-    FROM selected_services ss
-    INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
-    INNER JOIN services s ON s.service_id = ss.service_id
-    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
-    GROUP BY s.service_id, s.service_name
-    ORDER BY bookings DESC
-    LIMIT 8
-";
-$svcStmt = $conn->prepare($svcSql);
-if ($svcStmt) {
-    $bind = [$baseTypes];
-    foreach ($baseParams as $k => $v) {
-        $bind[] = &$baseParams[$k];
-    }
-    call_user_func_array([$svcStmt, 'bind_param'], $bind);
-    $svcStmt->execute();
-    $res = $svcStmt->get_result();
-        while ($row = $res->fetch_assoc()) {
-        $topServices[] = $row;
-    }
-    $svcStmt->close();
-}
-$topServiceMax = 1;
-foreach ($topServices as $row) {
-    $topServiceMax = max($topServiceMax, (int)$row['bookings']);
-}
-
-$doctorActivity = [];
-$docSql = "
-    SELECT u.first_name, u.last_name,
-           COUNT(a.appointment_id) AS total_visits,
-           SUM(CASE WHEN a.status IN ('completed','records_complete') THEN 1 ELSE 0 END) AS completed_visits,
-           SUM(CASE WHEN a.status = 'no_show' THEN 1 ELSE 0 END) AS no_shows
-    FROM users u
-    INNER JOIN role r ON r.role_id = u.role_id
-    LEFT JOIN appointments a ON a.user_id = u.user_id AND a.appointment_date BETWEEN ? AND ?
-    WHERE r.role_name = 'doctor'
-";
-if ($doctorId > 0) {
-    $docSql .= ' AND u.user_id = ?';
-}
-$docSql .= "
-    GROUP BY u.user_id, u.first_name, u.last_name
-    ORDER BY completed_visits DESC, total_visits DESC
-";
-$docStmt = $conn->prepare($docSql);
-if ($docStmt) {
-    if ($doctorId > 0) {
-        $docStmt->bind_param('ssi', $startDate, $endDate, $doctorId);
-    } else {
-        $docStmt->bind_param('ss', $startDate, $endDate);
-    }
-    $docStmt->execute();
-    $res = $docStmt->get_result();
-    while ($row = $res->fetch_assoc()) {
-        $doctorActivity[] = $row;
-    }
-    $docStmt->close();
-}
+$completionRate = $totalAppointments > 0 ? round(($completedVisits / $totalAppointments) * 100) : 0;
+$periodLabel = date('M d, Y', strtotime($startDate)) . ' – ' . date('M d, Y', strtotime($endDate));
 
 $totalBilled = 0.0;
 $totalCollected = 0.0;
@@ -238,6 +145,264 @@ if (table_exists($conn, 'billing')) {
     }
 }
 
+$serviceRevenue = [];
+if (table_exists($conn, 'billing_line_items')) {
+    $svcRevSql = "
+        SELECT s.service_name, 
+               COUNT(DISTINCT a.appointment_id) AS bookings,
+               COALESCE(SUM(bli.amount), 0) AS revenue
+        FROM billing_line_items bli
+        INNER JOIN appointments a ON a.appointment_id = bli.appointment_id
+        INNER JOIN services s ON s.service_id = bli.service_id
+        WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+        GROUP BY s.service_id, s.service_name
+        ORDER BY revenue DESC
+        LIMIT 10
+    ";
+    $svcRevStmt = $conn->prepare($svcRevSql);
+    if ($svcRevStmt) {
+        $bind = [$baseTypes];
+        foreach ($baseParams as $k => $v) {
+            $bind[] = &$baseParams[$k];
+        }
+        call_user_func_array([$svcRevStmt, 'bind_param'], $bind);
+        $svcRevStmt->execute();
+        $res = $svcRevStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $serviceRevenue[] = $row;
+        }
+        $svcRevStmt->close();
+    }
+}
+
+$paymentMethods = [];
+if (table_exists($conn, 'payments')) {
+    $paySql = "
+        SELECT p.payment_method, 
+               COUNT(*) AS count,
+               COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        INNER JOIN billing b ON b.billing_id = p.billing_id
+        INNER JOIN appointments a ON a.appointment_id = b.appointment_id
+        WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+        GROUP BY p.payment_method
+        ORDER BY total DESC
+    ";
+    $payStmt = $conn->prepare($paySql);
+    if ($payStmt) {
+        $bind = [$baseTypes];
+        foreach ($baseParams as $k => $v) {
+            $bind[] = &$baseParams[$k];
+        }
+        call_user_func_array([$payStmt, 'bind_param'], $bind);
+        $payStmt->execute();
+        $res = $payStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $paymentMethods[] = $row;
+        }
+        $payStmt->close();
+    }
+}
+
+$dailyRevenue = [];
+$dailyRevLabels = [];
+$dailyRevValues = [];
+if (table_exists($conn, 'billing')) {
+    $dailyRevSql = "
+        SELECT a.appointment_date AS dt,
+               COALESCE(SUM(b.total_amount), 0) AS revenue,
+               COALESCE(SUM(b.amount_paid), 0) AS collected
+        FROM appointments a
+        LEFT JOIN billing b ON b.appointment_id = a.appointment_id
+        WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+        GROUP BY a.appointment_date
+        ORDER BY a.appointment_date ASC
+    ";
+    $dailyRevStmt = $conn->prepare($dailyRevSql);
+    if ($dailyRevStmt) {
+        $bind = [$baseTypes];
+        foreach ($baseParams as $k => $v) {
+            $bind[] = &$baseParams[$k];
+        }
+        call_user_func_array([$dailyRevStmt, 'bind_param'], $bind);
+        $dailyRevStmt->execute();
+        $res = $dailyRevStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $dailyRevLabels[] = date('M d', strtotime($row['dt']));
+            $dailyRevValues[] = (float)$row['collected'];
+        }
+        $dailyRevStmt->close();
+    }
+}
+
+$ageGroups = [];
+$ageSql = "
+    SELECT 
+        CASE 
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) < 13 THEN '0-12'
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN 13 AND 17 THEN '13-17'
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN 18 AND 25 THEN '18-25'
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN 26 AND 35 THEN '26-35'
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN 36 AND 50 THEN '36-50'
+            WHEN TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) BETWEEN 51 AND 65 THEN '51-65'
+            ELSE '65+'
+        END AS age_group,
+        COUNT(DISTINCT p.patient_id) AS patient_count
+    FROM patients p
+    INNER JOIN appointments a ON a.patient_id = p.patient_id
+    WHERE a.appointment_date BETWEEN ? AND ?
+      AND p.date_of_birth IS NOT NULL
+      {$doctorClause}
+    GROUP BY age_group
+    ORDER BY MIN(TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()))
+";
+$ageStmt = $conn->prepare($ageSql);
+if ($ageStmt) {
+    $bind = [$baseTypes];
+    foreach ($baseParams as $k => $v) {
+        $bind[] = &$baseParams[$k];
+    }
+    call_user_func_array([$ageStmt, 'bind_param'], $bind);
+    $ageStmt->execute();
+    $res = $ageStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $ageGroups[] = $row;
+    }
+    $ageStmt->close();
+}
+
+$genderDist = [];
+$genderSql = "
+    SELECT COALESCE(p.gender, 'Not Specified') AS gender,
+           COUNT(DISTINCT p.patient_id) AS patient_count
+    FROM patients p
+    INNER JOIN appointments a ON a.patient_id = p.patient_id
+    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+    GROUP BY p.gender
+    ORDER BY patient_count DESC
+";
+$genderStmt = $conn->prepare($genderSql);
+if ($genderStmt) {
+    $bind = [$baseTypes];
+    foreach ($baseParams as $k => $v) {
+        $bind[] = &$baseParams[$k];
+    }
+    call_user_func_array([$genderStmt, 'bind_param'], $bind);
+    $genderStmt->execute();
+    $res = $genderStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $genderDist[] = $row;
+    }
+    $genderStmt->close();
+}
+
+$topServices = [];
+$svcSql = "
+    SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings
+    FROM selected_services ss
+    INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
+    INNER JOIN services s ON s.service_id = ss.service_id
+    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+    GROUP BY s.service_id, s.service_name
+    ORDER BY bookings DESC
+    LIMIT 8
+";
+$svcStmt = $conn->prepare($svcSql);
+if ($svcStmt) {
+    $bind = [$baseTypes];
+    foreach ($baseParams as $k => $v) {
+        $bind[] = &$baseParams[$k];
+    }
+    call_user_func_array([$svcStmt, 'bind_param'], $bind);
+    $svcStmt->execute();
+    $res = $svcStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $topServices[] = $row;
+    }
+    $svcStmt->close();
+}
+
+$monthlyTrends = [];
+$monthTrendSql = "
+    SELECT DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
+           DATE_FORMAT(a.appointment_date, '%b %Y') AS month_label,
+           COUNT(*) AS total_appointments,
+           SUM(CASE WHEN a.status IN ('completed','records_complete') THEN 1 ELSE 0 END) AS completed,
+           COUNT(DISTINCT a.patient_id) AS unique_patients
+    FROM appointments a
+    WHERE a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+    GROUP BY month_key, month_label
+    ORDER BY month_key ASC
+";
+$monthTrendRes = $conn->query($monthTrendSql);
+if ($monthTrendRes) {
+    while ($row = $monthTrendRes->fetch_assoc()) {
+        $monthlyTrends[] = $row;
+    }
+}
+
+$serviceTrends = [];
+$svcTrendSql = "
+    SELECT s.service_name,
+           DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
+           DATE_FORMAT(a.appointment_date, '%b %Y') AS month_label,
+           COUNT(*) AS bookings
+    FROM selected_services ss
+    INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
+    INNER JOIN services s ON s.service_id = ss.service_id
+    WHERE a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    GROUP BY s.service_id, s.service_name, month_key, month_label
+    ORDER BY month_key ASC, bookings DESC
+";
+$svcTrendRes = $conn->query($svcTrendSql);
+if ($svcTrendRes) {
+    while ($row = $svcTrendRes->fetch_assoc()) {
+        $serviceTrends[] = $row;
+    }
+}
+
+$peakDays = [];
+$peakSql = "
+    SELECT DAYNAME(a.appointment_date) AS day_name,
+           COUNT(*) AS appointments
+    FROM appointments a
+    WHERE a.appointment_date BETWEEN ? AND ?
+    GROUP BY DAYOFWEEK(a.appointment_date), day_name
+    ORDER BY appointments DESC
+";
+$peakStmt = $conn->prepare($peakSql);
+if ($peakStmt) {
+    $peakStmt->bind_param('ss', $startDate, $endDate);
+    $peakStmt->execute();
+    $res = $peakStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $peakDays[] = $row;
+    }
+    $peakStmt->close();
+}
+
+$peakHours = [];
+$peakHourSql = "
+    SELECT HOUR(ts.start_time) AS hour_of_day,
+           COUNT(*) AS appointments
+    FROM appointments a
+    INNER JOIN timeslot ts ON ts.timeslot_id = a.timeslot_id
+    WHERE a.appointment_date BETWEEN ? AND ?
+    GROUP BY hour_of_day
+    ORDER BY appointments DESC
+    LIMIT 5
+";
+$peakHourStmt = $conn->prepare($peakHourSql);
+if ($peakHourStmt) {
+    $peakHourStmt->bind_param('ss', $startDate, $endDate);
+    $peakHourStmt->execute();
+    $res = $peakHourStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $peakHours[] = $row;
+    }
+    $peakHourStmt->close();
+}
+
 $recentVisits = [];
 $recentSql = "
     SELECT a.appointment_date, a.status,
@@ -265,14 +430,68 @@ if ($recentStmt) {
     call_user_func_array([$recentStmt, 'bind_param'], $bind);
     $recentStmt->execute();
     $res = $recentStmt->get_result();
-        while ($row = $res->fetch_assoc()) {
+    while ($row = $res->fetch_assoc()) {
         $recentVisits[] = $row;
     }
     $recentStmt->close();
 }
 
-$completionRate = $totalAppointments > 0 ? round(($completedVisits / $totalAppointments) * 100) : 0;
-$periodLabel = date('M d, Y', strtotime($startDate)) . ' – ' . date('M d, Y', strtotime($endDate));
+$exportQuery = http_build_query([
+    'range' => $range,
+    'start_date' => $startDate,
+    'end_date' => $endDate,
+    'doctor_id' => $doctorId > 0 ? $doctorId : '',
+]);
+$birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
+
+$reportRangeNav = [
+    '7d' => 'Last 7 days',
+    '30d' => 'Last 30 days',
+    'month' => 'This month',
+    'custom' => 'Custom dates',
+];
+
+$reportTypes = [
+    'sales' => ['icon' => 'bi-currency-dollar', 'label' => 'Sales Reports'],
+    'demographic' => ['icon' => 'bi-people', 'label' => 'Demographic Reports'],
+    'trend' => ['icon' => 'bi-graph-up', 'label' => 'Trend & Predictive'],
+];
+
+$chartServiceLabels = [];
+$chartServiceValues = [];
+foreach (array_slice($topServices, 0, 5) as $row) {
+    $chartServiceLabels[] = (string)$row['service_name'];
+    $chartServiceValues[] = (int)$row['bookings'];
+}
+
+$chartStatusLabels = [];
+$chartStatusValues = [];
+$statusBreakdown = [];
+$statusSql = "
+    SELECT a.status, COUNT(*) AS total
+    FROM appointments a
+    WHERE a.appointment_date BETWEEN ? AND ?{$doctorClause}
+    GROUP BY a.status
+    ORDER BY total DESC
+";
+$statusStmt = $conn->prepare($statusSql);
+if ($statusStmt) {
+    $bind = [$baseTypes];
+    foreach ($baseParams as $k => $v) {
+        $bind[] = &$baseParams[$k];
+    }
+    call_user_func_array([$statusStmt, 'bind_param'], $bind);
+    $statusStmt->execute();
+    $res = $statusStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $statusBreakdown[] = $row;
+    }
+    $statusStmt->close();
+}
+foreach ($statusBreakdown as $row) {
+    $chartStatusLabels[] = reports_format_status((string)$row['status']);
+    $chartStatusValues[] = (int)$row['total'];
+}
 
 $dailyChartLabels = [];
 $dailyBookedValues = [];
@@ -317,18 +536,152 @@ if ($dailyStmt) {
     $dailyStmt->close();
 }
 
-$chartStatusLabels = [];
-$chartStatusValues = [];
-foreach ($statusBreakdown as $row) {
-    $chartStatusLabels[] = reports_format_status((string)$row['status']);
-    $chartStatusValues[] = (int)$row['total'];
+$ageLabels = [];
+$ageValues = [];
+foreach ($ageGroups as $row) {
+    $ageLabels[] = (string)$row['age_group'];
+    $ageValues[] = (int)$row['patient_count'];
 }
 
-$chartServiceLabels = [];
-$chartServiceValues = [];
-foreach (array_slice($topServices, 0, 5) as $row) {
-    $chartServiceLabels[] = (string)$row['service_name'];
-    $chartServiceValues[] = (int)$row['bookings'];
+$genderLabels = [];
+$genderValues = [];
+foreach ($genderDist as $row) {
+    $genderLabels[] = (string)$row['gender'];
+    $genderValues[] = (int)$row['patient_count'];
+}
+
+$svcRevLabels = [];
+$svcRevValues = [];
+foreach (array_slice($serviceRevenue, 0, 8) as $row) {
+    $svcRevLabels[] = (string)$row['service_name'];
+    $svcRevValues[] = (float)$row['revenue'];
+}
+
+$payMethodLabels = [];
+$payMethodValues = [];
+foreach ($paymentMethods as $row) {
+    $payMethodLabels[] = (string)$row['payment_method'];
+    $payMethodValues[] = (float)$row['total'];
+}
+
+$monthlyTrendLabels = [];
+$monthlyTrendAppts = [];
+$monthlyTrendCompleted = [];
+foreach ($monthlyTrends as $row) {
+    $monthlyTrendLabels[] = (string)$row['month_label'];
+    $monthlyTrendAppts[] = (int)$row['total_appointments'];
+    $monthlyTrendCompleted[] = (int)$row['completed'];
+}
+
+$serviceTrendSeries = [];
+$svcTrendMap = [];
+foreach ($serviceTrends as $row) {
+    $svcName = (string)$row['service_name'];
+    $monthKey = (string)$row['month_key'];
+    if (!isset($svcTrendMap[$svcName])) {
+        $svcTrendMap[$svcName] = [];
+    }
+    $svcTrendMap[$svcName][$monthKey] = (int)$row['bookings'];
+}
+$allTrendMonths = array_unique(array_column($serviceTrends, 'month_key'));
+sort($allTrendMonths);
+$topTrendServices = array_slice(array_keys($svcTrendMap), 0, 5);
+foreach ($topTrendServices as $svcName) {
+    $data = [];
+    foreach ($allTrendMonths as $m) {
+        $data[] = $svcTrendMap[$svcName][$m] ?? 0;
+    }
+    $serviceTrendSeries[] = ['name' => $svcName, 'data' => $data];
+}
+$serviceTrendMonthLabels = [];
+foreach ($allTrendMonths as $m) {
+    $serviceTrendMonthLabels[] = date('M Y', strtotime($m . '-01'));
+}
+
+$peakDayLabels = [];
+$peakDayValues = [];
+foreach ($peakDays as $row) {
+    $peakDayLabels[] = (string)$row['day_name'];
+    $peakDayValues[] = (int)$row['appointments'];
+}
+
+$peakHourLabels = [];
+$peakHourValues = [];
+foreach ($peakHours as $row) {
+    $h = (int)$row['hour_of_day'];
+    $peakHourLabels[] = date('g A', mktime($h, 0));
+    $peakHourValues[] = (int)$row['appointments'];
+}
+
+$avgRevenuePerPatient = $patientsSeen > 0 ? round($totalCollected / $patientsSeen, 2) : 0;
+$avgRevenuePerAppointment = $completedVisits > 0 ? round($totalCollected / $completedVisits, 2) : 0;
+$collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100) : 0;
+
+$nextMonthPredicted = 0;
+if (count($monthlyTrends) >= 2) {
+    $recentMonths = array_slice($monthlyTrends, -3);
+    $avgGrowth = 0;
+    for ($i = 1; $i < count($recentMonths); $i++) {
+        $prev = (int)$recentMonths[$i - 1]['total_appointments'];
+        $curr = (int)$recentMonths[$i]['total_appointments'];
+        if ($prev > 0) {
+            $avgGrowth += ($curr - $prev) / $prev;
+        }
+    }
+    $avgGrowth = $avgGrowth / max(1, count($recentMonths) - 1);
+    $lastMonth = (int)end($monthlyTrends)['total_appointments'];
+    $nextMonthPredicted = max(0, round($lastMonth * (1 + $avgGrowth)));
+}
+
+$topServicesPredicted = [];
+if (!empty($serviceTrendSeries)) {
+    foreach ($serviceTrendSeries as $series) {
+        $data = $series['data'];
+        if (count($data) >= 2) {
+            $recent = array_slice($data, -2);
+            $growth = $recent[0] > 0 ? ($recent[1] - $recent[0]) / $recent[0] : 0;
+            $topServicesPredicted[] = [
+                'service' => $series['name'],
+                'current' => end($data),
+                'predicted' => max(0, round(end($data) * (1 + $growth))),
+                'growth' => round($growth * 100, 1),
+            ];
+        }
+    }
+    usort($topServicesPredicted, fn($a, $b) => $b['predicted'] <=> $a['predicted']);
+}
+
+$doctorActivity = [];
+$docSql = "
+    SELECT u.first_name, u.last_name,
+           COUNT(a.appointment_id) AS total_visits,
+           SUM(CASE WHEN a.status IN ('completed','records_complete') THEN 1 ELSE 0 END) AS completed_visits,
+           SUM(CASE WHEN a.status = 'no_show' THEN 1 ELSE 0 END) AS no_shows
+    FROM users u
+    INNER JOIN role r ON r.role_id = u.role_id
+    LEFT JOIN appointments a ON a.user_id = u.user_id AND a.appointment_date BETWEEN ? AND ?
+    WHERE r.role_name = 'doctor'
+";
+if ($doctorId > 0) {
+    $docSql .= ' AND u.user_id = ?';
+}
+$docSql .= "
+    GROUP BY u.user_id, u.first_name, u.last_name
+    ORDER BY completed_visits DESC, total_visits DESC
+";
+$docStmt = $conn->prepare($docSql);
+if ($docStmt) {
+    if ($doctorId > 0) {
+        $docStmt->bind_param('ssi', $startDate, $endDate, $doctorId);
+    } else {
+        $docStmt->bind_param('ss', $startDate, $endDate);
+    }
+    $docStmt->execute();
+    $res = $docStmt->get_result();
+    while ($row = $res->fetch_assoc()) {
+        $doctorActivity[] = $row;
+    }
+    $docStmt->close();
 }
 
 $birSalesPreview = [];
@@ -362,46 +715,37 @@ if (table_exists($conn, 'billing')) {
     }
 }
 
-$exportQuery = http_build_query([
-    'range' => $range,
-    'start_date' => $startDate,
-    'end_date' => $endDate,
-    'doctor_id' => $doctorId > 0 ? $doctorId : '',
-]);
-$birExportUrl = '../assets/api/reports/export_bir.php?' . $exportQuery;
-$reportNavQuery = $doctorId > 0 ? ['doctor_id' => $doctorId] : [];
-$reportRangeNav = [
-    '7d' => 'Last 7 days',
-    '30d' => 'Last 30 days',
-    'month' => 'This month',
-    'custom' => 'Custom dates',
-];
-
+$reportNavQuery = array_merge(
+    ['page' => 'reports', 'report_type' => $reportType],
+    $doctorId > 0 ? ['doctor_id' => $doctorId] : []
+);
 ?>
 
 <div class="dental-dashboard-shell clinic-reports-shell" id="clinicReportPrintArea">
     <div class="dental-dashboard-hero">
         <div>
-            <h4 class="mb-0">Clinic Report</h4>
+            <h4 class="mb-0">Clinic Reports</h4>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="dental-chip"><?php echo htmlspecialchars($periodLabel); ?></span>
+            <?php if ($reportType === 'sales'): ?>
             <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-success clinic-report-no-print">
                 <i class="bi bi-download"></i> Export BIR CSV
             </a>
+            <?php endif; ?>
             <button type="button" class="btn btn-sm btn-secondary clinic-report-no-print clinic-report-print-btn" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print
             </button>
         </div>
     </div>
 
-    <nav class="module-section-nav clinic-report-no-print" aria-label="Report period">
+    <nav class="module-section-nav clinic-report-no-print" aria-label="Report types">
         <div class="module-section-nav__track">
             <ul class="nav nav-pills mb-0">
-                <?php foreach ($reportRangeNav as $rangeKey => $rangeLabel): ?>
+                <?php foreach ($reportTypes as $key => $info): ?>
                     <li class="nav-item">
-                        <a class="nav-link <?php echo $range === $rangeKey ? 'active' : ''; ?>" href="<?php echo htmlspecialchars('admin.php?' . http_build_query(array_merge(['page' => 'reports', 'range' => $rangeKey], $reportNavQuery)), ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($rangeLabel); ?>
+                        <a class="nav-link <?php echo $reportType === $key ? 'active' : ''; ?>" href="<?php echo htmlspecialchars('admin.php?' . http_build_query(array_merge(['page' => 'reports', 'report_type' => $key, 'range' => $range], $doctorId > 0 ? ['doctor_id' => $doctorId] : []))); ?>">
+                            <i class="bi <?php echo $info['icon']; ?>"></i> <?php echo $info['label']; ?>
                         </a>
                     </li>
                 <?php endforeach; ?>
@@ -410,50 +754,229 @@ $reportRangeNav = [
     </nav>
 
     <form method="GET" action="admin.php" class="clinic-reports-filter card border-0 mb-3">
-    <div class="card-body">
+        <div class="card-body">
             <input type="hidden" name="page" value="reports">
-            <input type="hidden" name="range" value="<?php echo htmlspecialchars($range); ?>">
+            <input type="hidden" name="report_type" value="<?php echo htmlspecialchars($reportType); ?>">
             <div class="row g-2 align-items-end">
-                <?php if ($range === 'custom'): ?>
-                <div class="col-md-2 report-custom-date">
+                <div class="col-md-2">
+                    <label class="form-label small mb-1">Period</label>
+                    <select name="range" class="form-select form-select-sm" id="reportRangeSelect">
+                        <?php foreach ($reportRangeNav as $rangeKey => $rangeLabel): ?>
+                            <option value="<?php echo $rangeKey; ?>" <?php echo $range === $rangeKey ? 'selected' : ''; ?>><?php echo htmlspecialchars($rangeLabel); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2 report-custom-date" style="<?php echo $range !== 'custom' ? 'display:none' : ''; ?>">
                     <label class="form-label small mb-1">From</label>
                     <input type="date" name="start_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($startDate); ?>">
-            </div>
-                <div class="col-md-2 report-custom-date">
+                </div>
+                <div class="col-md-2 report-custom-date" style="<?php echo $range !== 'custom' ? 'display:none' : ''; ?>">
                     <label class="form-label small mb-1">To</label>
                     <input type="date" name="end_date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($endDate); ?>">
-            </div>
-                <?php endif; ?>
-            <div class="col-md-3">
+                </div>
+                <div class="col-md-3">
                     <label class="form-label small mb-1">Doctor</label>
                     <select name="doctor_id" class="form-select form-select-sm">
                         <option value="">All doctors</option>
-                    <?php foreach ($doctors as $doc): ?>
+                        <?php foreach ($doctors as $doc): ?>
                             <option value="<?php echo (int)$doc['user_id']; ?>" <?php echo $doctorId === (int)$doc['user_id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-                <div class="col-md-2 d-flex gap-2">
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel"></i> Apply</button>
-                    <a href="admin.php?page=reports" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    <a href="admin.php?page=reports&report_type=<?php echo htmlspecialchars($reportType); ?>" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
                 </div>
             </div>
         </div>
     </form>
 
+    <?php if ($reportType === 'sales'): ?>
     <div class="row g-3 mb-3">
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Patients Seen</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$patientsSeen; ?></div>
+                <h6 class="mb-1">Total Billed</h6>
+                <div class="display-6 fw-bold">₱<?php echo number_format($totalBilled, 2); ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Completed Visits</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$completedVisits; ?></div>
+                <h6 class="mb-1">Collected</h6>
+                <div class="display-6 fw-bold text-success">₱<?php echo number_format($totalCollected, 2); ?></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Outstanding</h6>
+                <div class="display-6 fw-bold <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Collection Rate</h6>
+                <div class="display-6 fw-bold"><?php echo $collectionRate; ?>%</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Avg Revenue / Patient</h6>
+                <div class="display-6 fw-bold">₱<?php echo number_format($avgRevenuePerPatient, 2); ?></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Avg Revenue / Visit</h6>
+                <div class="display-6 fw-bold">₱<?php echo number_format($avgRevenuePerAppointment, 2); ?></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Total Invoices</h6>
+                <div class="display-6 fw-bold"><?php echo (int)$billingCount; ?></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Daily Revenue Trend</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="salesDailyRevChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="salesDailyRevChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Payment Methods</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="salesPayMethodChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="salesPayMethodChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Revenue by Service</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="salesSvcRevChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="salesSvcRevChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Service Revenue Breakdown</h5>
+                    <?php if (empty($serviceRevenue)): ?>
+                        <p class="text-muted mb-0">No billing data for this period.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Service</th>
+                                        <th class="text-end">Bookings</th>
+                                        <th class="text-end">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($serviceRevenue as $row): ?>
+                                        <tr>
+                                            <td class="fw-semibold"><?php echo htmlspecialchars($row['service_name']); ?></td>
+                                            <td class="text-end"><?php echo (int)$row['bookings']; ?></td>
+                                            <td class="text-end text-success">₱<?php echo number_format((float)$row['revenue'], 2); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if (!empty($birSalesPreview)): ?>
+    <div class="col-12 mb-3">
+        <div class="card dental-surface-card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <h5 class="card-title mb-0">BIR Sales Preview</h5>
+                    <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-outline-success clinic-report-no-print">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Invoice</th>
+                                <th>Service Date</th>
+                                <th>Patient</th>
+                                <th class="text-end">Billed</th>
+                                <th class="text-end">Collected</th>
+                                <th class="text-end">Balance</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($birSalesPreview as $row): ?>
+                                <?php
+                                $inv = $row['invoice_number'] ?: ('INV-' . str_pad((string)$row['billing_id'], 6, '0', STR_PAD_LEFT));
+                                $patient = trim(($row['patient_first'] ?? '') . ' ' . ($row['patient_last'] ?? ''));
+                                ?>
+                                <tr>
+                                    <td class="fw-semibold"><?php echo htmlspecialchars($inv); ?></td>
+                                    <td><?php echo htmlspecialchars($row['appointment_date']); ?></td>
+                                    <td><?php echo htmlspecialchars($patient); ?></td>
+                                    <td class="text-end">₱<?php echo number_format((float)$row['total_amount'], 2); ?></td>
+                                    <td class="text-end text-success">₱<?php echo number_format((float)$row['amount_paid'], 2); ?></td>
+                                    <td class="text-end">₱<?php echo number_format((float)$row['balance'], 2); ?></td>
+                                    <td><span class="badge bg-secondary"><?php echo htmlspecialchars($row['status']); ?></span></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php elseif ($reportType === 'demographic'): ?>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Total Patients Seen</h6>
+                <div class="display-6 fw-bold"><?php echo (int)$patientsSeen; ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
@@ -464,130 +987,103 @@ $reportRangeNav = [
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Needs Attention</h6>
-                <div class="display-6 fw-bold"><?php echo (int)($noShows + $cancelled + $awaitingRecords); ?></div>
-            </div>
+                <h6 class="mb-1">Total Appointments</h6>
+                <div class="display-6 fw-bold"><?php echo (int)$totalAppointments; ?></div>
             </div>
         </div>
-
-    <?php if ($billingCount > 0): ?>
-        <div class="row g-3 mb-3">
-        <div class="col-md-4">
-                <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Total Billed</h6>
-                <div class="display-6 fw-bold">₱<?php echo number_format($totalBilled, 2); ?></div>
-            </div>
-                </div>
-        <div class="col-md-4">
+        <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Collected</h6>
-                <div class="display-6 fw-bold text-success">₱<?php echo number_format($totalCollected, 2); ?></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-                <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Outstanding</h6>
-                <div class="display-6 fw-bold <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
+                <h6 class="mb-1">Completion Rate</h6>
+                <div class="display-6 fw-bold"><?php echo $completionRate; ?>%</div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
     <div class="row g-3 mb-3">
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
                     <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Completed Visits per Day</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge appointments vs completed visits chart">
+                        <h5 class="card-title mb-0">Age Distribution</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="demoAgeChart" aria-label="Enlarge chart">
                             <i class="bi bi-arrows-fullscreen"></i>
                         </button>
                     </div>
                     <div class="dental-chart-frame">
-                        <div id="reportDailyChart" class="clinic-simple-chart" data-chart-title="Appointments vs Completed Visits"></div>
+                        <div id="demoAgeChart" class="clinic-simple-chart"></div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
                     <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Appointment Outcomes</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportStatusChart" aria-label="Enlarge appointment outcomes chart">
+                        <h5 class="card-title mb-0">Gender Distribution</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="demoGenderChart" aria-label="Enlarge chart">
                             <i class="bi bi-arrows-fullscreen"></i>
                         </button>
                     </div>
                     <div class="dental-chart-frame">
-                        <div id="reportStatusChart" class="clinic-simple-chart" data-chart-title="Appointment Outcomes"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Top Services Booked</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportServicesChart" aria-label="Enlarge top services chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportServicesChart" class="clinic-simple-chart" data-chart-title="Top Services Booked"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php if ($billingCount > 0): ?>
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Collections vs Outstanding</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportCollectionsChart" aria-label="Enlarge collections chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportCollectionsChart" class="clinic-simple-chart" data-chart-title="Collections vs Outstanding"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php endif; ?>
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Top Services This Period</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportTopServicesMonthChart" aria-label="Enlarge top services chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportTopServicesMonthChart" class="clinic-simple-chart" data-chart-title="Top Services This Period"></div>
+                        <div id="demoGenderChart" class="clinic-simple-chart"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3">
+    <div class="row g-3 mb-3">
         <div class="col-lg-6">
-                <div class="card dental-surface-card h-100">
-                    <div class="card-body">
-                    <h5 class="card-title mb-3">Where Appointments Stand</h5>
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Peak Booking Days</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="demoPeakDaysChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="demoPeakDaysChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Peak Booking Hours</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="demoPeakHoursChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="demoPeakHoursChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Appointment Outcomes</h5>
                     <?php if (empty($statusBreakdown)): ?>
                         <p class="text-muted mb-0">No appointments in this period.</p>
                     <?php else: ?>
                         <ul class="clinic-report-bar-list list-unstyled mb-0">
-                            <?php foreach ($statusBreakdown as $row): ?>
-                                <?php
+                            <?php
+                            $statusMax = 1;
+                            foreach ($statusBreakdown as $row) {
+                                $statusMax = max($statusMax, (int)$row['total']);
+                            }
+                            foreach ($statusBreakdown as $row):
                                 $count = (int)$row['total'];
                                 $pct = (int)round(($count / $statusMax) * 100);
                                 $status = (string)$row['status'];
-                                ?>
+                            ?>
                                 <li class="clinic-report-bar-item">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="badge bg-<?php echo dashboard_appt_status_badge_class($status); ?>">
@@ -597,7 +1093,7 @@ $reportRangeNav = [
                                     </div>
                                     <div class="clinic-report-bar-track">
                                         <div class="clinic-report-bar-fill" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                    </div>
+                                    </div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
@@ -605,161 +1101,408 @@ $reportRangeNav = [
                 </div>
             </div>
         </div>
-
         <div class="col-lg-6">
             <div class="card dental-surface-card h-100">
-                            <div class="card-body">
-                    <h5 class="card-title mb-3">Most Booked Services</h5>
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Top Services by Bookings</h5>
                     <?php if (empty($topServices)): ?>
                         <p class="text-muted mb-0">No service bookings in this period.</p>
                     <?php else: ?>
                         <ul class="clinic-report-bar-list list-unstyled mb-0">
-                            <?php foreach ($topServices as $row): ?>
-                                <?php
+                            <?php
+                            $topServiceMax = 1;
+                            foreach ($topServices as $row) {
+                                $topServiceMax = max($topServiceMax, (int)$row['bookings']);
+                            }
+                            foreach ($topServices as $row):
                                 $count = (int)$row['bookings'];
                                 $pct = (int)round(($count / $topServiceMax) * 100);
-                                ?>
+                            ?>
                                 <li class="clinic-report-bar-item">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="fw-semibold"><?php echo htmlspecialchars($row['service_name']); ?></span>
                                         <strong><?php echo $count; ?></strong>
-                            </div>
+                                    </div>
                                     <div class="clinic-report-bar-track">
                                         <div class="clinic-report-bar-fill is-service" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                        </div>
+                                    </div>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
                     <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-        <div class="col-12">
-            <div class="card dental-surface-card">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Doctor Activity</h5>
-                <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead>
-                            <tr>
-                                <th>Doctor</th>
-                                    <th class="text-end">Total Appointments</th>
-                                    <th class="text-end">Completed</th>
-                                    <th class="text-end">No-Shows</th>
-                                    <th class="text-end">Completion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                                <?php if (empty($doctorActivity)): ?>
-                                    <tr><td colspan="5" class="text-muted text-center py-3">No doctor data for this period.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($doctorActivity as $doc): ?>
-                                        <?php
-                                        $total = (int)$doc['total_visits'];
-                                        $done = (int)$doc['completed_visits'];
-                                        $rate = $total > 0 ? round(($done / $total) * 100) : 0;
-                                        ?>
-                                        <tr>
-                                            <td class="fw-semibold"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></td>
-                                            <td class="text-end"><?php echo $total; ?></td>
-                                            <td class="text-end text-success fw-semibold"><?php echo $done; ?></td>
-                                            <td class="text-end <?php echo (int)$doc['no_shows'] > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$doc['no_shows']; ?></td>
-                                            <td class="text-end"><?php echo (int)$rate; ?>%</td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-                </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-        <?php if (!empty($birSalesPreview)): ?>
-        <div class="col-12">
-            <div class="card dental-surface-card">
+    <?php elseif ($reportType === 'trend'): ?>
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100 border-primary">
+                <h6 class="mb-1"><i class="bi bi-graph-up-arrow text-primary"></i> Predicted Next Month</h6>
+                <div class="display-6 fw-bold text-primary"><?php echo $nextMonthPredicted; ?></div>
+                <small class="text-muted">appointments forecast</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">12-Month Total</h6>
+                <div class="display-6 fw-bold"><?php echo array_sum($monthlyTrendAppts); ?></div>
+                <small class="text-muted">appointments</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card dental-kpi-card p-3 h-100">
+                <h6 class="mb-1">Avg Monthly Appointments</h6>
+                <div class="display-6 fw-bold"><?php echo count($monthlyTrendAppts) > 0 ? round(array_sum($monthlyTrendAppts) / count($monthlyTrendAppts)) : 0; ?></div>
+                <small class="text-muted">per month</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8">
+            <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h5 class="card-title mb-0">BIR Sales Preview</h5>
-                        <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-outline-success clinic-report-no-print">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
-                        </a>
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Monthly Appointment Trend (12 Months)</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendMonthlyChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendMonthlyChart" class="clinic-simple-chart"></div>
+                    </div>
                 </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Service Demand Forecast</h5>
+                    <?php if (empty($topServicesPredicted)): ?>
+                        <p class="text-muted mb-0">Not enough data for predictions.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Service</th>
+                                        <th class="text-end">Now</th>
+                                        <th class="text-end">Predicted</th>
+                                        <th class="text-end">Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (array_slice($topServicesPredicted, 0, 8) as $pred): ?>
+                                        <tr>
+                                            <td class="fw-semibold small"><?php echo htmlspecialchars($pred['service']); ?></td>
+                                            <td class="text-end"><?php echo $pred['current']; ?></td>
+                                            <td class="text-end fw-bold"><?php echo $pred['predicted']; ?></td>
+                                            <td class="text-end">
+                                                <?php if ($pred['growth'] > 0): ?>
+                                                    <span class="text-success"><i class="bi bi-arrow-up"></i> <?php echo $pred['growth']; ?>%</span>
+                                                <?php elseif ($pred['growth'] < 0): ?>
+                                                    <span class="text-danger"><i class="bi bi-arrow-down"></i> <?php echo abs($pred['growth']); ?>%</span>
+                                                <?php else: ?>
+                                                    <span class="text-muted">0%</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-12">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Service Trends (6 Months)</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendSvcChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendSvcChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Peak Days Analysis</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendPeakDaysChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendPeakDaysChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Peak Hours Analysis</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendPeakHoursChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendPeakHoursChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="bi bi-lightbulb text-warning"></i> Data-Driven Insights</h5>
+                    <ul class="list-unstyled mb-0">
+                        <?php if (!empty($peakDays)): ?>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Busiest Day:</strong> <?php echo htmlspecialchars($peakDays[0]['day_name']); ?>
+                            (<?php echo (int)$peakDays[0]['appointments']; ?> appointments)
+                        </li>
+                        <?php endif; ?>
+                        <?php if (!empty($peakHours)): ?>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Peak Hour:</strong> <?php echo htmlspecialchars($peakHourLabels[0] ?? ''); ?>
+                            (<?php echo (int)$peakHourValues[0]; ?> appointments)
+                        </li>
+                        <?php endif; ?>
+                        <?php if (!empty($topServices)): ?>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Most In-Demand Service:</strong> <?php echo htmlspecialchars($topServices[0]['service_name']); ?>
+                            (<?php echo (int)$topServices[0]['bookings']; ?> bookings)
+                        </li>
+                        <?php endif; ?>
+                        <?php if ($nextMonthPredicted > 0): ?>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Next Month Forecast:</strong> ~<?php echo $nextMonthPredicted; ?> appointments
+                            (based on recent growth trend)
+                        </li>
+                        <?php endif; ?>
+                        <li>
+                            <strong>Recommendation:</strong>
+                            <?php if (!empty($peakDays) && !empty($peakHours)): ?>
+                                Consider <?php echo $peakHours[0]['appointments'] > 5 ? 'extending' : 'maintaining'; ?> staff coverage on <?php echo htmlspecialchars($peakDays[0]['day_name']); ?>s during <?php echo htmlspecialchars($peakHourLabels[0] ?? ''); ?>.
+                            <?php else: ?>
+                                Collect more data to generate actionable insights.
+                            <?php endif; ?>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3"><i class="bi bi-box-seam text-info"></i> Material Preparation Guide</h5>
+                    <?php if (empty($topServicesPredicted)): ?>
+                        <p class="text-muted mb-0">Not enough data for material recommendations.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Service Trending Up</th>
+                                        <th>Prepare Materials</th>
+                                        <th>Priority</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $materialMap = [
+                                        'Teeth Cleaning' => 'Scaler tips, polishing paste, fluoride',
+                                        'Root Canal Treatment' => 'Files, gutta percha, sealer',
+                                        'Crown Placement' => 'Impression material, temporary crowns',
+                                        'Filling' => 'Composite resin, bonding agent, etchant',
+                                        'Extraction' => 'Forceps, elevators, sutures',
+                                        'Whitening' => 'Whitening gel, LED light, sensitivity paste',
+                                        'Denture Fitting' => 'Impression trays, acrylic, articulator',
+                                        'Implant Consultation' => 'CT scan referral, implant catalog',
+                                    ];
+                                    $priority = 1;
+                                    foreach (array_slice($topServicesPredicted, 0, 5) as $pred):
+                                        if ($pred['growth'] > 0):
+                                            $materials = $materialMap[$pred['service']] ?? 'General supplies';
+                                    ?>
+                                        <tr>
+                                            <td class="fw-semibold">
+                                                <?php echo htmlspecialchars($pred['service']); ?>
+                                                <br><small class="text-success">+<?php echo $pred['growth']; ?>%</small>
+                                            </td>
+                                            <td class="small"><?php echo htmlspecialchars($materials); ?></td>
+                                            <td>
+                                                <?php if ($priority <= 2): ?>
+                                                    <span class="badge bg-danger">High</span>
+                                                <?php elseif ($priority <= 3): ?>
+                                                    <span class="badge bg-warning text-dark">Medium</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Low</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php
+                                            $priority++;
+                                        endif;
+                                    endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php endif; ?>
+
+    <?php if ($reportType !== 'trend'): ?>
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Appointments Overview</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportDailyChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Status Breakdown</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportStatusChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportStatusChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Top Services</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportServicesChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportServicesChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="col-12 mb-3">
+        <div class="card dental-surface-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Doctor Activity</h5>
                 <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Invoice</th>
-                                    <th>Service Date</th>
-                                    <th>Patient</th>
-                                    <th class="text-end">Billed</th>
-                                    <th class="text-end">Collected</th>
-                                    <th class="text-end">Balance</th>
-                                    <th>Status</th>
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Doctor</th>
+                                <th class="text-end">Total Appointments</th>
+                                <th class="text-end">Completed</th>
+                                <th class="text-end">No-Shows</th>
+                                <th class="text-end">Completion</th>
                             </tr>
                         </thead>
                         <tbody>
-                                <?php foreach ($birSalesPreview as $row): ?>
+                            <?php if (empty($doctorActivity)): ?>
+                                <tr><td colspan="5" class="text-muted text-center py-3">No doctor data for this period.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($doctorActivity as $doc): ?>
                                     <?php
-                                    $inv = $row['invoice_number'] ?: ('INV-' . str_pad((string)$row['billing_id'], 6, '0', STR_PAD_LEFT));
-                                    $patient = trim(($row['patient_first'] ?? '') . ' ' . ($row['patient_last'] ?? ''));
+                                    $total = (int)$doc['total_visits'];
+                                    $done = (int)$doc['completed_visits'];
+                                    $rate = $total > 0 ? round(($done / $total) * 100) : 0;
                                     ?>
                                     <tr>
-                                        <td class="fw-semibold"><?php echo htmlspecialchars($inv); ?></td>
-                                        <td><?php echo htmlspecialchars($row['appointment_date']); ?></td>
-                                        <td><?php echo htmlspecialchars($patient); ?></td>
-                                        <td class="text-end">₱<?php echo number_format((float)$row['total_amount'], 2); ?></td>
-                                        <td class="text-end text-success">₱<?php echo number_format((float)$row['amount_paid'], 2); ?></td>
-                                        <td class="text-end">₱<?php echo number_format((float)$row['balance'], 2); ?></td>
-                                        <td><span class="badge bg-secondary"><?php echo htmlspecialchars($row['status']); ?></span></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    </div>
-                </div>
-                    </div>
-                </div>
-        <?php endif; ?>
-
-        <div class="col-12">
-            <div class="card dental-surface-card">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Recent Completed Visits</h5>
-                <div class="table-responsive">
-                        <table class="table table-sm table-hover align-middle mb-0">
-                            <thead>
-                            <tr>
-                                    <th>Date</th>
-                                <th>Patient</th>
-                                    <th>Doctor</th>
-                                    <th>Services</th>
-                                    <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                                <?php if (empty($recentVisits)): ?>
-                                    <tr><td colspan="5" class="text-muted text-center py-3">No completed visits in this period.</td></tr>
-                                <?php else: ?>
-                                    <?php foreach ($recentVisits as $visit): ?>
-                                        <?php $st = (string)($visit['status'] ?? 'completed'); ?>
-                                        <tr>
-                                            <td><?php echo date('M d, Y', strtotime($visit['appointment_date'])); ?></td>
-                                            <td><?php echo htmlspecialchars(trim(($visit['patient_first'] ?? '') . ' ' . ($visit['patient_last'] ?? ''))); ?></td>
-                                            <td><?php echo htmlspecialchars(trim(($visit['doctor_first'] ?? '') . ' ' . ($visit['doctor_last'] ?? ''))); ?></td>
-                                            <td class="small"><?php echo htmlspecialchars($visit['services'] ?? '—'); ?></td>
-                                            <td>
-                                                <span class="badge bg-<?php echo dashboard_appt_status_badge_class($st); ?>">
-                                                    <?php echo htmlspecialchars(reports_format_status($st)); ?>
-                                                </span>
-                                            </td>
+                                        <td class="fw-semibold"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></td>
+                                        <td class="text-end"><?php echo $total; ?></td>
+                                        <td class="text-end text-success fw-semibold"><?php echo $done; ?></td>
+                                        <td class="text-end <?php echo (int)$doc['no_shows'] > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$doc['no_shows']; ?></td>
+                                        <td class="text-end"><?php echo (int)$rate; ?>%</td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>
                     </table>
-                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card dental-surface-card">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Recent Completed Visits</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Services</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($recentVisits)): ?>
+                                <tr><td colspan="5" class="text-muted text-center py-3">No completed visits in this period.</td></tr>
+                            <?php else: ?>
+                                <?php foreach ($recentVisits as $visit): ?>
+                                    <?php $st = (string)($visit['status'] ?? 'completed'); ?>
+                                    <tr>
+                                        <td><?php echo date('M d, Y', strtotime($visit['appointment_date'])); ?></td>
+                                        <td><?php echo htmlspecialchars(trim(($visit['patient_first'] ?? '') . ' ' . ($visit['patient_last'] ?? ''))); ?></td>
+                                        <td><?php echo htmlspecialchars(trim(($visit['doctor_first'] ?? '') . ' ' . ($visit['doctor_last'] ?? ''))); ?></td>
+                                        <td class="small"><?php echo htmlspecialchars($visit['services'] ?? '—'); ?></td>
+                                        <td>
+                                            <span class="badge bg-<?php echo dashboard_appt_status_badge_class($st); ?>">
+                                                <?php echo htmlspecialchars(reports_format_status($st)); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -780,161 +1523,343 @@ $reportRangeNav = [
     </div>
 </div>
 
-<script src="../assets/js/admin-charts.js?v=20260614-admin-charts"></script>
+<script src="../assets/js/admin-charts.js?v=20260702-reports"></script>
 <script>
 (function () {
-    const dailyLabels = <?php echo json_encode($dailyChartLabels); ?>;
-    const dailyBooked = <?php echo json_encode($dailyBookedValues); ?>;
-    const dailyCompleted = <?php echo json_encode($dailyCompletedValues); ?>;
-    const statusLabels = <?php echo json_encode($chartStatusLabels); ?>;
-    const statusValues = <?php echo json_encode($chartStatusValues); ?>;
-    const serviceLabels = <?php echo json_encode($chartServiceLabels); ?>;
-    const serviceValues = <?php echo json_encode($chartServiceValues); ?>;
-    const totalCollected = <?php echo json_encode(round($totalCollected, 2)); ?>;
-    const totalOutstanding = <?php echo json_encode(round($totalOutstanding, 2)); ?>;
+    var reportType = <?php echo json_encode($reportType); ?>;
+    var dailyLabels = <?php echo json_encode($dailyChartLabels); ?>;
+    var dailyBooked = <?php echo json_encode($dailyBookedValues); ?>;
+    var dailyCompleted = <?php echo json_encode($dailyCompletedValues); ?>;
+    var statusLabels = <?php echo json_encode($chartStatusLabels); ?>;
+    var statusValues = <?php echo json_encode($chartStatusValues); ?>;
+    var serviceLabels = <?php echo json_encode($chartServiceLabels); ?>;
+    var serviceValues = <?php echo json_encode($chartServiceValues); ?>;
+    var dailyRevLabels = <?php echo json_encode($dailyRevLabels); ?>;
+    var dailyRevValues = <?php echo json_encode($dailyRevValues); ?>;
+    var payMethodLabels = <?php echo json_encode($payMethodLabels); ?>;
+    var payMethodValues = <?php echo json_encode($payMethodValues); ?>;
+    var svcRevLabels = <?php echo json_encode($svcRevLabels); ?>;
+    var svcRevValues = <?php echo json_encode($svcRevValues); ?>;
+    var ageLabels = <?php echo json_encode($ageLabels); ?>;
+    var ageValues = <?php echo json_encode($ageValues); ?>;
+    var genderLabels = <?php echo json_encode($genderLabels); ?>;
+    var genderValues = <?php echo json_encode($genderValues); ?>;
+    var peakDayLabels = <?php echo json_encode($peakDayLabels); ?>;
+    var peakDayValues = <?php echo json_encode($peakDayValues); ?>;
+    var peakHourLabels = <?php echo json_encode($peakHourLabels); ?>;
+    var peakHourValues = <?php echo json_encode($peakHourValues); ?>;
+    var monthlyTrendLabels = <?php echo json_encode($monthlyTrendLabels); ?>;
+    var monthlyTrendAppts = <?php echo json_encode($monthlyTrendAppts); ?>;
+    var monthlyTrendCompleted = <?php echo json_encode($monthlyTrendCompleted); ?>;
+    var serviceTrendLabels = <?php echo json_encode($serviceTrendMonthLabels); ?>;
+    var serviceTrendSeries = <?php echo json_encode($serviceTrendSeries); ?>;
+    var totalCollected = <?php echo json_encode(round($totalCollected, 2)); ?>;
+    var totalOutstanding = <?php echo json_encode(round($totalOutstanding, 2)); ?>;
+
+    var chartColors = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
 
     function renderCharts() {
         if (typeof AdminCharts === 'undefined' || typeof ApexCharts === 'undefined') return;
 
+        if (reportType === 'sales') {
+            renderSalesCharts();
+        } else if (reportType === 'demographic') {
+            renderDemographicCharts();
+        } else if (reportType === 'trend') {
+            renderTrendCharts();
+        }
+
+        renderCommonCharts();
+        AdminCharts.bindExpandButtons();
+    }
+
+    function renderSalesCharts() {
         try {
-            if (dailyLabels.length && (dailyBooked.some(function (v) { return v > 0; }) || dailyCompleted.some(function (v) { return v > 0; }))) {
-                var dailyEl = document.getElementById('reportDailyChart');
-                if (dailyEl && typeof ApexCharts !== 'undefined') {
-                    dailyEl.innerHTML = '';
-                    var dailyCard = dailyEl.closest('.dental-chart-card');
-                    if (dailyCard) {
-                        var dailyBtn = dailyCard.querySelector('[data-chart-expand]');
-                        if (dailyBtn) dailyBtn.style.display = '';
-                    }
-                    var dailyChart = new ApexCharts(dailyEl, {
+            if (dailyRevLabels.length && dailyRevValues.some(function(v) { return v > 0; })) {
+                var el = document.getElementById('salesDailyRevChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'area', height: 260, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [{ name: 'Revenue', data: dailyRevValues }],
+                        xaxis: { categories: dailyRevLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+                        yaxis: { min: 0, labels: { formatter: function(v) { return '₱' + v.toLocaleString(); } } },
+                        colors: ['#10b981'],
+                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
+                        stroke: { curve: 'smooth', width: 2 },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        tooltip: { theme: 'light', y: { formatter: function(v) { return '₱' + v.toLocaleString(); } } }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['salesDailyRevChart'] = { options: opts, title: 'Daily Revenue Trend', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('salesDailyRevChart', 'revenue data');
+            }
+        } catch(e) { console.error('Sales daily rev chart:', e); }
+
+        try {
+            if (payMethodLabels.length) {
+                AdminCharts.mount('salesPayMethodChart', AdminCharts.buildDonutOptions(payMethodLabels, payMethodValues), 'Payment Methods');
+            } else {
+                AdminCharts.renderNoData('salesPayMethodChart', 'payment data');
+            }
+        } catch(e) { console.error('Pay method chart:', e); }
+
+        try {
+            if (svcRevLabels.length) {
+                AdminCharts.mount('salesSvcRevChart', AdminCharts.buildHorizontalBarOptions(svcRevLabels, svcRevValues, 'Revenue'), 'Revenue by Service');
+            } else {
+                AdminCharts.renderNoData('salesSvcRevChart', 'service revenue');
+            }
+        } catch(e) { console.error('Svc rev chart:', e); }
+    }
+
+    function renderDemographicCharts() {
+        try {
+            if (ageLabels.length) {
+                AdminCharts.mount('demoAgeChart', AdminCharts.buildHorizontalBarOptions(ageLabels, ageValues, 'Patients'), 'Age Distribution');
+            } else {
+                AdminCharts.renderNoData('demoAgeChart', 'age data');
+            }
+        } catch(e) { console.error('Age chart:', e); }
+
+        try {
+            if (genderLabels.length) {
+                AdminCharts.mount('demoGenderChart', AdminCharts.buildDonutOptions(genderLabels, genderValues), 'Gender Distribution');
+            } else {
+                AdminCharts.renderNoData('demoGenderChart', 'gender data');
+            }
+        } catch(e) { console.error('Gender chart:', e); }
+
+        try {
+            if (peakDayLabels.length) {
+                var el = document.getElementById('demoPeakDaysChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [{ name: 'Appointments', data: peakDayValues }],
+                        xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: ['#6366f1'],
+                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['demoPeakDaysChart'] = { options: opts, title: 'Peak Booking Days', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('demoPeakDaysChart', 'day data');
+            }
+        } catch(e) { console.error('Peak days chart:', e); }
+
+        try {
+            if (peakHourLabels.length) {
+                var el = document.getElementById('demoPeakHoursChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [{ name: 'Appointments', data: peakHourValues }],
+                        xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: ['#f59e0b'],
+                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['demoPeakHoursChart'] = { options: opts, title: 'Peak Booking Hours', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('demoPeakHoursChart', 'hour data');
+            }
+        } catch(e) { console.error('Peak hours chart:', e); }
+    }
+
+    function renderTrendCharts() {
+        try {
+            if (monthlyTrendLabels.length) {
+                var el = document.getElementById('trendMonthlyChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'line', height: 280, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [
+                            { name: 'Total Appointments', data: monthlyTrendAppts },
+                            { name: 'Completed', data: monthlyTrendCompleted }
+                        ],
+                        xaxis: { categories: monthlyTrendLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: ['#1173c1', '#10b981'],
+                        stroke: { curve: 'smooth', width: 2 },
+                        fill: { type: 'solid', opacity: 0 },
+                        dataLabels: { enabled: false },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        markers: { size: 4, hover: { size: 6 } }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['trendMonthlyChart'] = { options: opts, title: 'Monthly Appointment Trend (12 Months)', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('trendMonthlyChart', 'monthly data');
+            }
+        } catch(e) { console.error('Monthly trend chart:', e); }
+
+        try {
+            if (serviceTrendLabels.length && serviceTrendSeries.length) {
+                var el = document.getElementById('trendSvcChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var seriesData = serviceTrendSeries.map(function(s, i) {
+                        return { name: s.name, data: s.data };
+                    });
+                    var opts = {
+                        chart: { type: 'line', height: 300, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: seriesData,
+                        xaxis: { categories: serviceTrendLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: chartColors,
+                        stroke: { curve: 'smooth', width: 2 },
+                        fill: { type: 'solid', opacity: 0 },
+                        dataLabels: { enabled: false },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        markers: { size: 3, hover: { size: 5 } }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['trendSvcChart'] = { options: opts, title: 'Service Trends (6 Months)', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('trendSvcChart', 'service trend data');
+            }
+        } catch(e) { console.error('Service trend chart:', e); }
+
+        try {
+            if (peakDayLabels.length) {
+                var el = document.getElementById('trendPeakDaysChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [{ name: 'Appointments', data: peakDayValues }],
+                        xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: ['#6366f1'],
+                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['trendPeakDaysChart'] = { options: opts, title: 'Peak Days Analysis', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('trendPeakDaysChart', 'day data');
+            }
+        } catch(e) { console.error('Trend peak days:', e); }
+
+        try {
+            if (peakHourLabels.length) {
+                var el = document.getElementById('trendPeakHoursChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        series: [{ name: 'Appointments', data: peakHourValues }],
+                        xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
+                        yaxis: { min: 0, forceNiceScale: true },
+                        colors: ['#f59e0b'],
+                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
+                        dataLabels: { enabled: false },
+                        legend: { show: false },
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['trendPeakHoursChart'] = { options: opts, title: 'Peak Hours Analysis', chart: chart };
+                }
+            } else {
+                AdminCharts.renderNoData('trendPeakHoursChart', 'hour data');
+            }
+        } catch(e) { console.error('Trend peak hours:', e); }
+    }
+
+    function renderCommonCharts() {
+        try {
+            if (dailyLabels.length && (dailyBooked.some(function(v) { return v > 0; }) || dailyCompleted.some(function(v) { return v > 0; }))) {
+                var el = document.getElementById('reportDailyChart');
+                if (el) {
+                    el.innerHTML = '';
+                    var opts = {
                         chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
                         series: [
                             { name: 'Booked', data: dailyBooked },
                             { name: 'Completed', data: dailyCompleted }
                         ],
-                        xaxis: {
-                            categories: dailyLabels,
-                            labels: { rotate: -45, style: { fontSize: '11px', colors: '#64748b' } },
-                            axisBorder: { show: false },
-                            axisTicks: { show: false }
-                        },
-                        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
+                        xaxis: { categories: dailyLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+                        yaxis: { min: 0, forceNiceScale: true },
                         colors: ['#94a3b8', '#0d9488'],
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
-                        tooltip: { theme: 'light', style: { fontSize: '12px' } }
-                    });
-                    dailyChart.render();
-
-                    var dailyExpandBtn = document.querySelector('[data-chart-expand="reportDailyChart"]');
-                    if (dailyExpandBtn && !dailyExpandBtn._dailyExpandBound) {
-                        dailyExpandBtn._dailyExpandBound = true;
-                        dailyExpandBtn.addEventListener('click', function () {
-                            var modalEl = document.getElementById('adminChartExpandModal');
-                            var titleEl = document.getElementById('adminChartExpandTitle');
-                            var hostEl = document.getElementById('adminChartExpandHost');
-                            if (!modalEl || !hostEl) return;
-                            if (titleEl) titleEl.textContent = 'Appointments vs Completed Visits';
-                            hostEl.innerHTML = '';
-                            var expandedChart = new ApexCharts(hostEl, dailyChart.w.config);
-                            expandedChart.render();
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                                bootstrap.Modal.getOrCreateInstance(modalEl).show();
-                            }
-                        });
-                    }
+                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                    };
+                    var chart = new ApexCharts(el, opts);
+                    chart.render();
+                    AdminCharts._registry = AdminCharts._registry || {};
+                    AdminCharts._registry['reportDailyChart'] = { options: opts, title: 'Appointments Overview', chart: chart };
                 }
-            } else {
+            } else if (document.getElementById('reportDailyChart')) {
                 AdminCharts.renderNoData('reportDailyChart', 'visit data');
             }
-        } catch (e) { console.error('Daily chart error:', e); }
+        } catch(e) { console.error('Daily chart:', e); }
 
         try {
             if (statusLabels.length) {
-                AdminCharts.mount(
-                    'reportStatusChart',
-                    AdminCharts.buildDonutOptions(statusLabels, statusValues),
-                    'Appointment Outcomes'
-                );
-            } else {
+                AdminCharts.mount('reportStatusChart', AdminCharts.buildDonutOptions(statusLabels, statusValues), 'Appointment Outcomes');
+            } else if (document.getElementById('reportStatusChart')) {
                 AdminCharts.renderNoData('reportStatusChart', 'appointment outcomes');
             }
-        } catch (e) { console.error('Status chart error:', e); }
+        } catch(e) { console.error('Status chart:', e); }
 
         try {
             if (serviceLabels.length) {
-                AdminCharts.mount(
-                    'reportServicesChart',
-                    AdminCharts.buildHorizontalBarOptions(serviceLabels, serviceValues, 'Bookings'),
-                    'Top Services Booked'
-                );
-            } else {
+                AdminCharts.mount('reportServicesChart', AdminCharts.buildHorizontalBarOptions(serviceLabels, serviceValues, 'Bookings'), 'Top Services');
+            } else if (document.getElementById('reportServicesChart')) {
                 AdminCharts.renderNoData('reportServicesChart', 'service bookings');
             }
-        } catch (e) { console.error('Services chart error:', e); }
+        } catch(e) { console.error('Services chart:', e); }
+    }
 
-        try {
-            if (document.getElementById('reportCollectionsChart') && (totalCollected > 0 || totalOutstanding > 0)) {
-                AdminCharts.mount(
-                    'reportCollectionsChart',
-                    AdminCharts.buildMoneyBarOptions(totalCollected, totalOutstanding),
-                    'Collections vs Outstanding'
-                );
-            } else if (document.getElementById('reportCollectionsChart')) {
-                AdminCharts.renderNoData('reportCollectionsChart', 'billing amounts');
-            }
-        } catch (e) { console.error('Collections chart error:', e); }
-
-        try {
-            var topSvcMonthEl = document.getElementById('reportTopServicesMonthChart');
-            if (topSvcMonthEl && serviceLabels.length) {
-                topSvcMonthEl.innerHTML = '';
-                var topSvcMonthCard = topSvcMonthEl.closest('.dental-chart-card');
-                if (topSvcMonthCard) {
-                    var topSvcMonthBtn = topSvcMonthCard.querySelector('[data-chart-expand]');
-                    if (topSvcMonthBtn) topSvcMonthBtn.style.display = '';
-                }
-                var topSvcColors = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-                var topSvcMonthChart = new ApexCharts(topSvcMonthEl, {
-                    chart: { type: 'donut', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
-                    series: serviceValues,
-                    labels: serviceLabels,
-                    colors: topSvcColors.slice(0, serviceLabels.length),
-                    legend: { position: 'bottom', fontSize: '11px' },
-                    dataLabels: { enabled: true, formatter: function (val) { return Math.round(val) + '%'; }, style: { fontSize: '10px', fontWeight: 600 } },
-                    plotOptions: { pie: { donut: { size: '55%', labels: { show: true, name: { fontSize: '11px' }, value: { fontSize: '16px', fontWeight: 700, color: '#1e293b' }, total: { show: true, label: 'Total', fontSize: '11px', formatter: function (w) { return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0); } } } } } },
-                    stroke: { width: 2, colors: ['#fff'] },
-                    tooltip: { theme: 'light', style: { fontSize: '12px' } }
-                });
-                topSvcMonthChart.render();
-
-                var topSvcExpandBtn = document.querySelector('[data-chart-expand="reportTopServicesMonthChart"]');
-                if (topSvcExpandBtn && !topSvcExpandBtn._topSvcExpandBound) {
-                    topSvcExpandBtn._topSvcExpandBound = true;
-                    topSvcExpandBtn.addEventListener('click', function () {
-                        var modalEl = document.getElementById('adminChartExpandModal');
-                        var titleEl = document.getElementById('adminChartExpandTitle');
-                        var hostEl = document.getElementById('adminChartExpandHost');
-                        if (!modalEl || !hostEl) return;
-                        if (titleEl) titleEl.textContent = 'Top Services This Period';
-                        hostEl.innerHTML = '';
-                        var expandedChart = new ApexCharts(hostEl, topSvcMonthChart.w.config);
-                        expandedChart.render();
-                        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-                        }
-                    });
-                }
-            } else if (topSvcMonthEl) {
-                topSvcMonthEl.innerHTML = '<div class="dental-chart-empty"><i class="bi bi-pie-chart"></i><span>No service data for this period.</span></div>';
-                var noSvcCard = topSvcMonthEl.closest('.dental-chart-card');
-                if (noSvcCard) { var noBtn = noSvcCard.querySelector('[data-chart-expand]'); if (noBtn) noBtn.style.display = 'none'; }
-            }
-        } catch (e) { console.error('Top services month chart error:', e); }
-
-        AdminCharts.bindExpandButtons();
+    var rangeSelect = document.getElementById('reportRangeSelect');
+    if (rangeSelect) {
+        rangeSelect.addEventListener('change', function() {
+            var customDates = document.querySelectorAll('.report-custom-date');
+            customDates.forEach(function(el) {
+                el.style.display = rangeSelect.value === 'custom' ? '' : 'none';
+            });
+        });
     }
 
     if (document.readyState === 'loading') {
@@ -946,7 +1871,136 @@ $reportRangeNav = [
 </script>
 
 <style>
-/* === AI Chat Widget === */
+.clinic-reports-filter .form-select,
+.clinic-reports-filter .form-control {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+}
+.clinic-reports-filter .form-select:focus,
+.clinic-reports-filter .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(17, 115, 193, 0.1);
+}
+.dental-kpi-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+.dental-kpi-card h6 {
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+}
+.dental-kpi-card .display-6 {
+    font-size: 1.8rem;
+    color: #1e293b;
+}
+.dental-chart-card {
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+.dental-chart-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.dental-chart-card__head h5 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+.dental-chart-expand-btn {
+    background: none;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 4px 8px;
+    color: #64748b;
+    cursor: pointer;
+}
+.dental-chart-frame {
+    min-height: 240px;
+}
+.clinic-report-bar-item {
+    margin-bottom: 12px;
+}
+.clinic-report-bar-track {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.clinic-report-bar-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+.clinic-report-bar-fill.is-service {
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+.badge {
+    font-weight: 500;
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.table th {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.table td {
+    font-size: 13px;
+    vertical-align: middle;
+}
+@media print {
+    .clinic-report-no-print { display: none !important; }
+    .clinic-reports-shell { padding: 0; }
+    .card { break-inside: avoid; border: 1px solid #dee2e6 !important; }
+}
+</style>
+
+<div class="ai-chat-wrapper" id="aiChatWrapper">
+    <button type="button" class="ai-chat-fab" id="aiChatFab" title="AI Analytics Assistant">
+        <i class="bi bi-robot"></i>
+    </button>
+
+    <div class="ai-chat-panel" id="aiChatPanel">
+        <div class="ai-chat-header">
+            <div class="ai-chat-header-left">
+                <div class="ai-chat-header-icon"><i class="bi bi-robot"></i></div>
+                <div class="ai-chat-header-text">
+                    <h6>Analytics Assistant</h6>
+                    <span class="ai-chat-subtitle"><span class="ai-chat-status-dot"></span>Powered by Groq AI</span>
+                </div>
+            </div>
+            <button type="button" class="ai-chat-close" id="aiChatClose">&times;</button>
+        </div>
+        <div class="ai-chat-messages" id="aiChatMessages">
+            <div class="ai-chat-msg bot">
+                Hi! I'm your clinic analytics assistant. Ask me anything about your data, for example:
+                <br><br>
+                <em>"Top services this month"</em><br>
+                <em>"How many appointments today?"</em><br>
+                <em>"Revenue this week"</em><br>
+                <em>"Which doctor is busiest?"</em><br>
+                <em>"Patient age demographics"</em><br>
+                <em>"What services are trending?"</em>
+            </div>
+        </div>
+        <div class="ai-chat-input-wrap">
+            <textarea class="ai-chat-input" id="aiChatInput" rows="1" placeholder="Ask about your clinic data..."></textarea>
+            <button type="button" class="ai-chat-send" id="aiChatSend"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+</div>
+
+<style>
 .ai-chat-wrapper {
     position: fixed;
     bottom: 24px;
@@ -958,8 +2012,6 @@ $reportRangeNav = [
     flex-direction: column;
     align-items: flex-end;
 }
-
-/* FAB — the robot icon button */
 .ai-chat-fab {
     width: 54px;
     height: 54px;
@@ -973,21 +2025,15 @@ $reportRangeNav = [
     align-items: center;
     justify-content: center;
     font-size: 22px;
-    transition: transform 0.3s cubic-bezier(0.34,1.5,0.64,1), opacity 0.22s ease, box-shadow 0.2s;
+    transition: transform 0.3s cubic-bezier(0.34,1.5,0.64,1), opacity 0.22s ease;
     position: relative;
     z-index: 1;
-}
-.ai-chat-fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 24px rgba(17,115,193,0.48);
 }
 .ai-chat-fab.hidden {
     opacity: 0;
     transform: scale(0);
     pointer-events: none;
 }
-
-/* Panel — scales out from bottom-right corner (icon position) */
 .ai-chat-panel {
     position: absolute;
     bottom: 0;
@@ -1012,8 +2058,6 @@ $reportRangeNav = [
     opacity: 1;
     pointer-events: all;
 }
-
-/* Header — white card style, dark legible text */
 .ai-chat-header {
     background: #fff;
     border-bottom: 1.5px solid #f0f4f8;
@@ -1049,7 +2093,6 @@ $reportRangeNav = [
     font-weight: 700;
     color: #0f172a;
     line-height: 1.25;
-    letter-spacing: -0.01em;
 }
 .ai-chat-subtitle {
     font-size: 11px;
@@ -1084,8 +2127,6 @@ $reportRangeNav = [
     line-height: 1;
 }
 .ai-chat-close:hover { background: #e2e8f0; color: #1e293b; }
-
-/* Messages list */
 .ai-chat-messages {
     flex: 1;
     min-height: 0;
@@ -1138,8 +2179,6 @@ $reportRangeNav = [
     border: 1px solid #fecaca;
     border-bottom-left-radius: 4px;
 }
-
-/* Typing dots */
 .ai-chat-typing {
     display: flex;
     gap: 4px;
@@ -1158,8 +2197,6 @@ $reportRangeNav = [
     0%,60%,100% { transform: translateY(0); opacity: 0.4; }
     30% { transform: translateY(-5px); opacity: 1; }
 }
-
-/* Input row */
 .ai-chat-input-wrap {
     padding: 10px 12px;
     border-top: 1.5px solid #f0f4f8;
@@ -1208,8 +2245,6 @@ $reportRangeNav = [
 }
 .ai-chat-send:hover { opacity: 0.88; transform: scale(1.06); }
 .ai-chat-send:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
-
-/* Response data rendering */
 .ai-metric {
     font-size: 28px;
     font-weight: 800;
@@ -1234,13 +2269,12 @@ $reportRangeNav = [
 .ai-kv-list li:last-child { border-bottom: none; }
 .ai-kv-label { color: #64748b; font-size: 11.5px; }
 .ai-kv-val { font-weight: 600; color: #1e293b; }
-.ai-row-list { counter-reset: none; padding-left: 0; }
+.ai-row-list { padding-left: 0; }
 .ai-row-list li {
     font-size: 12.5px;
     color: #1e293b;
     padding: 5px 0;
     border-bottom: 1px solid #f0f4f8;
-    list-style: decimal inside;
     list-style: none;
 }
 .ai-row-list li::before {
@@ -1261,39 +2295,6 @@ $reportRangeNav = [
     line-height: 1.55;
 }
 </style>
-
-<div class="ai-chat-wrapper" id="aiChatWrapper">
-    <button type="button" class="ai-chat-fab" id="aiChatFab" title="AI Analytics Assistant">
-        <i class="bi bi-robot"></i>
-    </button>
-
-    <div class="ai-chat-panel" id="aiChatPanel">
-        <div class="ai-chat-header">
-            <div class="ai-chat-header-left">
-                <div class="ai-chat-header-icon"><i class="bi bi-robot"></i></div>
-                <div class="ai-chat-header-text">
-                    <h6>Analytics Assistant</h6>
-                    <span class="ai-chat-subtitle"><span class="ai-chat-status-dot"></span>Powered by Groq AI</span>
-                </div>
-            </div>
-            <button type="button" class="ai-chat-close" id="aiChatClose">&times;</button>
-        </div>
-        <div class="ai-chat-messages" id="aiChatMessages">
-            <div class="ai-chat-msg bot">
-                Hi! I'm your clinic analytics assistant. Ask me anything about your data, for example:
-                <br><br>
-                <em>"Top services this month"</em><br>
-                <em>"How many appointments today?"</em><br>
-                <em>"Revenue this week"</em><br>
-                <em>"Which doctor is busiest?"</em>
-            </div>
-        </div>
-        <div class="ai-chat-input-wrap">
-            <textarea class="ai-chat-input" id="aiChatInput" rows="1" placeholder="Ask about your clinic data..."></textarea>
-            <button type="button" class="ai-chat-send" id="aiChatSend"><i class="bi bi-send-fill"></i></button>
-        </div>
-    </div>
-</div>
 
 <script>
 (function () {
@@ -1332,7 +2333,7 @@ $reportRangeNav = [
 
     sendBtn.addEventListener('click', sendMessage);
 
-    function addMessage(text, type, extra) {
+    function addMessage(text, type) {
         var div = document.createElement('div');
         div.className = 'ai-chat-msg ' + type;
         if (type === 'bot') {
@@ -1371,12 +2372,15 @@ $reportRangeNav = [
         var answer = data.answer || '';
         var html = '';
 
+        if (rows.length === 0) {
+            html += '<p class="ai-answer-text"><i class="bi bi-info-circle"></i> No records found for this query. ' + escHtml(answer) + '</p>';
+            return html;
+        }
+
         if (rows.length === 1 && Object.keys(rows[0]).length === 1) {
-            // Single metric — show as a large number
             var val = Object.values(rows[0])[0];
             html += '<div class="ai-metric">' + escHtml(String(val ?? '0')) + '</div>';
         } else if (rows.length === 1) {
-            // Single row, multiple columns — key/value pairs
             html += '<ul class="ai-kv-list">';
             Object.entries(rows[0]).forEach(function (kv) {
                 html += '<li><span class="ai-kv-label">' + escHtml(kv[0]) + '</span>'
@@ -1384,7 +2388,6 @@ $reportRangeNav = [
             });
             html += '</ul>';
         } else if (rows.length > 1) {
-            // Multiple rows — compact ordered list
             var keys = Object.keys(rows[0]);
             html += '<ol class="ai-row-list">';
             rows.slice(0, 8).forEach(function (row) {
@@ -1425,7 +2428,7 @@ $reportRangeNav = [
             return r.text().then(function (raw) {
                 var data;
                 try { data = JSON.parse(raw); } catch (e) {
-                    throw new Error('[HTTP ' + status + '] Server returned non-JSON. Likely blocked by host.\n\nRaw: ' + raw.substring(0, 300));
+                    throw new Error('[HTTP ' + status + '] Server returned non-JSON.\n\nRaw: ' + raw.substring(0, 300));
                 }
                 data.__status = status;
                 return data;
@@ -1435,9 +2438,6 @@ $reportRangeNav = [
             removeTyping();
             if (data.error) {
                 var msg = '[HTTP ' + data.__status + '] ' + data.error;
-                if (data.debug_hint)   msg += '\n\nHint: ' + data.debug_hint;
-                if (data.session_keys) msg += '\nSession keys: [' + data.session_keys.join(', ') + ']';
-                if (data.role)         msg += '\nRole: ' + data.role;
                 addMessage(escHtml(msg), 'error');
             } else {
                 addMessage(renderResponse(data), 'bot');
@@ -1448,7 +2448,7 @@ $reportRangeNav = [
         })
         .catch(function (err) {
             removeTyping();
-            addMessage(escHtml(err && err.message ? err.message : 'Unable to reach the assistant. Please try again.'), 'error');
+            addMessage(escHtml(err && err.message ? err.message : 'Unable to reach the assistant.'), 'error');
             sending = false;
             sendBtn.disabled = false;
         });

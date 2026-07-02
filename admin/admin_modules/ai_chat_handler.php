@@ -50,6 +50,8 @@ if (!$groqKey || $groqKey === 'your_groq_api_key_here') {
     exit;
 }
 
+$todayDate = date('Y-m-d');
+
 $input       = json_decode(file_get_contents('php://input'), true);
 $userMessage = trim($input['message'] ?? '');
 if ($userMessage === '') {
@@ -60,6 +62,8 @@ if ($userMessage === '') {
 
 $systemPrompt = <<<'PROMPT'
 You are a MySQL SELECT query generator for Azucena's Dental Clinic admin dashboard.
+
+TODAY'S DATE: {$todayDate}
 
 TASK: Given a question, output ONLY a JSON object with two keys:
 - "sql": a valid MySQL SELECT query
@@ -98,6 +102,7 @@ ANSWER RULES:
 - NEVER echo or rephrase the user's question as the answer.
 - NEVER say "you asked" or reference the question.
 - Use ₱ for currency amounts.
+- If the query might return 0 rows, phrase the answer neutrally: "Services booked this month" not "Top services booked this month"
 
 OFF-TOPIC: If not about clinic data → {"sql": null, "answer": "I can only answer questions about clinic appointments, patients, services, billing, and doctor activity."}
 
@@ -108,8 +113,11 @@ A: {"sql":"SELECT COUNT(*) AS total FROM appointments a WHERE a.appointment_date
 Q: Revenue this month?
 A: {"sql":"SELECT COALESCE(SUM(b.amount_paid),0) AS collected FROM billing b INNER JOIN appointments a ON a.appointment_id = b.appointment_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE())","answer":"Total revenue collected this month."}
 
+Q: What services are availed this month?
+A: {"sql":"SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings FROM selected_services ss INNER JOIN appointments a ON a.appointment_id = ss.appointment_id INNER JOIN services s ON s.service_id = ss.service_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE()) GROUP BY s.service_id, s.service_name ORDER BY bookings DESC LIMIT 10","answer":"Services availed this month with booking counts."}
+
 Q: Top services this month?
-A: {"sql":"SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings FROM selected_services ss INNER JOIN appointments a ON a.appointment_id = ss.appointment_id INNER JOIN services s ON s.service_id = ss.service_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE()) GROUP BY s.service_id ORDER BY bookings DESC LIMIT 5","answer":"Top 5 most booked services this month."}
+A: {"sql":"SELECT s.service_name, COUNT(ss.selected_service_id) AS bookings FROM selected_services ss INNER JOIN appointments a ON a.appointment_id = ss.appointment_id INNER JOIN services s ON s.service_id = ss.service_id WHERE MONTH(a.appointment_date)=MONTH(CURDATE()) AND YEAR(a.appointment_date)=YEAR(CURDATE()) GROUP BY s.service_id, s.service_name ORDER BY bookings DESC LIMIT 5","answer":"Top 5 most booked services this month."}
 
 Q: Busiest doctor this week?
 A: {"sql":"SELECT u.first_name, u.last_name, COUNT(a.appointment_id) AS total FROM appointments a INNER JOIN users u ON u.user_id = a.user_id WHERE YEARWEEK(a.appointment_date,1)=YEARWEEK(CURDATE(),1) GROUP BY u.user_id ORDER BY total DESC LIMIT 1","answer":"Doctor with the most appointments this week."}
@@ -119,6 +127,9 @@ A: {"sql":"SELECT COUNT(*) AS new_patients FROM patients p WHERE MONTH(DATE(p.cr
 
 Q: No-shows last 30 days?
 A: {"sql":"SELECT COUNT(*) AS no_shows FROM appointments a WHERE a.status = 'no_show' AND a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)","answer":"No-show appointments in the last 30 days."}
+
+Q: Patient demographics?
+A: {"sql":"SELECT p.gender, COUNT(*) AS count FROM patients p GROUP BY p.gender ORDER BY count DESC","answer":"Patient count by gender."}
 
 OUTPUT: Strict JSON only. No markdown. No code fences. No text outside the JSON object.
 PROMPT;
@@ -201,7 +212,7 @@ $sql    = isset($parsed['sql']) ? trim((string)$parsed['sql']) : '';
 
 if ($answer !== '' && strlen($answer) > 4) {
     similar_text(strtolower($answer), strtolower($userMessage), $pct);
-    if ($pct > 72) {
+    if ($pct > 85) {
         ob_end_clean();
         echo json_encode(['error' => 'Could not generate a proper answer. Please rephrase your question.']);
         exit;

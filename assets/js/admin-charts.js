@@ -297,7 +297,7 @@
     }
 
     function openExpanded(chartId) {
-        var entry = registry[chartId];
+        var entry = registry[chartId] || (window.AdminCharts._registry && window.AdminCharts._registry[chartId]);
         if (!entry || typeof ApexCharts === 'undefined') return;
         ensureModal();
         if (!modalEl || !modalHostEl) return;
