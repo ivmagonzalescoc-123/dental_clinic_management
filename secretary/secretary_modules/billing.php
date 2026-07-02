@@ -53,7 +53,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     INNER JOIN appointments a ON b.appointment_id = a.appointment_id
     INNER JOIN patients p ON a.patient_id = p.patient_id
     LEFT JOIN users u ON a.user_id = u.user_id
-    GROUP BY b.billing_id
     ORDER BY b.created_at DESC
     ";
 
@@ -61,13 +60,16 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     try {
         $result = $conn->query($billing_sql);
     } catch (mysqli_sql_exception $e) {
-        // If query fails because the `payment` table doesn't exist, fall back to a safe query
+        // If query fails, fall back to a safe query
         $billing_sql_no_payment = "
         SELECT
             b.billing_id,
             b.appointment_id,
             b.total_amount,
+            COALESCE(b.amount_paid, 0) AS amount_paid,
+            COALESCE(b.balance, b.total_amount) AS balance,
             b.created_at,
+            " . ($hasStatus ? 'b.status,' : "'unpaid' AS status,") . "
             a.appointment_date,
             p.first_name,
             p.last_name,
@@ -79,7 +81,6 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
         INNER JOIN appointments a ON b.appointment_id = a.appointment_id
         INNER JOIN patients p ON a.patient_id = p.patient_id
         LEFT JOIN users u ON a.user_id = u.user_id
-        GROUP BY b.billing_id
         ORDER BY b.created_at DESC
     ";
         $result = $conn->query($billing_sql_no_payment);

@@ -189,6 +189,9 @@ if (!function_exists('billing_migrate_billing_columns')) {
         if (!isset($cols['discount_notes'])) {
             @$conn->query('ALTER TABLE billing ADD COLUMN discount_notes VARCHAR(255) DEFAULT NULL AFTER discount_percent');
         }
+        if (!isset($cols['balance'])) {
+            @$conn->query('ALTER TABLE billing ADD COLUMN balance DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER amount_paid');
+        }
     }
 }
 
@@ -302,11 +305,11 @@ if (!function_exists('billing_sync_from_payments')) {
             $status = 'partial';
         }
 
-        $upd = $conn->prepare('UPDATE billing SET amount_paid = ?, status = ?, processed_by = ? WHERE billing_id = ?');
+        $upd = $conn->prepare('UPDATE billing SET amount_paid = ?, balance = ?, status = ?, processed_by = ? WHERE billing_id = ?');
         if (!$upd) {
             return false;
         }
-        $upd->bind_param('dsii', $paid, $status, $processedBy, $billingId);
+        $upd->bind_param('ddsii', $paid, $balance, $status, $processedBy, $billingId);
         $ok = $upd->execute();
         $upd->close();
 
@@ -456,18 +459,20 @@ if (!function_exists('billing_create_or_update')) {
             if ($row) {
                 $billingId = (int)$row['billing_id'];
                 $paid = billing_get_amount_paid($conn, $billingId);
+                $balance = max(0, round($totalAmount - $paid, 2));
                 $upd = $conn->prepare('
                     UPDATE billing
-                    SET total_amount = ?, user_id = ?, amount_paid = ?,
+                    SET total_amount = ?, user_id = ?, amount_paid = ?, balance = ?,
                         subtotal_amount = ?, discount_type = ?, discount_percent = ?, discount_notes = ?
                     WHERE billing_id = ?
                 ');
                 if ($upd) {
                     $upd->bind_param(
-                        'didddsdsi',
+                        'didddddsdsi',
                         $totalAmount,
                         $patientId,
                         $paid,
+                        $balance,
                         $subtotalAmount,
                         $discountType,
                         $discountPercent,
@@ -483,21 +488,23 @@ if (!function_exists('billing_create_or_update')) {
         }
 
         $zeroPaid = 0.0;
+        $initialBalance = max(0, round($totalAmount - $zeroPaid, 2));
         $ins = $conn->prepare('
             INSERT INTO billing (
-                appointment_id, user_id, total_amount, amount_paid, status,
+                appointment_id, user_id, total_amount, amount_paid, balance, status,
                 subtotal_amount, discount_type, discount_percent, discount_notes, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ');
         if (!$ins) {
             return 0;
         }
         $ins->bind_param(
-            'iidddsdsd',
+            'iidddddsdsd',
             $appointmentId,
             $patientId,
             $totalAmount,
             $zeroPaid,
+            $initialBalance,
             $initialStatus,
             $subtotalAmount,
             $discountType,

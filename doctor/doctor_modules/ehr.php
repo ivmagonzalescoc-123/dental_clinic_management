@@ -664,7 +664,10 @@ if ($sstmt) {
                 }
                 
                 notifyDoctor(json.already_processed || json.idempotent_replay ? 'Appointment was already finished.' : 'Appointment finished successfully', 'success');
-                
+                if (json.upload_warnings && json.upload_warnings.length > 0) {
+                    notifyDoctor('Upload warnings: ' + json.upload_warnings.join('; '), 'warning');
+                }
+
                 setTimeout(() => window.location.href = 'doctor.php?page=appointments', 1000);
             } catch (e) {
                 console.error(e);

@@ -246,25 +246,27 @@ try {
         $tsStmt->close();
     }
     
-    // 2. Handle file uploads (photos)
+    // 2. Handle file uploads (photos) — resilient: one bad photo should not kill the whole transaction
     $photoCount = 0;
+    $uploadErrors = [];
     if (isset($_FILES['photos']) && is_array($_FILES['photos']['name'])) {
-        $photoCount = count($_FILES['photos']['name']);
-        
-        for ($i = 0; $i < $photoCount; $i++) {
+        $rawCount = count($_FILES['photos']['name']);
+        for ($i = 0; $i < $rawCount; $i++) {
             if ($_FILES['photos']['error'][$i] === UPLOAD_ERR_NO_FILE) {
                 continue;
             }
-            
+
             if ($_FILES['photos']['error'][$i] !== UPLOAD_ERR_OK) {
-                throw new Exception('File upload error: ' . $_FILES['photos']['error'][$i]);
+                $uploadErrors[] = 'Upload error for file #' . ($i + 1) . ': code ' . $_FILES['photos']['error'][$i];
+                continue;
             }
-            
+
             $fileSize = $_FILES['photos']['size'][$i];
-            if ($fileSize > 5 * 1024 * 1024) {  // 5MB limit
-                throw new Exception('File size exceeds 5MB limit');
+            if ($fileSize > 5 * 1024 * 1024) {
+                $uploadErrors[] = basename($_FILES['photos']['name'][$i]) . ' exceeds 5MB limit';
+                continue;
             }
-            
+
             $tmpPath = $_FILES['photos']['tmp_name'][$i];
             $mimeType = function_exists('mime_content_type')
                 ? (mime_content_type($tmpPath) ?: '')
@@ -279,7 +281,8 @@ try {
                 $mimeType = $extToMime[$extGuess] ?? $mimeType;
             }
             if (!in_array($mimeType, $allowedMimes, true)) {
-                throw new Exception('Invalid file type: ' . ($mimeType !== '' ? $mimeType : 'unknown'));
+                $uploadErrors[] = basename($_FILES['photos']['name'][$i]) . ': invalid type (' . ($mimeType ?: 'unknown') . ')';
+                continue;
             }
 
             $originalName = basename($_FILES['photos']['name'][$i]);
@@ -291,7 +294,7 @@ try {
             $gdAvailable = function_exists('imagecreatefromjpeg')
                 && function_exists('imagecreatetruecolor')
                 && function_exists('imagecopyresampled');
-            if ($gdAvailable) {
+            if ($gdAvailable && $mimeType !== 'image/webp') {
                 $image = null;
                 if ($mimeType === 'image/jpeg') {
                     $image = @imagecreatefromjpeg($tmpPath) ?: null;
@@ -320,21 +323,30 @@ try {
                     imagedestroy($image);
                 }
             }
-            if (!$saved && !move_uploaded_file($tmpPath, $filePath)) {
-                throw new Exception('Failed to save file: ' . $originalName);
+            if (!$saved) {
+                $saved = @move_uploaded_file($tmpPath, $filePath);
             }
-            
+            if (!$saved) {
+                $uploadErrors[] = $originalName . ': could not save to disk';
+                continue;
+            }
+
             // Insert into appointment_media table
             $dbPath = 'assets/uploads/appointment_media/' . $uniqueName;
-            $mediaOrder = $i + 1;
-            $stmt = $conn->prepare('
-                INSERT INTO appointment_media 
+            $mediaOrder = $photoCount + 1;
+            $insStmt = $conn->prepare('
+                INSERT INTO appointment_media
                 (appointment_id, file_name, file_path, file_type, file_size, media_order, uploaded_by, uploaded_at)
                 VALUES (?, ?, ?, \'photo\', ?, ?, ?, NOW())
             ');
-            $stmt->bind_param('issiii', $appointmentId, $originalName, $dbPath, $fileSize, $mediaOrder, $doctorId);
-            $stmt->execute();
-            $stmt->close();
+            if ($insStmt) {
+                $insStmt->bind_param('issiii', $appointmentId, $originalName, $dbPath, $fileSize, $mediaOrder, $doctorId);
+                $insStmt->execute();
+                $insStmt->close();
+                $photoCount++;
+            } else {
+                $uploadErrors[] = $originalName . ': database insert failed';
+            }
         }
     }
     
@@ -373,6 +385,9 @@ try {
         'photos_uploaded' => $photoCount,
         'notes_saved' => !empty($notes),
     ];
+    if (!empty($uploadErrors)) {
+        $response['upload_warnings'] = $uploadErrors;
+    }
     idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
     if (ob_get_length()) {
         ob_clean();
