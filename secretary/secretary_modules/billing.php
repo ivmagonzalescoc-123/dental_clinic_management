@@ -205,7 +205,7 @@ if (!$hasAnyData) {
         <h6 class="mb-0"><i class="bi bi-graph-up"></i> Monthly Billings Overview</h6>
     </div>
     <div class="card-body">
-        <canvas id="billingChart" height="80"></canvas>
+        <div id="billingChart"></div>
     </div>
 </div>
 

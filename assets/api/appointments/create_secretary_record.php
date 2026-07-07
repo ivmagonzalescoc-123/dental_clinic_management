@@ -7,6 +7,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
+ob_start();
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
@@ -18,25 +19,30 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_hel
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/followup_helpers.php';
 
-header('Content-Type: application/json');
+// Discard any PHP warnings/notices buffered during includes
+if (ob_get_level()) ob_end_clean();
 
-if (($_SESSION['role'] ?? '') !== 'secretary') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+// Helper: flush buffered warnings then emit JSON
+function api_respond(array $data, int $code = 200): never {
+    http_response_code($code);
+    if (ob_get_level()) ob_clean();
+    echo json_encode($data);
     exit;
 }
 
+header('Content-Type: application/json');
+
+if (($_SESSION['role'] ?? '') !== 'secretary') {
+    api_respond(['success' => false, 'message' => 'Unauthorized'], 403);
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
-    exit;
+    api_respond(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token.']);
-    exit;
+    api_respond(['success' => false, 'message' => 'Invalid security token.'], 403);
 }
 
 $appointmentId = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
@@ -59,8 +65,7 @@ $secretaryId = (int)($_SESSION['user_id'] ?? 0);
 $idempotencyKey = $_POST['idempotency_key'] ?? '';
 
 if (!$appointmentId || !$patientId) {
-    echo json_encode(['success' => false, 'message' => 'Appointment and patient ID required']);
-    exit;
+    api_respond(['success' => false, 'message' => 'Appointment and patient ID required']);
 }
 
 if (!is_array($visitClinicalData)) {
@@ -83,8 +88,7 @@ billing_ensure_tables($conn);
 $idempotencyScope = 'secretary.create_record.' . $appointmentId;
 $cached = idempotency_handle_request($idempotencyScope, $idempotencyKey);
 if ($cached !== null) {
-    echo json_encode($cached);
-    exit;
+    api_respond($cached);
 }
 
 try {
@@ -104,8 +108,7 @@ try {
 
     if (!$appointment) {
         idempotency_clear_processing($idempotencyScope, $idempotencyKey);
-        echo json_encode(['success' => false, 'message' => 'Appointment not found']);
-        exit;
+        api_respond(['success' => false, 'message' => 'Appointment not found']);
     }
 
     if ($appointment['status'] !== 'awaiting_secretary_records') {
@@ -121,8 +124,7 @@ try {
             $response['already_processed'] = true;
             idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
         }
-        echo json_encode($response);
-        exit;
+        api_respond($response);
     }
 
     $doctorId = (int)($appointment['doctor_id'] ?? 0);
@@ -453,10 +455,10 @@ try {
         'follow_up_appointment_id' => $followUpAppointmentId,
     ];
     idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
-    echo json_encode($response);
+    api_respond($response);
 } catch (Exception $e) {
     $conn->rollback();
     idempotency_clear_processing($idempotencyScope, $idempotencyKey);
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    error_log('create_secretary_record error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    api_respond(['success' => false, 'message' => 'The system encountered an issue while saving. Please try again.'], 500);
 }

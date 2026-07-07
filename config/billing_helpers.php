@@ -499,7 +499,7 @@ if (!function_exists('billing_create_or_update')) {
             return 0;
         }
         $ins->bind_param(
-            'iidddddsdsd',
+            'iiddddsdsd',
             $appointmentId,
             $patientId,
             $totalAmount,

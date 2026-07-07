@@ -21,6 +21,10 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
+
+// Discard any PHP warnings buffered during includes
+if (ob_get_level()) ob_end_clean();
+
 set_error_handler(function($severity, $message, $file, $line) {
     // convert warnings/notices to ErrorException so they get caught
     throw new ErrorException($message, 0, $severity, $file, $line);
@@ -190,12 +194,12 @@ try {
     
     if ($existingCr) {
         $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = IFNULL(?, doctor_notes), status = ?, submitted_by = ?, submitted_at = NOW() WHERE appointment_id = ?');
-        $stmt->bind_param('iisssi', $doctorId, $patientId, $notes, $crStatus, $doctorId, $appointmentId);
+        $stmt->bind_param('iisisi', $doctorId, $patientId, $notes, $crStatus, $doctorId, $appointmentId);
         $stmt->execute();
         $stmt->close();
     } else {
         $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-        $stmt->bind_param('iiisss', $appointmentId, $doctorId, $patientId, $notes, $crStatus, $doctorId);
+        $stmt->bind_param('iiissi', $appointmentId, $doctorId, $patientId, $notes, $crStatus, $doctorId);
         $stmt->execute();
         $stmt->close();
     }

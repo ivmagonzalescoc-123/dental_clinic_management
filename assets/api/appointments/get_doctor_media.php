@@ -2,6 +2,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
+ob_start();
 
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
@@ -9,19 +10,26 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 
+// Discard any warnings from includes, then start fresh buffer
+if (ob_get_level()) ob_end_clean();
+
+function api_respond(array $data, int $code = 200): never {
+    http_response_code($code);
+    if (ob_get_level()) ob_clean();
+    echo json_encode($data);
+    exit;
+}
+
 header('Content-Type: application/json');
 
 if (($_SESSION['role'] ?? '') !== 'secretary') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
+    api_respond(['success' => false, 'message' => 'Unauthorized'], 403);
 }
 
 $appointmentId = isset($_GET['appointment_id']) ? (int)$_GET['appointment_id'] : 0;
 
 if (!$appointmentId) {
-    echo json_encode(['success' => false, 'message' => 'Appointment ID required']);
-    exit;
+    api_respond(['success' => false, 'message' => 'Appointment ID required']);
 }
 
 billing_ensure_tables($conn);
@@ -35,8 +43,7 @@ try {
     $stmt->close();
 
     if (!$appointment) {
-        echo json_encode(['success' => false, 'message' => 'Appointment not found']);
-        exit;
+        api_respond(['success' => false, 'message' => 'Appointment not found']);
     }
 
     $stmt = $conn->prepare('SELECT media_id, file_name, file_path, file_type, tooth_number, notes, uploaded_at FROM appointment_media WHERE appointment_id = ? ORDER BY media_order ASC');
@@ -181,6 +188,7 @@ try {
         if ($bgRow) $patientBackground = $bgRow;
     }
 
+    if (ob_get_length()) ob_clean();
     echo json_encode([
         'success' => true,
         'appointment' => [
@@ -208,6 +216,6 @@ try {
         'prescriptions' => $prescriptions,
     ]);
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    error_log('get_doctor_media error: ' . $e->getMessage());
+    api_respond(['success' => false, 'message' => 'Unable to load appointment data.'], 500);
 }

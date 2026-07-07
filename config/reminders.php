@@ -722,3 +722,48 @@ if (!function_exists('reminder_insert_patient_inapp_notification')) {
         return (bool)$ok;
     }
 }
+
+/**
+ * Auto-cron for local development.
+ * Checks if reminders haven't been sent recently and triggers the worker.
+ * Call this from page loads — only fires in development mode.
+ */
+if (!function_exists('reminder_auto_cron')) {
+    function reminder_auto_cron($conn, int $intervalMinutes = 5): void
+    {
+        if (defined('REMINDER_WORKER_RUNNING')) {
+            return;
+        }
+
+        $appEnv = strtolower((string)(function_exists('env') ? env('APP_ENV', 'development') : 'development'));
+        if ($appEnv !== 'development') {
+            return;
+        }
+
+        $lockFile = dirname(__DIR__) . '/scripts/.cron_auto_lock';
+
+        if (is_file($lockFile)) {
+            $lastRun = (int)@filemtime($lockFile);
+            if ($lastRun > 0 && (time() - $lastRun) < ($intervalMinutes * 60)) {
+                return;
+            }
+        }
+
+        $fp = @fopen($lockFile . '.lock', 'c');
+        if (!$fp || !flock($fp, LOCK_EX | LOCK_NB)) {
+            return;
+        }
+
+        @touch($lockFile);
+        define('REMINDER_WORKER_RUNNING', true);
+
+        try {
+            include_once dirname(__DIR__) . '/scripts/send_reminders.php';
+        } catch (Throwable $e) {
+            error_log('reminder_auto_cron: ' . $e->getMessage());
+        }
+
+        flock($fp, LOCK_UN);
+        fclose($fp);
+    }
+}

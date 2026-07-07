@@ -158,7 +158,7 @@
                     borderRadius: 8,
                     barHeight: '62%',
                     distributed: true,
-                    dataLabels: { position: 'right' }
+                    dataLabels: { position: 'left' }
                 }
             },
             dataLabels: {

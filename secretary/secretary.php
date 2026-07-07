@@ -2,6 +2,7 @@
 include_once '../config/session_check.php';
 check_session(['secretary']);
 $csrf_token = security_generate_csrf_token();
+$baseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 // include database to show queue counts in sidebar (use include_once to avoid re-definitions)
 include_once '../config/database.php';
 include_once '../config/system_logs.php';

@@ -2157,7 +2157,7 @@ document.getElementById('rescheduleSuggestSec').addEventListener('click', functi
             });
             wrap.appendChild(a);
         });
-    } catch(e){ console.error(e); notifySecretary('Error fetching suggestions', 'danger'); }
+    } catch(e){ console.error(e); notifySecretary('Unable to load suggestions. Please try again.', 'danger'); }
     });
 });
 
@@ -2209,7 +2209,7 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
         }
     } catch (e) {
         console.error(e);
-        notifySecretary('Error', 'danger');
+        notifySecretary('Unable to complete this action. Please try again.', 'danger');
     }
 });
 
@@ -2778,7 +2778,8 @@ function resolveMediaUrl(filePath) {
     const path = String(filePath || '').replace(/^\/+/, '');
     if (!path) return '';
     if (/^https?:\/\//i.test(path)) return path;
-    return getAppRoot() + '/' + path;
+    const base = window.MEDIA_BASE_URL || '';
+    return base + '/' + path;
 }
 
 window.recordBillingCatalog = [];
@@ -2802,7 +2803,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
             if (patientNameEl) {
                 patientNameEl.textContent = '';
             }
-            notifySecretary('Error loading appointment data: ' + (data.message || ''), 'danger');
+            notifySecretary('Unable to load appointment data. Please try again.', 'danger');
             return;
         }
 
@@ -2902,7 +2903,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         modal.show();
     } catch (e) {
         console.error(e);
-        notifySecretary('Error loading appointment: ' + e.message, 'danger');
+        notifySecretary('Unable to load appointment. Please try again.', 'danger');
     }
 }
 
@@ -3219,12 +3220,12 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             json = JSON.parse(responseText);
         } catch (parseErr) {
             console.error('create_secretary_record non-JSON response:', responseText);
-            notifySecretary('Server error: invalid response while saving record.', 'danger');
+            notifySecretary('The system is currently busy. Please try again in a moment.', 'danger');
             secretaryRecordSubmitting = false;
             return;
         }
         if (!json.success) {
-            notifySecretary('Error: ' + (json.message || 'Failed to create record'), 'danger');
+            notifySecretary(json.message || 'The system encountered an issue. Please try again.', 'danger');
             secretaryRecordSubmitting = false;
             return;
         }
@@ -3236,7 +3237,7 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         setTimeout(() => location.reload(), 1000);
     } catch (e) {
         console.error(e);
-        notifySecretary('Error: ' + e.message, 'danger');
+        notifySecretary('The system is currently busy. Please try again in a moment.', 'danger');
         secretaryRecordSubmitting = false;
     }
 });
@@ -3245,4 +3246,5 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
 <script>
 window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
+window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/')); ?>';
 </script>

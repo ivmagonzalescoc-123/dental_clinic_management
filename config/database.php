@@ -74,4 +74,12 @@ if (!function_exists('table_exists')) {
     }
 }
 
+// Auto-cron: trigger reminders in development mode (every 5 minutes)
+if (!is_cli() && env('APP_ENV', 'development') === 'development') {
+    include_once __DIR__ . '/reminders.php';
+    if (function_exists('reminder_auto_cron')) {
+        reminder_auto_cron($conn);
+    }
+}
+
 ?>
