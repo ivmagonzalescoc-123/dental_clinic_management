@@ -1,0 +1,46 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', dirname(__FILE__) . '/error.log');
+
+header('Content-Type: application/json');
+
+session_start();
+include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
+
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Authentication required.']);
+    exit;
+}
+
+$role = $_SESSION['role'] ?? '';
+if (!in_array($role, ['admin', 'secretary'], true)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Access denied.']);
+    exit;
+}
+
+try {
+    if (!$conn) throw new Exception('Database connection failed');
+
+    $bookingId = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : 0;
+    if ($bookingId <= 0) {
+        throw new Exception('Invalid booking ID.');
+    }
+
+    $stmt = $conn->prepare("UPDATE bookings SET status = 'converted' WHERE booking_id = ? AND status = 'verified'");
+    if (!$stmt) throw new Exception('Database error.');
+    $stmt->bind_param('i', $bookingId);
+    $stmt->execute();
+    $stmt->close();
+
+    echo json_encode(['success' => true, 'message' => 'Booking marked as converted.']);
+
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+?>

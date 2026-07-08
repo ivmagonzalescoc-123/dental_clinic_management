@@ -455,6 +455,8 @@ if ($patient_id) {
                                 $statusBadge = 'secondary';
                                 if ($statusKey === 'confirmed') {
                                     $statusBadge = 'primary';
+                                } elseif ($statusKey === 'arrived') {
+                                    $statusBadge = 'success';
                                 } elseif ($statusKey === 'checked_in') {
                                     $statusBadge = 'info';
                                 } elseif ($statusKey === 'in_progress') {
@@ -1363,12 +1365,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function buildHistoryRow(a) {
         var statusKey = (a.status || 'scheduled').toLowerCase();
         var statusLabels = {
-            'scheduled': 'Scheduled', 'confirmed': 'Confirmed', 'checked_in': 'Checked In',
+            'scheduled': 'Scheduled', 'confirmed': 'Confirmed', 'arrived': 'Arrived', 'checked_in': 'Checked In',
             'in_progress': 'In Progress', 'completed': 'Completed', 'missed': 'Missed',
             'cancelled': 'Cancelled', 'no_show': 'No Show', 'rescheduled': 'Rescheduled'
         };
         var statusBadges = {
-            'scheduled': 'secondary', 'confirmed': 'primary', 'checked_in': 'info',
+            'scheduled': 'secondary', 'confirmed': 'primary', 'arrived': 'success', 'checked_in': 'info',
             'in_progress': 'warning', 'completed': 'success', 'missed': 'warning',
             'cancelled': 'danger', 'no_show': 'danger', 'rescheduled': 'secondary'
         };

@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Sensitive files
+.mimocode
+
 # IDE
 .vscode/
 .idea/

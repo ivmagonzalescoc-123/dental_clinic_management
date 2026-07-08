@@ -40,42 +40,36 @@ $services = [
         'desc' => 'Achieve a brighter, whiter smile with our professional-grade whitening treatments. Safe, effective, and long-lasting results.',
         'icon' => 'sparkles',
         'duration' => '60 min',
-        'price' => 'From ₱2,500',
     ],
     [
         'title' => 'Dental Implants',
         'desc' => 'Restore missing teeth with permanent, natural-looking implants that blend seamlessly with your existing smile.',
         'icon' => 'shield',
         'duration' => '2–3 sessions',
-        'price' => 'From ₱25,000',
     ],
     [
         'title' => 'Orthodontics',
         'desc' => 'Straighten your teeth with modern braces or clear aligners. We create custom treatment plans for every patient.',
         'icon' => 'zap',
         'duration' => '12–24 months',
-        'price' => 'From ₱35,000',
     ],
     [
         'title' => 'Preventive Care',
         'desc' => 'Regular cleanings, check-ups, and fluoride treatments to keep your teeth healthy and catch issues early.',
         'icon' => 'heart',
         'duration' => '45 min',
-        'price' => 'From ₱800',
     ],
     [
         'title' => 'Porcelain Veneers',
         'desc' => 'Transform your smile with ultra-thin porcelain veneers that correct chips, gaps, stains, and misshapen teeth.',
         'icon' => 'award',
         'duration' => '2 sessions',
-        'price' => 'From ₱8,000',
     ],
     [
         'title' => 'Pediatric Dentistry',
         'desc' => 'Gentle, child-friendly dental care in a welcoming environment that builds lifelong habits of oral health.',
         'icon' => 'calendar',
         'duration' => '30–45 min',
-        'price' => 'From ₱600',
     ],
 ];
 
@@ -449,8 +443,8 @@ $aboutPoints = [
                 <button type="button" data-auth-open="login" id="navLoginBtn" class="rounded-full border px-5 py-2.5 text-sm font-semibold transition-all duration-200" style="background: rgba(255,255,255,0.15); color: #ffffff; border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(8px);">
                     Login
                 </button>
-                <button type="button" data-auth-open="register" id="navRegisterBtn" class="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 sm:inline-flex">
-                    Create Account
+                <button type="button" data-auth-open="booking" id="navRegisterBtn" class="hidden rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 sm:inline-flex">
+                    Book Appointment
                 </button>
             </div>
 
@@ -471,7 +465,7 @@ $aboutPoints = [
                     <button type="button" data-auth-open="login" class="mobile-nav-link block w-full text-center bg-primary text-white px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Login</button>
                 </li>
                 <li>
-                    <button type="button" data-auth-open="register" class="mobile-nav-link block w-full text-center border border-primary text-primary px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Create Account</button>
+                    <button type="button" data-auth-open="booking" class="mobile-nav-link block w-full text-center border border-primary text-primary px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Book Appointment</button>
                 </li>
             </ul>
         </div>
@@ -557,7 +551,6 @@ $aboutPoints = [
 
                         <div class="flex items-center justify-between pt-4 border-t border-border">
                             <span class="text-xs text-muted-foreground"><?php echo htmlspecialchars($service['duration'], ENT_QUOTES, 'UTF-8'); ?></span>
-                            <span class="text-primary text-sm" style="font-weight: 700;"><?php echo htmlspecialchars($service['price'], ENT_QUOTES, 'UTF-8'); ?></span>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -787,21 +780,21 @@ $aboutPoints = [
 
         <!-- Login -->
         <section id="authPanelLogin" class="auth-panel hidden max-w-md" aria-label="Login">
-            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
-                <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
+                <div class="flex items-center gap-2.5">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Welcome back</h2>
-                        <p class="text-xs text-slate-500">Sign in to your account</p>
+                        <h2 class="text-sm font-bold text-slate-900">Welcome back</h2>
+                        <p class="text-[11px] text-slate-500">Sign in to your account</p>
                     </div>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <div class="auth-body">
-            <form id="login-form" class="space-y-5 px-6 py-6 sm:px-8" novalidate>
+            <form id="login-form" class="space-y-4 px-5 py-4 sm:px-7" novalidate>
                 <div class="space-y-1.5">
                     <!-- <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label> -->
                     <div class="relative">
@@ -809,7 +802,7 @@ $aboutPoints = [
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                         </span>
                         <input type="email" id="login-email" name="email" autocomplete="email" required placeholder="Enter your email"
-                            class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
+                            class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
                     </div>
                 </div>
 
@@ -820,7 +813,7 @@ $aboutPoints = [
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
                         </span>
                         <input type="password" id="login-password" name="password" autocomplete="current-password" required placeholder="Enter your password"
-                            class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-3 pl-11 pr-12 text-sm text-slate-900 placeholder:text-slate-400">
+                            class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-12 text-sm text-slate-900 placeholder:text-slate-400">
                         <button type="button" data-toggle-password="login-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
                             <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
@@ -834,16 +827,16 @@ $aboutPoints = [
                         <span id="loginCaptchaQuestion" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
                         <button type="button" id="refreshLoginCaptchaBtn" class="shrink-0 text-sm font-semibold text-primary hover:text-primary">Refresh</button>
                         <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Answer"
-                            class="auth-field min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50/50 py-3 px-4 text-sm text-slate-900 placeholder:text-slate-400">
+                            class="auth-field min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400">
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password</button>
-                    <button type="button" data-auth-switch="register" class="font-medium text-primary hover:text-primary transition-colors">Create Account</button>
+                    <button type="button" data-auth-switch="booking" class="font-medium text-primary hover:text-primary transition-colors">Book Appointment</button>
                 </div>
 
-                <button type="submit" class="w-full rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="submit" class="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                     Login to Dashboard
                 </button>
 
@@ -869,186 +862,176 @@ $aboutPoints = [
             </form>
             </div>
 
-            <footer class="auth-footer border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8">
-                <p class="text-center text-[10px] leading-relaxed text-slate-500 sm:text-xs">
+            <footer class="auth-footer border-t border-slate-100 bg-slate-50/80 px-5 py-3 sm:px-7">
+                <p class="text-center text-[10px] leading-relaxed text-slate-500">
                     Secure portal access - compliant with the Philippine Data Privacy Act of 2012 (RA 10173)
                 </p>
             </footer>
         </section>
 
-        <!-- Create Account -->
-        <section id="authPanelRegister" class="auth-panel hidden max-w-2xl" aria-label="Create account">
-            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
-                <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
+        <!-- Book Appointment (Guest) -->
+        <section id="authPanelBooking" class="auth-panel hidden max-w-lg" aria-label="Book appointment">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
+                <div class="flex items-center gap-2.5">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Create Account</h2>
-                        <p class="text-xs text-slate-500">Register as a patient of Azucena's Dental Clinic</p>
+                        <h2 class="text-sm font-bold text-slate-900">Book an Appointment</h2>
+                        <p class="text-[11px] text-slate-500">Azucena's Dental Clinic</p>
                     </div>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <div class="auth-body">
-            <form id="register-form" class="space-y-5 px-6 py-6 sm:px-8" novalidate>
-                <div class="grid gap-5 sm:grid-cols-2">
+            <!-- Step 1: Booking Form -->
+            <form id="booking-form" class="space-y-3 px-5 py-4 sm:px-7" novalidate>
+                <div class="grid gap-3 sm:grid-cols-2">
                     <div>
-                        <label for="reg-first-name" class="mb-1.5 block text-sm font-medium text-slate-700">First Name</label>
-                        <input type="text" id="reg-first-name" name="first_name" required placeholder="First name"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
+                        <label for="book-first-name" class="mb-1 block text-xs font-semibold text-slate-600">First Name</label>
+                        <input type="text" id="book-first-name" name="first_name" required placeholder="First name"
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
                     </div>
                     <div>
-                        <label for="reg-last-name" class="mb-1.5 block text-sm font-medium text-slate-700">Last Name</label>
-                        <input type="text" id="reg-last-name" name="last_name" required placeholder="Last name"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
+                        <label for="book-last-name" class="mb-1 block text-xs font-semibold text-slate-600">Last Name</label>
+                        <input type="text" id="book-last-name" name="last_name" required placeholder="Last name"
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label for="book-email" class="mb-1 block text-xs font-semibold text-slate-600">Email</label>
+                        <input type="email" id="book-email" name="email" required placeholder="you@example.com" autocomplete="email"
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                    </div>
+                    <div>
+                        <label for="book-phone" class="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
+                        <input type="tel" id="book-phone" name="phone_number" required placeholder="0917 123 4567" autocomplete="tel"
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                    </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div>
+                        <label for="book-dob" class="mb-1 block text-xs font-semibold text-slate-600">Birthdate</label>
+                        <input type="date" id="book-dob" name="date_of_birth" required
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
+                    </div>
+                    <div>
+                        <label for="book-pref-date" class="mb-1 block text-xs font-semibold text-slate-600">Preferred Date</label>
+                        <input type="date" id="book-pref-date" name="preferred_date" required
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold text-slate-600">Time</label>
+                        <div class="flex gap-1.5">
+                            <label class="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm cursor-pointer hover:border-primary/40 transition-colors flex-1">
+                                <input type="radio" name="preferred_time" value="morning" checked class="text-primary focus:ring-primary/40">
+                                <span class="text-slate-700">AM</span>
+                            </label>
+                            <label class="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm cursor-pointer hover:border-primary/40 transition-colors flex-1">
+                                <input type="radio" name="preferred_time" value="afternoon" class="text-primary focus:ring-primary/40">
+                                <span class="text-slate-700">PM</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
                 <div>
-                    <label for="reg-email" class="mb-1.5 block text-sm font-medium text-slate-700">Email Address</label>
-                    <input type="email" id="reg-email" name="email" required placeholder="you@example.com" autocomplete="email"
-                        class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
+                    <label for="book-reason" class="mb-1 block text-xs font-semibold text-slate-600">Reason</label>
+                    <textarea id="book-reason" name="reason" rows="2" placeholder="e.g. Regular checkup, tooth pain..."
+                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
                 </div>
 
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="reg-dob" class="mb-1.5 block text-sm font-medium text-slate-700">Date of Birth</label>
-                        <input type="date" id="reg-dob" name="dob" required
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-700">
-                    </div>
-                    <div>
-                        <label for="reg-gender" class="mb-1.5 block text-sm font-medium text-slate-700">Gender</label>
-                        <select id="reg-gender" name="gender" required
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm text-slate-700">
-                            <option value="" disabled selected>Select</option>
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                            <option value="prefer_not">Prefer not to say</option>
-                        </select>
-                    </div>
-                </div>
+                <div id="booking-alert" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
 
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="reg-phone" class="mb-1.5 block text-sm font-medium text-slate-700">Phone Number</label>
-                        <input type="tel" id="reg-phone" name="phone" required placeholder="e.g. 0917 123 4567" autocomplete="tel"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                    </div>
-                    <div>
-                        <label for="reg-address" class="mb-1.5 block text-sm font-medium text-slate-700">Address</label>
-                        <input type="text" id="reg-address" name="address" required placeholder="House no., street, barangay, city" autocomplete="street-address"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                    </div>
-                </div>
-
-                <div class="grid gap-5 sm:grid-cols-2">
-                    <div>
-                        <label for="reg-password" class="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-                        <div class="relative">
-                            <input type="password" id="reg-password" name="password" required minlength="8" autocomplete="new-password" placeholder="Create a password"
-                                class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 pr-12 text-sm placeholder:text-slate-400">
-                            <button type="button" data-toggle-password="reg-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
-                                <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                                <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label for="reg-confirm-password" class="mb-1.5 block text-sm font-medium text-slate-700">Confirm Password</label>
-                        <input type="password" id="reg-confirm-password" name="confirm_password" required minlength="8" autocomplete="new-password" placeholder="Re-enter password"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                    </div>
-                </div>
-
-                <div class="rounded-xl border border-primary/15 bg-primary/5 px-4 py-3 text-sm text-slate-600">
-                    <p class="font-medium text-slate-800">Password must have:</p>
-                    <ul class="mt-2 list-disc space-y-1 pl-5">
-                        <li>At least 8 characters</li>
-                        <li>One uppercase and one lowercase letter</li>
-                        <li>One number and one special character (@ # $ % & * ! ?)</li>
-                    </ul>
-                </div>
-
-                <div class="flex items-start gap-2.5 text-sm text-slate-600">
-                    <input type="checkbox" id="reg-terms" class="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary focus:ring-primary/40">
-                    <span>
-                        I agree to the
-                        <button type="button" id="openTermsModal" class="font-semibold text-primary underline underline-offset-2 hover:text-primary/80 transition-colors">Terms and Conditions</button>
-                    </span>
-                </div>
-
-                <button type="submit" class="block w-full rounded-xl bg-primary px-6 py-3.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors">
-                    Create Account
+                <button type="submit" id="booking-submit-btn" class="block w-full rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                    Request Appointment
                 </button>
 
-                <?php if ($googleClientId !== ''): ?>
-                <div class="flex items-center gap-3">
-                    <div class="flex-1 h-px bg-slate-200"></div>
-                    <span class="text-xs font-medium text-slate-400">or</span>
-                    <div class="flex-1 h-px bg-slate-200"></div>
-                </div>
-                <div class="flex justify-center">
-                    <button type="button" id="google-register-btn"
-                        class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
-                        title="Sign up with Google" aria-label="Sign up with Google">
-                        <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                    </button>
-                </div>
-                <?php endif; ?>
-
-                <p class="text-center text-sm text-slate-600">
-                    Already have an account?
-                    <button type="button" data-auth-switch="login" class="font-bold text-primary hover:text-primary/80">Login here</button>
+                <p class="text-center text-xs text-slate-500">
+                    Already have an account? <button type="button" data-auth-switch="login" class="font-bold text-primary hover:text-primary/80">Login</button>
                 </p>
             </form>
+
+            <!-- Step 2: OTP Verification (hidden by default) -->
+            <div id="booking-otp-section" class="hidden px-5 py-5 sm:px-7 text-center">
+                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900">Check Your Email</h3>
+                <p class="mt-1 text-sm text-slate-500">Code sent to <strong id="otp-email-display"></strong></p>
+
+                <div class="mt-4">
+                    <input type="text" id="booking-otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Enter 6-digit code"
+                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3 text-center text-xl tracking-widest text-slate-900 placeholder:text-slate-400 font-mono">
+                </div>
+
+                <div id="otp-alert" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
+
+                <button type="button" id="verify-otp-btn" class="mt-4 block w-full rounded-lg bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                    Confirm Appointment
+                </button>
+
+                <button type="button" id="resend-otp-btn" class="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+                    Resend code
+                </button>
+            </div>
+
+            <!-- Step 3: Success (hidden by default) -->
+            <div id="booking-success-section" class="hidden px-5 py-6 sm:px-7 text-center">
+                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <h3 class="text-base font-bold text-slate-900">Booking Confirmed!</h3>
+                <p class="mt-2 text-sm text-slate-500 leading-relaxed">A confirmation email has been sent to your email address.</p>
+                <p class="mt-2 text-sm text-slate-400">Appointment Ref# <strong id="booking-ref-display" class="text-slate-700"></strong></p>
+                <button type="button" data-auth-close class="mt-4 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                    Done
+                </button>
+            </div>
             </div>
         </section>
 
         <!-- Password recovery -->
         <section id="authPanelForgot" class="auth-panel hidden max-w-md" aria-label="Password recovery">
-            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-6 py-5 sm:px-8">
-                <div class="flex items-center gap-3">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-11 w-11 rounded-full object-cover" width="44" height="44">
+            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
+                <div class="flex items-center gap-2.5">
+                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
                     <div>
-                        <h2 class="text-base font-bold text-slate-900">Password Recovery</h2>
-                        <p class="text-xs text-slate-500">Enter your email to receive an OTP, then set a new password</p>
+                        <h2 class="text-sm font-bold text-slate-900">Password Recovery</h2>
+                        <p class="text-[11px] text-slate-500">Enter your email to receive an OTP</p>
                     </div>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
             <div class="auth-body">
-            <form id="reset-form" class="space-y-4 px-6 py-6 sm:px-8">
+            <form id="reset-form" class="space-y-4 px-5 py-4 sm:px-7">
                 <input type="email" id="reset-email" required placeholder="Email Address"
-                    class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-xl border border-primary/20 bg-primary/5 py-3 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors">
+                    class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-lg border border-primary/20 bg-primary/5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors">
                     Send OTP
                 </button>
 
-                <div id="reset-section" class="space-y-4 hidden">
+                <div id="reset-section" class="space-y-3 hidden">
                     <input type="text" id="reset-otp" required placeholder="OTP Code"
-                        class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
+                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
                     <div class="relative">
                         <input type="password" id="reset-password" required placeholder="New Password"
-                            class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 pr-12 text-sm placeholder:text-slate-400">
-                        <button type="button" data-toggle-password="reset-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
-                            <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-10 text-sm placeholder:text-slate-400">
+                        <button type="button" data-toggle-password="reset-password" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
+                            <svg data-icon="eye" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <svg data-icon="eye-off" class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
                         </button>
                     </div>
                     <input type="password" id="reset-confirm" required placeholder="Confirm Password"
-                        class="auth-field w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-sm placeholder:text-slate-400">
-                    <button type="submit" class="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                    <button type="submit" class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                         Reset Password
                     </button>
                 </div>
@@ -1237,7 +1220,7 @@ $aboutPoints = [
         const authModal = document.getElementById('authModal');
         const authPanels = {
             login: document.getElementById('authPanelLogin'),
-            register: document.getElementById('authPanelRegister'),
+            booking: document.getElementById('authPanelBooking'),
             forgot: document.getElementById('authPanelForgot')
         };
         let loginCaptchaLoaded = false;
@@ -1265,6 +1248,16 @@ $aboutPoints = [
             authModal.classList.remove('open');
             authModal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
+            // Reset booking form if open
+            const bookingForm = document.getElementById('booking-form');
+            const otpSection = document.getElementById('booking-otp-section');
+            const successSection = document.getElementById('booking-success-section');
+            if (bookingForm) bookingForm.classList.remove('hidden');
+            if (otpSection) otpSection.classList.add('hidden');
+            if (successSection) successSection.classList.add('hidden');
+            if (bookingForm) bookingForm.reset();
+            const otpInput = document.getElementById('booking-otp');
+            if (otpInput) otpInput.value = '';
         }
 
         document.querySelectorAll('[data-auth-open]').forEach(function(btn) {
@@ -1451,84 +1444,191 @@ $aboutPoints = [
         });
 
         // ----- Create account -----
-        function validatePasswordPolicy(password) {
-            if (password.length < 8) return 'Password must be at least 8 characters.';
-            if (!/[A-Z]/.test(password)) return 'Password must include at least one uppercase letter.';
-            if (!/[a-z]/.test(password)) return 'Password must include at least one lowercase letter.';
-            if (!/\d/.test(password)) return 'Password must include at least one number.';
-            if (!/[^A-Za-z0-9]/.test(password)) return 'Password must include at least one special character.';
-            return '';
+        // ----- Booking form (guest) -----
+        function setBookingAlert(message, type) {
+            const alertEl = document.getElementById('booking-alert');
+            if (!alertEl) return;
+            const tone = type === 'error' ? 'danger' : (type || 'info');
+            alertEl.className = 'rounded-xl border px-4 py-3 text-sm';
+            if (tone === 'danger') {
+                alertEl.classList.add('border-red-200', 'bg-red-50', 'text-red-700');
+            } else if (tone === 'success') {
+                alertEl.classList.add('border-green-200', 'bg-green-50', 'text-green-700');
+            } else if (tone === 'warning') {
+                alertEl.classList.add('border-amber-200', 'bg-amber-50', 'text-amber-700');
+            } else {
+                alertEl.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-700');
+            }
+            alertEl.textContent = message;
+            alertEl.classList.remove('hidden');
         }
 
-        document.getElementById('register-form')?.addEventListener('submit', async function(event) {
+        let bookingEmail = '';
+        let bookingId = 0;
+
+        document.getElementById('booking-form')?.addEventListener('submit', async function(event) {
             event.preventDefault();
 
-            const firstName = document.getElementById('reg-first-name').value.trim();
-            const lastName = document.getElementById('reg-last-name').value.trim();
-            const email = document.getElementById('reg-email').value.trim();
-            const dob = document.getElementById('reg-dob').value;
-            const gender = document.getElementById('reg-gender').value;
-            const phone = document.getElementById('reg-phone').value.trim();
-            const address = document.getElementById('reg-address').value.trim();
-            const password = document.getElementById('reg-password').value;
-            const confirmPassword = document.getElementById('reg-confirm-password').value;
-            const termsAccepted = document.getElementById('reg-terms').checked;
-            const phoneDigits = phone.replace(/\D/g, '');
+            const firstName = document.getElementById('book-first-name').value.trim();
+            const lastName = document.getElementById('book-last-name').value.trim();
+            const email = document.getElementById('book-email').value.trim();
+            const phone = document.getElementById('book-phone').value.trim();
+            const dob = document.getElementById('book-dob').value;
+            const prefDate = document.getElementById('book-pref-date').value;
+            const prefTime = document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning';
+            const reason = document.getElementById('book-reason').value.trim();
+            const submitBtn = document.getElementById('booking-submit-btn');
 
-            if (phoneDigits.length < 4) {
-                setAlert('Phone number must contain at least 4 digits.', 'warning');
+            if (!firstName || !lastName) {
+                setBookingAlert('First name and last name are required.', 'warning');
+                return;
+            }
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                setBookingAlert('Please enter a valid email address.', 'warning');
+                return;
+            }
+            if (!phone) {
+                setBookingAlert('Phone number is required.', 'warning');
+                return;
+            }
+            if (!dob) {
+                setBookingAlert('Date of birth is required.', 'warning');
+                return;
+            }
+            if (!prefDate) {
+                setBookingAlert('Please select your preferred date.', 'warning');
                 return;
             }
 
-            if (!termsAccepted) {
-                setAlert('Accept Terms and Conditions.', 'warning');
-                return;
-            }
-
-            const policyError = validatePasswordPolicy(password);
-            if (policyError) {
-                setAlert(policyError, 'warning');
-                return;
-            }
-
-            if (password !== confirmPassword) {
-                setAlert('Password and confirmation do not match.', 'warning');
-                return;
-            }
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
 
             try {
-                const response = await fetch('assets/api/auth/register_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        first_name: firstName,
-                        last_name: lastName,
-                        email: email,
-                        date_of_birth: dob,
-                        gender: gender,
-                        phone_number: phone,
-                        address: address,
-                        password: password,
-                        confirm_password: confirmPassword,
-                        role: 'patient',
-                        terms_accepted: termsAccepted ? 1 : 0,
-                        csrf_token: csrfToken
-                    })
-                });
+                const fd = new FormData();
+                fd.append('first_name', firstName);
+                fd.append('last_name', lastName);
+                fd.append('email', email);
+                fd.append('phone_number', phone);
+                fd.append('date_of_birth', dob);
+                fd.append('preferred_date', prefDate);
+                fd.append('preferred_time', prefTime);
+                fd.append('reason', reason);
+                fd.append('csrf_token', csrfToken);
 
+                const response = await fetch('assets/api/bookings/create_booking.php', {
+                    method: 'POST',
+                    body: fd
+                });
                 const data = await response.json();
 
                 if (data.success) {
-                    setAlert('Account created.', 'success');
-                    setTimeout(function() {
-                        window.location.href = 'patient/patient.php';
-                    }, 1200);
+                    bookingEmail = email;
+                    bookingId = data.booking_id || 0;
+                    // Show OTP section
+                    document.getElementById('booking-form').classList.add('hidden');
+                    document.getElementById('booking-otp-section').classList.remove('hidden');
+                    document.getElementById('otp-email-display').textContent = email;
+                    document.getElementById('booking-otp').focus();
                 } else {
-                    setAlert(data.message || 'Registration failed', 'error');
+                    if (data.code === 'account_exists') {
+                        setBookingAlert(data.message, 'warning');
+                        setTimeout(function() { openAuthModal('login'); }, 2000);
+                    } else {
+                        setBookingAlert(data.message || 'Booking failed. Please try again.', 'error');
+                    }
                 }
             } catch (error) {
-                setAlert('An error occurred. Please try again.', 'error');
-                console.error('Error:', error);
+                setBookingAlert('An error occurred. Please try again.', 'error');
+                console.error('Booking error:', error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Request Appointment';
+            }
+        });
+
+        // OTP verification
+        document.getElementById('verify-otp-btn')?.addEventListener('click', async function() {
+            const otp = document.getElementById('booking-otp').value.trim();
+            const btn = this;
+            const otpAlert = document.getElementById('otp-alert');
+
+            if (!otp || otp.length !== 6) {
+                if (otpAlert) {
+                    otpAlert.className = 'mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700';
+                    otpAlert.textContent = 'Please enter the 6-digit code.';
+                    otpAlert.classList.remove('hidden');
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Verifying...';
+
+            try {
+                const fd = new FormData();
+                fd.append('booking_id', bookingId);
+                fd.append('otp', otp);
+
+                const response = await fetch('assets/api/bookings/verify_booking_otp.php', {
+                    method: 'POST',
+                    body: fd
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // Show success
+                    document.getElementById('booking-otp-section').classList.add('hidden');
+                    document.getElementById('booking-success-section').classList.remove('hidden');
+                    document.getElementById('booking-ref-display').textContent = '#' + bookingId;
+                } else {
+                    if (otpAlert) {
+                        otpAlert.className = 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';
+                        otpAlert.textContent = data.message || 'Verification failed.';
+                        otpAlert.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                if (otpAlert) {
+                    otpAlert.className = 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';
+                    otpAlert.textContent = 'An error occurred. Please try again.';
+                    otpAlert.classList.remove('hidden');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Verify & Confirm Booking';
+            }
+        });
+
+        // Resend OTP
+        document.getElementById('resend-otp-btn')?.addEventListener('click', async function() {
+            const btn = this;
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+
+            try {
+                const fd = new FormData();
+                fd.append('first_name', document.getElementById('book-first-name').value.trim());
+                fd.append('last_name', document.getElementById('book-last-name').value.trim());
+                fd.append('email', bookingEmail);
+                fd.append('phone_number', document.getElementById('book-phone').value.trim());
+                fd.append('date_of_birth', document.getElementById('book-dob').value);
+                fd.append('preferred_date', document.getElementById('book-pref-date').value);
+                fd.append('preferred_time', document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning');
+                fd.append('reason', document.getElementById('book-reason').value.trim());
+                fd.append('csrf_token', csrfToken);
+
+                await fetch('assets/api/bookings/create_booking.php', { method: 'POST', body: fd });
+                const otpAlert = document.getElementById('otp-alert');
+                if (otpAlert) {
+                    otpAlert.className = 'mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700';
+                    otpAlert.textContent = 'New code sent. Check your email.';
+                    otpAlert.classList.remove('hidden');
+                }
+            } catch (e) {
+                // silent
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Resend code';
             }
         });
 
@@ -1719,7 +1819,6 @@ $aboutPoints = [
         }
 
         document.getElementById('google-login-btn')?.addEventListener('click', triggerGoogleSignIn);
-        document.getElementById('google-register-btn')?.addEventListener('click', triggerGoogleSignIn);
 
         // Session timeout notice
         if (new URLSearchParams(window.location.search).has('timeout')) {

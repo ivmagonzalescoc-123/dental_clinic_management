@@ -28,7 +28,7 @@ $nextAppt = null;
 $upcomingList = [];
 
 if ($patientId > 0) {
-    $activeStatuses = "'scheduled','confirmed','checked_in','in_progress','rescheduled'";
+    $activeStatuses = "'scheduled','confirmed','arrived','checked_in','in_progress','rescheduled'";
     $upcoming = dashboard_scalar_int(
         $conn,
         "SELECT COUNT(*) FROM appointments WHERE patient_id = ? AND appointment_date >= ? AND status IN ($activeStatuses)",

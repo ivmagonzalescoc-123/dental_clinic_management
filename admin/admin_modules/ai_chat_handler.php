@@ -202,7 +202,7 @@ PROMPT;
 $schema = <<<'SCHEMA'
 FULL SCHEMA REFERENCE:
 patients(patient_id, first_name, last_name, middle_name, date_of_birth, gender, phone_number, email, address, created_at)
-appointments(appointment_id, appointment_date, status[scheduled|confirmed|checked_in|in_progress|completed_by_doctor|awaiting_secretary_records|records_complete|completed|cancelled|no_show|rescheduled], patient_id, user_id, is_emergency, created_at)
+appointments(appointment_id, appointment_date, status[scheduled|confirmed|arrived|checked_in|in_progress|completed_by_doctor|awaiting_secretary_records|records_complete|completed|cancelled|no_show|rescheduled], patient_id, user_id, is_emergency, created_at)
 users(user_id, first_name, last_name, email, role_id, is_active)
 role(role_id, role_name[admin|doctor|secretary|patient])
 payments(payment_id, billing_id, amount, payment_method, or_number, notes, recorded_by, paid_at)

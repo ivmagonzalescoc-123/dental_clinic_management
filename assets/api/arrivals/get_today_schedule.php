@@ -78,7 +78,7 @@ try {
             GROUP BY ss.appointment_id
         ) svc ON svc.appointment_id = a.appointment_id
         WHERE t.slot_date = ?
-          AND a.status NOT IN ('cancelled', 'rescheduled')
+          AND a.status NOT IN ('cancelled', 'rescheduled', 'arrived')
         {$extra}
         ORDER BY t.start_time ASC
     ";
@@ -103,6 +103,8 @@ try {
             $paStatus = 'in_progress';
         } elseif (in_array($apptStatus, ['completed', 'awaiting_secretary_records', 'records_complete'], true)) {
             $paStatus = 'served';
+        } elseif ($apptStatus === 'arrived') {
+            $paStatus = 'arrived';
         } elseif ($apptStatus === 'checked_in') {
             $paStatus = 'arrived';
         } elseif ($apptStatus === 'no_show') {

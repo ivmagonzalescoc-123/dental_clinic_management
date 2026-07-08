@@ -47,6 +47,8 @@ if (!function_exists('dashboard_appt_status_badge_class')) {
             case 'cancelled':
             case 'no_show':
                 return 'danger';
+            case 'arrived':
+                return 'success';
             case 'checked_in':
                 return 'primary';
             case 'confirmed':
@@ -68,7 +70,8 @@ if (!function_exists('dashboard_format_status_label')) {
     function dashboard_format_status_label(string $status): string
     {
         $labels = [
-            'checked_in' => 'Arrived',
+            'arrived' => 'Arrived',
+            'checked_in' => 'Checked In',
             'in_progress' => 'In Progress',
             'awaiting_secretary_records' => 'Awaiting Records',
             'completed_by_doctor' => 'Doctor Finished',

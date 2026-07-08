@@ -237,14 +237,15 @@ CREATE TABLE `appointments` (
   `reason` varchar(255) DEFAULT NULL,
   `is_online_appointment` tinyint(1) DEFAULT 0,
   `notes` text DEFAULT NULL,
-  `status` enum('scheduled','confirmed','checked_in','in_progress','completed_by_doctor','awaiting_secretary_records','records_complete','completed','cancelled','no_show','rescheduled') DEFAULT 'scheduled',
+  `status` enum('scheduled','confirmed','arrived','checked_in','in_progress','completed_by_doctor','awaiting_secretary_records','records_complete','completed','cancelled','no_show','rescheduled') DEFAULT 'scheduled',
   `created_at` datetime DEFAULT current_timestamp(),
   `user_id` int(11) DEFAULT NULL,
   `rescheduled_from` int(11) DEFAULT NULL,
   `patient_id` int(11) NOT NULL,
   `is_emergency` tinyint(1) DEFAULT 0,
   `completed_by_doctor_at` datetime DEFAULT NULL,
-  `secretary_records_completed_at` datetime DEFAULT NULL
+  `secretary_records_completed_at` datetime DEFAULT NULL,
+  `booking_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `appointment_reschedule_requests` (
@@ -541,6 +542,28 @@ CREATE TABLE `backup` (
   `file_name` varchar(255) DEFAULT NULL,
   `file_path` varchar(500) DEFAULT NULL,
   `file_size` decimal(12,2) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `bookings` (
+  `booking_id` int(11) NOT NULL AUTO_INCREMENT,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `phone_number` varchar(30) DEFAULT NULL,
+  `date_of_birth` date DEFAULT NULL,
+  `preferred_date` date NOT NULL,
+  `preferred_time` enum('morning','afternoon') NOT NULL DEFAULT 'morning',
+  `reason` varchar(500) DEFAULT NULL,
+  `otp_hash` char(64) DEFAULT NULL,
+  `otp_expires_at` datetime DEFAULT NULL,
+  `status` enum('pending_verification','verified','converted','cancelled') NOT NULL DEFAULT 'pending_verification',
+  `converted_to_appointment_id` int(11) DEFAULT NULL,
+  `converted_to_patient_id` int(11) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  PRIMARY KEY (`booking_id`),
+  KEY `idx_bookings_status` (`status`),
+  KEY `idx_bookings_email` (`email`),
+  KEY `idx_bookings_preferred_date` (`preferred_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 ALTER TABLE `role`
@@ -859,6 +882,7 @@ ALTER TABLE `backup`
 
 ALTER TABLE `appointments`
   ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`timeslot_id`) REFERENCES `timeslot` (`timeslot_id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_appointments_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`booking_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_appointments_rescheduled_from` FOREIGN KEY (`rescheduled_from`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_appointments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;

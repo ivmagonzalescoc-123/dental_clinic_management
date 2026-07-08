@@ -304,12 +304,115 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 
 #main .ux-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 0.9rem 1rem;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 0.5rem 0.75rem;
 }
 
 #main .ux-form-grid .form-span-2 {
   grid-column: 1 / -1;
+}
+
+/* Compact form labels and inputs */
+#main .ux-form-grid .form-label,
+#main .modal .ux-form-grid .form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  color: #475569;
+}
+
+#main .ux-form-grid .form-control,
+#main .ux-form-grid .form-select,
+#main .modal .ux-form-grid .form-control,
+#main .modal .ux-form-grid .form-select {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+}
+
+#main .ux-form-grid textarea.form-control,
+#main .modal .ux-form-grid textarea.form-control {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+/* Compact modal body padding */
+#main .modal .modal-body .tab-content {
+  padding-top: 0.75rem !important;
+}
+
+/* Compact secretary record modal sections */
+#secretaryRecordModal .modal-body > div {
+  margin-bottom: 0.75rem !important;
+  padding: 0.6rem 0.75rem !important;
+}
+
+#secretaryRecordModal .modal-body h6 {
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem !important;
+}
+
+#secretaryRecordModal .modal-body .form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+#secretaryRecordModal .modal-body .form-control,
+#secretaryRecordModal .modal-body .form-select {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+#secretaryRecordModal .modal-body textarea.form-control {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+/* Compact add patient modal */
+#addPatientModal .ux-form-grid {
+  gap: 0.4rem 0.6rem;
+}
+
+#addPatientModal .form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+#addPatientModal .form-control,
+#addPatientModal .form-select {
+  padding: 0.35rem 0.6rem;
+  font-size: 0.875rem;
+}
+
+/* Compact patient profile modal */
+#patientProfileModal .form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.1rem;
+  color: #475569;
+}
+
+#patientProfileModal .form-control,
+#patientProfileModal .form-select {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+#patientProfileModal .nav-tabs .nav-link {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.82rem;
+}
+
+#patientProfileModal .modal-body {
+  padding: 0.5rem 0.75rem;
+}
+
+.patient-account-password-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.4rem;
 }
 
 #main .compact-control {

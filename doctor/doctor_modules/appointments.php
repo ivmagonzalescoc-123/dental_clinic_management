@@ -13,6 +13,7 @@ function appointment_can_transition_doctor(string $from, string $to): bool
     $matrix = [
         'scheduled' => ['confirmed', 'cancelled', 'no_show'],
         'confirmed' => ['checked_in', 'cancelled', 'no_show'],
+        'arrived' => ['in_progress', 'cancelled'],
         'checked_in' => ['in_progress', 'no_show'],
         'in_progress' => ['completed'],
         'completed' => [],
@@ -26,7 +27,7 @@ function appointment_can_transition_doctor(string $from, string $to): bool
 function doctor_appointment_status_badge(string $status): string
 {
     $status = strtolower(trim($status));
-    if (in_array($status, ['completed', 'records_complete'], true)) {
+    if (in_array($status, ['completed', 'records_complete', 'arrived'], true)) {
         return 'success';
     }
     if ($status === 'awaiting_secretary_records') {
@@ -47,6 +48,7 @@ function doctor_appointment_status_label(string $status): string
     $labels = [
         'awaiting_secretary_records' => 'Awaiting secretary record',
         'in_progress' => 'In session',
+        'arrived' => 'Arrived',
         'checked_in' => 'Checked in',
         'confirmed' => 'Confirmed',
         'scheduled' => 'Scheduled',
@@ -502,6 +504,14 @@ if ($stmt) {
                                             <button type="button" class="btn btn-sm btn-primary" onclick="openFinishAppointmentModal(<?php echo $apptId; ?>)" title="Finish appointment and upload photos/notes">
                                                 <i class="fas fa-check"></i> Finish
                                             </button>
+                                        <?php elseif (in_array($apptStatus, ['arrived', 'checked_in'])): ?>
+                                            <form method="POST" action="doctor.php?page=appointments&action=accept" style="display:inline;" data-confirm="Start session with this patient?" data-confirm-title="Accept Patient" data-confirm-ok="Start Session">
+                                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
+                                                <input type="hidden" name="appointment_id" value="<?php echo $apptId; ?>">
+                                                <button type="submit" class="btn btn-sm btn-success" title="Accept patient and start session">
+                                                    <i class="bi bi-play-circle"></i> Start Session
+                                                </button>
+                                            </form>
                                         <?php elseif ($apptStatus === 'completed' || $apptStatus === 'completed_by_doctor' || $apptStatus === 'awaiting_secretary_records' || $apptStatus === 'records_complete'): ?>
                                             <span class="text-muted small">Done</span>
                                         <?php else: ?>
@@ -1564,6 +1574,36 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                     </div>
                 </div>
 
+                <!-- Services Section -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h6 class="mb-3">
+                        <i class="fas fa-list-check"></i> Services Performed
+                    </h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-8">
+                            <select id="finishServiceSelect" class="form-select">
+                                <option value="">-- Select Service --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="button" class="btn btn-success w-100" onclick="addFinishService()">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr><th>Service</th><th style="width:90px;">Price</th><th style="width:40px;"></th></tr>
+                            </thead>
+                            <tbody id="finishServicesBody">
+                                <tr><td colspan="3" class="text-center text-muted small">No services added yet</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted d-block mt-1">Add services performed during this session</small>
+                </div>
+
                 <!-- Submit Section -->
                 <div class="alert alert-info small" role="alert">
                     <i class="fas fa-info-circle"></i> Once submitted, the appointment will be marked as completed and the secretary will be notified to create records.
@@ -1597,8 +1637,75 @@ function openFinishAppointmentModal(appointmentId) {
     document.getElementById('finishPhotoUpload').value = '';
     document.getElementById('finishAdditionalCharge').value = '';
     document.getElementById('finishChargeReason').value = '';
+    finishSelectedServices = [];
+    renderFinishServicesTable();
+    loadFinishServices();
     const modal = new bootstrap.Modal(document.getElementById('finishAppointmentModal'));
     modal.show();
+}
+
+// Services management
+var finishSelectedServices = [];
+
+function loadFinishServices() {
+    var select = document.getElementById('finishServiceSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Select Service --</option>';
+    fetch('../assets/api/appointments/manage_services.php?action=services&appointment_id=' + finishingAppointmentId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success && data.services) {
+                data.services.forEach(function(s) {
+                    var opt = document.createElement('option');
+                    opt.value = s.service_id;
+                    opt.textContent = s.service_name + ' — ₱' + parseFloat(s.initial_price || 0).toLocaleString();
+                    opt.dataset.price = s.initial_price || 0;
+                    opt.dataset.name = s.service_name;
+                    select.appendChild(opt);
+                });
+            }
+        })
+        .catch(function(err) { console.error('Failed to load services:', err); });
+}
+
+function addFinishService() {
+    var select = document.getElementById('finishServiceSelect');
+    var serviceId = parseInt(select.value);
+    if (!serviceId) return;
+    var option = select.options[select.selectedIndex];
+    var exists = finishSelectedServices.find(function(s) { return s.service_id === serviceId; });
+    if (exists) { notifyDoctor('Service already added.', 'warning'); return; }
+    finishSelectedServices.push({
+        service_id: serviceId,
+        name: option.dataset.name,
+        price: parseFloat(option.dataset.price || 0)
+    });
+    select.value = '';
+    renderFinishServicesTable();
+}
+
+function removeFinishService(serviceId) {
+    finishSelectedServices = finishSelectedServices.filter(function(s) { return s.service_id !== serviceId; });
+    renderFinishServicesTable();
+}
+
+function renderFinishServicesTable() {
+    var tbody = document.getElementById('finishServicesBody');
+    if (!tbody) return;
+    if (finishSelectedServices.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small">No services added yet</td></tr>';
+        return;
+    }
+    tbody.innerHTML = '';
+    finishSelectedServices.forEach(function(s) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + escapeHtmlFinish(s.name) + '</td><td>₱' + s.price.toLocaleString() + '</td><td><button type="button" class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeFinishService(' + s.service_id + ')"><i class="bi bi-x"></i></button></td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function escapeHtmlFinish(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Photo Upload Handler
@@ -1746,7 +1853,12 @@ document.getElementById('submitFinishAppointmentBtn').addEventListener('click', 
         fd.append('idempotency_key', finishAppointmentIdempotencyKey);
         fd.append('additional_charge', document.getElementById('finishAdditionalCharge').value);
         fd.append('charge_reason', document.getElementById('finishChargeReason').value);
-        
+
+        // Add selected services
+        finishSelectedServices.forEach(function(s, i) {
+            fd.append('selected_service_ids[' + i + ']', s.service_id);
+        });
+
         // Add photo files
         uploadedPhotos.forEach((file, idx) => {
             fd.append(`photos[]`, file);

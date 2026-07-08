@@ -51,6 +51,7 @@ try {
     // New: support multiple selected services
     $selected_service_ids  = isset($_POST['selected_service_ids'])  ? $_POST['selected_service_ids']       : [];
     $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
+    $booking_id            = isset($_POST['booking_id'])            ? (int)$_POST['booking_id']            : 0;
 
     $requester_role = $_SESSION['role'] ?? '';
     $isPatientRequester = isset($_SESSION['patient_id']) || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'patient');
@@ -93,7 +94,7 @@ try {
     }
     $notes = $notesResult;
 
-    $allowedStatus = ['scheduled', 'confirmed'];
+    $allowedStatus = ['scheduled', 'confirmed', 'arrived'];
     if (!in_array($status, $allowedStatus, true)) {
         $status = 'scheduled';
     }
@@ -270,15 +271,16 @@ try {
     $conn->begin_transaction();
 
     // Insert appointment (service is linked via selected_services, not appointments.service_id)
+    $bookingIdVal = $booking_id > 0 ? $booking_id : null;
     $sql  = "INSERT INTO appointments
-             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+             (patient_id, appointment_date, reason, is_online_appointment, notes, status, user_id, is_emergency, timeslot_id, booking_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) throw new Exception('Prepare insert failed: ' . $conn->error);
     $stmt->bind_param(
-        'ississiii',
+        'ississiiii',
         $patient_id, $appointment_date, $reason, $is_online_appointment,
-        $notes, $status, $user_id, $is_emergency, $timeslot_id
+        $notes, $status, $user_id, $is_emergency, $timeslot_id, $bookingIdVal
     );
     if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);
     $appointment_id = (int)$conn->insert_id;

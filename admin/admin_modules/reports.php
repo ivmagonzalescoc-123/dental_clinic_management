@@ -103,7 +103,7 @@ $newPatients = dashboard_scalar_int(
 
 $patientsSeen = reports_count_appts(
     $conn,
-    "SELECT COUNT(DISTINCT a.patient_id) FROM appointments a WHERE a.appointment_date BETWEEN ? AND ? AND a.status IN ('completed','records_complete','in_progress','checked_in'){$doctorClause}",
+    "SELECT COUNT(DISTINCT a.patient_id) FROM appointments a WHERE a.appointment_date BETWEEN ? AND ? AND a.status IN ('completed','records_complete','in_progress','arrived','checked_in'){$doctorClause}",
     $baseTypes,
     $baseParams
 );

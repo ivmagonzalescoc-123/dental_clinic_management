@@ -115,7 +115,7 @@ if ($email === '' && $emailFromClient !== '') {
 }
 
 if ($googleId === '' || $email === '') {
-    echo json_encode(['success' => false, 'message' => 'Could not retrieve Google account information.']);
+    echo json_encode(['success' => false, 'message' => 'Could not retrieve your Google account information. Please try again or contact the clinic.']);
     exit;
 }
 
@@ -123,10 +123,6 @@ if (!$emailVerified) {
     echo json_encode(['success' => false, 'message' => 'Your Google email address is not verified.']);
     exit;
 }
-
-// Ensure google columns exist
-$conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) DEFAULT NULL");
-$conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS google_picture VARCHAR(500) DEFAULT NULL");
 
 // Look up patient by google_id OR email
 $stmt = $conn->prepare(
@@ -137,7 +133,7 @@ $stmt = $conn->prepare(
 );
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'Unable to verify your account. Contact the clinic.']);
     exit;
 }
 $stmt->bind_param('ss', $googleId, $email);
@@ -190,80 +186,8 @@ if ($patient) {
     exit;
 }
 
-// ---- New patient via Google ----
-if ($firstName === '' && $fullName !== '') {
-    $parts     = explode(' ', $fullName, 2);
-    $firstName = $parts[0];
-    $lastName  = $parts[1] ?? '';
-}
-if ($firstName === '') {
-    $firstName = 'Google';
-}
-
-$passwordHash   = security_hash_password(bin2hex(random_bytes(16)));
-$defaultPhone   = '';
-$defaultGender  = 'prefer_not';
-$defaultDob     = '2000-01-01';
-$defaultAddress = '';
-
-$ins = $conn->prepare(
-    "INSERT INTO patients
-        (first_name, last_name, middle_name, password_hash, email,
-         phone_number, gender, date_of_birth, address,
-         google_id, google_picture, created_at, must_change_password, password_updated_at)
-     VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0, NULL)"
-);
-
-if (!$ins) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
-    exit;
-}
-
-$ins->bind_param(
-    'ssssssssss',
-    $firstName, $lastName, $passwordHash, $email,
-    $defaultPhone, $defaultGender, $defaultDob, $defaultAddress,
-    $googleId, $picture
-);
-
-if (!$ins->execute()) {
-    $err = $ins->error;
-    $ins->close();
-    if (strpos($err, 'Duplicate') !== false) {
-        echo json_encode(['success' => false, 'message' => 'An account with this email already exists. Please sign in with your password.']);
-    } else {
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Could not create account: ' . $err]);
-    }
-    exit;
-}
-
-$patientId = (int)$ins->insert_id;
-$ins->close();
-
-session_regenerate_id(true);
-$_SESSION['patient_id']           = $patientId;
-$_SESSION['email']                = $email;
-$_SESSION['first_name']           = $firstName;
-$_SESSION['last_name']            = $lastName;
-$_SESSION['role']                 = 'patient';
-$_SESSION['user_type']            = 'patient';
-$_SESSION['must_change_password'] = false;
-$_SESSION['profile_image']        = null;
-$_SESSION['last_activity']        = time();
-$_SESSION['google_new_user']      = true;
-
-$logId = google_record_patient_login($conn, $patientId);
-if ($logId !== null) {
-    $_SESSION['patient_log_id'] = $logId;
-}
-
-log_system_event($conn, 'auth.register', 'patients', $patientId, 'Patient registered via Google', null);
-
+// ---- No existing patient found with this Google account ----
 echo json_encode([
-    'success'  => true,
-    'message'  => 'Account created! Please complete your profile.',
-    'new_user' => true,
-    'redirect' => 'patient/patient.php',
+    'success' => false,
+    'message' => 'No account found for this email. Please visit the clinic for appointment and account creation, or use the Book Appointment form for first-time visits.',
 ]);

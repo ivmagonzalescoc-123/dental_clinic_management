@@ -16,7 +16,7 @@ if ($doctor_id && $conn) {
                  LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
                  WHERE COALESCE(a.user_id, t.doctor_id) = ?
                      AND COALESCE(t.slot_date, a.appointment_date) = ?
-                     AND a.status IN ('confirmed','checked_in','in_progress')"
+                     AND a.status IN ('confirmed','arrived','checked_in','in_progress')"
     );
     if ($qc_stmt) {
         $qc_stmt->bind_param('is', $doctor_id, $today_for_count);

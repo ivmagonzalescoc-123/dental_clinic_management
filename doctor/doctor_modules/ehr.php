@@ -20,6 +20,7 @@ if (!$appointment_id) {
                                 COALESCE(t.slot_date, a.appointment_date) AS appointment_date,
                                 CASE
                                     WHEN a.status = 'in_progress' THEN 'in_progress'
+                                    WHEN a.status = 'arrived' THEN 'arrived'
                                     WHEN a.status = 'checked_in' THEN 'arrived'
                                     WHEN a.status = 'no_show' THEN 'no_show'
                                     ELSE 'pending'
@@ -35,7 +36,7 @@ if (!$appointment_id) {
                         JOIN patients p ON a.patient_id = p.patient_id
                         WHERE COALESCE(a.user_id, t.doctor_id) = ?
                             AND COALESCE(t.slot_date, a.appointment_date) = ?
-                            AND (a.status IN ('checked_in','in_progress','confirmed') OR cr.record_id IS NOT NULL)
+                            AND (a.status IN ('arrived','checked_in','in_progress','confirmed') OR cr.record_id IS NOT NULL)
                         ORDER BY a.is_emergency DESC, COALESCE(t.start_time, '00:00:00') ASC";
 
     $qstmt = $conn->prepare($sql);
@@ -79,103 +80,157 @@ if ($sstmt) {
     <input type="hidden" name="schedule_id" id="schedule_id_hidden"
         value="<?php echo isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : ''; ?>">
 
-    <!-- Integrated Profiling Fields (top of form) -->
-    <div class="mb-3">
-        <div id="queueSelectorWrap">
-            <label class="form-label">Select Patient from Queue</label>
-            <select id="queueSelector" class="form-select">
+    <!-- Row 1: Patient Selector | Patient Info | Clinical Notes -->
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem;">Select Patient</label>
+            <select id="queueSelector" class="form-select form-select-sm" style="font-size:0.82rem;">
                 <option value="">-- Select patient --</option>
                 <?php foreach ($queueItems as $qi): ?>
-                                <?php
-                                    $display = trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']);
-                                    if (!empty($qi['is_emergency'])) {
-                                        $display .= ' (EMERGENCY)';
-                                    }
-                                    // Indicate if a clinical record already exists for this appointment
-                                    $hasRecord = !empty($qi['record_id']);
-                                    if ($hasRecord) {
-                                        $display .= ' — Record';
-                                    }
-                                ?>
-                                <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo $hasRecord ? '1' : '0'; ?>">
-                                    <?php echo htmlspecialchars($display); ?>
-                                </option>
-                    <?php endforeach; ?>
+                    <?php
+                        $display = trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']);
+                        if (!empty($qi['is_emergency'])) $display .= ' (EMERGENCY)';
+                        if (!empty($qi['record_id'])) $display .= ' — Record';
+                    ?>
+                    <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>">
+                        <?php echo htmlspecialchars($display); ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
-            <div class="form-text">Select a patient to begin or continue a session.</div>
         </div>
-        <div id="apptInfo" class="alert alert-info mt-3" style="display:none;"></div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Patient</label>
+            <div id="apptInfo" class="form-control form-control-sm bg-light" style="font-size:0.8rem;min-height:38px;display:flex;align-items:center;">
+                <span class="text-muted">No patient selected</span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label fw-bold" style="font-size:0.8rem;">Clinical Notes</label>
+            <textarea id="doctor_notes" class="form-control form-control-sm" rows="1" placeholder="Notes..." style="font-size:0.82rem;resize:vertical;"></textarea>
+        </div>
     </div>
 
-    <!-- Clinical Inputs -->
-    <div class="mb-4 p-3 border rounded">
-        <h5 class="mb-3">Clinical Inputs</h5>
-        <!-- Photo Gallery Section -->
-        <div class="mb-4">
-            <h6 class="mb-3">
-                <i class="fas fa-images"></i> Appointment Photos
-                <span class="badge bg-info ms-2" id="photoCountBadge">0</span>
-            </h6>
-            <div id="photoGalleryContainer" class="row g-2">
-                <p class="text-muted small">No photos uploaded yet</p>
-            </div>
+    <!-- Row 2: Photos + Actions -->
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('finishPhotoUpload').click()">
+            <i class="fas fa-upload"></i> Upload
+        </button>
+        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#cameraModal">
+            <i class="fas fa-camera"></i> Take Photo
+        </button>
+        <div class="ms-auto">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#chartingSection">
+                <i class="bi bi-tooth"></i> Charting
+            </button>
         </div>
+    </div>
 
-        <!-- Upload Photo Section -->
-        <div class="mb-4 p-3 bg-light rounded">
-            <h6 class="mb-3">
-                <i class="fas fa-plus-circle"></i> Add Photos
-            </h6>
-            <div class="row g-2">
-                <div class="col-6">
-                    <input type="file" id="finishPhotoUpload" class="form-control" accept="image/*" multiple hidden>
-                    <button type="button" class="btn btn-outline-primary w-100" onclick="document.getElementById('finishPhotoUpload').click()">
-                        <i class="fas fa-upload"></i> Upload Photos
-                    </button>
-                </div>
-                <div class="col-6">
-                    <button type="button" class="btn btn-outline-info w-100" id="cameraButton">
-                        <i class="fas fa-camera"></i> Take Photo
-                    </button>
-                </div>
-            </div>
-            <small class="text-muted d-block mt-2">Support: JPG, PNG. Max 5MB each</small>
-            <!-- Hidden video element for camera capture -->
-            <video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d6efd; border-radius: 5px;"></video>
-            <canvas id="cameraCaptureCanvas" style="display: none;"></canvas>
-        </div>
+    <!-- Photo Gallery (compact thumbnails with click to view) -->
+    <div id="photoGalleryContainer" class="d-flex flex-wrap gap-2 mb-3" style="min-height:40px;">
+        <span class="text-muted small" id="noPhotosMsg">No photos uploaded</span>
+    </div>
 
-        <!-- Doctor Notes Section -->
-        <div class="mb-4">
-            <h6 class="mb-2">
-                <i class="fas fa-sticky-note"></i> Clinical Notes
-            </h6>
-            <textarea id="doctor_notes" class="form-control" rows="4" placeholder="Enter clinical notes, findings, recommendations..." style="resize: vertical;"></textarea>
-            <small class="text-muted d-block mt-1">These notes will be visible to the secretary when creating records</small>
-        </div>
-
-        <!-- Odontogram moved to be the last input section -->
-        <div class="mb-3">
-            <label class="form-label"><i class="bi bi-tooth"></i> Odontogram</label>
-            <small class="text-muted d-block mb-2">Chart on the <strong>2D Chart</strong> tab; open <strong>3D Preview</strong> inside the panel for the realistic tooth view.</small>
-            <div class="d-flex align-items-center mb-2 gap-2">
-                <button type="button" id="toggleOdontogramBtn" class="btn btn-sm btn-outline-secondary ms-2">Show</button>
-                <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+    <!-- Charting Section (hidden by default) -->
+    <div class="collapse mb-3" id="chartingSection">
+        <div class="p-2 border rounded bg-light">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <label class="form-label fw-bold mb-0"><i class="bi bi-tooth"></i> Odontogram / Charting</label>
+                <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-sm btn-outline-primary">Full Screen</button>
             </div>
             <div id="odontogramViewport" class="odontogram-viewport">
                 <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
                     <i class="bi bi-x-lg"></i> Close
                 </button>
-                <div id="odontogramContainer">
-                    <!-- iframe will be created here on demand -->
-                </div>
+                <div id="odontogramContainer"></div>
             </div>
             <input type="hidden" id="odontogram_data" name="odontogram">
         </div>
     </div>
 
-    <div class="d-flex gap-2 mt-4">
-        <button type="button" id="submitFinishAppointmentBtn" class="btn btn-primary">
+    <!-- Row 3: Services -->
+    <div class="mb-3 p-2 border rounded bg-light">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <label class="form-label fw-bold mb-0"><i class="fas fa-list-check"></i> Services Performed</label>
+        </div>
+        <div class="row g-1 mb-2">
+            <div class="col-md-9">
+                <select id="ehrServiceSelect" class="form-select form-select-sm">
+                    <option value="">-- Select Service --</option>
+                    <?php foreach ($services as $svc): ?>
+                        <option value="<?php echo (int)$svc['service_id']; ?>"
+                            data-price="<?php echo (float)$svc['initial_price']; ?>"
+                            data-name="<?php echo htmlspecialchars($svc['service_name'], ENT_QUOTES); ?>">
+                            <?php echo htmlspecialchars($svc['service_name']); ?> — ₱<?php echo number_format($svc['initial_price'], 0); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-primary btn-sm w-100" id="addEhrServiceBtn">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive" style="max-height:120px;overflow-y:auto;">
+            <table class="table table-sm table-bordered mb-0">
+                <thead class="table-light" style="position:sticky;top:0;">
+                    <tr><th>Service</th><th style="width:80px;">Price</th><th style="width:35px;"></th></tr>
+                </thead>
+                <tbody id="ehrServicesBody">
+                    <tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Camera Modal -->
+    <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title"><i class="fas fa-camera"></i> Take Photo</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-2">
+                    <video id="cameraPreviewVideo" style="width:100%;max-height:350px;border-radius:8px;"></video>
+                    <canvas id="cameraCaptureCanvas" style="display:none;"></canvas>
+                    <div id="capturedPreview" class="mt-2" style="display:none;">
+                        <img id="capturedPreviewImg" style="max-width:100%;max-height:250px;border-radius:8px;">
+                    </div>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-primary btn-sm" id="capturePhotoBtn">
+                        <i class="fas fa-camera"></i> Capture
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" id="confirmPhotoBtn" style="display:none;">
+                        <i class="fas fa-check"></i> Use Photo
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="retakePhotoBtn" style="display:none;">
+                        <i class="fas fa-redo"></i> Retake
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo Viewer Modal -->
+    <div class="modal fade" id="photoViewerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark">
+                <div class="modal-header py-1 border-0">
+                    <span class="text-white small" id="photoViewerTitle">Photo</span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-2">
+                    <img id="photoViewerImg" style="max-width:100%;max-height:70vh;border-radius:8px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="button" id="submitFinishAppointmentBtn" class="btn btn-primary btn-sm" style="font-size:0.82rem;">
             <i class="fas fa-check"></i> Finalize Session
         </button>
     </div>
@@ -381,20 +436,14 @@ if ($sstmt) {
             if (!container) return;
             ensureOdontogramFrame();
             container.style.display = '';
-            document.getElementById('toggleOdontogramBtn').textContent = 'Hide';
         }
         function hideOdontogram() {
             const container = document.getElementById('odontogramContainer');
             if (!container) return;
             container.style.display = 'none';
-            document.getElementById('toggleOdontogramBtn').textContent = 'Show';
         }
         function updateOdontogramToggle() {
-            const container = document.getElementById('odontogramContainer');
-            const btn = document.getElementById('toggleOdontogramBtn');
-            if (!container || !btn) return;
-            if (container.style.display === 'none') btn.textContent = 'Show';
-            else btn.textContent = 'Hide';
+            // no-op: charting section is now a collapse toggle
         }
 
         function getOdontogramFullscreenElement() {
@@ -444,19 +493,6 @@ if ($sstmt) {
             setTimeout(notifyOdontogramResize, 50);
         }
 
-        // toggle button
-        document.getElementById('toggleOdontogramBtn')?.addEventListener('click', function () {
-            const container = document.getElementById('odontogramContainer');
-            if (!container) return;
-            if (container.style.display === 'none') {
-                showOdontogram();
-                const od = document.getElementById('odontogram_data')?.value || '';
-                if (od) postOdontogramToFrame(od);
-            } else {
-                hideOdontogram();
-            }
-        });
-
         document.getElementById('openOdontogramFullscreenBtn')?.addEventListener('click', function () {
             if (isOdontogramFullscreen()) {
                 exitOdontogramFullscreen();
@@ -479,117 +515,151 @@ if ($sstmt) {
 
         syncOdontogramFullscreenUI();
 
+        // Services management
+        var ehrSelectedServices = [];
+
+        function addEhrService() {
+            var select = document.getElementById('ehrServiceSelect');
+            var serviceId = parseInt(select.value);
+            if (!serviceId) { notifyDoctor('Select a service first.', 'warning'); return; }
+            var option = select.options[select.selectedIndex];
+            var exists = ehrSelectedServices.find(function(s) { return s.service_id === serviceId; });
+            if (exists) { notifyDoctor('Service already added.', 'warning'); return; }
+            ehrSelectedServices.push({
+                service_id: serviceId,
+                name: option.dataset.name,
+                price: parseFloat(option.dataset.price || 0)
+            });
+            select.value = '';
+            renderEhrServicesTable();
+        }
+
+        function removeEhrService(serviceId) {
+            ehrSelectedServices = ehrSelectedServices.filter(function(s) { return s.service_id !== serviceId; });
+            renderEhrServicesTable();
+        }
+
+        function renderEhrServicesTable() {
+            var tbody = document.getElementById('ehrServicesBody');
+            if (!tbody) return;
+            if (ehrSelectedServices.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            ehrSelectedServices.forEach(function(s) {
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td style="font-size:0.8rem;">' + escapeHtmlEhr(s.name) + '</td><td style="font-size:0.8rem;">₱' + s.price.toLocaleString() + '</td><td><button type="button" class="btn btn-sm py-0 px-1" onclick="removeEhrService(' + s.service_id + ')" style="color:#dc3545;background:none;border:none;"><i class="bi bi-x"></i></button></td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        function escapeHtmlEhr(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Add service button event listener
+        document.getElementById('addEhrServiceBtn')?.addEventListener('click', addEhrService);
+
         // Photo Upload Handler
         document.getElementById('finishPhotoUpload').addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (!files.length) return;
-            
             for (const file of files) {
-                if (!file.type.startsWith('image/')) {
-                    notifyDoctor('Only image files allowed', 'warning');
-                    continue;
-                }
-                if (file.size > 5 * 1024 * 1024) {
-                    notifyDoctor(`File ${file.name} exceeds 5MB limit`, 'warning');
-                    continue;
-                }
+                if (!file.type.startsWith('image/')) { notifyDoctor('Only image files allowed', 'warning'); continue; }
+                if (file.size > 5 * 1024 * 1024) { notifyDoctor('File ' + file.name + ' exceeds 5MB limit', 'warning'); continue; }
                 uploadedPhotos.push(file);
             }
-            
             updatePhotoGalleryPreview();
         });
 
-        // Camera Capture Handler
-        document.getElementById('cameraButton').addEventListener('click', async function() {
+        // Camera Modal Logic
+        var cameraStream = null;
+        document.getElementById('cameraModal')?.addEventListener('show.bs.modal', async function() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-                const video = document.getElementById('cameraPreviewVideo');
-                video.srcObject = stream;
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                var video = document.getElementById('cameraPreviewVideo');
+                video.srcObject = cameraStream;
                 video.style.display = 'block';
                 video.play();
-                
-                let captureBtn = document.getElementById('photoCaptureBtn');
-                if (!captureBtn) {
-                    captureBtn = document.createElement('button');
-                    captureBtn.id = 'photoCaptureBtn';
-                    captureBtn.type = 'button';
-                    captureBtn.className = 'btn btn-sm btn-success mt-2';
-                    captureBtn.innerHTML = '<i class="fas fa-camera"></i> Capture';
-                    captureBtn.addEventListener('click', () => capturePhoto(stream));
-                    video.parentNode.insertBefore(captureBtn, video.nextSibling);
-                }
-                
-                let stopBtn = document.getElementById('photoStopBtn');
-                if (!stopBtn) {
-                    stopBtn = document.createElement('button');
-                    stopBtn.id = 'photoStopBtn';
-                    stopBtn.type = 'button';
-                    stopBtn.className = 'btn btn-sm btn-secondary mt-2 ms-2';
-                    stopBtn.innerHTML = '<i class="fas fa-times"></i> Stop';
-                    stopBtn.addEventListener('click', () => {
-                        stream.getTracks().forEach(track => track.stop());
-                        video.style.display = 'none';
-                        captureBtn.remove();
-                        stopBtn.remove();
-                        document.getElementById('cameraButton').disabled = false;
-                    });
-                    captureBtn.parentNode.insertBefore(stopBtn, captureBtn.nextSibling);
-                }
-                
-                this.disabled = true;
+                document.getElementById('capturedPreview').style.display = 'none';
+                document.getElementById('capturePhotoBtn').style.display = '';
+                document.getElementById('confirmPhotoBtn').style.display = 'none';
+                document.getElementById('retakePhotoBtn').style.display = 'none';
             } catch (err) {
                 notifyDoctor('Camera access denied or unavailable', 'danger');
-                console.error('Camera error:', err);
             }
         });
 
-        function capturePhoto(stream) {
-            const video = document.getElementById('cameraPreviewVideo');
-            const canvas = document.getElementById('cameraCaptureCanvas');
+        document.getElementById('cameraModal')?.addEventListener('hidden.bs.modal', function() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(function(track) { track.stop(); });
+                cameraStream = null;
+            }
+        });
+
+        document.getElementById('capturePhotoBtn')?.addEventListener('click', function() {
+            var video = document.getElementById('cameraPreviewVideo');
+            var canvas = document.getElementById('cameraCaptureCanvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
-            
-            canvas.toBlob((blob) => {
-                const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            document.getElementById('capturedPreviewImg').src = canvas.toDataURL('image/jpeg', 0.9);
+            document.getElementById('capturedPreview').style.display = '';
+            video.style.display = 'none';
+            this.style.display = 'none';
+            document.getElementById('confirmPhotoBtn').style.display = '';
+            document.getElementById('retakePhotoBtn').style.display = '';
+        });
+
+        document.getElementById('confirmPhotoBtn')?.addEventListener('click', function() {
+            var canvas = document.getElementById('cameraCaptureCanvas');
+            canvas.toBlob(function(blob) {
+                var file = new File([blob], 'capture_' + Date.now() + '.jpg', { type: 'image/jpeg' });
                 uploadedPhotos.push(file);
                 updatePhotoGalleryPreview();
                 notifyDoctor('Photo captured', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('cameraModal'))?.hide();
             }, 'image/jpeg', 0.9);
-        }
+        });
+
+        document.getElementById('retakePhotoBtn')?.addEventListener('click', function() {
+            var video = document.getElementById('cameraPreviewVideo');
+            video.style.display = 'block';
+            document.getElementById('capturedPreview').style.display = 'none';
+            document.getElementById('capturePhotoBtn').style.display = '';
+            this.style.display = 'none';
+            document.getElementById('confirmPhotoBtn').style.display = 'none';
+        });
 
         function updatePhotoGalleryPreview() {
-            const container = document.getElementById('photoGalleryContainer');
-            document.getElementById('photoCountBadge').textContent = uploadedPhotos.length;
+            var container = document.getElementById('photoGalleryContainer');
 
-            if (typeof renderLocalMediaGallery === 'function') {
-                renderLocalMediaGallery(container, uploadedPhotos, function (idx) {
-                    uploadedPhotos.splice(idx, 1);
-                    updatePhotoGalleryPreview();
-                });
-                return;
-            }
-            
             if (uploadedPhotos.length === 0) {
-                container.innerHTML = '<p class="text-muted small">No photos uploaded yet</p>';
+                container.innerHTML = '<span class="text-muted small" id="noPhotosMsg">No photos uploaded</span>';
                 return;
             }
-            
+
             container.innerHTML = '';
-            uploadedPhotos.forEach((file, idx) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const col = document.createElement('div');
-                    col.className = 'col-sm-6 col-md-4 position-relative';
-                    col.innerHTML = `
-                        <div style="position: relative; overflow: hidden; border-radius: 8px; background: #f0f0f0; aspect-ratio: 3/2;">
-                            <img src="${e.target.result}" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
-                            <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" onclick="removeUploadedPhoto(${idx})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                    container.appendChild(col);
+            uploadedPhotos.forEach(function(file, idx) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var wrap = document.createElement('div');
+                    wrap.style.cssText = 'position:relative;width:80px;height:60px;border-radius:6px;overflow:hidden;border:1px solid #ddd;flex-shrink:0;cursor:pointer;';
+                    wrap.title = 'Click to view full size';
+                    wrap.setAttribute('data-photo-url', e.target.result);
+                    wrap.setAttribute('data-photo-idx', idx);
+                    wrap.innerHTML = '<img src="' + e.target.result + '" alt="Photo" style="width:100%;height:100%;object-fit:cover;">' +
+                        '<button type="button" onclick="event.stopPropagation();removeUploadedPhoto(' + idx + ')" style="position:absolute;top:2px;right:2px;background:rgba(220,53,69,0.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>';
+                    wrap.addEventListener('click', function() {
+                        var viewerImg = document.getElementById('photoViewerImg');
+                        var viewerTitle = document.getElementById('photoViewerTitle');
+                        if (viewerImg) viewerImg.src = this.getAttribute('data-photo-url');
+                        if (viewerTitle) viewerTitle.textContent = 'Photo ' + (parseInt(this.getAttribute('data-photo-idx')) + 1);
+                        var modal = new bootstrap.Modal(document.getElementById('photoViewerModal'));
+                        modal.show();
+                    });
+                    container.appendChild(wrap);
                 };
                 reader.readAsDataURL(file);
             });
@@ -627,7 +697,12 @@ if ($sstmt) {
                 fd.append('notes', document.getElementById('doctor_notes').value);
                 fd.append('csrf_token', doctorCsrfToken);
                 fd.append('idempotency_key', ehrFinishIdempotencyKey);
-                
+
+                // Add selected services
+                ehrSelectedServices.forEach(function(s, i) {
+                    fd.append('selected_service_ids[' + i + ']', s.service_id);
+                });
+
                 const odontogramPayload = collectOdontogramPayload();
                 if (odontogramPayload) {
                     fd.append('odontogram', odontogramPayload);

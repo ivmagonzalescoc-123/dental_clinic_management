@@ -20,7 +20,7 @@ $doctorScope = "
 if ($userId > 0) {
     $upcoming = dashboard_scalar_int(
         $conn,
-        "SELECT COUNT(*) $doctorScope AND COALESCE(t.slot_date, a.appointment_date) >= ? AND a.status IN ('scheduled','confirmed','checked_in','in_progress','rescheduled')",
+        "SELECT COUNT(*) $doctorScope AND COALESCE(t.slot_date, a.appointment_date) >= ? AND a.status IN ('scheduled','confirmed','arrived','checked_in','in_progress','rescheduled')",
         'is',
         [$userId, $today]
     );
@@ -32,7 +32,7 @@ if ($userId > 0) {
     );
     $queueToday = dashboard_scalar_int(
         $conn,
-        "SELECT COUNT(*) $doctorScope AND COALESCE(t.slot_date, a.appointment_date) = ? AND a.status IN ('confirmed','checked_in','in_progress')",
+        "SELECT COUNT(*) $doctorScope AND COALESCE(t.slot_date, a.appointment_date) = ? AND a.status IN ('confirmed','arrived','checked_in','in_progress')",
         'is',
         [$userId, $today]
     );

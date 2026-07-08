@@ -40,7 +40,8 @@ function appointment_can_transition_secretary(string $from, string $to): bool
 
     $matrix = [
         'scheduled' => ['confirmed', 'cancelled', 'no_show'],
-        'confirmed' => ['checked_in', 'cancelled', 'no_show'],
+        'confirmed' => ['arrived', 'checked_in', 'cancelled', 'no_show'],
+        'arrived' => ['in_progress', 'cancelled'],
         'checked_in' => ['in_progress', 'no_show'],
         'in_progress' => ['completed'],
         'completed' => [],
@@ -358,7 +359,7 @@ if ($action === 'approve' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Count already approved/confirmed for that date
-    $cap_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','checked_in','in_progress','completed')");
+    $cap_stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM appointments WHERE appointment_date = ? AND status IN ('confirmed','arrived','checked_in','in_progress','completed')");
     if ($cap_stmt) {
         $cap_stmt->bind_param('s', $apptDate);
         $cap_stmt->execute();
@@ -485,6 +486,14 @@ if ($recordsQueueRes && ($r = $recordsQueueRes->fetch_assoc())) {
 // Fetch appointments - ALL APPOINTMENTS (no filtering)
 $appointments = [];
 $pendingRescheduleRequests = [];
+
+// Count verified guest bookings
+$guestBookingsCount = 0;
+$gbCountRes = $conn->query("SELECT COUNT(*) AS cnt FROM bookings WHERE status = 'verified'");
+if ($gbCountRes) {
+    $gbRow = $gbCountRes->fetch_assoc();
+    $guestBookingsCount = (int)($gbRow['cnt'] ?? 0);
+}
 $appointments_sql = "
     SELECT
         a.*,
@@ -610,6 +619,12 @@ $appointmentsViewFilters = [
     'reschedule' => ['label' => 'Reschedule Requests', 'count' => $pendingReqCount],
     'records_queue' => ['label' => 'Records Queue', 'count' => $recordsQueueCount],
 ];
+
+// Top-level section tabs
+$activeSection = $_GET['section'] ?? 'appointments';
+if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
+    $activeSection = 'appointments';
+}
 ?>
 
 <!-- Alert Messages -->
@@ -622,12 +637,489 @@ $appointmentsViewFilters = [
 <?php endif; ?>
 
 
+<!-- Top-level section tabs -->
+<ul class="nav nav-tabs mb-3" id="appointmentSectionTabs">
+    <li class="nav-item">
+        <a class="nav-link <?php echo $activeSection === 'appointments' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($view); ?>" style="font-size:0.85rem;">
+            <i class="bi bi-calendar-check"></i> Appointments
+            <span class="badge bg-primary ms-1"><?php echo (int)$totalCount; ?></span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
+            <i class="bi bi-person-plus"></i> New Customers
+            <span class="badge bg-warning text-dark ms-1"><?php echo (int)$guestBookingsCount; ?></span>
+        </a>
+    </li>
+</ul>
+
+<?php if ($activeSection === 'new_customers'): ?>
+
+<!-- New Customers / Guest Bookings -->
+<div class="card border-0">
+    
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="unified-table-search-wrap">
+                <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                <input id="newCustomerSearch" type="search" class="form-control unified-table-search-input"
+                    placeholder="Search by name, email, or phone..." aria-label="Search new customers">
+                <button type="button" class="unified-table-search-clear" id="newCustomerSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+            </div>
+            <?php
+                    $guestBookings = [];
+                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','converted') ORDER BY b.created_at DESC");
+                    if ($gbRes) {
+                        while ($gbRow = $gbRes->fetch_assoc()) {
+                            $guestBookings[] = $gbRow;
+                        }
+                    }
+                    ?>
+            <small class="text-muted">Showing <span id="newCustomerCount"><?php echo count($guestBookings); ?></span> records</small>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover" id="newCustomerTable" data-skip-table-search="1" data-skip-datatable="1">
+                <thead>
+                    <tr>
+                        <th>Ref. No.</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Preferred Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Requested</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($guestBookings)): ?>
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                No guest bookings yet.
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($guestBookings as $gb): ?>
+                            <?php $isConverted = ($gb['status'] === 'converted'); ?>
+                            <tr style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                                <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
+                                <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
+                                <td><?php echo htmlspecialchars($gb['email']); ?></td>
+                                <td><?php echo htmlspecialchars($gb['phone_number'] ?? '—'); ?></td>
+                                <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
+                                <td><span class="badge bg-<?php echo $gb['preferred_time'] === 'morning' ? 'warning' : 'info'; ?>"><?php echo ucfirst($gb['preferred_time']); ?></span></td>
+                                <td>
+                                    <?php if ($isConverted): ?>
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?php echo date('M j, g:i A', strtotime($gb['created_at'])); ?></td>
+                                <td>
+                                    <?php if ($isConverted): ?>
+                                        <a href="secretary.php?page=appointments&section=appointments&view=all" class="btn btn-sm btn-outline-info" title="View appointment">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-sm btn-success"
+                                            onclick='openConvertBookingModal(<?php echo json_encode([
+                                                'booking_id' => (int)$gb['booking_id'],
+                                                'first_name' => $gb['first_name'],
+                                                'last_name' => $gb['last_name'],
+                                                'email' => $gb['email'],
+                                                'phone_number' => $gb['phone_number'] ?? '',
+                                                'date_of_birth' => $gb['date_of_birth'] ?? '',
+                                                'preferred_date' => $gb['preferred_date'],
+                                                'preferred_time' => $gb['preferred_time'],
+                                                'reason' => $gb['reason'] ?? '',
+                                            ]); ?>)'>
+                                            <i class="bi bi-arrow-right-circle"></i> Process
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Process Booking to Appointment Modal -->
+<div class="modal fade" id="convertBookingModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2 px-3">
+                <h5 class="modal-title" style="font-size:0.9rem;">
+                    <i class="bi bi-arrow-right-circle"></i> Process New Booked Appointment
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="convertBookingForm">
+                <input type="hidden" id="convertBookingId" name="booking_id">
+                <div class="modal-body py-2 px-3">
+                    <div class="alert alert-info mb-2 py-2 px-3" style="font-size:0.82rem;">
+                        <strong>Patient:</strong> <span id="convertBookingPatientInfo"></span>
+                    </div>
+
+                    <!-- 2-Column: Doctor + Services -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Select Doctor *</label>
+                            <select id="convertDoctorSelect" name="user_id" class="form-select form-select-sm" required style="font-size:0.82rem;">
+                                <option value="">-- Select Doctor --</option>
+                                <?php foreach ($doctors as $d): ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
+                            <div class="input-group input-group-sm">
+                                <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
+                                    <option value="">-- Select Service --</option>
+                                </select>
+                                <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()" style="font-size:0.78rem;">
+                                    <i class="bi bi-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selected Services Table -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Services</label>
+                        <div class="table-responsive" style="max-height:180px;overflow-y:auto;">
+                            <table class="table table-sm table-bordered mb-0" id="processServicesTable">
+                                <thead class="table-light" style="position:sticky;top:0;">
+                                    <tr style="font-size:0.75rem;">
+                                        <th>Service Name</th>
+                                        <th style="width:90px;">Est. Time</th>
+                                        <th style="width:90px;">Price</th>
+                                        <th style="width:40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="processServicesBody">
+                                    <tr id="processNoServicesRow">
+                                        <td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">
+                                            Consultation Only — No additional services
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot id="processServicesFooter" style="display:none;">
+                                    <tr style="font-size:0.8rem;">
+                                        <td colspan="2" class="text-end fw-bold">Total:</td>
+                                        <td class="fw-bold" id="processTotalPrice">₱0</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <small class="text-muted" style="font-size:0.7rem;" id="processTotalTime">Estimated: 0 minutes</small>
+                    </div>
+
+                    <!-- Start Time -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem;">Available Start Time *</label>
+                        <select id="convertTimeslotSelect" name="timeslot_id" class="form-select form-select-sm" required disabled style="font-size:0.82rem;">
+                            <option value="">-- Select Doctor first --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-3">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="convertSubmitBtn" class="btn btn-success btn-sm">
+                        <i class="bi bi-check-circle"></i> Process Booking
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// New Customer Search
+function filterNewCustomerTable() {
+    var input = document.getElementById('newCustomerSearch');
+    var clearBtn = document.getElementById('newCustomerSearchClear');
+    var filter = input.value.toLowerCase();
+    var table = document.getElementById('newCustomerTable');
+    if (!table) return;
+    var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+    var visibleCount = 0;
+    for (var i = 0; i < rows.length; i++) {
+        var text = rows[i].textContent.toLowerCase();
+        var show = text.indexOf(filter) > -1;
+        rows[i].style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    }
+    var countEl = document.getElementById('newCustomerCount');
+    if (countEl) countEl.textContent = visibleCount;
+    if (clearBtn) clearBtn.style.display = filter ? '' : 'none';
+}
+document.getElementById('newCustomerSearch')?.addEventListener('input', filterNewCustomerTable);
+document.getElementById('newCustomerSearchClear')?.addEventListener('click', function() {
+    var input = document.getElementById('newCustomerSearch');
+    if (input) { input.value = ''; filterNewCustomerTable(); }
+});
+
+// Process Booking Modal
+var convertBookingData = {};
+var processSelectedServices = [];
+var processServicesCatalog = [];
+
+function openConvertBookingModal(booking) {
+    convertBookingData = booking;
+    processSelectedServices = [];
+    document.getElementById('convertBookingId').value = booking.booking_id;
+    document.getElementById('convertBookingPatientInfo').textContent =
+        booking.first_name + ' ' + booking.last_name + ' | ' + booking.email + ' | ' + (booking.phone_number || 'No phone');
+
+    // Reset services table
+    renderProcessServicesTable();
+
+    // Reset doctor and timeslot
+    document.getElementById('convertDoctorSelect').value = '';
+    document.getElementById('convertTimeslotSelect').innerHTML = '<option value="">-- Select Doctor first --</option>';
+    document.getElementById('convertTimeslotSelect').disabled = true;
+    document.getElementById('convertServiceSelect').innerHTML = '<option value="">-- Select Service --</option>';
+
+    var modal = new bootstrap.Modal(document.getElementById('convertBookingModal'));
+    modal.show();
+}
+
+// Load services when doctor changes
+document.getElementById('convertDoctorSelect')?.addEventListener('change', async function() {
+    var doctorId = this.value;
+    var serviceSelect = document.getElementById('convertServiceSelect');
+    var timeslotSelect = document.getElementById('convertTimeslotSelect');
+
+    processSelectedServices = [];
+    renderProcessServicesTable();
+
+    if (!doctorId) {
+        serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+        timeslotSelect.innerHTML = '<option value="">-- Select Doctor first --</option>';
+        timeslotSelect.disabled = true;
+        return;
+    }
+
+    // Load services
+    try {
+        var resp = await fetch('../assets/api/appointments/manage_services.php?action=services&appointment_id=0');
+        var data = await resp.json();
+        if (data.success && data.services) {
+            processServicesCatalog = data.services;
+            serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
+            data.services.forEach(function(s) {
+                var opt = document.createElement('option');
+                opt.value = s.service_id;
+                opt.textContent = s.service_name + ' — ₱' + parseFloat(s.initial_price || 0).toLocaleString();
+                opt.dataset.price = s.initial_price || 0;
+                opt.dataset.duration = s.default_duration_minutes || 30;
+                opt.dataset.name = s.service_name;
+                serviceSelect.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error('Failed to load services:', err);
+    }
+
+    // Load available timeslots for preferred date
+    loadProcessTimeslots(doctorId, convertBookingData.preferred_date);
+});
+
+function loadProcessTimeslots(doctorId, date) {
+    var timeslotSelect = document.getElementById('convertTimeslotSelect');
+    if (!doctorId || !date) {
+        timeslotSelect.innerHTML = '<option value="">-- Select date first --</option>';
+        timeslotSelect.disabled = true;
+        return;
+    }
+    fetch('../assets/api/appointments/get_timeslots.php?doctor_id=' + doctorId + '&date=' + date)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            timeslotSelect.innerHTML = '<option value="">-- Select Start Time --</option>';
+            if (data.success && data.slots && data.slots.length > 0) {
+                data.slots.forEach(function(slot) {
+                    var opt = document.createElement('option');
+                    opt.value = slot.timeslot_id;
+                    opt.textContent = slot.label;
+                    timeslotSelect.appendChild(opt);
+                });
+                timeslotSelect.disabled = false;
+            } else {
+                timeslotSelect.innerHTML = '<option value="">No available times</option>';
+                timeslotSelect.disabled = true;
+            }
+        });
+}
+
+// Add service to table
+function addProcessService() {
+    var select = document.getElementById('convertServiceSelect');
+    var serviceId = parseInt(select.value);
+    if (!serviceId) return;
+
+    var option = select.options[select.selectedIndex];
+    var exists = processSelectedServices.find(function(s) { return s.service_id === serviceId; });
+    if (exists) {
+        notifySecretary('This service is already added.', 'warning');
+        return;
+    }
+
+    processSelectedServices.push({
+        service_id: serviceId,
+        name: option.dataset.name,
+        price: parseFloat(option.dataset.price || 0),
+        duration: parseInt(option.dataset.duration || 30)
+    });
+
+    select.value = '';
+    renderProcessServicesTable();
+}
+
+// Remove service from table
+function removeProcessService(serviceId) {
+    processSelectedServices = processSelectedServices.filter(function(s) { return s.service_id !== serviceId; });
+    renderProcessServicesTable();
+}
+
+// Render services table
+function renderProcessServicesTable() {
+    var tbody = document.getElementById('processServicesBody');
+    var tfoot = document.getElementById('processServicesFooter');
+    var noRow = document.getElementById('processNoServicesRow');
+    var totalTimeEl = document.getElementById('processTotalTime');
+
+    tbody.innerHTML = '';
+
+    if (processSelectedServices.length === 0) {
+        tbody.innerHTML = '<tr id="processNoServicesRow"><td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">Consultation Only — No additional services</td></tr>';
+        tfoot.style.display = 'none';
+        totalTimeEl.textContent = 'Estimated: 0 minutes';
+        return;
+    }
+
+    var totalPrice = 0;
+    var totalTime = 0;
+
+    processSelectedServices.forEach(function(s) {
+        totalPrice += s.price;
+        totalTime += s.duration;
+        var tr = document.createElement('tr');
+        tr.style.fontSize = '0.8rem';
+        tr.innerHTML = '<td>' + escapeProcessHtml(s.name) + '</td>' +
+            '<td>' + s.duration + ' min</td>' +
+            '<td>₱' + s.price.toLocaleString() + '</td>' +
+            '<td><button type="button" class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeProcessService(' + s.service_id + ')" style="font-size:0.7rem;"><i class="bi bi-x"></i></button></td>';
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('processTotalPrice').textContent = '₱' + totalPrice.toLocaleString();
+    tfoot.style.display = '';
+    totalTimeEl.textContent = 'Estimated: ' + totalTime + ' minutes';
+}
+
+function escapeProcessHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Submit handler
+document.getElementById('convertBookingForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var submitBtn = document.getElementById('convertSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+
+    var bookingId = document.getElementById('convertBookingId').value;
+    var doctorId = document.getElementById('convertDoctorSelect').value;
+    var timeslotId = document.getElementById('convertTimeslotSelect').value;
+
+    if (!doctorId) {
+        notifySecretary('Please select a doctor.', 'warning');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Process Booking';
+        return;
+    }
+    if (!timeslotId) {
+        notifySecretary('Please select a start time.', 'warning');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Process Booking';
+        return;
+    }
+
+    try {
+        // 1. Create patient account
+        var patientFd = new FormData();
+        patientFd.append('first_name', convertBookingData.first_name || '');
+        patientFd.append('last_name', convertBookingData.last_name || '');
+        patientFd.append('email', convertBookingData.email || '');
+        patientFd.append('phone_number', convertBookingData.phone_number || '');
+        patientFd.append('date_of_birth', convertBookingData.date_of_birth || '');
+        patientFd.append('csrf_token', window.secretaryCsrfToken || '');
+
+        var patientResp = await fetch('../assets/api/patients/create_walkin.php', { method: 'POST', body: patientFd });
+        var patientData = await patientResp.json();
+
+        if (!patientData.success || !patientData.patient_id) {
+            notifySecretary('Error creating patient: ' + (patientData.message || 'Unknown error'), 'danger');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Process Booking';
+            return;
+        }
+
+        // 2. Create appointment with services and arrived status
+        var apptFd = new FormData();
+        apptFd.append('patient_id', patientData.patient_id);
+        apptFd.append('appointment_date', convertBookingData.preferred_date || '');
+        apptFd.append('user_id', doctorId);
+        apptFd.append('reason', convertBookingData.reason || '');
+        apptFd.append('is_online_appointment', '0');
+        apptFd.append('timeslot_id', timeslotId);
+        apptFd.append('status', 'checked_in');
+        apptFd.append('booking_id', bookingId);
+        apptFd.append('allow_duplicate_day', '1');
+        apptFd.append('csrf_token', window.secretaryCsrfToken || '');
+
+        // Add selected services
+        processSelectedServices.forEach(function(s, i) {
+            apptFd.append('selected_service_ids[' + i + ']', s.service_id);
+        });
+
+        var apptResp = await fetch('../assets/api/appointments/create_appointment.php', { method: 'POST', body: apptFd });
+        var apptData = await apptResp.json();
+
+        if (apptData.success) {
+            // Mark booking as converted
+            await fetch('../assets/api/bookings/convert_booking.php?booking_id=' + bookingId, { method: 'POST' });
+            notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
+            setTimeout(function() { location.reload(); }, 1500);
+        } else {
+            notifySecretary('Error creating appointment: ' + (apptData.message || 'Unknown error'), 'danger');
+        }
+    } catch (err) {
+        notifySecretary('Error: ' + err.message, 'danger');
+    }
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Process Booking';
+});
+</script>
+
+<?php else: ?>
+
+<!-- Appointments Section Nav -->
 <nav class="module-section-nav" aria-label="Appointment views">
     <div class="module-section-nav__track module-section-nav__scroll">
         <ul class="nav nav-pills mb-0">
             <?php foreach ($appointmentsViewFilters as $filterKey => $filterOpt): ?>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;view=<?php echo urlencode($filterKey); ?>">
+                    <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($filterKey); ?>">
                         <?php echo htmlspecialchars($filterOpt['label']); ?>
                         <span class="badge bg-light text-dark ms-1"><?php echo (int)$filterOpt['count']; ?></span>
                     </a>
@@ -638,7 +1130,7 @@ $appointmentsViewFilters = [
 </nav>
 <?php if ($view !== 'all'): ?>
     <div class="mb-3">
-        <a href="secretary.php?page=appointments&amp;view=all" class="btn btn-sm btn-outline-secondary">Reset to all appointments</a>
+        <a href="secretary.php?page=appointments&amp;section=appointments&amp;view=all" class="btn btn-sm btn-outline-secondary">Reset to all appointments</a>
     </div>
 <?php endif; ?>
 
@@ -782,7 +1274,8 @@ $appointmentsViewFilters = [
         </div>
     </div>
 </div>
-<?php else: ?>
+
+<?php endif; ?>
 
 <!-- Appointments List -->
 <div class="card border-0">
@@ -878,6 +1371,8 @@ $appointmentsViewFilters = [
                                         <span class="badge bg-warning text-dark">Pending</span>
                                     <?php elseif ($status === 'confirmed'): ?>
                                         <span class="badge bg-info">Confirmed</span>
+                                    <?php elseif ($status === 'arrived'): ?>
+                                        <span class="badge bg-success">Arrived</span>
                                     <?php elseif ($status === 'checked_in'): ?>
                                         <span class="badge bg-success">Checked-In</span>
                                     <?php elseif ($status === 'completed'): ?>

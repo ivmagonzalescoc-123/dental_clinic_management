@@ -754,7 +754,7 @@ foreach ($roles as $roleRow) {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="addPatientForm" class="ux-form-shell">
+                <form id="addPatientForm" class="ux-form-shell" method="POST" action="#">
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="ux-form-grid">
                         <div>
@@ -814,162 +814,160 @@ foreach ($roles as $roleRow) {
 
 <!-- ========== PATIENT PROFILE MODAL (tabbed) ========== -->
 <div class="modal fade" id="patientProfileModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header patient-profile-modal__header">
-                <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+            <div class="modal-header patient-profile-modal__header py-2 px-3">
+                <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
                     <div id="patientProfileModalAvatar" class="patient-profile-modal__avatar" aria-hidden="true"></div>
-                    <h5 class="modal-title mb-0" id="patientProfileModalTitle">Patient Profile</h5>
+                    <h5 class="modal-title mb-0" id="patientProfileModalTitle" style="font-size:0.9rem;">Patient Profile</h5>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body pt-2">
-                <ul class="nav nav-tabs" id="patientProfileTabs" role="tablist">
+            <div class="modal-body py-2 px-3">
+                <ul class="nav nav-tabs nav-tabs-sm" id="patientProfileTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="patient-tab-profile" data-bs-toggle="tab" data-bs-target="#patientTabProfile" type="button" role="tab">Profile</button>
+                        <button class="nav-link active py-1 px-2" id="patient-tab-profile" data-bs-toggle="tab" data-bs-target="#patientTabProfile" type="button" role="tab" style="font-size:0.82rem;">Profile</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="patient-tab-background" data-bs-toggle="tab" data-bs-target="#patientTabBackground" type="button" role="tab">Medical Background</button>
+                        <button class="nav-link py-1 px-2" id="patient-tab-background" data-bs-toggle="tab" data-bs-target="#patientTabBackground" type="button" role="tab" style="font-size:0.82rem;">Medical</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="patient-tab-account" data-bs-toggle="tab" data-bs-target="#patientTabAccount" type="button" role="tab">Account &amp; Password</button>
+                        <button class="nav-link py-1 px-2" id="patient-tab-account" data-bs-toggle="tab" data-bs-target="#patientTabAccount" type="button" role="tab" style="font-size:0.82rem;">Account</button>
                     </li>
                 </ul>
 
-                <div class="tab-content pt-3">
+                <div class="tab-content pt-2">
                     <div class="tab-pane fade show active" id="patientTabProfile" role="tabpanel">
-                        <form method="POST" action="../assets/api/patients/update_patient.php" class="ux-form-shell">
+                        <form id="editPatientForm" class="ux-form-shell" method="POST" action="#">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                             <input type="hidden" name="patient_id" id="edit_patient_id">
-                            <div class="ux-form-grid">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem 0.5rem;">
                                 <div>
                                     <label class="form-label">First Name *</label>
-                                    <input type="text" class="form-control" name="first_name" id="edit_patient_first_name" required>
+                                    <input type="text" class="form-control" name="first_name" id="edit_patient_first_name" required style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
                                     <label class="form-label">Middle Name</label>
-                                    <input type="text" class="form-control" name="middle_name" id="edit_patient_middle_name">
+                                    <input type="text" class="form-control" name="middle_name" id="edit_patient_middle_name" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
                                     <label class="form-label">Last Name *</label>
-                                    <input type="text" class="form-control" name="last_name" id="edit_patient_last_name" required>
+                                    <input type="text" class="form-control" name="last_name" id="edit_patient_last_name" required style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
                                     <label class="form-label">Email *</label>
-                                    <input type="email" class="form-control" name="email" id="edit_patient_email" required>
+                                    <input type="email" class="form-control" name="email" id="edit_patient_email" required style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
-                                    <label class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" name="phone_number" id="edit_patient_phone_number">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone_number" id="edit_patient_phone_number" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
-                                    <label class="form-label">Date of Birth *</label>
-                                    <input type="date" class="form-control" name="date_of_birth" id="edit_patient_date_of_birth" required>
+                                    <label class="form-label">Birthdate *</label>
+                                    <input type="date" class="form-control" name="date_of_birth" id="edit_patient_date_of_birth" required style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                                 <div>
                                     <label class="form-label">Gender</label>
-                                    <select class="form-select" name="gender" id="edit_patient_gender">
-                                        <option value="">Unspecified</option>
+                                    <select class="form-select" name="gender" id="edit_patient_gender" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
+                                        <option value="">-</option>
                                         <option value="Male">Male</option>
                                         <option value="Female">Female</option>
                                         <option value="Other">Other</option>
                                     </select>
                                 </div>
-                                <div class="form-span-2">
+                                <div>
                                     <label class="form-label">Address</label>
-                                    <textarea class="form-control" name="address" id="edit_patient_address" rows="2"></textarea>
+                                    <input type="text" class="form-control" name="address" id="edit_patient_address" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
                                 </div>
                             </div>
-                            <div class="d-flex justify-content-end gap-2 mt-3">
-                                <button type="submit" class="btn btn-primary">Save Profile</button>
+                            <div id="editPatientAlert" class="mt-1"></div>
+                            <div class="d-flex justify-content-end mt-1">
+                                <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.8rem;">Save</button>
                             </div>
                         </form>
                     </div>
 
                     <div class="tab-pane fade" id="patientTabBackground" role="tabpanel">
-                        <p class="text-muted small">Background medical information only.</p>
                         <form id="profilingForm" class="ux-form-shell">
                             <input type="hidden" id="profiling_patient_id" name="patient_id">
-                            <div class="ux-form-grid">
-                                <div><label class="form-label">Race</label><input type="text" id="pf_race" class="form-control"></div>
-                                <div><label class="form-label">Occupation</label><input type="text" id="pf_occupation" class="form-control"></div>
-                                <div class="form-span-2"><label class="form-label">Medical History</label><textarea id="pf_medical_history" class="form-control" rows="2"></textarea></div>
-                                <div class="form-span-2"><label class="form-label">Medications</label><textarea id="pf_medications" class="form-control" rows="2"></textarea></div>
-                                <div><label class="form-label">Allergies</label><input type="text" id="pf_allergies" class="form-control"></div>
-                                <div><label class="form-label">Smoking</label><input type="text" id="pf_smoking" class="form-control" placeholder="e.g. Non-smoker"></div>
-                                <div><label class="form-label">Alcohol</label><input type="text" id="pf_alcohol" class="form-control"></div>
-                                <div><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="pf_hypertensive"><label class="form-check-label" for="pf_hypertensive">Hypertensive</label></div></div>
-                                <div><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="pf_diabetic"><label class="form-check-label" for="pf_diabetic">Diabetic</label></div></div>
-                                <div><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="pf_asthmatic"><label class="form-check-label" for="pf_asthmatic">Asthmatic</label></div></div>
-                                <div><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="pf_heart_disease"><label class="form-check-label" for="pf_heart_disease">Heart Disease</label></div></div>
-                                <div><div class="form-check mt-4"><input class="form-check-input" type="checkbox" id="pf_hiv_positive"><label class="form-check-label" for="pf_hiv_positive">HIV Positive</label></div></div>
-                                <div><label class="form-label">Bleeding Disorder</label><input type="text" id="pf_bleeding_disorder" class="form-control"></div>
-                                <div><label class="form-label">ASA Classification</label><input type="text" id="pf_asa" class="form-control"></div>
-                                <div><label class="form-label">Pregnancy Status</label><input type="text" id="pf_pregnancy_status" class="form-control"></div>
-                                <div class="form-span-2"><label class="form-label">Previous Dental Treatment</label><textarea id="pf_previous_dental_treatment" class="form-control" rows="2"></textarea></div>
-                                <div><label class="form-label">Dental Anxiety</label><input type="text" id="pf_dental_anxiety" class="form-control"></div>
-                                <div><label class="form-label">Emergency Contact</label><input type="text" id="pf_emergency_contact" class="form-control"></div>
-                                <div><label class="form-label">Emergency Phone</label><input type="text" id="pf_emergency_phone" class="form-control"></div>
-                                <div class="form-span-2"><label class="form-label">Additional Notes</label><textarea id="pf_background_notes" class="form-control" rows="2"></textarea></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3rem 0.5rem;">
+                                <div><label class="form-label">Race</label><input type="text" id="pf_race" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Occupation</label><input type="text" id="pf_occupation" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Allergies</label><input type="text" id="pf_allergies" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Smoking</label><input type="text" id="pf_smoking" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Alcohol</label><input type="text" id="pf_alcohol" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">ASA Class</label><input type="text" id="pf_asa" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Pregnancy</label><input type="text" id="pf_pregnancy_status" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Dental Anxiety</label><input type="text" id="pf_dental_anxiety" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Bleeding Disorder</label><input type="text" id="pf_bleeding_disorder" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div><label class="form-label">Emergency Phone</label><input type="text" id="pf_emergency_phone" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div style="grid-column:1/-1;"><label class="form-label">Medical History</label><textarea id="pf_medical_history" class="form-control" rows="1" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+                                <div style="grid-column:1/-1;"><label class="form-label">Medications</label><textarea id="pf_medications" class="form-control" rows="1" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+                                <div style="grid-column:1/-1;"><label class="form-label">Previous Treatment</label><textarea id="pf_previous_dental_treatment" class="form-control" rows="1" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+                                <div style="grid-column:1/-1;"><label class="form-label">Emergency Contact</label><input type="text" id="pf_emergency_contact" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
+                                <div style="grid-column:1/-1;">
+                                    <label class="form-label">Conditions</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hypertensive" style="width:14px;height:14px;"><label class="form-check-label" for="pf_hypertensive" style="font-size:0.8rem;">Hypertensive</label></div>
+                                        <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_diabetic" style="width:14px;height:14px;"><label class="form-check-label" for="pf_diabetic" style="font-size:0.8rem;">Diabetic</label></div>
+                                        <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_asthmatic" style="width:14px;height:14px;"><label class="form-check-label" for="pf_asthmatic" style="font-size:0.8rem;">Asthmatic</label></div>
+                                        <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_heart_disease" style="width:14px;height:14px;"><label class="form-check-label" for="pf_heart_disease" style="font-size:0.8rem;">Heart Disease</label></div>
+                                        <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hiv_positive" style="width:14px;height:14px;"><label class="form-check-label" for="pf_hiv_positive" style="font-size:0.8rem;">HIV+</label></div>
+                                    </div>
+                                </div>
+                                <div style="grid-column:1/-1;"><label class="form-label">Notes</label><textarea id="pf_background_notes" class="form-control" rows="1" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
                             </div>
-                            <div class="d-flex justify-content-end gap-2 mt-3">
-                                <button type="submit" class="btn btn-primary">Save Medical Background</button>
+                            <div class="d-flex justify-content-end mt-1">
+                                <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Save</button>
                             </div>
                         </form>
                     </div>
 
                     <div class="tab-pane fade" id="patientTabAccount" role="tabpanel">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <div class="p-3 rounded border bg-light">
-                                    <div class="small text-muted">Mobile Number</div>
-                                    <div class="fw-semibold" id="account_patient_phone">—</div>
-                                </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <div class="flex-fill p-2 rounded border bg-light">
+                                <div style="font-size:0.75rem;color:#64748b;">Phone</div>
+                                <div class="fw-semibold" style="font-size:0.82rem;" id="account_patient_phone">—</div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="p-3 rounded border bg-light">
-                                    <div class="small text-muted">Login Email</div>
-                                    <div class="fw-semibold" id="account_patient_email">—</div>
-                                </div>
+                            <div class="flex-fill p-2 rounded border bg-light">
+                                <div style="font-size:0.75rem;color:#64748b;">Email</div>
+                                <div class="fw-semibold" style="font-size:0.82rem;" id="account_patient_email">—</div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="p-3 rounded border bg-light">
-                                    <div class="small text-muted">Last Login</div>
-                                    <div class="fw-semibold" id="account_patient_last_login">—</div>
-                                </div>
+                            <div class="flex-fill p-2 rounded border bg-light">
+                                <div style="font-size:0.75rem;color:#64748b;">Last Login</div>
+                                <div class="fw-semibold" style="font-size:0.82rem;" id="account_patient_last_login">—</div>
                             </div>
                         </div>
 
-                        <div class="patient-account-password-grid">
-                        <div class="card border h-100">
-                            <div class="card-body">
-                                <h6 class="card-title">Set New Password</h6>
-                                <p class="text-muted small">Choose a custom password.</p>
-                                <form id="setPatientPasswordForm" class="ux-form-shell narrow">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                        <div class="card border">
+                            <div class="card-body py-2 px-3">
+                                <h6 class="mb-1" style="font-size:0.82rem;font-weight:600;">Set Password</h6>
+                                <form id="setPatientPasswordForm">
                                     <?php
                                     $password_field_id = 'set_patient_password';
-                                    $password_field_label = 'New Password';
-                                    $password_field_attrs = 'required minlength="8" autocomplete="new-password"';
+                                    $password_field_label = 'New';
+                                    $password_field_attrs = 'required minlength="8" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
                                     include dirname(dirname(__DIR__)) . '/includes/password_field.php';
                                     $password_field_id = 'set_patient_password_confirm';
-                                    $password_field_label = 'Confirm Password';
-                                    $password_field_attrs = 'required minlength="8" autocomplete="new-password"';
+                                    $password_field_label = 'Confirm';
+                                    $password_field_attrs = 'required minlength="8" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
                                     include dirname(dirname(__DIR__)) . '/includes/password_field.php';
                                     ?>
-                                    <button type="submit" class="btn btn-primary">Update Password</button>
+                                    <button type="submit" class="btn btn-primary btn-sm mt-1" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Update</button>
                                 </form>
                             </div>
                         </div>
 
-                        <div class="card border h-100">
-                            <div class="card-body">
+                        <div class="card border">
+                            <div class="card-body py-2 px-3">
                                 <h6 class="card-title">Generate Temporary Password</h6>
                                 <p class="text-muted small mb-3">Creates a secure random password you can copy and share with the patient.</p>
-                                <form method="POST" action="../assets/api/patients/reset_patient_password.php" id="resetPatientPasswordForm" data-confirm="Generate a new temporary password for this patient?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
+                                <form method="POST" action="../assets/api/patients/reset_patient_password.php" id="resetPatientPasswordForm" data-confirm="Generate a new temporary password?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="patient_id" id="reset_patient_id" value="">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-key"></i> Generate Temporary Password
+                                    <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.7rem;">
+                                        <i class="bi bi-key"></i> Generate
                                     </button>
                                 </form>
                             </div>
@@ -1240,6 +1238,44 @@ function openPatientProfileModal(patient, activeTab) {
             modal.show();
         });
 }
+
+// Edit patient profile via AJAX
+document.getElementById('editPatientForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+    const form = event.target;
+    const data = new FormData(form);
+    const alertEl = document.getElementById('editPatientAlert');
+
+    fetch('../assets/api/patients/update_patient.php', {
+        method: 'POST',
+        body: data
+    })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+            if (result.success) {
+                notifyAdminPatients(result.message || 'Patient updated successfully.', 'success');
+                if (activePatientRecord) {
+                    activePatientRecord.first_name = data.get('first_name');
+                    activePatientRecord.middle_name = data.get('middle_name');
+                    activePatientRecord.last_name = data.get('last_name');
+                    activePatientRecord.email = data.get('email');
+                    activePatientRecord.phone_number = data.get('phone_number');
+                    activePatientRecord.date_of_birth = data.get('date_of_birth');
+                    activePatientRecord.gender = data.get('gender');
+                    activePatientRecord.address = data.get('address');
+                }
+                if (alertEl) alertEl.innerHTML = '';
+            } else {
+                if (alertEl) {
+                    alertEl.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0 small">' + (result.message || 'Unable to update patient.') + '</div>';
+                }
+                notifyAdminPatients(result.message || 'Unable to update patient.', 'danger');
+            }
+        })
+        .catch(function () {
+            notifyAdminPatients('Unable to update patient.', 'danger');
+        });
+});
 
 document.getElementById('profilingForm').addEventListener('submit', function (event) {
     event.preventDefault();

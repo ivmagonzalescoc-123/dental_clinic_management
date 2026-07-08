@@ -54,7 +54,7 @@ $appointmentsPendingToday = dashboard_scalar_int(
 
 $checkedInToday = dashboard_scalar_int(
 	$conn,
-	"SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status IN ('checked_in','in_progress')",
+	"SELECT COUNT(*) FROM appointments WHERE appointment_date = ? AND status IN ('arrived','checked_in','in_progress')",
 	's',
 	[$today]
 );

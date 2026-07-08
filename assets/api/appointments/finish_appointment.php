@@ -354,7 +354,29 @@ try {
         }
     }
     
-    // 3. Update appointment status to awaiting_secretary_records
+    // 3. Save selected services
+    $selectedServiceIds = $_POST['selected_service_ids'] ?? [];
+    if (is_array($selectedServiceIds) && !empty($selectedServiceIds)) {
+        // Clear existing selected_services for this appointment
+        $delStmt = $conn->prepare('DELETE FROM selected_services WHERE appointment_id = ?');
+        $delStmt->bind_param('i', $appointmentId);
+        $delStmt->execute();
+        $delStmt->close();
+
+        // Insert new services
+        $insStmt = $conn->prepare('INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)');
+        $note = 'Added by doctor during session';
+        foreach ($selectedServiceIds as $sid) {
+            $sid = (int)$sid;
+            if ($sid > 0) {
+                $insStmt->bind_param('iis', $appointmentId, $sid, $note);
+                $insStmt->execute();
+            }
+        }
+        $insStmt->close();
+    }
+
+    // 4. Update appointment status to awaiting_secretary_records
     $completedByDoctorAt = date('Y-m-d H:i:s');
     $stmt = $conn->prepare('
         UPDATE appointments 
