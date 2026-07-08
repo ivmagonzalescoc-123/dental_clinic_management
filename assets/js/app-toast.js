@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var TOAST_MAX_LENGTH = 48;
+  var TOAST_MAX_LENGTH = 200;
 
   var TOAST_SHORTCUTS = {
     'thank you! your message has been sent. our secretary will get back to you soon.': 'Message sent.',

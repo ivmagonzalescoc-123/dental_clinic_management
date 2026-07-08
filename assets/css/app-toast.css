@@ -23,7 +23,7 @@
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    max-width: min(92vw, 520px);
+    max-width: min(92vw, 480px);
     width: fit-content;
     padding: 12px 16px;
     border-radius: 14px;
@@ -106,8 +106,9 @@
     font-size: 0.9rem;
     line-height: 1.4;
     font-weight: 600;
-    white-space: nowrap;
     color: #ffffff;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 @media (max-width: 576px) {
@@ -118,7 +119,7 @@
         transform: translate(-50%, -50%);
     }
 
-    .app-toast-body {
-        white-space: normal;
+    .app-toast {
+        max-width: 92vw;
     }
 }

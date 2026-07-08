@@ -20,6 +20,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
     include __DIR__ . '/availability_guard.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     if (!$conn) throw new Exception('Database connection failed');
 
     $csrfToken = $_POST['csrf_token'] ?? '';
@@ -370,6 +371,19 @@ try {
     }
 
     $conn->commit();
+
+    // Create patient schedule and queue reminders (same as confirm_appointment.php)
+    if ($timeslot_id > 0 && !empty($ts)) {
+        $schStart = $ts['slot_date'] . ' ' . $ts['start_time'];
+        $schEnd   = $ts['slot_date'] . ' ' . $ts['end_time'];
+        $ins_s = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
+        $ins_s->bind_param('iiss', $appointment_id, $user_id, $schStart, $schEnd);
+        $ins_s->execute();
+        $schedule_id = (int)$conn->insert_id;
+        $ins_s->close();
+
+        reminder_queue_default_pack($conn, $schedule_id, $schStart, $appointment_id);
+    }
 
     if (function_exists('log_system_event')) {
         log_system_event(

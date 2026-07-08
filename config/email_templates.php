@@ -171,3 +171,116 @@ if (!function_exists('email_patient_account_created_html')) {
 HTML;
     }
 }
+
+if (!function_exists('email_appointment_reminder_html')) {
+    function email_appointment_reminder_html(string $patientName, string $scheduledStart, string $doctorName, string $appointmentId, string $type = '24h'): string
+    {
+        $clinic = email_clinic_name();
+        $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
+        $patientSafe = htmlspecialchars(trim($patientName) ?: 'Patient', ENT_QUOTES, 'UTF-8');
+        $doctorSafe = htmlspecialchars($doctorName !== '' ? ('Dr. ' . $doctorName) : 'Your dentist', ENT_QUOTES, 'UTF-8');
+        $dateSafe = htmlspecialchars($scheduledStart, ENT_QUOTES, 'UTF-8');
+        $idSafe = htmlspecialchars($appointmentId, ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
+
+        if ($type === '24h') {
+            $badge = 'Appointment Reminder';
+            $badgeColor = '#0ea5e9';
+            $heading = 'Your appointment is tomorrow';
+            $subtext = "This is a friendly reminder that your dental appointment is scheduled for <strong>{$dateSafe}</strong>.";
+            $note = 'Please arrive 10–15 minutes early to complete any necessary paperwork.';
+        } elseif ($type === '1h') {
+            $badge = 'Starting Soon';
+            $badgeColor = '#f59e0b';
+            $heading = 'Your appointment starts in 1 hour';
+            $subtext = "Your appointment with <strong>{$doctorSafe}</strong> begins at <strong>{$dateSafe}</strong>.";
+            $note = 'If you need to reschedule, please contact the clinic as soon as possible.';
+        } elseif ($type === 'missed') {
+            $badge = 'Missed Appointment';
+            $badgeColor = '#ef4444';
+            $heading = 'We missed you today';
+            $subtext = "Our records show that your appointment at <strong>{$dateSafe}</strong> may have been missed.";
+            $note = 'Please contact the clinic to reschedule at your earliest convenience.';
+        } else {
+            $badge = 'Appointment Update';
+            $badgeColor = '#8b5cf6';
+            $heading = 'Appointment status update';
+            $subtext = "Your appointment at <strong>{$dateSafe}</strong> has been marked as no-show.";
+            $note = 'Please contact the clinic if you would like to reschedule.';
+        }
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$badge}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#334155;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;">
+        <tr>
+            <td align="center">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+                    <tr>
+                        <td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#f0f9ff 0%,#ffffff 100%);">
+                            <div style="display:inline-block;padding:4px 14px;border-radius:20px;background-color:{$badgeColor};color:#ffffff;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">{$badge}</div>
+                            <h1 style="margin:14px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1>
+                            <p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientSafe}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px 32px 24px;text-align:center;">
+                            <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;color:#0f172a;">{$heading}</h2>
+                            <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">{$subtext}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0 32px 20px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;">
+                                <tr>
+                                    <td style="padding:18px;">
+                                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                            <tr>
+                                                <td style="padding:4px 0;font-size:13px;color:#64748b;width:100px;vertical-align:top;"><strong style="color:#0f172a;">Doctor</strong></td>
+                                                <td style="padding:4px 0;font-size:13px;color:#334155;">{$doctorSafe}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:4px 0;font-size:13px;color:#64748b;vertical-align:top;"><strong style="color:#0f172a;">Date &amp; Time</strong></td>
+                                                <td style="padding:4px 0;font-size:13px;color:#334155;">{$dateSafe}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding:4px 0;font-size:13px;color:#64748b;vertical-align:top;"><strong style="color:#0f172a;">Reference</strong></td>
+                                                <td style="padding:4px 0;font-size:13px;color:#334155;">#{$idSafe}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:0 32px 24px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:12px;">
+                                <tr>
+                                    <td style="padding:14px 18px;font-size:13px;line-height:1.6;color:#92400e;">
+                                        {$note}
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">
+                            &copy; {$year} {$clinicSafe}
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+HTML;
+    }
+}

@@ -9,6 +9,8 @@ include __DIR__ . '/../config/database.php';
 include __DIR__ . '/../config/reminders.php';
 include __DIR__ . '/../config/system_logs.php';
 include __DIR__ . '/../config/billing_helpers.php';
+include_once __DIR__ . '/../config/email_templates.php';
+
 
 if (!function_exists('fetch_secretary_ids')) {
     function fetch_secretary_ids($conn)
@@ -48,7 +50,7 @@ if (!function_exists('build_reminder_template')) {
             case 'appt_24h':
                 return [
                     'subject' => 'Appointment reminder: 24 hours before',
-                    'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is tomorrow at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
+                    'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is scheduled at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
                     'sms' => "Reminder: You have a dental appointment tomorrow at {$scheduledStart} (ID #{$appointmentId}).",
                     'title' => 'Appointment reminder (24h)',
                     'body' => "{$patientDisplay} has an appointment tomorrow at {$scheduledStart}."

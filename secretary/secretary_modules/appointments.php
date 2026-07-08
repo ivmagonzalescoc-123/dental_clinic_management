@@ -1153,9 +1153,6 @@ $appointmentsViewFilters = [
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-hospital"></i> Select Services
-                            </label>
                             <div id="secretaryServiceSelector" class="service-selector">
                                 <small class="text-muted">Select a doctor first to load available services</small>
                             </div>

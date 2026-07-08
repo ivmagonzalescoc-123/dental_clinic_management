@@ -50,6 +50,8 @@ function initProfilePhotoUpload() {
     const alertBox = document.getElementById('profilePhotoAlert');
     const saveBtn = document.getElementById('profilePhotoSaveBtn');
     if (!form || !input || !previewWrap || !saveBtn) return;
+    if (form.dataset.initialized) return;
+    form.dataset.initialized = '1';
 
     function showPhotoAlert(message, type) {
         if (typeof window.showToast === 'function') {
@@ -142,6 +144,9 @@ function initProfilePhotoUpload() {
     });
 }
 document.addEventListener('DOMContentLoaded', initProfilePhotoUpload);
-window.addEventListener('page-loaded', initProfilePhotoUpload);
+window.addEventListener('page-loaded', function () {
+    if (!document.getElementById('profilePhotoForm') || document.getElementById('profilePhotoForm').dataset.initialized) return;
+    initProfilePhotoUpload();
+});
 </script>
 <?php endif; ?>

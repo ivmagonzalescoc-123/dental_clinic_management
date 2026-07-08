@@ -83,8 +83,17 @@ CRITICAL DISTINCTION — BILLING vs PAYMENTS:
 - When the user asks about PAYMENTS MADE (collected, received, paid) on a date, you MUST query the payments table using py.paid_at as the date filter. NEVER use billing.created_at or a.appointment_date for payment date questions.
 - When the user asks about BILLING or INVOICES (what was billed, total billed, outstanding), query the billing table.
 
+TIME-BASED QUERIES (critical for "busiest hour", "peak hours", etc.):
+- The timeslot table has start_time and end_time columns. Use these for hourly analysis.
+- To find busiest hours: JOIN appointments a ON a.timeslot_id = t.timeslot_id, then GROUP BY t.start_time.
+- To extract hour from a time column: HOUR(t.start_time) or DATE_FORMAT(t.start_time, '%H:00').
+- For "busiest hour today": filter by a.appointment_date = CURDATE() AND a.status NOT IN ('cancelled','no_show').
+- For "busiest hour this week": filter by YEARWEEK(a.appointment_date,1) = YEARWEEK(CURDATE(),1) AND a.status NOT IN ('cancelled','no_show').
+- Always exclude cancelled and no_show appointments from busy-hour analysis.
+- Return start_time and count, ORDER BY count DESC, LIMIT 5.
+
 COLUMN → TABLE MAP (use these exact aliases):
-  appointments a   → a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency
+  appointments a   → a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency, a.timeslot_id
   patients p       → p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
   users u          → u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
   role r           → r.role_id, r.role_name
@@ -94,6 +103,7 @@ COLUMN → TABLE MAP (use these exact aliases):
   payments py      → py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at, py.or_number
   clinical_records cr  → cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
   billing_line_items bli → bli.item_id, bli.billing_id, bli.appointment_id, bli.service_id, bli.description, bli.amount, bli.item_type
+  timeslot t       → t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
 
 DATE PATTERNS (always qualify with table alias):
   APPOINTMENTS:
@@ -140,6 +150,12 @@ EXAMPLES:
 
 Q: How many appointments today?
 A: {"sql":"SELECT COUNT(*) AS total FROM appointments a WHERE a.appointment_date = CURDATE()","answer":"Total appointments scheduled for today."}
+
+Q: What is the busiest hour today?
+A: {"sql":"SELECT t.start_time AS hour, COUNT(a.appointment_id) AS appointment_count FROM appointments a INNER JOIN timeslot t ON t.timeslot_id = a.timeslot_id WHERE a.appointment_date = CURDATE() AND a.status NOT IN ('cancelled','no_show') GROUP BY t.start_time ORDER BY appointment_count DESC LIMIT 5","answer":"Peak appointment hours today by number of bookings."}
+
+Q: Busiest hours this week?
+A: {"sql":"SELECT DATE_FORMAT(t.start_time, '%H:00') AS hour, COUNT(a.appointment_id) AS appointment_count FROM appointments a INNER JOIN timeslot t ON t.timeslot_id = a.timeslot_id WHERE YEARWEEK(a.appointment_date,1) = YEARWEEK(CURDATE(),1) AND a.status NOT IN ('cancelled','no_show') GROUP BY DATE_FORMAT(t.start_time, '%H:00') ORDER BY appointment_count DESC LIMIT 5","answer":"Most active hours this week based on confirmed appointments."}
 
 Q: Total payments made today?
 A: {"sql":"SELECT COALESCE(SUM(py.amount),0) AS total_paid, COUNT(py.payment_id) AS payment_count FROM payments py WHERE DATE(py.paid_at) = CURDATE()","answer":"Total payments collected today from actual payment transactions."}
@@ -268,7 +284,6 @@ if (!is_array($parsed) || !array_key_exists('answer', $parsed)) {
 $answer = trim((string)($parsed['answer'] ?? ''));
 $sql    = isset($parsed['sql']) ? trim((string)$parsed['sql']) : '';
 
-// Skip similarity check for non-data responses (greetings, capabilities, unrelated)
 $isDataResponse = $sql !== '' && strtolower($sql) !== 'null';
 if ($isDataResponse && $answer !== '' && strlen($answer) > 4) {
     similar_text(strtolower($answer), strtolower($userMessage), $pct);
@@ -309,6 +324,55 @@ while ($row = $result->fetch_assoc()) {
     $rows[] = $row;
 }
 $result->close();
+
+// ── STEP 2: Send query results back to AI for a natural language answer ──
+if (count($rows) > 0) {
+    $dataJson = json_encode($rows, JSON_UNESCAPED_UNICODE);
+    if (strlen($dataJson) > 3000) {
+        $rows = array_slice($rows, 0, 20);
+        $dataJson = json_encode($rows, JSON_UNESCAPED_UNICODE);
+    }
+
+    $interpretPrompt = "You are a clinic analytics assistant. The user asked a question and here is the data from the database.\n\nUSER QUESTION: {$userMessage}\nQUERY RESULTS (JSON): {$dataJson}\n\nTASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured — give the real answer with the values.\n\nRULES:\n- Use the actual values from the results (counts, names, amounts, etc.)\n- Use PHP peso sign for currency\n- Be conversational but factual\n- If results are empty, say No data found for that period.\n- If there is only one row with one value, state it directly\n- For lists/rankings, mention the top results by name\n- Keep it under 3 sentences";
+
+    $interpretPayload = [
+        'model' => 'llama-3.3-70b-versatile',
+        'messages' => [
+            ['role' => 'system', 'content' => 'You are a friendly dental clinic analytics assistant. Answer with actual data values in natural sentences.'],
+            ['role' => 'user',   'content' => $interpretPrompt],
+        ],
+        'temperature' => 0.3,
+        'max_tokens'  => 300,
+    ];
+
+    $ch2 = curl_init('https://api.groq.com/openai/v1/chat/completions');
+    curl_setopt_array($ch2, [
+        CURLOPT_POST          => true,
+        CURLOPT_HTTPHEADER    => [
+            'Authorization: Bearer ' . $groqKey,
+            'Content-Type: application/json',
+        ],
+        CURLOPT_POSTFIELDS    => json_encode($interpretPayload),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT       => 15,
+    ]);
+
+    $response2  = curl_exec($ch2);
+    $httpCode2  = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+    $curlError2 = curl_error($ch2);
+    unset($ch2);
+
+    error_log('CHATBOT_STEP2: http=' . $httpCode2 . ' error=' . $curlError2 . ' response=' . substr((string)$response2, 0, 500));
+
+    if (!$curlError2 && $httpCode2 === 200) {
+        $aiResponse2 = json_decode($response2, true);
+        $naturalAnswer = trim($aiResponse2['choices'][0]['message']['content'] ?? '');
+        error_log('CHATBOT_STEP2: naturalAnswer=' . $naturalAnswer);
+        if ($naturalAnswer !== '') {
+            $answer = $naturalAnswer;
+        }
+    }
+}
 
 ob_end_clean();
 echo json_encode([

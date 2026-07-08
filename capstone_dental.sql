@@ -428,6 +428,7 @@ CREATE TABLE `billing` (
   `user_id` int(11) DEFAULT NULL,
   `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `amount_paid` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `balance` decimal(12,2) NOT NULL DEFAULT 0.00,
   `subtotal_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `discount_type` enum('none','senior','pwd','custom') NOT NULL DEFAULT 'none',
   `discount_percent` decimal(5,2) NOT NULL DEFAULT 0.00,
@@ -465,7 +466,9 @@ CREATE TABLE `billing_installment_terms` (
   `due_date` date NOT NULL,
   `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
   `status` enum('pending','paid') NOT NULL DEFAULT 'pending',
-  `paid_at` datetime DEFAULT NULL
+  `paid_at` datetime DEFAULT NULL,
+  `due_soon_reminder_sent_at` datetime DEFAULT NULL,
+  `overdue_reminder_sent_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `payments` (

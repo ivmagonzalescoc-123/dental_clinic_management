@@ -2373,19 +2373,21 @@ $reportNavQuery = array_merge(
         var answer = data.answer || '';
         var html = '';
 
-        if (rows.length === 0 && answer) {
+        if (answer) {
             html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';
-            return html;
         }
 
-        if (rows.length === 0) {
+        if (rows.length === 0 && !answer) {
             html += '<p class="ai-answer-text"><i class="bi bi-info-circle"></i> No records found for this query.</p>';
             return html;
         }
 
-        if (rows.length === 1 && Object.keys(rows[0]).length === 1) {
-            var val = Object.values(rows[0])[0];
-            html += '<div class="ai-metric">' + escHtml(String(val ?? '0')) + '</div>';
+        if (rows.length === 0) {
+            return html;
+        }
+
+        if (rows.length === 1 && Object.keys(rows[0]).length <= 2) {
+            // skip — value already stated in answer
         } else if (rows.length === 1) {
             html += '<ul class="ai-kv-list">';
             Object.entries(rows[0]).forEach(function (kv) {
@@ -2404,10 +2406,6 @@ $reportNavQuery = array_merge(
                 html += '<li class="ai-more">+' + escHtml(String(data.row_count - 8)) + ' more</li>';
             }
             html += '</ol>';
-        }
-
-        if (answer) {
-            html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';
         }
 
         return html || escHtml(answer || 'No data found.');

@@ -664,7 +664,8 @@ if (!function_exists('billing_send_installment_reminders')) {
                           FROM billing_installment_terms bit
                           INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
                           INNER JOIN billing b ON b.billing_id = bi.billing_id
-                          INNER JOIN patients p ON p.patient_id = b.patient_id
+                          INNER JOIN appointments a ON a.appointment_id = b.appointment_id
+                          INNER JOIN patients p ON p.patient_id = a.patient_id
                           WHERE bit.status = 'pending'
                             AND bit.term_number > 0
                             AND bit.due_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
@@ -678,7 +679,8 @@ if (!function_exists('billing_send_installment_reminders')) {
                           FROM billing_installment_terms bit
                           INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
                           INNER JOIN billing b ON b.billing_id = bi.billing_id
-                          INNER JOIN patients p ON p.patient_id = b.patient_id
+                          INNER JOIN appointments a ON a.appointment_id = b.appointment_id
+                          INNER JOIN patients p ON p.patient_id = a.patient_id
                           WHERE bit.status = 'pending'
                             AND bit.term_number > 0
                             AND bit.due_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
