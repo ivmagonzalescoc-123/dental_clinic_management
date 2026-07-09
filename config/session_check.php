@@ -28,11 +28,17 @@ if (!defined('SESSION_IDLE_WARNING_GRACE_SECONDS')) {
 if (!function_exists('get_session_timeout_seconds_for_role')) {
     function get_session_timeout_seconds_for_role(string $role): int
     {
-        // Clinic staff should not be auto-logged out due to idle timeout.
-        if ($role === 'doctor' || $role === 'secretary') {
+        // Doctor: no timeout
+        if ($role === 'doctor') {
             return 0;
         }
 
+        // Secretary: 2 hours idle timeout
+        if ($role === 'secretary') {
+            return (2 * 60 * 60) + SESSION_IDLE_WARNING_GRACE_SECONDS;
+        }
+
+        // Admin and others: keep existing timeout
         $idleLimit = ($role === 'patient') ? SESSION_PATIENT_IDLE_SECONDS : SESSION_USER_IDLE_SECONDS;
         return $idleLimit + SESSION_IDLE_WARNING_GRACE_SECONDS;
     }

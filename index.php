@@ -416,6 +416,12 @@ $aboutPoints = [
 </head>
 <body class="font-sans antialiased text-foreground bg-background">
 
+    <!-- Global Loading Overlay -->
+    <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);">
+        <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1d6fd8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
     <!-- Header -->
     <header id="siteHeader" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style="background: transparent; backdrop-filter: none; border-bottom: none; box-shadow: none;">
         <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 h-16 lg:h-20">
@@ -1152,6 +1158,17 @@ $aboutPoints = [
 
     <script src="assets/js/app-toast.js?v=20260614-short"></script>
     <script src="assets/js/app-request.js?v=20260612"></script>
+    <script>window.__pageLoadStart = Date.now();</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var overlay = document.getElementById('globalLoadingOverlay');
+            if (overlay) {
+              var loadTime = Date.now() - (window.__pageLoadStart || Date.now());
+              var remaining = Math.max(0, 300 - loadTime);
+              setTimeout(function() { overlay.remove(); }, remaining);
+            }
+        });
+    </script>
     <script>
         const contactCsrfToken = <?php echo json_encode($csrf_token); ?>;
         const csrfToken = contactCsrfToken;

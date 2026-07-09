@@ -2001,32 +2001,6 @@ table a:hover {
 }
 
 /* ===== AJAX page navigation loading ===== */
-#main.ajax-page-loading {
-    position: relative;
-    pointer-events: none;
-}
-#main.ajax-page-loading::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, #7ec8f5 50%, var(--primary-color) 100%);
-    background-size: 200% auto;
-    animation: ajax-progress-bar 1s linear infinite;
-    z-index: 9999;
-}
-#main.ajax-page-loading::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.5);
-    z-index: 9998;
-    pointer-events: none;
-}
-@keyframes ajax-progress-bar {
-    0%   { background-position: 200% center; }
     100% { background-position: 0%   center; }
 }
 

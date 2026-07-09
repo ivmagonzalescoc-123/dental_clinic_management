@@ -71,6 +71,12 @@ switch ($role_key) {
 
 <body class="patient-portal">
 
+    <!-- Global Loading Overlay -->
+    <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);">
+        <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1d6fd8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+    </div>
+    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
     <!-- ======= Header ======= -->
     <header id="header" class="header fixed-top d-flex align-items-center">
         <div class="d-flex align-items-center">
@@ -240,6 +246,7 @@ switch ($role_key) {
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
+    <script>window.__pageLoadStart = Date.now();</script>
     <script src="../assets/js/main.js?v=20260614-header-mobile4"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>

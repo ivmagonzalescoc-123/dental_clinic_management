@@ -251,13 +251,16 @@
     }
 
     function setPageLoading(active) {
-      var mainEl = document.getElementById('main')
-      if (!mainEl) return
-      if (active) {
-        mainEl.classList.add('ajax-page-loading')
-      } else {
-        mainEl.classList.remove('ajax-page-loading')
+      var overlay = document.getElementById('globalLoadingOverlay')
+      if (!overlay) {
+        // Create overlay if it doesn't exist
+        overlay = document.createElement('div')
+        overlay.id = 'globalLoadingOverlay'
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);'
+        overlay.innerHTML = '<div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1d6fd8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>'
+        document.body.appendChild(overlay)
       }
+      overlay.style.display = active ? 'flex' : 'none'
     }
 
     function cleanupModalState() {
@@ -1258,6 +1261,14 @@
   document.addEventListener('DOMContentLoaded', function () {
     initPortalHeaderSearch();
     initNotificationDropdown();
+    // Remove global loading overlay when page is ready (with minimum display time)
+    var overlay = document.getElementById('globalLoadingOverlay');
+    if (overlay) {
+      var loadTime = Date.now() - (window.__pageLoadStart || Date.now());
+      var minDisplay = 300; // minimum 300ms display
+      var remaining = Math.max(0, minDisplay - loadTime);
+      setTimeout(function() { overlay.remove(); }, remaining);
+    }
   });
   // start polling notifications every 30s
   setInterval(fetchNotifications, 30000);
