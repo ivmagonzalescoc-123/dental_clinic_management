@@ -119,7 +119,7 @@ switch ($role_key) {
 <body class="doctor-portal">
 
     <!-- Global Loading Overlay -->
-    <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.85);backdrop-filter:blur(2px);">
+    <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;">
         <div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1d6fd8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
     </div>
     <style>@keyframes spin{to{transform:rotate(360deg)}}</style>

@@ -172,14 +172,16 @@ if ($sstmt) {
                 </button>
             </div>
         </div>
-        <div class="table-responsive" style="max-height:120px;overflow-y:auto;">
+        <div class="table-responsive">
             <table class="table table-sm table-bordered mb-0">
-                <thead class="table-light" style="position:sticky;top:0;">
-                    <tr><th>Service</th><th style="width:80px;">Price</th><th style="width:35px;"></th></tr>
+                <thead class="table-light">
+                    <tr><th>Service</th><th style="width:100px;text-align:right;">Price</th><th style="width:35px;"></th></tr>
                 </thead>
                 <tbody id="ehrServicesBody">
                     <tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>
                 </tbody>
+                <tfoot id="ehrServicesFoot">
+                </tfoot>
             </table>
         </div>
     </div>
@@ -541,17 +543,24 @@ if ($sstmt) {
 
         function renderEhrServicesTable() {
             var tbody = document.getElementById('ehrServicesBody');
+            var tfoot = document.getElementById('ehrServicesFoot');
             if (!tbody) return;
             if (ehrSelectedServices.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>';
+                if (tfoot) tfoot.innerHTML = '';
                 return;
             }
             tbody.innerHTML = '';
+            var total = 0;
             ehrSelectedServices.forEach(function(s) {
+                total += s.price;
                 var tr = document.createElement('tr');
-                tr.innerHTML = '<td style="font-size:0.8rem;">' + escapeHtmlEhr(s.name) + '</td><td style="font-size:0.8rem;">₱' + s.price.toLocaleString() + '</td><td><button type="button" class="btn btn-sm py-0 px-1" onclick="removeEhrService(' + s.service_id + ')" style="color:#dc3545;background:none;border:none;"><i class="bi bi-x"></i></button></td>';
+                tr.innerHTML = '<td style="font-size:0.8rem;">' + escapeHtmlEhr(s.name) + '</td><td style="font-size:0.8rem;text-align:right;">₱' + s.price.toLocaleString() + '</td><td><button type="button" class="btn btn-sm py-0 px-1" onclick="removeEhrService(' + s.service_id + ')" style="color:#dc3545;background:none;border:none;"><i class="bi bi-x"></i></button></td>';
                 tbody.appendChild(tr);
             });
+            if (tfoot) {
+                tfoot.innerHTML = '<tr style="font-weight:700;background:#f8f9fa;"><td style="font-size:0.82rem;">Total</td><td style="font-size:0.82rem;text-align:right;">₱' + total.toLocaleString() + '</td><td></td></tr>';
+            }
         }
 
         function escapeHtmlEhr(str) {
