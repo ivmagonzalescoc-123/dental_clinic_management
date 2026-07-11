@@ -153,255 +153,193 @@ class AppointmentServiceManager {
     }
     
     /**
-     * Render service selection UI
+     * Render service selection UI — custom dropdown style
      */
     renderServiceSelector(containerId, mode = 'patient') {
-        console.log(`[AppointmentServiceManager] renderServiceSelector - Container: ${containerId}, Mode: ${mode}, Services: ${this.services.length}`);
-        
         const container = document.getElementById(containerId);
-        if (!container) {
-            console.error(`[AppointmentServiceManager] Container not found: ${containerId}`);
-            return;
-        }
+        if (!container) return;
 
-        const selectedIds = this.selectedServices.map(service => String(service.service_id));
-        const selectedSummary = this.selectedServices.length > 0
-            ? this.selectedServices.map(service => `
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="badge bg-primary">${this.escapeHtml(service.service_name)}</span>
-                    <span class="text-muted small">${this.getServiceDuration(service)} min</span>
-                </div>
-            `).join('')
-            : '<span class="text-muted small">No services selected.</span>';
+        const selectedIds = new Set(this.selectedServices.map(s => String(s.service_id)));
+        const count = this.selectedServices.length;
 
-        const selectedInputs = this.selectedServices.length > 0
-            ? this.selectedServices.map(service => `
-                <input type="hidden" name="selected_service_ids[]" value="${service.service_id}">
-            `).join('')
+        const itemsHtml = this.services.map(s => {
+            const isSelected = selectedIds.has(String(s.service_id));
+            const dur = s.service_duration_minutes || s.default_duration_minutes || 20;
+            return `
+                <div class="service-dropdown-item${isSelected ? ' is-selected' : ''}" data-sid="${s.service_id}">
+                    <span class="svc-check">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </span>
+                    <span class="svc-name">${this.escapeHtml(s.service_name)}</span>
+                    <span class="svc-meta">
+                        <span class="svc-price">₱${parseFloat(s.initial_price).toFixed(0)}</span>
+                        <span>${dur}m</span>
+                    </span>
+                </div>`;
+        }).join('');
+
+        const tagsHtml = this.selectedServices.map(s =>
+            `<span class="service-tag" data-sid="${s.service_id}">
+                ${this.escapeHtml(s.service_name)}
+                <span class="tag-remove" data-remove="${s.service_id}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </span>
+            </span>`
+        ).join('');
+
+        const durationHint = this.totalDuration > 0
+            ? `<div class="service-duration-hint">${this.totalDuration} min total · ${this.getRequiredTimeslots()} timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}</div>`
             : '';
-        
+
+        const selectedInputs = this.selectedServices.map(s =>
+            `<input type="hidden" name="selected_service_ids[]" value="${s.service_id}">`
+        ).join('');
+
+        const triggerText = count > 0
+            ? `${count} service${count > 1 ? 's' : ''} selected`
+            : 'Tap to select services';
+
         const html = `
             <div class="service-selector">
-                <!-- Service List Container (initially visible) -->
-                <div id="serviceListContainer">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
-                        <div>
-                            <label class="form-label fw-bold mb-1">
-                                <i class="bi bi-hospital"></i> Select Services
-                            </label>
-                            <div class="text-muted small">Choose one or more services.</div>
-                        </div>
-                    </div>
-
-                    <div class="services-list-wrap" id="serviceListWrap">
-                        <div class="services-list">
-                            ${this.services.map(service => {
-                                const isSelected = selectedIds.includes(String(service.service_id));
-                                return `
-                                    <div class="service-item mb-2">
-                                        <div class="form-check">
-                                            <input 
-                                                class="form-check-input service-checkbox" 
-                                                type="checkbox" 
-                                                id="service_${service.service_id}"
-                                                value="${service.service_id}"
-                                                ${isSelected ? 'checked' : ''}
-                                                ${(mode === 'patient' || mode === 'secretary') ? '' : 'disabled'}
-                                            >
-                                            <label class="form-check-label" for="service_${service.service_id}">
-                                                <span class="service-name fw-500">${this.escapeHtml(service.service_name)}</span>
-                                                <span class="service-info ms-2">
-                                                    <span class="text-muted small">
-                                                        ₱${parseFloat(service.initial_price).toFixed(2)}
-                                                    </span>
-                                                    <span class="text-muted small ms-1">
-                                                        ${service.service_duration_minutes || service.default_duration_minutes || '20'} min
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                        <!-- Confirm button at bottom of list -->
-                        ${(mode === 'patient' || mode === 'secretary') ? `
-                            <div class="d-flex gap-2 mt-3 pt-3 border-top">
-                                <button type="button" class="btn btn-primary btn-sm flex-grow-1" id="confirmServiceSelectionBtn">
-                                    <i class="bi bi-check2-circle"></i> Confirm Services
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="clearServiceSelectionBtn">
-                                    Clear
-                                </button>
-                            </div>
-                        ` : ''}
-                    </div>
+                <div class="service-dropdown-trigger" id="svcDropdownTrigger">
+                    <span class="trigger-text${count > 0 ? ' has-selection' : ''}">${triggerText}</span>
+                    <span class="trigger-chevron">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </span>
                 </div>
-
-                <!-- Selected Summary Container (hidden until confirm) -->
-                <div id="servicesSummaryContainer" class="d-none">
-                    <div class="border rounded-3 p-3 bg-light">
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
-                            <div>
-                                <div class="fw-semibold mb-1">Selected Services</div>
-                                <div id="selectedServicesList" class="mb-2">
-                                    ${selectedSummary}
-                                </div>
-                                <div class="d-flex flex-wrap align-items-center gap-3">
-                                    <div>
-                                        <span class="text-muted small">
-                                            <i class="bi bi-clock"></i> Estimated time: <span id="total-duration-display">${this.formatDuration(this.totalDuration)}</span>
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span class="text-muted small">
-                                            <span id="timeslot-count-display">${this.getRequiredTimeslots()}</span> timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="editServiceSelectionBtn">
-                                <i class="bi bi-pencil"></i> Edit
-                            </button>
-                        </div>
-                    </div>
+                <div class="service-dropdown-panel" id="svcDropdownPanel">
+                    ${itemsHtml}
                 </div>
-
-                <div id="selectedServiceInputs">
-                    ${selectedInputs}
+                <div class="service-selected-tags" id="svcSelectedTags">${tagsHtml}</div>
+                ${durationHint}
+                <div id="selectedServiceInputs">${selectedInputs}
                     <input type="hidden" name="total_duration_minutes" value="${this.totalDuration}">
                 </div>
-            </div>
-        `;
-        
+            </div>`;
+
         container.innerHTML = html;
-        
-        // Add event listeners
+
         if (mode === 'patient') {
-            this.attachServiceCheckboxListeners(containerId);
+            this.attachServiceDropdownListeners(containerId);
         }
     }
-    
+
     /**
-     * Attach event listeners to service checkboxes
+     * Attach event listeners to custom dropdown
      */
-    attachServiceCheckboxListeners(containerId) {
+    attachServiceDropdownListeners(containerId) {
         const container = document.getElementById(containerId);
-        const checkboxes = container.querySelectorAll('.service-checkbox');
-        const selectedListEl = container.querySelector('#selectedServicesList');
-        const hiddenInputsEl = container.querySelector('#selectedServiceInputs');
-        const listContainer = container.querySelector('#serviceListContainer');
-        const summaryContainer = container.querySelector('#servicesSummaryContainer');
-        const confirmBtn = container.querySelector('#confirmServiceSelectionBtn');
-        const clearBtn = container.querySelector('#clearServiceSelectionBtn');
-        const editBtn = container.querySelector('#editServiceSelectionBtn');
-        
-        const updateDurationDisplay = () => {
-            const selected = Array.from(checkboxes)
-                .filter(cb => cb.checked)
-                .map(cb => parseInt(cb.value));
-            const selectedSet = new Set(selected.map(id => String(id)));
-            const selectedServices = this.services.filter(s => selectedSet.has(String(s.service_id)));
-            const total = selectedServices.reduce((sum, s) => sum + this.getServiceDuration(s), 0);
+        const trigger = container.querySelector('#svcDropdownTrigger');
+        const panel = container.querySelector('#svcDropdownPanel');
+        const tagsContainer = container.querySelector('#svcSelectedTags');
+        const self = this;
 
-            this.selectedServices = selectedServices;
-            this.totalDuration = total;
+        // Remove any old listeners first
+        if (self._onDocClick) document.removeEventListener('click', self._onDocClick);
 
-            if (typeof window !== 'undefined') {
-                window.patientSelectedServiceDuration = total;
-                window.patientSelectedServiceIds = selected.slice();
-                window.dispatchEvent(new CustomEvent('patient-service-duration-changed', {
-                    detail: {
-                        totalDuration: total,
-                        selectedServiceIds: selected.slice(),
-                        selectedServices: selectedServices
-                    }
-                }));
-            }
-            
-            const durationDisplay = document.getElementById('total-duration-display');
-            if (durationDisplay) {
-                durationDisplay.textContent = this.formatDuration(total);
-            }
-            
-            const timeslotDisplay = document.getElementById('timeslot-count-display');
-            if (timeslotDisplay) {
-                timeslotDisplay.textContent = this.getRequiredTimeslots(total);
-            }
-
-            if (selectedListEl) {
-                selectedListEl.innerHTML = selectedServices.length > 0
-                    ? selectedServices.map(service => `
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-primary">${this.escapeHtml(service.service_name)}</span>
-                            <span class="text-muted small">${this.getServiceDuration(service)} min</span>
-                        </div>
-                    `).join('')
-                    : '<span class="text-muted small">No services selected.</span>';
-            }
-
-            if (hiddenInputsEl) {
-                const selectedInputs = selected.map(id => `
-                    <input type="hidden" name="selected_service_ids[]" value="${id}">
-                `).join('');
-                hiddenInputsEl.innerHTML = `${selectedInputs}
-                    <input type="hidden" name="total_duration_minutes" value="${total}">
-                `;
-            }
-
-            if (confirmBtn) {
-                confirmBtn.disabled = selected.length === 0;
-            }
-        };
-        
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', updateDurationDisplay);
+        // Toggle dropdown
+        trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = panel.classList.contains('is-open');
+            panel.classList.toggle('is-open', !isOpen);
+            trigger.classList.toggle('is-open', !isOpen);
         });
 
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => {
-                updateDurationDisplay();
-                const selected = Array.from(checkboxes)
-                    .filter(cb => cb.checked)
-                    .map(cb => parseInt(cb.value));
+        // Stop all clicks inside the panel from closing it
+        panel.addEventListener('click', function(e) {
+            e.stopPropagation();
 
-                if (selected.length === 0) {
-                    if (typeof window.showToast === 'function') window.showToast('Please select at least one service', 'warning');
-                    return;
-                }
+            const item = e.target.closest('.service-dropdown-item');
+            if (!item) return;
 
-                // Hide service list, show summary
-                if (listContainer && summaryContainer) {
-                    listContainer.classList.add('d-none');
-                    summaryContainer.classList.remove('d-none');
-                }
+            const sid = parseInt(item.dataset.sid);
+            const idx = self.selectedServices.findIndex(s => s.service_id === sid);
 
-                if (typeof window.showToast === 'function') {
-                    window.showToast('Services confirmed successfully.', 'success');
+            if (idx >= 0) {
+                self.selectedServices.splice(idx, 1);
+                item.classList.remove('is-selected');
+            } else {
+                const svc = self.services.find(s => s.service_id === sid);
+                if (svc) {
+                    self.selectedServices.push(svc);
+                    item.classList.add('is-selected');
                 }
-            });
+            }
+
+            self.recalcDuration();
+            self.updateDropdownUI(containerId);
+        });
+
+        // Close on outside click
+        self._onDocClick = function() {
+            panel.classList.remove('is-open');
+            trigger.classList.remove('is-open');
+        };
+        document.addEventListener('click', self._onDocClick);
+
+        // Remove tag
+        tagsContainer.addEventListener('click', function(e) {
+            const removeBtn = e.target.closest('.tag-remove');
+            if (!removeBtn) return;
+            e.stopPropagation();
+
+            const sid = parseInt(removeBtn.dataset.remove);
+            self.selectedServices = self.selectedServices.filter(s => s.service_id !== sid);
+
+            const item = panel.querySelector(`.service-dropdown-item[data-sid="${sid}"]`);
+            if (item) item.classList.remove('is-selected');
+
+            self.recalcDuration();
+            self.updateDropdownUI(containerId);
+        });
+    }
+
+    recalcDuration() {
+        this.totalDuration = this.selectedServices.reduce((sum, s) => sum + this.getServiceDuration(s), 0);
+        if (typeof window !== 'undefined') {
+            window.patientSelectedServiceDuration = this.totalDuration;
+            window.patientSelectedServiceIds = this.selectedServices.map(s => s.service_id);
+            window.dispatchEvent(new CustomEvent('patient-service-duration-changed', {
+                detail: { totalDuration: this.totalDuration, selectedServiceIds: this.selectedServices.map(s => s.service_id), selectedServices: this.selectedServices }
+            }));
+        }
+    }
+
+    updateDropdownUI(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const count = this.selectedServices.length;
+        const triggerText = container.querySelector('.trigger-text');
+        const tagsContainer = container.querySelector('#svcSelectedTags');
+        const durationHint = container.querySelector('.service-duration-hint');
+        const hiddenInputs = container.querySelector('#selectedServiceInputs');
+
+        if (triggerText) {
+            triggerText.textContent = count > 0 ? `${count} service${count > 1 ? 's' : ''} selected` : 'Tap to select services';
+            triggerText.classList.toggle('has-selection', count > 0);
         }
 
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-                updateDurationDisplay();
-            });
+        if (tagsContainer) {
+            tagsContainer.innerHTML = this.selectedServices.map(s =>
+                `<span class="service-tag" data-sid="${s.service_id}">
+                    ${this.escapeHtml(s.service_name)}
+                    <span class="tag-remove" data-remove="${s.service_id}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
+                </span>`
+            ).join('');
         }
 
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                // Show service list, hide summary
-                if (listContainer && summaryContainer) {
-                    listContainer.classList.remove('d-none');
-                    summaryContainer.classList.add('d-none');
-                }
-            });
+        if (durationHint) {
+            durationHint.innerHTML = this.totalDuration > 0
+                ? `${this.totalDuration} min total · ${this.getRequiredTimeslots()} timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}`
+                : '';
         }
 
-        updateDurationDisplay();
+        if (hiddenInputs) {
+            const inputs = this.selectedServices.map(s => `<input type="hidden" name="selected_service_ids[]" value="${s.service_id}">`).join('');
+            hiddenInputs.innerHTML = inputs + `<input type="hidden" name="total_duration_minutes" value="${this.totalDuration}">`;
+        }
     }
     
     /**

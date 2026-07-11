@@ -70,8 +70,14 @@ try {
         }
     }
 
-    if (empty($patient_id) || empty($appointment_date) || empty($user_id)) {
-        echo json_encode(['success' => false, 'message' => 'Patient, doctor and appointment date are required!']);
+    if (empty($patient_id) || empty($appointment_date)) {
+        echo json_encode(['success' => false, 'message' => 'Patient and appointment date are required!']);
+        exit;
+    }
+
+    // Timeslot is required for all new bookings.
+    if ($timeslot_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Please select a time slot.']);
         exit;
     }
 
@@ -97,6 +103,24 @@ try {
     $allowedStatus = ['scheduled', 'confirmed', 'arrived'];
     if (!in_array($status, $allowedStatus, true)) {
         $status = 'scheduled';
+    }
+
+    // ── Doctor resolution ────────────────────────────────────────────────
+    // If no doctor specified, resolve from the selected timeslot.
+    $doctorAutoAssigned = false;
+    if ($user_id <= 0) {
+        $tsLookup = $conn->prepare("SELECT doctor_id FROM timeslot WHERE timeslot_id = ? LIMIT 1");
+        $tsLookup->bind_param('i', $timeslot_id);
+        $tsLookup->execute();
+        $tsLookupRes = $tsLookup->get_result()->fetch_assoc();
+        $tsLookup->close();
+        if ($tsLookupRes && (int)$tsLookupRes['doctor_id'] > 0) {
+            $user_id = (int)$tsLookupRes['doctor_id'];
+            $doctorAutoAssigned = true;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Could not determine a doctor for the selected time slot.']);
+            exit;
+        }
     }
 
     // Verify doctor exists and is active
@@ -128,12 +152,6 @@ try {
     }
 
     appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $appointment_date);
-
-    // Timeslot is required for all new bookings.
-    if ($timeslot_id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Please select a 20-minute time slot.']);
-        exit;
-    }
 
     // Compute total duration based on selected services
     $total_duration_minutes = 0;

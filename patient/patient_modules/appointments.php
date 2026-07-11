@@ -330,62 +330,15 @@ if ($patient_id) {
             <div id="apptAlert"></div>
             <form id="createApptForm">
                 <div class="row g-4 patient-appt-booking-row">
-                    <div class="col-lg-5 order-lg-2 patient-appt-form-col">
-                        <div class="patient-appt-step">
-                            <div class="patient-appt-step-heading">
-                                <span class="patient-appt-step-num" aria-hidden="true">1</span>
-                                <span class="patient-appt-step-title">Choose Doctor</span>
-                            </div>
-                            <div class="patient-appt-step-body">
-                                <select class="form-select" id="user_id" name="user_id" required aria-label="Choose doctor">
-                                    <option value="">-- Select Doctor --</option>
-                                    <?php foreach ($doctors_list as $d): ?>
-                                        <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="patient-appt-step">
-                            <div class="patient-appt-step-heading">
-                                <span class="patient-appt-step-num" aria-hidden="true">2</span>
-                                <span class="patient-appt-step-title">Select Services</span>
-                            </div>
-                            <div class="patient-appt-step-body">
-                                <div id="serviceSelector" class="service-selector">
-                                    <small class="text-muted">Please select a doctor first</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3" id="patientTimeslotWrap" style="display:none;">
-                            <label class="form-label">Choose Start Time (range shown)</label>
-                            <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
-                                <option value="">-- Select a start time slot --</option>
-                            </select>
-                            <div class="form-text" id="patientTimeslotHint">Select services to see the required appointment duration.</div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Reason for Appointment</label>
-                            <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe the reason" required></textarea>
-                        </div>
-
-                        <input type="hidden" name="patient_id" value="<?php echo (int)$patient_id; ?>">
-                        <input type="hidden" name="is_online_appointment" value="0">
-                    </div>
                     <div class="col-lg-7 order-lg-1 patient-appt-calendar-col">
                         <div class="calendar-panel" id="patientCalendarPanel">
                             <div class="patient-appt-step mb-0">
                                 <div class="patient-appt-step-heading">
-                                    <span class="patient-appt-step-num" aria-hidden="true">3</span>
-                                    <span class="patient-appt-step-title">Availability Calendar</span>
+                                    <span class="patient-appt-step-num" aria-hidden="true">1</span>
+                                    <span class="patient-appt-step-title">Select Date</span>
                                 </div>
                             </div>
-                            <div id="calendarLockedMessage" class="patient-calendar-placeholder">
-                                Select a doctor first to view the availability calendar.
-                            </div>
-                            <div id="calendarActiveWrap" class="d-none">
+                            <div id="calendarActiveWrap">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
                                 </div>
@@ -399,10 +352,55 @@ if ($patient_id) {
                             </div>
                         </div>
                     </div>
+                    <div class="col-lg-5 order-lg-2 patient-appt-form-col">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Choose Doctor <span class="text-muted fw-normal">(optional)</span></label>
+                            <select class="form-select" id="user_id" name="user_id" aria-label="Choose doctor">
+                                <option value="">Any available doctor</option>
+                                <?php foreach ($doctors_list as $d): ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Select Services <span class="text-muted fw-normal">(optional)</span></label>
+                            <div id="serviceSelector" class="service-selector">
+                                <small class="text-muted">Select a date first to load services.</small>
+                            </div>
+                        </div>
+
+                        <div class="patient-appt-step" id="patientTimeslotWrap">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">2</span>
+                                <span class="patient-appt-step-title">Choose Time Slot</span>
+                            </div>
+                            <div class="patient-appt-step-body">
+                                <select class="form-select" id="timeslot_id" name="timeslot_id" required disabled>
+                                    <option value="">-- Select a time slot --</option>
+                                </select>
+                                <div class="form-text" id="patientTimeslotHint">Select a date to see available time slots.</div>
+                            </div>
+                        </div>
+
+                        <div class="patient-appt-step">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">3</span>
+                                <span class="patient-appt-step-title">Reason for Appointment</span>
+                            </div>
+                            <div class="patient-appt-step-body">
+                                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Describe the reason" required></textarea>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mt-2" id="submitApptBtn">
+                            Request Appointment
+                        </button>
+
+                        <input type="hidden" name="patient_id" value="<?php echo (int)$patient_id; ?>">
+                        <input type="hidden" name="is_online_appointment" value="0">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary mt-3" id="submitApptBtn" style="width: 180px; display: block; margin: 12px auto 0;">
-                    Request Appointment
-                </button>
             </form>
         </div>
 
@@ -577,7 +575,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const DAYS_AHEAD = 150;
     const dateSelect = document.getElementById('appointment_date');
     const alertBox = document.getElementById('apptAlert');
-    const calendarLockedMessage = document.getElementById('calendarLockedMessage');
     const calendarActiveWrap = document.getElementById('calendarActiveWrap');
     const patientCalendarPanel = document.getElementById('patientCalendarPanel');
     const doctorSelect = document.getElementById('user_id');
@@ -605,6 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let appointmentCalendar = null;
     let availabilityByDate = {};
     let selectedDayEl = null;
+    let calendarDataLoaded = false;
 
     function getCalendarEl() {
         return document.getElementById('appointmentCalendar');
@@ -615,9 +613,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function setCalendarPanelVisible(visible) {
-        if (calendarLockedMessage) {
-            calendarLockedMessage.classList.toggle('d-none', visible);
-        }
         if (calendarActiveWrap) {
             calendarActiveWrap.classList.toggle('d-none', !visible);
         }
@@ -815,12 +810,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function resetTimeslots() {
-        if (!timeslotWrap || !timeslotSelect) return;
-        timeslotWrap.style.display = 'none';
+        if (!timeslotSelect) return;
         timeslotSelect.disabled = true;
         timeslotSelect.required = false;
         timeslotSelect.value = '';
-        timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+        timeslotSelect.innerHTML = '<option value="">-- Select a time slot --</option>';
     }
 
     function clearSelectedDate() {
@@ -852,10 +846,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const reason = String(item.reason || '').toLowerCase();
         if (reason.includes('leave')) {
-            return 'Doctor is on leave for this date.';
+            return doctorSelect && doctorSelect.value ? 'Doctor is on leave for this date.' : 'Doctors are unavailable on this date.';
         }
         if (reason.includes('schedule')) {
-            return 'Doctor has no available schedule on this date.';
+            return doctorSelect && doctorSelect.value ? 'Doctor has no available schedule on this date.' : 'No doctors available on this date.';
+        }
+        if (reason.includes('sunday') || reason.includes('closed')) {
+            return 'Clinic is closed on this date.';
         }
         return 'This date is not available for booking.';
     }
@@ -892,17 +889,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 badge.classList.add('state-open');
                 badge.textContent = 'Open';
             }
-        } else {
+        } else if (item && !item.available) {
+            // Data loaded but date is not available
             arg.el.classList.add('appt-day-closed');
             badge.classList.add('state-closed');
-            const reason = String(item && item.reason ? item.reason : '').toLowerCase();
+            const reason = String(item.reason || '').toLowerCase();
             if (reason.includes('leave')) {
                 badge.textContent = 'On leave';
-            } else if (reason.includes('schedule')) {
+            } else if (reason.includes('schedule') || reason.includes('doctors available')) {
                 badge.textContent = 'No schedule';
             } else {
                 badge.textContent = 'Unavailable';
             }
+        } else if (!calendarDataLoaded && !doctorSelect?.value) {
+            // No data loaded yet and no doctor selected — show as Open by default
+            arg.el.classList.add('appt-day-open');
+            badge.classList.add('state-open');
+            badge.textContent = 'Open';
+        } else {
+            // Data loaded but this date has no entry — closed
+            arg.el.classList.add('appt-day-closed');
+            badge.classList.add('state-closed');
+            badge.textContent = 'Unavailable';
         }
 
         if (dateSelect && dateSelect.value === dateStr) {
@@ -965,21 +973,28 @@ document.addEventListener('DOMContentLoaded', function() {
         appointmentCalendar.render();
     }
 
+    function refreshDayCells() {
+        if (!appointmentCalendar) return;
+        var cells = document.querySelectorAll('.fc-daygrid-day');
+        cells.forEach(function(cell) {
+            var dateStr = cell.getAttribute('data-date');
+            if (!dateStr) return;
+            var arg = { date: new Date(dateStr + 'T00:00:00'), el: cell, dayEl: cell };
+            decorateDayCell(arg);
+        });
+    }
+
     async function loadDates() {
         clearSelectedDate();
         const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
-        if (!doctorId) {
-            availabilityByDate = {};
-            destroyCalendar();
-            setCalendarPanelVisible(false);
-            return;
-        }
 
         setCalendarPanelVisible(true);
 
         try {
             let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(String(DAYS_AHEAD));
-            url += '&user_id=' + encodeURIComponent(doctorId);
+            if (doctorId) {
+                url += '&user_id=' + encodeURIComponent(doctorId);
+            }
 
             var data;
             if (Cache) {
@@ -991,8 +1006,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!data.success || !Array.isArray(data.dates)) {
                 availabilityByDate = {};
-                renderCalendar();
-                showAlert('Unable to load available dates for this doctor.', 'warning');
+                refreshDayCells();
+                showAlert('Unable to load available dates.', 'warning');
                 return;
             }
 
@@ -1002,15 +1017,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 availabilityByDate[String(item.date)] = {
                     available: !!item.available,
                     count: parseInt(item.count || 0, 10) || 0,
-                    reason: String(item.reason || '')
+                    reason: String(item.reason || ''),
+                    doctors_available: parseInt(item.doctors_available || 0, 10) || 0
                 };
             });
 
-            renderCalendar();
+            refreshDayCells();
+            calendarDataLoaded = true;
         } catch (err) {
             console.error(err);
             availabilityByDate = {};
-            renderCalendar();
+            refreshDayCells();
             showAlert('Error loading available dates.', 'danger');
         }
     }
@@ -1021,19 +1038,21 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedDuration = Number(window.patientSelectedServiceDuration || 0);
         if (!timeslotWrap || !timeslotSelect) return;
 
-        timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
-        if (!doctorId || !apptDate) {
+        timeslotSelect.innerHTML = '<option value="">-- Select a time slot --</option>';
+        if (!apptDate) {
             resetTimeslots();
             return;
         }
 
-        timeslotWrap.style.display = '';
         timeslotSelect.disabled = false;
         timeslotSelect.required = true;
         timeslotSelect.innerHTML = '<option value="">Loading time slots...</option>';
 
         try {
-            let url = '../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(apptDate);
+            let url = '../assets/api/appointments/get_timeslots.php?date=' + encodeURIComponent(apptDate);
+            if (doctorId) {
+                url += '&doctor_id=' + encodeURIComponent(doctorId);
+            }
             if (selectedDuration > 0) {
                 url += '&duration=' + encodeURIComponent(String(selectedDuration));
             }
@@ -1113,10 +1132,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    setCalendarPanelVisible(false);
+    // Initialize calendar on page load (render immediately, fetch data async)
+    renderCalendar();
+    loadDates();
 
     if (doctorSelect) {
         doctorSelect.addEventListener('change', function() {
+            calendarDataLoaded = false;
             loadDates();
             loadTimeslots();
         });
@@ -1250,10 +1272,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
             const selectedDate = dateSelect ? String(dateSelect.value || '').trim() : '';
-            if (!doctorId) {
-                showAlert('Please select a doctor first.', 'warning');
-                return;
-            }
             if (!selectedDate) {
                 showAlert('Please select an available date on the calendar.', 'warning');
                 return;
@@ -1265,7 +1283,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const selectedDoctor = doctorSelect && doctorSelect.selectedOptions.length > 0
+            const selectedDoctor = doctorSelect && doctorId && doctorSelect.selectedOptions.length > 0
                 ? String(doctorSelect.selectedOptions[0].textContent || '').trim()
                 : 'To be assigned';
             const selectedSlot = timeslotSelect && timeslotSelect.selectedOptions.length > 0

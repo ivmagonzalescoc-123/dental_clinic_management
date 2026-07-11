@@ -15,8 +15,8 @@ $date       = isset($_GET['date'])       ? trim($_GET['date'])       : '';
 $service_id = isset($_GET['service_id']) ? (int)$_GET['service_id'] : 0;
 $duration   = isset($_GET['duration'])   ? (int)$_GET['duration']   : 0;
 
-if (!$doctor_id || !$date) {
-    echo json_encode(['success' => false, 'message' => 'doctor_id and date are required']);
+if (!$date) {
+    echo json_encode(['success' => false, 'message' => 'date is required']);
     exit;
 }
 
@@ -25,6 +25,132 @@ if (!appt_validate_appointment_date($date)) {
     exit;
 }
 
+// ── No-doctor mode: merged slots across all available doctors ────────────
+if (!$doctor_id) {
+    // Find all active doctors who are available on this date
+    $docRes = $conn->query("SELECT user_id FROM users WHERE role_id = 2 AND is_active = 1");
+    $availableDoctorIds = [];
+    if ($docRes) {
+        while ($dRow = $docRes->fetch_assoc()) {
+            $did = (int)$dRow['user_id'];
+            [$ok] = appt_assert_doctor_bookable($conn, $did, $date);
+            if ($ok) {
+                $availableDoctorIds[] = $did;
+                appt_ensure_standard_timeslots_for_doctor_date($conn, $did, $date);
+            }
+        }
+    }
+
+    if (empty($availableDoctorIds)) {
+        echo json_encode(['success' => true, 'slots' => [], 'message' => 'No doctors available on this date.', 'duration' => $duration]);
+        exit;
+    }
+
+    // Derive minimum duration
+    $minDuration = $duration > 0 ? $duration : 0;
+    if ($minDuration <= 0 && $service_id) {
+        $dStmt = $conn->prepare("SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS dur FROM services s LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id WHERE s.service_id = ? LIMIT 1");
+        $dStmt->bind_param('i', $service_id);
+        $dStmt->execute();
+        $dRow = $dStmt->get_result()->fetch_assoc();
+        $dStmt->close();
+        $minDuration = (int)($dRow['dur'] ?? 30);
+    }
+
+    // Query all available timeslots for all available doctors, grouped by start_time
+    $placeholders = implode(',', array_fill(0, count($availableDoctorIds), '?'));
+    $types = str_repeat('i', count($availableDoctorIds)) . 's';
+    $bindParams = array_merge($availableDoctorIds, [$date]);
+
+    $sql = "
+        SELECT t.start_time, t.end_time,
+               COUNT(*) AS spots_total,
+               SUM(t.status = 'available') AS spots_available,
+               GROUP_CONCAT(CASE WHEN t.status = 'available' THEN t.timeslot_id END ORDER BY t.doctor_id) AS available_ids
+        FROM timeslot t
+        WHERE t.doctor_id IN ($placeholders)
+          AND t.slot_date = ?
+        GROUP BY t.start_time, t.end_time
+        HAVING spots_available > 0
+        ORDER BY t.start_time ASC
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$bindParams);
+    $stmt->execute();
+    $res = $stmt->get_result();
+
+    $mergedSlots = [];
+    while ($row = $res->fetch_assoc()) {
+        $firstAvailableId = (int)(explode(',', $row['available_ids'])[0]);
+        $spotsAvail = (int)$row['spots_available'];
+        $spotsTotal = (int)$row['spots_total'];
+        $slotMinutes = (int)((strtotime($row['end_time']) - strtotime($row['start_time'])) / 60);
+
+        $label = date('g:i A', strtotime($row['start_time']))
+               . ' – '
+               . date('g:i A', strtotime($row['end_time']))
+               . ' (' . $spotsAvail . ' slot' . ($spotsAvail !== 1 ? 's' : '') . ')';
+
+        $mergedSlots[] = [
+            'timeslot_id'      => $firstAvailableId,
+            'start_time'       => $row['start_time'],
+            'end_time'         => $row['end_time'],
+            'duration_minutes' => $slotMinutes,
+            'spots_available'  => $spotsAvail,
+            'spots_total'      => $spotsTotal,
+            'label'            => $label,
+        ];
+    }
+    $stmt->close();
+
+    // If duration > 0, group consecutive merged slots into ranges
+    $slots = [];
+    if ($minDuration <= 0) {
+        $slots = $mergedSlots;
+    } else {
+        $count = count($mergedSlots);
+        for ($i = 0; $i < $count; $i++) {
+            $accMinutes = 0;
+            $startTime = $mergedSlots[$i]['start_time'];
+            $endTime = $mergedSlots[$i]['end_time'];
+            $accMinutes += $mergedSlots[$i]['duration_minutes'];
+            $prevEnd = $mergedSlots[$i]['end_time'];
+            $minSpots = $mergedSlots[$i]['spots_available'];
+            $firstId = $mergedSlots[$i]['timeslot_id'];
+
+            if ($accMinutes < $minDuration) {
+                for ($j = $i + 1; $j < $count; $j++) {
+                    if ($mergedSlots[$j]['start_time'] !== $prevEnd) break;
+                    $accMinutes += $mergedSlots[$j]['duration_minutes'];
+                    $prevEnd = $mergedSlots[$j]['end_time'];
+                    $endTime = $mergedSlots[$j]['end_time'];
+                    $minSpots = min($minSpots, $mergedSlots[$j]['spots_available']);
+                    if ($accMinutes >= $minDuration) break;
+                }
+            }
+
+            if ($accMinutes >= $minDuration) {
+                $slots[] = [
+                    'timeslot_id'      => $firstId,
+                    'start_time'       => $startTime,
+                    'end_time'         => $endTime,
+                    'duration_minutes' => $accMinutes,
+                    'spots_available'  => $minSpots,
+                    'label'            => date('g:i A', strtotime($startTime))
+                                        . ' – '
+                                        . date('g:i A', strtotime($endTime))
+                                        . ' (' . $minSpots . ' slot' . ($minSpots !== 1 ? 's' : '') . ')',
+                ];
+            }
+        }
+    }
+
+    $message = empty($slots) ? 'No available slots for the selected services on this date.' : '';
+    echo json_encode(['success' => true, 'slots' => $slots, 'message' => $message, 'duration' => $minDuration]);
+    exit;
+}
+
+// ── Single-doctor mode (existing behavior) ───────────────────────────────
 [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doctor_id, $date);
 if (!$bookable) {
     echo json_encode(['success' => true, 'slots' => [], 'message' => $bookableMsg]);

@@ -16,6 +16,10 @@
   </head>
   <body>
     <div class="app">
+      <button type="button" class="panel-toggle" id="panelToggle" aria-label="Toggle controls panel" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
+        <span>Controls</span>
+      </button>
       <aside class="panel">
         <header class="panel__header">
           <h1>Odontogram</h1>
@@ -87,5 +91,46 @@
       </section>
     </div>
     <script type="module" src="./main.js?v=20250606"></script>
+    <script>
+    (function() {
+      var toggle = document.getElementById('panelToggle');
+      var panel = document.querySelector('.panel');
+      if (!toggle || !panel) return;
+
+      var backdrop = document.createElement('div');
+      backdrop.className = 'panel-backdrop';
+      document.body.appendChild(backdrop);
+
+      function openPanel() {
+        panel.classList.add('is-open');
+        backdrop.classList.add('is-visible');
+        toggle.classList.add('is-open');
+        toggle.setAttribute('aria-expanded', 'true');
+      }
+      function closePanel() {
+        panel.classList.remove('is-open');
+        backdrop.classList.remove('is-visible');
+        toggle.classList.remove('is-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+      function togglePanel() {
+        if (panel.classList.contains('is-open')) closePanel();
+        else openPanel();
+      }
+
+      toggle.addEventListener('click', togglePanel);
+      backdrop.addEventListener('click', closePanel);
+
+      /* Auto-close panel when a tooth is clicked (desktop-like UX on mobile) */
+      var chart = document.getElementById('odontogram');
+      if (chart) {
+        chart.addEventListener('click', function() {
+          if (window.innerWidth <= 860 && panel.classList.contains('is-open')) {
+            closePanel();
+          }
+        });
+      }
+    })();
+    </script>
   </body>
 </html>

@@ -126,6 +126,7 @@ try {
             'timeslot_id'        => (int)$row['ts_id'],
             'start_time'         => $row['start_time'],
             'end_time'           => $row['end_time'],
+            'slot_date'          => $date,
             'patient_name'       => $row['patient_name'] ?? '—',
             'patient_phone'      => $row['patient_phone'] ?? '',
             'doctor_name'        => $row['doctor_name'] ?? '—',

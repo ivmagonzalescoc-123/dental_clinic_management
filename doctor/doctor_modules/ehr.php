@@ -285,6 +285,17 @@ if ($sstmt) {
     right: 10px;
     z-index: 30;
 }
+
+@media (max-width: 768px) {
+    #odontogramContainer {
+        height: 520px;
+    }
+}
+@media (max-width: 480px) {
+    #odontogramContainer {
+        height: 440px;
+    }
+}
 </style>
 
 <script>

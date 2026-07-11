@@ -152,6 +152,8 @@
       }, 180);
     };
 
+    toast.style.cursor = 'pointer';
+    toast.addEventListener('click', removeToast);
     setTimeout(removeToast, Number(opts.delay || 3200));
   }
 

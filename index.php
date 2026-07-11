@@ -821,19 +821,18 @@ $aboutPoints = [
                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700">Captcha</label>
-                    <div class="flex items-center gap-2">
-                        <span id="loginCaptchaQuestion" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">Loading...</span>
-                        <button type="button" id="refreshLoginCaptchaBtn" class="shrink-0 text-sm font-semibold text-primary hover:text-primary">Refresh</button>
-                        <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Answer"
-                            class="auth-field min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400">
-                    </div>
-                </div>
-
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password</button>
                     <button type="button" data-auth-switch="booking" class="font-medium text-primary hover:text-primary transition-colors">Book Appointment</button>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span id="loginCaptchaQuestion" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700" style="min-width:140px;max-width:140px;text-align:center;">Loading...</span>
+                        <button type="button" id="refreshLoginCaptchaBtn" class="shrink-0 text-sm font-semibold text-primary hover:text-primary">Refresh</button>
+                        <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Answer"
+                            class="auth-field min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400" style="width:900px;max-width:90px;">
+                    </div>
                 </div>
 
                 <button type="submit" class="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -864,7 +863,7 @@ $aboutPoints = [
 
             <footer class="auth-footer border-t border-slate-100 bg-slate-50/80 px-5 py-3 sm:px-7">
                 <p class="text-center text-[10px] leading-relaxed text-slate-500">
-                    Secure portal access - compliant with the Philippine Data Privacy Act of 2012 (RA 10173)
+                    Compliant with the Philippine Data Privacy Act of 2012 (RA 10173)
                 </p>
             </footer>
         </section>

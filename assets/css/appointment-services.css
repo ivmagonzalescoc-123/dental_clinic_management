@@ -3,80 +3,196 @@
    ======================================== */
 
 .service-selector {
-    background: #f8f9fa;
-    padding: 18px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+    border: none;
 }
 
 .service-selector .form-label {
-    color: #1173c1;
-    font-size: 15px;
-    margin-bottom: 12px;
+    color: #1f3347;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 6px;
 }
 
-.services-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.service-item {
-    background: white;
-    padding: 12px;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-}
-
-.service-item:hover {
-    border-color: #1173c1;
-    box-shadow: 0 2px 8px rgba(17, 115, 193, 0.1);
-}
-
-.service-item .form-check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.service-item .form-check-input {
-    margin-top: 0;
-    width: 20px;
-    height: 20px;
-    border: 2px solid #dee2e6;
-    cursor: pointer;
-}
-
-.service-item .form-check-input:checked {
-    background-color: #1173c1;
-    border-color: #1173c1;
-}
-
-.service-item .form-check-label {
-    margin-bottom: 0;
-    cursor: pointer;
-    flex: 1;
+/* Dropdown trigger */
+.service-dropdown-trigger {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    font-size: 0.88rem;
+    color: #64748b;
 }
 
-.service-name {
-    font-size: 15px;
+.service-dropdown-trigger:hover {
+    border-color: #1173c1;
+}
+
+.service-dropdown-trigger.is-open {
+    border-color: #1173c1;
+    box-shadow: 0 0 0 3px rgba(17, 115, 193, 0.1);
+}
+
+.service-dropdown-trigger .trigger-text {
+    flex: 1;
+    text-align: left;
+}
+
+.service-dropdown-trigger .trigger-text.has-selection {
     color: #1f3347;
+    font-weight: 500;
 }
 
-.service-info {
+.service-dropdown-trigger .trigger-chevron {
+    transition: transform 0.2s ease;
+    color: #94a3b8;
+}
+
+.service-dropdown-trigger.is-open .trigger-chevron {
+    transform: rotate(180deg);
+}
+
+/* Dropdown panel */
+.service-dropdown-panel {
+    display: none;
+    border: 1px solid #dee2e6;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    background: #fff;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.service-dropdown-panel.is-open {
+    display: block;
+}
+
+.service-dropdown-item {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 0.88rem;
 }
 
-.service-info .badge {
+.service-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.service-dropdown-item:hover {
+    background: #f0f7ff;
+}
+
+.service-dropdown-item.is-selected {
+    background: #eef4ff;
+}
+
+.service-dropdown-item .svc-check {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.service-dropdown-item.is-selected .svc-check {
+    background: #1173c1;
+    border-color: #1173c1;
+}
+
+.service-dropdown-item .svc-check svg {
+    display: none;
+    width: 12px;
+    height: 12px;
+    color: #fff;
+}
+
+.service-dropdown-item.is-selected .svc-check svg {
+    display: block;
+}
+
+.service-dropdown-item .svc-name {
+    flex: 1;
+    color: #1f3347;
     font-weight: 500;
-    font-size: 12px;
-    padding: 4px 8px;
+}
+
+.service-dropdown-item .svc-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.service-dropdown-item .svc-meta .svc-price {
+    color: #1173c1;
+    font-weight: 600;
+}
+
+/* Selected tags below dropdown */
+.service-selected-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.service-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: #eef4ff;
+    border: 1px solid #c7ddf9;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    color: #1173c1;
+    font-weight: 500;
+}
+
+.service-tag .tag-remove {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(17, 115, 193, 0.15);
+    transition: background 0.15s ease;
+}
+
+.service-tag .tag-remove:hover {
+    background: rgba(17, 115, 193, 0.3);
+}
+
+.service-tag .tag-remove svg {
+    width: 10px;
+    height: 10px;
+}
+
+.service-duration-hint {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: #94a3b8;
 }
 
 /* Doctor Service Modifier */
@@ -198,18 +314,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-    .service-item .form-check-label {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .service-info {
-        margin-top: 8px;
-        margin-left: 0;
-    }
-    
-    .services-checkbox-group {
+    .service-dropdown-panel {
         max-height: 200px;
-        overflow-y: auto;
+    }
+
+    .service-dropdown-item .svc-meta {
+        font-size: 0.72rem;
     }
 }

@@ -39,6 +39,9 @@ if (!security_validate_csrf_token($csrfToken)) {
 }
 
 $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
+$assign_doctor_id = isset($_POST['doctor_id']) ? (int)$_POST['doctor_id'] : 0;
+$selected_service_ids = isset($_POST['selected_service_ids']) ? $_POST['selected_service_ids'] : [];
+$move_timeslot_id = isset($_POST['timeslot_id']) ? (int)$_POST['timeslot_id'] : 0;
 
 if (!$appointment_id) {
     echo json_encode(['success' => false, 'message' => 'Missing appointment_id']);
@@ -70,12 +73,94 @@ try {
         throw new Exception('Cannot mark arrived from current status: ' . $currentStatus);
     }
 
+    // ── Doctor assignment ──────────────────────────────────────────────────
+    $finalDoctorId = (int)($appt['doctor_id'] ?? 0);
+    if ($assign_doctor_id > 0 && $assign_doctor_id !== $finalDoctorId) {
+        $ndoc = $conn->prepare("SELECT user_id FROM users WHERE user_id = ? AND role_id = 2 AND is_active = 1 LIMIT 1");
+        $ndoc->bind_param('i', $assign_doctor_id);
+        $ndoc->execute();
+        $ndocRes = $ndoc->get_result()->fetch_assoc();
+        $ndoc->close();
+        if ($ndocRes) {
+            $updDoc = $conn->prepare("UPDATE appointments SET user_id = ? WHERE appointment_id = ?");
+            $updDoc->bind_param('ii', $assign_doctor_id, $appointment_id);
+            $updDoc->execute();
+            $updDoc->close();
+            $finalDoctorId = $assign_doctor_id;
+        }
+    }
+
+    // ── Services linking ───────────────────────────────────────────────────
+    if (is_array($selected_service_ids) && count($selected_service_ids) > 0) {
+        $conn->query("DELETE FROM selected_services WHERE appointment_id = " . (int)$appointment_id);
+        $ssStmt = $conn->prepare("INSERT INTO selected_services (appointment_id, service_id) VALUES (?, ?)");
+        if ($ssStmt) {
+            foreach ($selected_service_ids as $sid) {
+                $sid = (int)$sid;
+                if ($sid > 0) {
+                    $ssStmt->bind_param('ii', $appointment_id, $sid);
+                    $ssStmt->execute();
+                }
+            }
+            $ssStmt->close();
+        }
+    }
+
+    // ── Timeslot move ──────────────────────────────────────────────────────
+    $finalTimeslotId = (int)($appt['timeslot_id'] ?? 0);
+    $newTs = null;
+    if ($move_timeslot_id > 0 && $move_timeslot_id !== $finalTimeslotId) {
+        $tsCheck = $conn->prepare("SELECT timeslot_id, status, doctor_id, slot_date, start_time, end_time FROM timeslot WHERE timeslot_id = ? LIMIT 1");
+        $tsCheck->bind_param('i', $move_timeslot_id);
+        $tsCheck->execute();
+        $newTs = $tsCheck->get_result()->fetch_assoc();
+        $tsCheck->close();
+
+        if ($newTs && $newTs['status'] === 'available') {
+            if ($finalTimeslotId > 0) {
+                $freeOld = $conn->prepare("UPDATE timeslot SET status = 'available' WHERE timeslot_id = ? AND status = 'booked'");
+                $freeOld->bind_param('i', $finalTimeslotId);
+                $freeOld->execute();
+                $freeOld->close();
+            }
+            $bookNew = $conn->prepare("UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'");
+            $bookNew->bind_param('i', $move_timeslot_id);
+            $bookNew->execute();
+            if ($bookNew->affected_rows === 0) {
+                $bookNew->close();
+                throw new Exception('Selected time slot was just taken.');
+            }
+            $bookNew->close();
+
+            $updTs = $conn->prepare("UPDATE appointments SET timeslot_id = ?, appointment_date = ? WHERE appointment_id = ?");
+            $updTs->bind_param('isi', $move_timeslot_id, $newTs['slot_date'], $appointment_id);
+            $updTs->execute();
+            $updTs->close();
+
+            $conn->query("DELETE FROM patient_schedules WHERE appointment_id = " . (int)$appointment_id);
+            $schStart = $newTs['slot_date'] . ' ' . $newTs['start_time'];
+            $schEnd = $newTs['slot_date'] . ' ' . $newTs['end_time'];
+            $insSch = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
+            $insSch->bind_param('iiss', $appointment_id, $finalDoctorId, $schStart, $schEnd);
+            $insSch->execute();
+            $insSch->close();
+
+            $finalTimeslotId = $move_timeslot_id;
+        }
+    }
+
     // Determine if arriving late (15-min grace period)
-    $expectedTs = strtotime($appt['slot_date'] . ' ' . $appt['start_time']);
+    $slotDate = $appt['slot_date'];
+    $slotStart = $appt['start_time'];
+    if ($newTs) {
+        $slotDate = $newTs['slot_date'];
+        $slotStart = $newTs['start_time'];
+    }
+    $expectedTs = strtotime($slotDate . ' ' . $slotStart);
     $isLate = ($expectedTs && (time() - $expectedTs) > 900);
     $newStatus = $isLate ? 'late' : 'arrived';
 
-    // Arrivals/check-in queue is now represented by appointments.status
+    // Mark checked_in
     $updA = $conn->prepare("UPDATE appointments SET status = 'checked_in' WHERE appointment_id = ?");
     $updA->bind_param('i', $appointment_id);
     $updA->execute();
@@ -98,7 +183,7 @@ try {
         $conn,
         $appointment_id,
         (int)($appt['patient_id'] ?? 0),
-        (int)($appt['doctor_id'] ?? 0)
+        $finalDoctorId
     );
 
     echo json_encode([

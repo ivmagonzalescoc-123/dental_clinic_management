@@ -164,11 +164,11 @@ body.patient-portal {
         --bs-gutter-x: 0;
     }
 
-    body.patient-portal .patient-appt-booking-row .patient-appt-form-col {
+    body.patient-portal .patient-appt-booking-row .patient-appt-calendar-col {
         order: 1;
     }
 
-    body.patient-portal .patient-appt-booking-row .patient-appt-calendar-col {
+    body.patient-portal .patient-appt-booking-row .patient-appt-form-col {
         order: 2;
         margin-top: 0.5rem;
     }
@@ -198,16 +198,8 @@ body.patient-portal {
         padding: 0;
     }
 
-    body.patient-portal .service-item {
-        padding: 10px;
-        border-radius: 8px;
-    }
-
-    body.patient-portal .service-selector .border.rounded-3.bg-light {
-        border: 1px solid #dbe4f0 !important;
-        background: #f8fafc !important;
-        padding: 0.75rem !important;
-        border-radius: 10px !important;
+    body.patient-portal .service-dropdown-panel {
+        max-height: 180px;
     }
 
     /* Services module */
@@ -289,11 +281,6 @@ body.patient-portal {
 
     body.patient-portal textarea.form-control {
         min-height: 96px;
-    }
-
-    body.patient-portal .service-item .form-check-input {
-        width: 22px;
-        height: 22px;
     }
 }
 

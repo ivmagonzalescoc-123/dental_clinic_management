@@ -19,6 +19,7 @@ try {
     $end   = date('Y-m-d', strtotime("+{$days} days"));
 
     if ($user_id > 0) {
+        // Ensure timeslots exist for the specific doctor
         $genPeriod = new DatePeriod(
             new DateTime($start),
             new DateInterval('P1D'),
@@ -27,14 +28,37 @@ try {
         foreach ($genPeriod as $dt) {
             appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $dt->format('Y-m-d'));
         }
+    } else {
+        // No doctor — ensure timeslots for ALL active doctors on each date
+        $docRes = $conn->query("SELECT user_id FROM users WHERE role_id = 2 AND is_active = 1");
+        $doctorIds = [];
+        if ($docRes) {
+            while ($dRow = $docRes->fetch_assoc()) {
+                $doctorIds[] = (int)$dRow['user_id'];
+            }
+        }
+        if (!empty($doctorIds)) {
+            $genPeriod = new DatePeriod(
+                new DateTime($start),
+                new DateInterval('P1D'),
+                (new DateTime($end))->modify('+1 day')
+            );
+            foreach ($genPeriod as $dt) {
+                $dateStr = $dt->format('Y-m-d');
+                foreach ($doctorIds as $did) {
+                    appt_ensure_standard_timeslots_for_doctor_date($conn, $did, $dateStr);
+                }
+            }
+        }
     }
 
-    // Use timeslot table when a doctor is specified — count available vs booked per date
+    // Use timeslot table — count available vs booked per date
     if ($user_id) {
         $sql = "
             SELECT slot_date,
-                   SUM(status = 'booked')    AS booked_slots,
-                   COUNT(*)                  AS total_slots
+                   COUNT(DISTINCT doctor_id)    AS doctors_available,
+                   SUM(status = 'booked')       AS booked_slots,
+                   COUNT(*)                     AS total_slots
             FROM timeslot
             WHERE doctor_id = ?
               AND slot_date BETWEEN ? AND ?
@@ -43,15 +67,15 @@ try {
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('iss', $user_id, $start, $end);
     } else {
-        // No doctor — aggregate confirmed appointments per date across all doctors
+        // No doctor — aggregate across all doctors' timeslots
         $sql = "
-            SELECT appointment_date AS slot_date,
-                   COUNT(DISTINCT appointment_id) AS booked_slots,
-                   15                             AS total_slots
-            FROM appointments
-            WHERE appointment_date BETWEEN ? AND ?
-              AND status IN ('confirmed', 'checked_in', 'in_progress', 'completed')
-            GROUP BY appointment_date
+            SELECT slot_date,
+                   COUNT(DISTINCT doctor_id)                       AS doctors_available,
+                   SUM(status = 'booked')                          AS booked_slots,
+                   COUNT(*)                                        AS total_slots
+            FROM timeslot
+            WHERE slot_date BETWEEN ? AND ?
+            GROUP BY slot_date
         ";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param('ss', $start, $end);
@@ -63,8 +87,9 @@ try {
     $counts = [];
     while ($row = $res->fetch_assoc()) {
         $counts[$row['slot_date']] = [
-            'booked' => (int)$row['booked_slots'],
-            'total'  => (int)($row['total_slots'] ?? 15),
+            'booked'   => (int)$row['booked_slots'],
+            'total'    => (int)($row['total_slots'] ?? 0),
+            'doctors'  => (int)($row['doctors_available'] ?? 0),
         ];
     }
     $stmt->close();
@@ -78,8 +103,9 @@ try {
     foreach ($period as $dt) {
         $d    = $dt->format('Y-m-d');
 
-        $data = $counts[$d] ?? ['booked' => 0, 'total' => 15];
-        $available = ($data['booked'] < $data['total']);
+        $data = $counts[$d] ?? ['booked' => 0, 'total' => 0, 'doctors' => 0];
+        $doctorsAvailable = $data['doctors'];
+        $available = ($doctorsAvailable > 0 && $data['booked'] < $data['total']);
         $reason = '';
 
         if ($user_id > 0) {
@@ -89,18 +115,29 @@ try {
             if (!$bookable) {
                 $reason = (string)$bookableMsg;
             }
+        } else {
+            // No doctor mode: check if Sunday
+            $weekday = (int)(new DateTime($d))->format('w');
+            if ($weekday === 0) {
+                $available = false;
+                $reason = 'Clinic is closed on Sundays.';
+            } elseif ($doctorsAvailable <= 0) {
+                $available = false;
+                $reason = 'No doctors available on this date.';
+            }
         }
 
-        if (!$available && $reason === '' && ((int)$data['total'] > 0) && ((int)$data['booked'] >= (int)$data['total'])) {
+        if (!$available && $reason === '' && $data['total'] > 0 && $data['booked'] >= $data['total']) {
             $reason = 'No remaining available slots on this date.';
         }
 
         $dates[] = [
-            'date'      => $d,
-            'count'     => $data['booked'],
-            'total'     => $data['total'],
-            'available' => $available,
-            'reason'    => $reason,
+            'date'              => $d,
+            'count'             => $data['booked'],
+            'total'             => $data['total'],
+            'available'         => $available,
+            'reason'            => $reason,
+            'doctors_available' => $doctorsAvailable,
         ];
     }
 

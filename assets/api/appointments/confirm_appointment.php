@@ -11,6 +11,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include __DIR__ . '/availability_guard.php';
 header('Content-Type: application/json');
 
@@ -55,6 +56,8 @@ $timeslot_id    = isset($_POST['timeslot_id'])    ? (int)$_POST['timeslot_id']  
 $book_start     = isset($_POST['book_start'])     ? trim($_POST['book_start'])     : '';
 $book_end       = isset($_POST['book_end'])       ? trim($_POST['book_end'])       : '';
 $duration       = isset($_POST['duration'])       ? (int)$_POST['duration']       : 30;
+$assign_doctor_id = isset($_POST['doctor_id'])    ? (int)$_POST['doctor_id']      : 0;
+$selected_service_ids = isset($_POST['selected_service_ids']) ? $_POST['selected_service_ids'] : [];
 
 if ($appointment_id <= 0) {
     send_json(['success' => false, 'message' => 'Missing appointment_id'], 400);
@@ -109,6 +112,40 @@ $conf = $conn->prepare("UPDATE appointments SET status = 'confirmed' WHERE appoi
 $conf->bind_param('i', $appointment_id);
 $conf->execute();
 $conf->close();
+
+// ── Doctor assignment (from secretary confirmation modal) ──────────────────
+if ($assign_doctor_id > 0 && (int)$appointment['user_id'] !== $assign_doctor_id) {
+    // Verify the new doctor is valid
+    $ndoc = $conn->prepare("SELECT user_id FROM users WHERE user_id = ? AND role_id = 2 AND is_active = 1 LIMIT 1");
+    $ndoc->bind_param('i', $assign_doctor_id);
+    $ndoc->execute();
+    $ndocRes = $ndoc->get_result()->fetch_assoc();
+    $ndoc->close();
+    if ($ndocRes) {
+        $updDoc = $conn->prepare("UPDATE appointments SET user_id = ? WHERE appointment_id = ?");
+        $updDoc->bind_param('ii', $assign_doctor_id, $appointment_id);
+        $updDoc->execute();
+        $updDoc->close();
+        $appointment['user_id'] = $assign_doctor_id;
+    }
+}
+
+// ── Service linking (from secretary confirmation modal) ────────────────────
+if (is_array($selected_service_ids) && count($selected_service_ids) > 0) {
+    // Clear any existing selected services for this appointment
+    $conn->query("DELETE FROM selected_services WHERE appointment_id = " . (int)$appointment_id);
+    $ssStmt = $conn->prepare("INSERT INTO selected_services (appointment_id, service_id) VALUES (?, ?)");
+    if ($ssStmt) {
+        foreach ($selected_service_ids as $sid) {
+            $sid = (int)$sid;
+            if ($sid > 0) {
+                $ssStmt->bind_param('ii', $appointment_id, $sid);
+                $ssStmt->execute();
+            }
+        }
+        $ssStmt->close();
+    }
+}
 
 $doc_id = (int)$appointment['user_id'];
 
@@ -286,6 +323,17 @@ if (!empty($availability)) {
 
         send_json(['success' => true, 'message' => 'Appointment confirmed and earliest slot scheduled', 'schedule_id' => $schedule_id]);
     }
+}
+
+// ── Send confirmation notification ────────────────────────────────────────
+if (function_exists('wf_notify_appointment_approved')) {
+    wf_notify_appointment_approved(
+        $conn,
+        $appointment_id,
+        (int)$appointment['patient_id'],
+        $doc_id,
+        (string)$appointment['appointment_date']
+    );
 }
 
 send_json(['success' => true, 'message' => 'Appointment confirmed. Please assign a timeslot to complete scheduling.']);

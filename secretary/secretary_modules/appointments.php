@@ -1398,7 +1398,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         
                                         
                                         <?php if ($status === 'scheduled' && !$isDisabled): ?>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="confirmAppointment(<?php echo (int)$appointment['appointment_id']; ?>)" title="Approve appointment">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="confirmAppointment(<?php echo (int)$appointment['appointment_id']; ?>, <?php echo empty($appointment['user_id']) ? 'true' : 'false'; ?>)" title="Approve appointment">
                                                 <i class="bi bi-check2-square"></i>
                                             </button>
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
@@ -1726,6 +1726,43 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     </div>
 </div>
 
+<!-- Assign Doctor & Confirm Modal -->
+<div class="modal fade" id="assignDoctorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-person-check"></i> Assign Doctor & Confirm</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">This appointment has no doctor assigned. Select a doctor to confirm.</p>
+                <input type="hidden" id="assignDoctorApptId">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Assign Doctor *</label>
+                    <select id="assignDoctorSelect" class="form-select" required>
+                        <option value="">-- Select Doctor --</option>
+                        <?php foreach ($doctors_list as $d): ?>
+                            <option value="<?php echo (int)$d['user_id']; ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Services <small class="text-muted fw-normal">(optional — doctor can decide during session)</small></label>
+                    <div id="assignServiceCheckboxes">
+                        <small class="text-muted">Loading services...</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="assignDoctorConfirmBtn">
+                    <i class="bi bi-check2-square"></i> Confirm Appointment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- View Patient Profiling Modal -->
 <div class="modal fade" id="viewProfilingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1785,29 +1822,93 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             }
 
             // Confirm appointment via AJAX (calls confirm_appointment.php)
-            window.confirmAppointment = async function(appointmentId) {
-                if (!(await showConfirmModal({
-                    title: 'Approve Appointment',
-                    message: 'Approve and schedule this appointment?',
-                    confirmText: 'Approve'
-                }))) return;
+            window.confirmAppointment = async function(appointmentId, needsDoctorAssignment) {
+                if (needsDoctorAssignment) {
+                    // Show doctor assignment modal
+                    document.getElementById('assignDoctorApptId').value = appointmentId;
+                    document.getElementById('assignDoctorSelect').value = '';
+
+                    // Load services into checkboxes
+                    const svcContainer = document.getElementById('assignServiceCheckboxes');
+                    svcContainer.innerHTML = '<small class="text-muted">Loading services...</small>';
+                    try {
+                        const svcResp = await fetch('../assets/api/appointments/manage_services.php?action=services&appointment_id=0');
+                        const svcData = await svcResp.json();
+                        if (svcData.success && Array.isArray(svcData.services) && svcData.services.length > 0) {
+                            svcContainer.innerHTML = svcData.services.map(s =>
+                                '<div class="form-check">' +
+                                '<input class="form-check-input" type="checkbox" value="' + s.service_id + '" id="assignSvc_' + s.service_id + '">' +
+                                '<label class="form-check-label" for="assignSvc_' + s.service_id + '">' + (s.service_name || '') + ' — ₱' + Number(s.initial_price || 0).toLocaleString() + '</label>' +
+                                '</div>'
+                            ).join('');
+                        } else {
+                            svcContainer.innerHTML = '<small class="text-muted">No services available.</small>';
+                        }
+                    } catch (e) {
+                        svcContainer.innerHTML = '<small class="text-muted">Failed to load services.</small>';
+                    }
+
+                    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('assignDoctorModal'));
+                    modal.show();
+                } else {
+                    // Standard confirm (doctor already assigned)
+                    if (!(await showConfirmModal({
+                        title: 'Approve Appointment',
+                        message: 'Approve and schedule this appointment?',
+                        confirmText: 'Approve'
+                    }))) return;
+                    try {
+                        const fd = new FormData();
+                        fd.append('appointment_id', appointmentId);
+                        fd.append('csrf_token', secretaryCsrfToken);
+                        const resp = await fetch('../assets/api/appointments/confirm_appointment.php', { method: 'POST', body: fd });
+                        const j = await resp.json();
+                        if (j.success) {
+                            showSecretaryActionFeedback(j.message || 'Appointment approved', 'success');
+                            window.location.reload();
+                        } else {
+                            showSecretaryActionFeedback('Approve failed: ' + (j.message || 'unknown'), 'danger');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showSecretaryActionFeedback('Approve error', 'danger');
+                    }
+                }
+            };
+
+            // Assign Doctor Confirm button handler
+            document.getElementById('assignDoctorConfirmBtn')?.addEventListener('click', async function() {
+                const apptId = document.getElementById('assignDoctorApptId')?.value;
+                const doctorId = document.getElementById('assignDoctorSelect')?.value;
+                if (!apptId) return;
+                if (!doctorId) {
+                    showSecretaryActionFeedback('Please select a doctor to assign.', 'warning');
+                    return;
+                }
+                this.disabled = true;
                 try {
                     const fd = new FormData();
-                    fd.append('appointment_id', appointmentId);
+                    fd.append('appointment_id', apptId);
+                    fd.append('doctor_id', doctorId);
                     fd.append('csrf_token', secretaryCsrfToken);
+                    const svcChecks = document.querySelectorAll('#assignServiceCheckboxes input[type="checkbox"]:checked');
+                    svcChecks.forEach(cb => fd.append('selected_service_ids[]', cb.value));
                     const resp = await fetch('../assets/api/appointments/confirm_appointment.php', { method: 'POST', body: fd });
                     const j = await resp.json();
                     if (j.success) {
-                        showSecretaryActionFeedback(j.message || 'Appointment approved', 'success');
+                        bootstrap.Modal.getInstance(document.getElementById('assignDoctorModal'))?.hide();
+                        showSecretaryActionFeedback(j.message || 'Appointment confirmed with assigned doctor', 'success');
                         window.location.reload();
                     } else {
-                        showSecretaryActionFeedback('Approve failed: ' + (j.message || 'unknown'), 'danger');
+                        showSecretaryActionFeedback('Failed: ' + (j.message || 'unknown'), 'danger');
                     }
                 } catch (err) {
                     console.error(err);
-                    showSecretaryActionFeedback('Approve error', 'danger');
+                    showSecretaryActionFeedback('Error confirming appointment', 'danger');
+                } finally {
+                    this.disabled = false;
                 }
-            };
+            });
 
             const BOOK_DAYS_AHEAD = 150;
             const bookSelectedDateText = document.getElementById('bookSelectedDateText');
@@ -2772,327 +2873,164 @@ function escapeHtml(text) {
 
 <!-- Secretary Record Creation Modal -->
 <div class="modal fade" id="secretaryRecordModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white">
+            <div class="modal-header bg-success text-white py-2">
                 <div class="me-auto pe-3">
-                    <h5 class="modal-title mb-0">Create Clinical Record from Doctor Session</h5>
-                    <div id="secretaryRecordPatientName" class="mt-2 mb-0 fw-bold text-white secretary-record-patient-name"></div>
+                    <h6 class="modal-title mb-0">Create Clinical Record</h6>
+                    <small id="secretaryRecordPatientName" class="fw-bold text-white-50"></small>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <!-- Doctor Media Section -->
-                <div class="mb-4 p-3 bg-light rounded">
-                    <h6 class="mb-3"><i class="bi bi-image"></i> Doctor's Photos</h6>
-                    <div id="doctorPhotoGallery" class="row g-2"></div>
-                </div>
+            <div class="modal-body p-0">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs nav-tabs-sm" id="recordTabs" role="tablist" style="padding: 0 16px; background: #f8f9fa;">
+                    <li class="nav-item"><a class="nav-link active py-2 px-3" data-bs-toggle="tab" href="#tabNotes" role="tab"><i class="bi bi-sticky-note"></i> Notes</a></li>
+                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabClinical" role="tab"><i class="bi bi-clipboard2-pulse"></i> Clinical</a></li>
+                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabOdontogram" role="tab"><i class="bi bi-box"></i> Odontogram</a></li>
+                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabBilling" role="tab"><i class="bi bi-receipt"></i> Billing</a></li>
+                </ul>
 
-                <!-- Doctor Notes Section -->
-                <div class="mb-4 p-3 bg-light rounded">
-                    <h6 class="mb-2"><i class="bi bi-sticky-note"></i> Doctor's Notes</h6>
-                    <div id="doctorNotesDisplay" class="border rounded p-3 bg-white" style="min-height: 80px; white-space: pre-wrap;"></div>
-                </div>
-
-                <!-- Clinical Results -->
-                <div class="mb-4 p-3 bg-light rounded">
-                    <h6 class="mb-3"><i class="bi bi-clipboard2-pulse"></i> Clinical Results & Summary</h6>
-                    <textarea id="recordSummary" class="form-control" rows="3" placeholder="Treatment results, findings, recommendations..."></textarea>
-                </div>
-
-                <!-- Prescriptions -->
-                <div class="mb-4 p-3 border rounded">
-                    <h6 class="mb-3"><i class="bi bi-capsule"></i> Prescriptions</h6>
-                    <div id="prescriptionsBody"></div>
-                    <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="addPrescriptionBtn">
-                        <i class="bi bi-plus"></i> Add Prescription
-                    </button>
-                </div>
-
-                <!-- Follow-up Schedule -->
-                <div class="mb-4 p-3 border rounded border-warning">
-                    <h6 class="mb-3 text-warning"><i class="bi bi-calendar-check"></i> Follow-up Schedule</h6>
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <label class="form-label">Next Follow-up Date</label>
-                            <input type="date" class="form-control" id="followUpDate">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Interval (months)</label>
-                            <input type="number" min="1" class="form-control" id="followUpInterval" placeholder="e.g. 1 for monthly braces">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Total Visits</label>
-                            <input type="number" min="1" class="form-control" id="followUpTotalVisits" placeholder="e.g. 12">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Services and Charges Section -->
-                <div class="mb-4 p-3 border rounded border-primary">
-                    <h6 class="mb-3 text-primary"><i class="bi bi-receipt"></i> Services & Charges (Billing)</h6>
-                    <p class="text-muted small mb-3">Package service prices are fixed from the clinic price list. Only additional charges can have a custom amount.</p>
-
-                    <h6 class="small text-uppercase text-muted mb-2">Package Services</h6>
-                    <div class="table-responsive mb-3">
-                        <table class="table table-sm align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Service</th>
-                                    <th width="150">Price (PHP)</th>
-                                    <th width="60"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="billingServicesBody">
-                                <tr id="billingServicesEmptyRow">
-                                    <td colspan="3" class="text-muted small">No package services added.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
-                        <select id="addServiceSelect" class="form-select form-select-sm" style="max-width:280px;">
-                            <option value="">Add service from price list...</option>
-                        </select>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="addBillingServiceBtn">
-                            <i class="bi bi-plus"></i> Add Service
-                        </button>
-                    </div>
-
-                    <h6 class="small text-uppercase text-muted mb-2">Additional Charges</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm align-middle" id="billingChargesTable">
-                            <thead>
-                                <tr>
-                                    <th>Charge Description</th>
-                                    <th width="150">Amount (PHP)</th>
-                                    <th width="60"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="billingChargesBody">
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="3">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="addBillingChargeBtn">
-                                            <i class="bi bi-plus"></i> Add Charge
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <h6 class="small text-uppercase text-muted mb-2 mt-3">Discounts</h6>
-                    <p class="text-muted small mb-2">Apply senior/PWD discount or a custom rate approved by the doctor.</p>
-                    <div class="row g-2 mb-3">
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountNone" value="none" checked>
-                                <label class="form-check-label" for="discountNone">No discount</label>
+                <div class="tab-content p-3" style="max-height: calc(80vh - 120px); overflow-y: auto;">
+                    <!-- TAB 1: Notes & Photos -->
+                    <div class="tab-pane fade show active" id="tabNotes" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold small">Doctor's Notes</label>
+                                <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
                             </div>
-                            <div class="form-check">
-                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountSenior" value="senior">
-                                <label class="form-check-label" for="discountSenior">Senior Citizen (<?php echo (int) billing_senior_discount_percent(); ?>%)</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountPwd" value="pwd">
-                                <label class="form-check-label" for="discountPwd">PWD (<?php echo (int) billing_pwd_discount_percent(); ?>%)</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountCustom" value="custom">
-                                <label class="form-check-label" for="discountCustom">Custom discount</label>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold small">Doctor's Photos</label>
+                                <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div id="customDiscountFields" style="display:none;">
-                                <label class="form-label">Custom discount (%)</label>
-                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" id="customDiscountPercent" value="20" placeholder="e.g. 25">
-                                <label class="form-label mt-2">Reason / notes</label>
-                                <input type="text" class="form-control form-control-sm" id="discountNotes" maxlength="255" placeholder="e.g. Doctor approved additional discount">
-                            </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-semibold small">Clinical Summary</label>
+                            <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
                         </div>
-                    </div>
-                    <div class="p-2 bg-white border rounded mb-3" id="billingTotalsSummary">
-                        <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
-                        <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;">
-                            <span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span>
-                        </div>
-                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
-                    </div>
-
-                    <div class="mt-3 p-2 bg-light rounded">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="useInstallment">
-                            <label class="form-check-label" for="useInstallment">Enable installment plan (50% down payment)</label>
-                        </div>
-                        <div id="installmentOptions" style="display:none;">
-                            <label class="form-label">Number of monthly terms (customizable)</label>
-                            <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" style="max-width:200px;">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Patient Profiling Form -->
-                <div class="mb-4">
-                    <h6 class="mb-3"><i class="bi bi-clipboard2-pulse"></i> Visit Clinical Exam (This Appointment)</h6>
-                    <p class="text-muted small">Exam findings for this visit go on the patient history record, not background profiling.</p>
-                    <form id="secretaryProfilingForm">
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Case History</label>
-                                <textarea class="form-control visit-clinical-field" name="case_history" rows="2" placeholder="Patient case history for this visit"></textarea>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Prescriptions</label>
+                                <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary mt-1 py-0" id="addPrescriptionBtn" style="font-size: 0.78rem;"><i class="bi bi-plus"></i> Add</button>
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Chief Complaint</label>
-                                <textarea class="form-control visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit"></textarea>
-                            </div>
-                        </div>
-
-                        <h6 class="small text-uppercase text-muted mb-2">Clinical Assessment <span class="text-lowercase fw-normal">(click option again to unselect)</span></h6>
-                        <div class="row mb-3">
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <label class="form-label d-block">Consistency Gingiva</label>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_firm" value="Firm"><label class="form-check-label" for="gingiva_firm">Firm</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_hyper" value="Hyper plastic"><label class="form-check-label" for="gingiva_hyper">Hyper plastic</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" id="gingiva_smooth" value="Smooth"><label class="form-check-label" for="gingiva_smooth">Smooth</label></div>
-                            </div>
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <label class="form-label d-block">Oral Hygiene</label>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_good" value="Good"><label class="form-check-label" for="oral_good">Good</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_fair" value="Fair"><label class="form-check-label" for="oral_fair">Fair</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" id="oral_bad" value="Bad"><label class="form-check-label" for="oral_bad">Bad</label></div>
-                            </div>
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <label class="form-label d-block">Gingival Color</label>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" id="color_pink" value="Pink"><label class="form-check-label" for="color_pink">Pink</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" id="color_red" value="Bright red"><label class="form-check-label" for="color_red">Bright red</label></div>
-                            </div>
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <label class="form-label d-block">Lymph Nodes</label>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" id="lymph_not" value="Not palpable"><label class="form-check-label" for="lymph_not">Not palpable</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" id="lymph_pal" value="Palpable"><label class="form-check-label" for="lymph_pal">Palpable</label></div>
-                            </div>
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <label class="form-label d-block">Tongue</label>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" id="tongue_normal" value="Normal"><label class="form-check-label" for="tongue_normal">Normal</label></div>
-                                <div class="form-check"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" id="tongue_coated" value="Coated"><label class="form-check-label" for="tongue_coated">Coated</label></div>
-                            </div>
-                        </div>
-
-                        <h6 class="small text-uppercase text-muted mb-2">Additional Clinical Findings</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Occlusion</label>
-                                <input type="text" class="form-control visit-clinical-field" name="occlusion" placeholder="e.g., Angle Class I">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Cl. I Type</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_i_type" placeholder="Normal">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.II Division</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_ii_division">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.II SubDivision</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_ii_subdivision">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.II Type</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_ii_type">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.III Division</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_iii_division">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.III SubDivision</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_iii_subdivision">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Cl.III Extra</label>
-                                <input type="text" class="form-control visit-clinical-field" name="cl_iii_extra">
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Operation if any</label>
-                                <input type="text" class="form-control visit-clinical-field" name="operation_if_any">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Blood Sugar</label>
-                                <input type="text" class="form-control visit-clinical-field" name="blood_sugar" placeholder="Value">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Blood Sugar Status</label>
-                                <div>
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_normal">
-                                        <label class="form-check-label">Normal</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_high_low">
-                                        <label class="form-check-label">High/Low</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_low">
-                                        <label class="form-check-label">Low</label>
-                                    </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Follow-up</label>
+                                <div class="row g-1">
+                                    <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;"></div>
+                                    <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;"></div>
+                                    <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;"></div>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Bleeding Time</label>
-                                <input type="text" class="form-control visit-clinical-field" name="bleeding_time">
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Clinical Assessment -->
+                    <div class="tab-pane fade" id="tabClinical" role="tabpanel">
+                        <form id="secretaryProfilingForm">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6"><label class="form-label fw-semibold small">Case History</label><textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Patient case history" style="font-size:0.85rem;"></textarea></div>
+                                <div class="col-md-6"><label class="form-label fw-semibold small">Chief Complaint</label><textarea class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit" style="font-size:0.85rem;"></textarea></div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Clotting Time</label>
-                                <input type="text" class="form-control visit-clinical-field" name="clotting_time">
+
+                            <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Clinical Assessment</h6>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4"><label class="form-label small mb-1">Gingiva Consistency</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Firm" id="gf"><label class="form-check-label small" for="gf">Firm</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Hyper plastic" id="gh"><label class="form-check-label small" for="gh">Hyper</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Smooth" id="gs"><label class="form-check-label small" for="gs">Smooth</label></div></div></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Oral Hygiene</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Good" id="og"><label class="form-check-label small" for="og">Good</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Fair" id="of"><label class="form-check-label small" for="of">Fair</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Bad" id="ob"><label class="form-check-label small" for="ob">Bad</label></div></div></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Gingival Color</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" value="Pink" id="cp"><label class="form-check-label small" for="cp">Pink</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" value="Bright red" id="cr"><label class="form-check-label small" for="cr">Red</label></div></div></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Lymph Nodes</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" value="Not palpable" id="ln"><label class="form-check-label small" for="ln">Not palpable</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" value="Palpable" id="lp"><label class="form-check-label small" for="lp">Palpable</label></div></div></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Tongue</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" value="Normal" id="tn"><label class="form-check-label small" for="tn">Normal</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" value="Coated" id="tc"><label class="form-check-label small" for="tc">Coated</label></div></div></div>
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Radiographic Interpretation</label>
-                                <textarea class="form-control visit-clinical-field" name="radiographic_interpretation" rows="2"></textarea>
+
+                            <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Additional Clinical Findings</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4"><label class="form-label small mb-1">Occlusion</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="occlusion" placeholder="e.g. Angle Class I" style="font-size:0.82rem;"></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Cl. I Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_i_type" placeholder="Normal" style="font-size:0.82rem;"></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Cl.II Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_division" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Cl.II SubDiv</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Cl.II Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_type" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Cl.III Div</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_division" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Cl.III SubDiv</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="col-md-6"><label class="form-label small mb-1">Operation if any</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="operation_if_any" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Blood Sugar</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_sugar" placeholder="Value" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">BS Status</label><div class="d-flex gap-2 flex-wrap"><div class="form-check form-check-sm m-0"><input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_normal" id="bsn"><label class="form-check-label small" for="bsn">Normal</label></div><div class="form-check form-check-sm m-0"><input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_high_low" id="bsh"><label class="form-check-label small" for="bsh">High/Low</label></div></div></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Bleeding Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="bleeding_time" style="font-size:0.82rem;"></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Clotting Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="clotting_time" style="font-size:0.82rem;"></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">B.P.</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_pressure" placeholder="e.g. 120/80" style="font-size:0.82rem;"></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Allergy</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="allergy_notes" placeholder="No" style="font-size:0.82rem;"></div>
+                                <div class="col-md-4"><label class="form-label small mb-1">Blood Diseases</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_diseases" style="font-size:0.82rem;"></div>
+                                <div class="col-md-6"><label class="form-label small mb-1">Radiographic Interpretation</label><textarea class="form-control form-control-sm visit-clinical-field" name="radiographic_interpretation" rows="2" style="font-size:0.82rem;"></textarea></div>
+                                <div class="col-md-3"><label class="form-label small mb-1">Fainting</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="fainting" style="font-size:0.82rem;"></div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Allergy</label>
-                                <input type="text" class="form-control visit-clinical-field" name="allergy_notes" placeholder="No">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Blood Diseases</label>
-                                <input type="text" class="form-control visit-clinical-field" name="blood_diseases">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Fainting</label>
-                                <input type="text" class="form-control visit-clinical-field" name="fainting">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">B.P. (Blood Pressure)</label>
-                                <input type="text" class="form-control visit-clinical-field" name="blood_pressure">
+                        </form>
+                    </div>
+
+                    <!-- TAB 3: Odontogram -->
+                    <div class="tab-pane fade" id="tabOdontogram" role="tabpanel">
+                        <div class="d-flex align-items-center mb-2 gap-2">
+                            <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark"><i class="bi bi-fullscreen"></i> Full Screen</button>
+                            <small class="text-muted">Use 2D chart to set status and comments.</small>
+                        </div>
+                        <div id="secretaryOdontogramViewport" class="odontogram-viewport">
+                            <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;"><i class="bi bi-x-lg"></i></button>
+                            <div id="secretaryOdontogramContainer" class="secretary-odontogram-container">
+                                <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"></iframe>
                             </div>
                         </div>
-                    </form>
-                </div>
-
-                <!-- Odontogram Section -->
-                <div class="mb-4">
-                    <h6 class="mb-3"><i class="bi bi-box"></i> Odontogram</h6>
-                    <p class="text-muted small">Use the 2D chart to set status and comments. Switch to 3D preview if needed.</p>
-                    <div class="d-flex align-items-center mb-2 gap-2">
-                        <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
                     </div>
-                    <div id="secretaryOdontogramViewport" class="odontogram-viewport">
-                        <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                            <i class="bi bi-x-lg"></i> Close
-                        </button>
-                        <div id="secretaryOdontogramContainer" class="secretary-odontogram-container">
-                            <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"></iframe>
+
+                    <!-- TAB 4: Billing -->
+                    <div class="tab-pane fade" id="tabBilling" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-md-7">
+                                <h6 class="small fw-bold mb-2">Services</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-2">
+                                        <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th><th style="width:40px;"></th></tr></thead>
+                                        <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="3" class="text-muted small">No services added.</td></tr></tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex gap-1 mb-3">
+                                    <select id="addServiceSelect" class="form-select form-select-sm" style="max-width:220px; font-size:0.82rem;"><option value="">Add service...</option></select>
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" id="addBillingServiceBtn" style="font-size:0.78rem;"><i class="bi bi-plus"></i></button>
+                                </div>
+
+                                <h6 class="small fw-bold mb-2">Additional Charges</h6>
+                                <table class="table table-sm align-middle mb-2">
+                                    <thead class="table-light"><tr><th>Description</th><th style="width:120px;">Amount</th><th style="width:40px;"></th></tr></thead>
+                                    <tbody id="billingChargesBody"></tbody>
+                                    <tfoot><tr><td colspan="3"><button type="button" class="btn btn-sm btn-outline-secondary py-0" id="addBillingChargeBtn" style="font-size:0.78rem;"><i class="bi bi-plus"></i> Add Charge</button></td></tr></tfoot>
+                                </table>
+                            </div>
+                            <div class="col-md-5">
+                                <h6 class="small fw-bold mb-2">Discount</h6>
+                                <div class="mb-2">
+                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountNone" value="none" checked><label class="form-check-label small" for="discountNone">None</label></div>
+                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountSenior" value="senior"><label class="form-check-label small" for="discountSenior">Senior (<?php echo (int) billing_senior_discount_percent(); ?>%)</label></div>
+                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountPwd" value="pwd"><label class="form-check-label small" for="discountPwd">PWD (<?php echo (int) billing_pwd_discount_percent(); ?>%)</label></div>
+                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountCustom" value="custom"><label class="form-check-label small" for="discountCustom">Custom</label></div>
+                                </div>
+                                <div id="customDiscountFields" style="display:none;">
+                                    <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm mb-1" id="customDiscountPercent" value="20" placeholder="%" style="font-size:0.82rem;">
+                                    <input type="text" class="form-control form-control-sm" id="discountNotes" maxlength="255" placeholder="Reason" style="font-size:0.82rem;">
+                                </div>
+
+                                <div class="p-2 bg-light border rounded mt-2 mb-2" id="billingTotalsSummary">
+                                    <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
+                                    <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
+                                    <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
+                                </div>
+
+                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
+                                <div id="installmentOptions" style="display:none;"><input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Monthly terms" style="max-width:140px; font-size:0.82rem;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success" id="submitSecretaryRecordBtn">
-                    <i class="bi bi-check-lg"></i> Create Record
-                </button>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm" id="submitSecretaryRecordBtn"><i class="bi bi-check-lg"></i> Create Record</button>
             </div>
         </div>
     </div>
@@ -3105,6 +3043,27 @@ function escapeHtml(text) {
     letter-spacing: 0.02em;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
+
+.nav-tabs-sm .nav-link {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 14px;
+}
+.nav-tabs-sm .nav-link.active {
+    color: #16a34a;
+    border-bottom-color: #16a34a;
+    background: transparent;
+}
+.nav-tabs-sm .nav-link:hover {
+    color: #16a34a;
+    background: transparent;
+}
+#secretaryRecordModal .form-label { margin-bottom: 2px; font-size: 0.82rem; }
+#secretaryRecordModal .form-check-sm .form-check-input { width: 16px; height: 16px; }
+#secretaryRecordModal .form-check-sm .form-check-label { font-size: 0.8rem; }
 
 .odontogram-viewport {
     position: relative;
@@ -3143,6 +3102,17 @@ function escapeHtml(text) {
     top: 10px;
     right: 10px;
     z-index: 30;
+}
+
+@media (max-width: 768px) {
+    .secretary-odontogram-container {
+        height: 520px;
+    }
+}
+@media (max-width: 480px) {
+    .secretary-odontogram-container {
+        height: 440px;
+    }
 }
 </style>
 
