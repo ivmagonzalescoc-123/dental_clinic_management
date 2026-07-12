@@ -16,7 +16,7 @@ contact_messages_ensure_table($conn);
     <div class="module-section-nav__track">
         <ul class="nav nav-pills mb-0 contact-message-tabs" id="contactMessageTabs">
             <li class="nav-item"><button type="button" class="nav-link active" data-status="all">All</button></li>
-            <li class="nav-item"><button type="button" class="nav-link" data-status="new">New <span class="badge bg-danger ms-1" id="contactNewCountBadge">0</span></button></li>
+            <li class="nav-item"><button type="button" class="nav-link" data-status="new">New <span class="nav-dot" id="contactNewCountBadge"></span></button></li>
             <li class="nav-item"><button type="button" class="nav-link" data-status="read">Read</button></li>
             <li class="nav-item"><button type="button" class="nav-link" data-status="archived">Archived</button></li>
         </ul>
@@ -97,6 +97,10 @@ contact_messages_ensure_table($conn);
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Hide contact dot when page loads
+    const contactDot = document.getElementById('secretaryContactDot');
+    if (contactDot) contactDot.classList.remove('is-active');
+
     const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     const tbody = document.getElementById('contactMessagesBody');
     const emptyEl = document.getElementById('contactMessagesEmpty');
@@ -153,10 +157,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateBadges(newCount) {
-        if (newCountBadge) newCountBadge.textContent = String(newCount);
+        if (newCountBadge) {
+            if (newCount > 0) {
+                newCountBadge.classList.add('is-active');
+            } else {
+                newCountBadge.classList.remove('is-active');
+            }
+        }
+        // Always hide sidebar dot when on this page
         if (sidebarDot) {
-            sidebarDot.dataset.count = newCount;
-            sidebarDot.classList.toggle('is-active', newCount > 0);
+            sidebarDot.classList.remove('is-active');
         }
     }
 

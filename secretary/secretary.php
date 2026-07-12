@@ -222,7 +222,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span class="ms-2">Appointments</span>
-                    <span class="nav-dot<?php echo ((int)$recordsQueueCount > 0 || (int)$pendingReqCount > 0 || (int)$guestBookingsCount > 0) ? ' is-active' : ''; ?>" id="secretaryAppointmentsDot"></span>
+                    <span class="nav-dot" id="secretaryAppointmentsDot"></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -254,7 +254,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
                     <i class="bi bi-envelope"></i>
                     <span class="ms-2">Contact Us</span>
-                    <span class="nav-dot<?php echo (int)$newContactCount > 0 ? ' is-active' : ''; ?>" id="secretaryContactDot"></span>
+                    <span class="nav-dot" id="secretaryContactDot"></span>
                 </a>
             </li>
 

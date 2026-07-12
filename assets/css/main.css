@@ -586,6 +586,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     transition: margin-left 0.3s ease;
     width: calc(100% - 260px);
     box-sizing: border-box;
+    overflow-x: auto;
 }
 
 .pagetitle {

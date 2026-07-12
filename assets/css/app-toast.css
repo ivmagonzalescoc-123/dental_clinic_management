@@ -43,25 +43,25 @@
 }
 
 .app-toast-success {
-    background: linear-gradient(135deg, #0c4a6e 0%, #1173c1 100%) !important;
+    background: #0c4a6e !important;
     color: #ffffff !important;
     border: none !important;
 }
 
 .app-toast-danger {
-    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%) !important;
+    background: #991b1b !important;
     color: #ffffff !important;
     border: none !important;
 }
 
 .app-toast-warning {
-    background: linear-gradient(135deg, #78350f 0%, #92400e 100%) !important;
+    background: #92400e !important;
     color: #ffffff !important;
     border: none !important;
 }
 
 .app-toast-info {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1173c1 100%) !important;
+    background: #1e3a5f !important;
     color: #ffffff !important;
     border: none !important;
 }

@@ -63,6 +63,20 @@ function doctor_appointment_status_label(string $status): string
     return ucfirst(str_replace('_', ' ', $status));
 }
 
+function dr_cal_format_time_label(?string $start, ?string $end): string
+{
+    if (!$start) return 'All day';
+    $fmt = function (string $t): string {
+        $h = (int) date('g', strtotime($t));
+        $m = date('i', strtotime($t));
+        $ap = strtolower(date('A', strtotime($t)));
+        return $m === '00' ? $h . $ap : $h . ':' . $m . $ap;
+    };
+    $label = $fmt($start);
+    if ($end) $label .= ' - ' . $fmt($end);
+    return $label;
+}
+
 // Get logged-in doctor ID
 $doctor_id = $_SESSION['user_id'] ?? 0;
 if ($doctor_id <= 0) {
@@ -289,13 +303,7 @@ foreach ($generalAppointments as $entry) {
 
     $startTime = (string)($entry['start_time'] ?? '');
     $endTime = (string)($entry['end_time'] ?? '');
-    $timeLabel = 'All day';
-    if ($startTime !== '') {
-        $timeLabel = substr($startTime, 0, 5);
-        if ($endTime !== '') {
-            $timeLabel .= ' - ' . substr($endTime, 0, 5);
-        }
-    }
+    $timeLabel = dr_cal_format_time_label($startTime ?: null, $endTime ?: null);
 
     if (!isset($calendarCountsByDate[$eventDate])) {
         $calendarCountsByDate[$eventDate] = [
@@ -475,13 +483,7 @@ if ($stmt) {
                                     $eventDate = (string)($appt['event_date'] ?? '');
                                     $startTime = (string)($appt['start_time'] ?? '');
                                     $endTime = (string)($appt['end_time'] ?? '');
-                                    $timeLabel = 'All day';
-                                    if ($startTime !== '') {
-                                        $timeLabel = substr($startTime, 0, 5);
-                                        if ($endTime !== '') {
-                                            $timeLabel .= ' - ' . substr($endTime, 0, 5);
-                                        }
-                                    }
+                                    $timeLabel = dr_cal_format_time_label($startTime ?: null, $endTime ?: null);
                                     $apptStatus = (string)($appt['status'] ?? 'scheduled');
                                     $apptId = (int)($appt['appointment_id'] ?? 0);
                                 ?>
@@ -696,6 +698,15 @@ if ($stmt) {
 
 #doctorAppointmentsCalendar {
     min-height: 560px;
+}
+
+#doctorCalendarLegend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.82rem;
+    color: #475569;
 }
 
 #doctorAppointmentsCalendar .fc-toolbar-title {
@@ -962,8 +973,9 @@ function initDoctorAppointmentsCalendar() {
 
     const legendEl = document.getElementById('doctorCalendarLegend');
     if (legendEl) {
-        const totalDays = Object.keys(doctorCalendarCountsByDate).length;
-        legendEl.textContent = 'Legend: A = appointments, F = follow-up schedules. Hover a day to see names and time. Days with at least one booking: ' + totalDays + '.';
+        legendEl.innerHTML = '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#dcfce7;border:1px solid #86efac;"></span><span>A = Appointments</span></span>'
+            + '<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;"><span style="display:inline-block;width:10px;height:10px;border-radius:999px;background:#dbeafe;border:1px solid #93c5fd;"></span><span>F = Follow-up Visits</span></span>'
+            + '<span style="color:#6b7280;font-size:0.82em;">Follow-ups are return visits scheduled after an appointment. Click a date to filter the list below.</span>';
     }
 
     const clearBtn = document.getElementById('clearAppointmentsDateFilter');

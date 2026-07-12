@@ -95,7 +95,33 @@ if (!function_exists('table_exists') || (table_exists($conn, 'billing') && table
     error_log('Billing page: missing required tables (billing/appointments/patients). Skipping billing query.');
 }
 
-// Payments removed: no payment methods
+// Fetch payment history
+$payments = [];
+if (table_exists($conn, 'payments')) {
+    $paySql = "
+        SELECT p.payment_id, p.billing_id, p.amount, p.payment_method, p.or_number, p.notes, p.paid_at,
+               b.total_amount, b.balance,
+               a.appointment_date,
+               pt.first_name, pt.last_name,
+               u.first_name AS recorded_by_name
+        FROM payments p
+        INNER JOIN billing b ON p.billing_id = b.billing_id
+        INNER JOIN appointments a ON b.appointment_id = a.appointment_id
+        INNER JOIN patients pt ON a.patient_id = pt.patient_id
+        LEFT JOIN users u ON p.recorded_by = u.user_id
+        ORDER BY p.paid_at DESC
+    ";
+    try {
+        $payResult = $conn->query($paySql);
+        if ($payResult) {
+            while ($pRow = $payResult->fetch_assoc()) {
+                $payments[] = $pRow;
+            }
+        }
+    } catch (Throwable $e) {
+        error_log('Billing page: payments query failed: ' . $e->getMessage());
+    }
+}
 
 // --- Dashboard Stats ---
 $thisMonth = date('Y-m');
@@ -209,23 +235,42 @@ if (!$hasAnyData) {
     </div>
 </div>
 
-<!-- Billing Records -->
-<div class="card border-0">
-    <div class="card-header">
-        <h2 class="card-title mb-0">
+<!-- Billing Tabs -->
+<ul class="nav nav-tabs mb-3" id="billingTabs">
+    <li class="nav-item">
+        <a class="nav-link active" data-bs-toggle="tab" href="#tabBillingRecords" style="font-size:0.85rem;">
             <i class="bi bi-receipt"></i> Billing Records
-        </h2>
-    </div>
-    <div class="card-body">
-        <!-- Filters -->
-        <div class="module-search-toolbar mb-3 flex-wrap gap-2">
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" data-bs-toggle="tab" href="#tabPaymentHistory" style="font-size:0.85rem;">
+            <i class="bi bi-cash-stack"></i> Payment History
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <!-- Billing Records Tab -->
+    <div class="tab-pane fade show active" id="tabBillingRecords">
+        <div class="card border-0">
+            <div class="card-header">
+                <h2 class="card-title mb-0">
+                    <i class="bi bi-receipt"></i> Billing Records
+                </h2>
+            </div>
+            <div class="card-body">
+                <!-- Filters -->
+                <div class="module-search-toolbar mb-3 flex-wrap gap-2">
             <select id="billingFilterStatus" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
                 <option value="all">All Statuses</option>
                 <option value="unpaid">Outstanding</option>
                 <option value="partial">Partial</option>
                 <option value="paid">Paid</option>
+                <option value="overdue">Overdue</option>
             </select>
-            <input type="date" id="billingFilterDate" class="form-control form-control-sm" style="width: auto; min-width: 160px;" title="Filter by service date">
+            <input type="date" id="billingFilterDateFrom" class="form-control form-control-sm" style="width: auto; min-width: 140px;" title="From date">
+            <span class="text-muted align-self-center">–</span>
+            <input type="date" id="billingFilterDateTo" class="form-control form-control-sm" style="width: auto; min-width: 140px;" title="To date">
             <div class="unified-table-search-wrap">
                 <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                 <input id="billingSearch" type="search" class="form-control unified-table-search-input"
@@ -264,6 +309,40 @@ if (!$hasAnyData) {
                             ?>
                             <tr class="billing-data-row" data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>"
                                 data-date="<?php echo htmlspecialchars($billing['appointment_date']); ?>"
+                                data-overdue="<?php
+                                    $bStatus = strtolower($billing['status'] ?? 'unpaid');
+                                    $bBalance = (float)($billing['balance'] ?? 0);
+                                    $bCreatedAt = (string)($billing['created_at'] ?? '');
+                                    $bBillingId = (int)($billing['billing_id'] ?? 0);
+                                    $isOverdue = 0;
+                                    if ($bStatus !== 'paid' && $bBalance > 0) {
+                                        // Check if billing has installment terms
+                                        $instChk = $conn->prepare('SELECT installment_id FROM billing_installments WHERE billing_id = ? LIMIT 1');
+                                        if ($instChk) {
+                                            $instChk->bind_param('i', $bBillingId);
+                                            $instChk->execute();
+                                            $instRow = $instChk->get_result()->fetch_assoc();
+                                            $instChk->close();
+                                            if ($instRow) {
+                                                // Installment: check if any term's due_date has passed
+                                                $termChk = $conn->prepare('SELECT term_id FROM billing_installment_terms WHERE installment_id = ? AND status = "pending" AND due_date < CURDATE() LIMIT 1');
+                                                if ($termChk) {
+                                                    $termChk->bind_param('i', $instRow['installment_id']);
+                                                    $termChk->execute();
+                                                    $termRow = $termChk->get_result()->fetch_assoc();
+                                                    $termChk->close();
+                                                    if ($termRow) $isOverdue = 1;
+                                                }
+                                            } else {
+                                                // Non-installment: overdue if no payment after 1 day of creation
+                                                if ($bCreatedAt !== '' && (time() - strtotime($bCreatedAt)) > 86400) {
+                                                    $isOverdue = 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    echo $isOverdue;
+                                ?>"
                                 data-patient="<?php echo htmlspecialchars(strtolower($billing['first_name'] . ' ' . $billing['last_name'])); ?>"
                                 data-doctor="<?php echo htmlspecialchars(strtolower(trim(($billing['doctor_first_name'] ?? '') . ' ' . ($billing['doctor_last_name'] ?? '')))); ?>"
                                 data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>"
@@ -339,10 +418,66 @@ if (!$hasAnyData) {
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
+        </div><!-- end card-body -->
+        </div><!-- end card -->
+    </div><!-- end billing records tab pane -->
 
-<!-- Invoice Modal -->
+    <!-- Payment History Tab -->
+    <div class="tab-pane" id="tabPaymentHistory" style="display: none;">
+        <div class="card border-0">
+            <div class="card-body">
+                <div class="module-search-toolbar mb-3 flex-wrap gap-2">
+                    <div class="unified-table-search-wrap">
+                        <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+                        <input id="paymentSearch" type="search" class="form-control unified-table-search-input"
+                            placeholder="Search patient, OR number, or method..." aria-label="Search payments">
+                        <button type="button" class="unified-table-search-clear" id="paymentSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+                    </div>
+                    <small class="text-muted">Showing <span id="paymentCount"><?php echo count($payments); ?></span> payments</small>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover" id="paymentTable">
+                        <thead>
+                            <tr>
+                                <th>OR #</th>
+                                <th>Patient</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Balance After</th>
+                                <th>Date</th>
+                                <th>Recorded By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($payments)): ?>
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">No payments recorded yet.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($payments as $pay): ?>
+                                    <tr class="payment-data-row"
+                                        data-search="<?php echo htmlspecialchars(strtolower(
+                                            $pay['first_name'] . ' ' . $pay['last_name'] . ' ' .
+                                            $pay['or_number'] . ' ' . $pay['payment_method']
+                                        )); ?>">
+                                        <td><strong><?php echo htmlspecialchars($pay['or_number']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($pay['first_name'] . ' ' . $pay['last_name']); ?></td>
+                                        <td class="text-success fw-bold">₱<?php echo number_format((float)$pay['amount'], 2); ?></td>
+                                        <td><?php echo htmlspecialchars(ucfirst($pay['payment_method'])); ?></td>
+                                        <td>₱<?php echo number_format((float)($pay['balance'] ?? 0), 2); ?></td>
+                                        <td><?php echo htmlspecialchars(date('M d, Y g:i A', strtotime($pay['paid_at']))); ?></td>
+                                        <td><?php echo htmlspecialchars($pay['recorded_by_name'] ?? 'System'); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- end tab-content -->
 <div class="modal fade" id="invoiceModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
@@ -612,7 +747,8 @@ if (!$hasAnyData) {
 
     function filterBillingTable() {
         const status = (document.getElementById('billingFilterStatus')?.value || 'all').toLowerCase();
-        const dateFilter = (document.getElementById('billingFilterDate')?.value || '').trim();
+        const dateFrom = (document.getElementById('billingFilterDateFrom')?.value || '').trim();
+        const dateTo = (document.getElementById('billingFilterDateTo')?.value || '').trim();
         const rawQ = (document.getElementById('billingSearch')?.value || '').toLowerCase().trim();
         const q = rawQ.replace(/^#/, '');
         const tbody = document.querySelector('#billingTable tbody');
@@ -624,13 +760,19 @@ if (!$hasAnyData) {
         Array.from(tbody.querySelectorAll('tr.billing-data-row')).forEach(row => {
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
             const rowDate = row.getAttribute('data-date') || '';
+            const rowOverdue = row.getAttribute('data-overdue') === '1';
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
             let match = true;
 
-            if (status !== 'all' && rowStatus !== status) {
+            if (status === 'overdue') {
+                if (!rowOverdue) match = false;
+            } else if (status !== 'all' && rowStatus !== status) {
                 match = false;
             }
-            if (dateFilter && rowDate !== dateFilter) {
+            if (dateFrom && rowDate < dateFrom) {
+                match = false;
+            }
+            if (dateTo && rowDate > dateTo) {
                 match = false;
             }
             if (q && !searchBlob.includes(q)) {
@@ -660,11 +802,13 @@ if (!$hasAnyData) {
 
     document.addEventListener('DOMContentLoaded', function () {
         const statusEl = document.getElementById('billingFilterStatus');
-        const dateEl = document.getElementById('billingFilterDate');
+        const dateFromEl = document.getElementById('billingFilterDateFrom');
+        const dateToEl = document.getElementById('billingFilterDateTo');
         const searchEl = document.getElementById('billingSearch');
 
         if (statusEl) statusEl.addEventListener('change', filterBillingTable);
-        if (dateEl) dateEl.addEventListener('change', filterBillingTable);
+        if (dateFromEl) dateFromEl.addEventListener('change', filterBillingTable);
+        if (dateToEl) dateToEl.addEventListener('change', filterBillingTable);
         const clearEl = document.getElementById('billingSearchClear');
         if (searchEl) {
             searchEl.addEventListener('input', function () {
@@ -690,7 +834,50 @@ if (!$hasAnyData) {
         }
 
         filterBillingTable();
+
+        // Payment history search
+        const paymentSearchEl = document.getElementById('paymentSearch');
+        const paymentClearEl = document.getElementById('paymentSearchClear');
+        if (paymentSearchEl) {
+            paymentSearchEl.addEventListener('input', function () {
+                if (paymentClearEl) paymentClearEl.style.display = paymentSearchEl.value ? '' : 'none';
+                clearTimeout(paymentSearchEl._timer);
+                paymentSearchEl._timer = setTimeout(filterPaymentTable, 150);
+            });
+            paymentSearchEl.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    paymentSearchEl.value = '';
+                    if (paymentClearEl) paymentClearEl.style.display = 'none';
+                    filterPaymentTable();
+                }
+            });
+        }
+        if (paymentClearEl && paymentSearchEl) {
+            paymentClearEl.addEventListener('click', function () {
+                paymentSearchEl.value = '';
+                paymentClearEl.style.display = 'none';
+                filterPaymentTable();
+                paymentSearchEl.focus();
+            });
+        }
     });
+</script>
+
+<script>
+    function filterPaymentTable() {
+        const q = (document.getElementById('paymentSearch')?.value || '').toLowerCase().trim();
+        const tbody = document.querySelector('#paymentTable tbody');
+        if (!tbody) return;
+        let visible = 0;
+        Array.from(tbody.querySelectorAll('tr.payment-data-row')).forEach(row => {
+            const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
+            const match = !q || searchBlob.includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        const countEl = document.getElementById('paymentCount');
+        if (countEl) countEl.textContent = visible;
+    }
 </script>
 
 <script>

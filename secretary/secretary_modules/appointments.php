@@ -642,13 +642,13 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'appointments' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($view); ?>" style="font-size:0.85rem;">
             <i class="bi bi-calendar-check"></i> Appointments
-            <span class="nav-dot is-active" id="dotAppointments" data-viewed=""></span>
+            <span class="nav-dot" id="dotAppointments" data-viewed=""></span>
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
             <i class="bi bi-person-plus"></i> New Customers
-            <span class="nav-dot<?php echo (int)$guestBookingsCount > 0 ? ' is-active' : ''; ?>" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
+            <span class="nav-dot" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
         </a>
     </li>
 </ul>
@@ -1122,9 +1122,9 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($filterKey); ?>" data-subnav="<?php echo htmlspecialchars($filterKey); ?>">
                         <?php echo htmlspecialchars($filterOpt['label']); ?>
                         <?php if ($filterKey === 'records_queue' && (int)$recordsQueueCount > 0): ?>
-                            <span class="nav-dot is-active" id="dotRecordsQueue" data-count="<?php echo (int)$recordsQueueCount; ?>"></span>
+                            <span class="nav-dot" id="dotRecordsQueue" data-count="<?php echo (int)$recordsQueueCount; ?>"></span>
                         <?php elseif ($filterKey === 'reschedule' && (int)$pendingReqCount > 0): ?>
-                            <span class="nav-dot is-active" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
+                            <span class="nav-dot" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -1473,6 +1473,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     border-radius: 14px;
     background: #f4f8ff;
     padding: 14px;
+    overflow: hidden;
 }
 .secretary-booking-calendar .selected-date-chip {
     display: inline-flex;
@@ -1614,13 +1615,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             </div>
                     <form id="bookAppointmentForm" method="POST" action="#" class="ux-form-shell">
                 <div class="modal-body">
-                    <!-- Step 1: Patient Info -->
-                    <div id="stepPatient" class="modal-step">
-                        <!-- Patient selection (single dropdown below) -->
-
-                        <div class="mb-3">
-                            <label for="bookPatientSelect" class="form-label"><strong>Select Patient</strong></label>
-                            <select id="bookPatientSelect" name="patient_id" class="form-select compact-control" required>
+                    <!-- Compact top row: Patient + Doctor + Type -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label for="bookPatientSelect" class="form-label fw-semibold small">Patient</label>
+                            <select id="bookPatientSelect" name="patient_id" class="form-select form-select-sm" required>
                                 <option value="">-- Select Patient --</option>
                                 <?php foreach ($patients as $p): ?>
                                     <?php $fullname = trim($p['first_name'] . ' ' . ($p['middle_name'] ? $p['middle_name'] . ' ' : '') . $p['last_name']); ?>
@@ -1628,34 +1627,29 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                    </div>
-
-                    <!-- Step 2: Booking Info -->
-                    <div id="stepBooking" class="modal-step" style="display:none;">
-                        <div class="mb-3">
-                            <label for="bookDoctorSelect" class="form-label"><strong>Select Doctor</strong></label>
-                            <select id="bookDoctorSelect" name="user_id" class="form-select compact-control" required>
+                        <div class="col-md-4">
+                            <label for="bookDoctorSelect" class="form-label fw-semibold small">Doctor</label>
+                            <select id="bookDoctorSelect" name="user_id" class="form-select form-select-sm" required>
                                 <option value="">-- Select Doctor --</option>
                                 <?php foreach ($doctors as $d): ?>
                                     <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
-
-                        <div class="mb-3">
-                            <label for="bookAppointmentType" class="form-label"><strong>Appointment Type</strong></label>
-                            <select id="bookAppointmentType" name="is_online_appointment" class="form-select compact-control" required>
+                        <div class="col-md-3">
+                            <label for="bookAppointmentType" class="form-label fw-semibold small">Type</label>
+                            <select id="bookAppointmentType" name="is_online_appointment" class="form-select form-select-sm" required>
                                 <option value="0" selected>Walk-In</option>
                                 <option value="1">Online</option>
                             </select>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <div id="secretaryServiceSelector" class="service-selector">
-                                <small class="text-muted">Select a doctor first to load available services</small>
-                            </div>
+                    <div class="mb-3">
+                        <div id="secretaryServiceSelector" class="service-selector">
+                            <small class="text-muted">Select a doctor first to load available services</small>
                         </div>
+                    </div>
 
                         <div class="mb-3">
                             <label for="bookAppointmentDateInput" class="form-label"><strong>Appointment Date</strong></label>
@@ -1665,7 +1659,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                     <span class="fw-semibold">Clinic Calendar</span>
                                     <span id="bookSelectedDateText" class="selected-date-chip">No date selected</span>
                                 </div>
-                                <div id="bookCalendar">Loading available dates...</div>
+                                <div id="bookCalendar"></div>
                                 <div class="calendar-legend">
                                     <span><span class="legend-dot legend-open"></span>Available</span>
                                     <span><span class="legend-dot legend-busy"></span>With bookings</span>
@@ -1686,7 +1680,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             <label for="bookReason" class="form-label"><strong>Reason for Appointment</strong></label>
                             <textarea class="form-control" id="bookReason" name="reason" rows="3" placeholder="Enter reason for appointment" required></textarea>
                         </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -1810,12 +1803,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         // Handle book appointment form: booking requires existing patient_id
         const bookForm = document.getElementById('bookAppointmentForm');
         if (bookForm) {
-            const stepPatient = document.getElementById('stepPatient');
-            const stepBooking = document.getElementById('stepBooking');
-            // Show both sections for secretary: select patient + booking details
-            if (stepPatient) stepPatient.style.display = '';
-            if (stepBooking) stepBooking.style.display = '';
-
             // Patient selection (single dropdown)
             const bookPatientSelect = document.getElementById('bookPatientSelect');
             if (bookPatientSelect) {
@@ -2125,7 +2112,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 }
 
                 clearBookDateSelection();
-                cal.innerHTML = '<div class="text-muted small p-2">Loading calendar...</div>';
 
                 try {
                     let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(days);
@@ -2163,6 +2149,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             const bookModal = document.getElementById('bookAppointmentModal');
             if (bookModal) {
                 bookModal.addEventListener('shown.bs.modal', function () {
+                    renderBookCalendar();
                     loadAvailableDates(BOOK_DAYS_AHEAD);
                     setTimeout(function() {
                         if (bookCalendarInstance) {
@@ -3742,10 +3729,12 @@ window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(dirname(dirname($_SER
 
 <script>
 (function() {
+    // Pyramid red dot system:
+    // Root (sidebar) → only disappears when ALL branches are clear
+    // Branch (sub-nav) → only disappears when ALL leaves are clear
+    // Leaf (filter) → disappears when clicked
+
     const STORAGE_KEY = 'sec_viewed_tabs';
-    const currentView = '<?php echo htmlspecialchars($view); ?>';
-    const currentSection = '<?php echo htmlspecialchars($activeSection); ?>';
-    const role = '<?php echo htmlspecialchars($_SESSION['role'] ?? ''); ?>';
 
     function getViewedTabs() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
@@ -3755,83 +3744,75 @@ window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(dirname(dirname($_SER
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
     }
 
-    // Mark current tab as viewed
-    function markCurrentTabViewed() {
-        const viewed = getViewedTabs();
-        const key = role + ':' + currentSection + ':' + currentView;
-        viewed[key] = Date.now();
-        setViewedTabs(viewed);
-    }
-
-    // Check if a specific dot should be shown (not viewed)
-    function shouldShowDot(section, view) {
-        const viewed = getViewedTabs();
-        const key = role + ':' + section + ':' + view;
-        const lastViewed = viewed[key] || 0;
-        // Dot shows if never viewed or viewed more than 24 hours ago
-        return !lastViewed || (Date.now() - lastViewed) > 86400000;
-    }
-
-    // Update sidebar dot based on sub-dots
-    function updateSidebarDot() {
-        const sidebarDot = document.getElementById('secretaryAppointmentsDot');
-        if (!sidebarDot) return;
-
-        // Check all sub-tabs that have dots
-        const subDots = document.querySelectorAll('.nav-dot[data-count]');
-        let hasActiveDot = false;
-
-        subDots.forEach(function(dot) {
-            const count = parseInt(dot.dataset.count || '0', 10);
-            if (count > 0) {
-                const view = dot.id === 'dotRecordsQueue' ? 'records_queue' :
-                             dot.id === 'dotReschedule' ? 'reschedule' :
-                             dot.id === 'dotNewCustomers' ? 'new_customers' : '';
-                const section = dot.id === 'dotNewCustomers' ? 'new_customers' : 'appointments';
-                if (view && shouldShowDot(section, view)) {
-                    hasActiveDot = true;
-                }
-            }
-        });
-
-        // Also check the appointments section tab dot
-        const apptDot = document.getElementById('dotAppointments');
-        if (apptDot && apptDot.classList.contains('is-active')) {
-            if (shouldShowDot('appointments', 'all')) {
-                hasActiveDot = true;
-            }
-        }
-
-        sidebarDot.classList.toggle('is-active', hasActiveDot);
-    }
-
-    // Mark current tab viewed and update dots
-    markCurrentTabViewed();
-
-    // Update sub-tab dots based on viewed status
+    // Show dots for items that haven't been viewed
     document.querySelectorAll('.nav-dot[data-count]').forEach(function(dot) {
         const count = parseInt(dot.dataset.count || '0', 10);
-        if (count <= 0) {
-            dot.classList.remove('is-active');
-            return;
-        }
         const view = dot.id === 'dotRecordsQueue' ? 'records_queue' :
                      dot.id === 'dotReschedule' ? 'reschedule' :
-                     dot.id === 'dotNewCustomers' ? 'new_customers' : '';
+                     dot.id === 'dotNewCustomers' ? 'new_customers' :
+                     dot.id === 'dotAppointments' ? 'appointments' : '';
         const section = dot.id === 'dotNewCustomers' ? 'new_customers' : 'appointments';
-        if (view && !shouldShowDot(section, view)) {
+
+        if (count > 0 && view) {
+            const viewed = getViewedTabs();
+            const key = section + ':' + view;
+            if (!viewed[key]) {
+                dot.classList.add('is-active');
+            }
+        }
+
+        // When clicked, hide permanently
+        dot.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const viewed = getViewedTabs();
+            const key = section + ':' + view;
+            viewed[key] = Date.now();
+            setViewedTabs(viewed);
             dot.classList.remove('is-active');
+            updateDots();
+        });
+
+        // Also hide when the parent link is clicked
+        const parentLink = dot.closest('a');
+        if (parentLink) {
+            parentLink.addEventListener('click', function() {
+                const viewed = getViewedTabs();
+                const key = section + ':' + view;
+                viewed[key] = Date.now();
+                setViewedTabs(viewed);
+                dot.classList.remove('is-active');
+                updateDots();
+            });
         }
     });
 
-    // Update sidebar dot
-    const sidebarDot = document.getElementById('secretaryAppointmentsDot');
-    if (sidebarDot) {
-        let hasActiveDot = false;
-        document.querySelectorAll('.nav-dot.is-active').forEach(function(dot) {
-            if (dot !== sidebarDot) hasActiveDot = true;
+    // Pyramid update: check leaves → branch → root
+    function updateDots() {
+        // 1. Check sub-nav dots (branches)
+        const appointmentSubDots = document.querySelectorAll('#dotRecordsQueue, #dotReschedule, #dotNewCustomers');
+        let hasAnySubDot = false;
+        appointmentSubDots.forEach(function(dot) {
+            if (dot.classList.contains('is-active')) hasAnySubDot = true;
         });
-        sidebarDot.classList.toggle('is-active', hasActiveDot);
+
+        // Update appointments sub-nav dot (branch)
+        const apptDot = document.getElementById('dotAppointments');
+        if (apptDot) {
+            apptDot.classList.toggle('is-active', hasAnySubDot);
+        }
+
+        // 2. Check sidebar dot (root) - only if any dot is active
+        const sidebarDot = document.getElementById('secretaryAppointmentsDot');
+        if (sidebarDot) {
+            let hasAnyActiveDot = false;
+            document.querySelectorAll('.nav-dot.is-active').forEach(function(dot) {
+                if (dot !== sidebarDot) hasAnyActiveDot = true;
+            });
+            sidebarDot.classList.toggle('is-active', hasAnyActiveDot);
+        }
     }
+
+    // Initialize
+    updateDots();
 })();
 </script>

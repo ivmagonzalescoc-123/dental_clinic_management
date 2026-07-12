@@ -167,6 +167,10 @@ async function doStartSession(appointmentId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Hide arrivals dot when page loads
+    const docArrDot = document.getElementById('doctorArrivalsDot');
+    if (docArrDot) docArrDot.classList.remove('is-active');
+
     loadDocArrival(DOC_TODAY);
     fetch('../assets/api/arrivals/get_today_schedule.php?date=' + DOC_TOMORROW + '&doctor_id=' + DOC_UID)
         .then(function(r) { return r.json(); })

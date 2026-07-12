@@ -319,6 +319,10 @@ document.getElementById('arrivedConfirmBtn')?.addEventListener('click', async fu
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Hide arrivals dot when page loads
+    const arrDot = document.getElementById('secretaryArrivalsDot');
+    if (arrDot) arrDot.classList.remove('is-active');
+
     loadArrivalSchedule(ARR_TODAY);
     fetch('../assets/api/arrivals/get_today_schedule.php?date=' + ARR_TOMORROW)
         .then(function(r) { return r.json(); })

@@ -51,6 +51,7 @@ if (!function_exists('build_reminder_template')) {
                 return [
                     'subject' => 'Appointment reminder: 24 hours before',
                     'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is scheduled at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, '24h'),
                     'sms' => "Reminder: You have a dental appointment tomorrow at {$scheduledStart} (ID #{$appointmentId}).",
                     'title' => 'Appointment reminder (24h)',
                     'body' => "{$patientDisplay} has an appointment tomorrow at {$scheduledStart}."
@@ -78,6 +79,7 @@ if (!function_exists('build_reminder_template')) {
                 return [
                     'subject' => 'Appointment reminder: 1 hour before',
                     'email' => "Hello {$patientName},\n\nYour appointment starts in about 1 hour at {$scheduledStart}.\nAppointment ID: #{$appointmentId}\n\nIf you cannot attend, please contact the clinic as soon as possible.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, '1h'),
                     'sms' => "Reminder: Appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart}).",
                     'title' => 'Appointment in 1 hour',
                     'body' => "{$patientDisplay} has an appointment in about 1 hour ({$scheduledStart})."
@@ -105,6 +107,7 @@ if (!function_exists('build_reminder_template')) {
                 return [
                     'subject' => 'Missed appointment alert',
                     'email' => "Hello {$patientName},\n\nOur records show that your appointment time ({$scheduledStart}) may have been missed.\nAppointment ID: #{$appointmentId}\n\nPlease contact the clinic immediately so our secretary can help reschedule or confirm cancellation.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, 'missed'),
                     'sms' => "Alert: It looks like you missed appointment #{$appointmentId} at {$scheduledStart}. Please contact the clinic to reschedule.",
                     'title' => 'Possible missed appointment',
                     'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} appears missed. Secretary follow-up may be needed."
@@ -123,6 +126,7 @@ if (!function_exists('build_reminder_template')) {
                 return [
                     'subject' => 'Appointment marked as no-show',
                     'email' => "Hello {$patientName},\n\nBy end of day, appointment #{$appointmentId} has been marked as no-show.\nPlease contact the clinic so the secretary can help with next steps.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, 'no_show'),
                     'sms' => "Update: Appointment #{$appointmentId} is now marked as no-show. Please contact the clinic for next steps.",
                     'title' => 'Appointment marked no-show',
                     'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} was marked no-show."
@@ -303,7 +307,8 @@ while ($row = $res->fetch_assoc()) {
         $to = (string)($row['patient_email'] ?? '');
         $subject = (string)$content['subject'];
         $message = (string)$content['email'];
-        $sent = reminder_send_email($to, $subject, $message);
+        $htmlMessage = $content['html'] ?? null;
+        $sent = reminder_send_email($to, $subject, $message, $htmlMessage);
     } elseif ($channel === 'sms') {
         $to = (string)($row['patient_phone'] ?? '');
         $message = (string)$content['sms'];

@@ -83,6 +83,7 @@ if ($patient_id) {
     border-radius: 14px;
     background: #f4f8ff;
     padding: 14px;
+    overflow: hidden;
 }
 .patient-appt-card .selected-date-chip {
     display: inline-flex;
