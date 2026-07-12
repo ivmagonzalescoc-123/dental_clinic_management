@@ -130,7 +130,7 @@ switch ($role_key) {
             <a href="doctor.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
                 <div class="ms-2">
-                    <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
+                    <span class="fw-bold">Dental Clinic</span>
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
@@ -176,8 +176,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed" href="doctor.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
                     <span>Appointments</span>
-                    <span id="doctorApptIndicator" class="badge bg-info ms-auto"
-                        style="margin-left:8px;display:none;font-size:0.75rem;">New</span>
+                    <span class="nav-dot" id="doctorApptDot"></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -196,8 +195,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed" href="doctor.php?page=arrivals" data-tooltip="My Patients Today" title="My Patients Today">
                     <i class="bi bi-person-check"></i>
                     <span>My Patients Today</span>
-                    <span id="doctorArrivalsBadge" class="badge bg-success ms-auto"
-                        style="margin-left:8px;"><?php echo (int)$doctor_today_count; ?></span>
+                    <span class="nav-dot<?php echo (int)$doctor_today_count > 0 ? ' is-active' : ''; ?>" id="doctorArrivalsDot"></span>
                 </a>
             </li>
 

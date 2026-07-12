@@ -209,7 +209,7 @@ function secretary_patient_format_datetime(?string $value): string
                         <button class="nav-link active py-1 px-2" id="patient-tab-profile" data-bs-toggle="tab" data-bs-target="#patientTabProfile" type="button" role="tab" style="font-size:0.82rem;">Profile</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link py-1 px-2" id="patient-tab-background" data-bs-toggle="tab" data-bs-target="#patientTabBackground" type="button" role="tab" style="font-size:0.82rem;">Medical</button>
+                        <button class="nav-link py-1 px-2" id="patient-tab-background" data-bs-toggle="tab" data-bs-target="#patientTabBackground" type="button" role="tab" style="font-size:0.82rem;">Profiling</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link py-1 px-2" id="patient-tab-account" data-bs-toggle="tab" data-bs-target="#patientTabAccount" type="button" role="tab" style="font-size:0.82rem;">Account</button>
@@ -593,13 +593,13 @@ document.getElementById('profilingForm').addEventListener('submit', function (ev
         .then(function (response) { return response.json(); })
         .then(function (result) {
             if (result.success) {
-                notifySecretaryPatients('Medical background saved successfully.', 'success');
+                notifySecretaryPatients('Patient profiling saved successfully.', 'success');
             } else {
-                notifySecretaryPatients(result.message || 'Unable to save medical background.', 'danger');
+                notifySecretaryPatients(result.message || 'Unable to save patient profiling.', 'danger');
             }
         })
         .catch(function () {
-            notifySecretaryPatients('Unable to save medical background.', 'danger');
+            notifySecretaryPatients('Unable to save patient profiling.', 'danger');
         });
 });
 

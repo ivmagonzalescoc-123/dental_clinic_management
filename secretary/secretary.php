@@ -74,6 +74,30 @@ try {
     $newContactCount = 0;
 }
 
+// Compute counts for sidebar dots
+$recordsQueueCount = 0;
+$pendingReqCount = 0;
+$guestBookingsCount = 0;
+try {
+    // Records queue: appointments with clinical records but no secretary record yet
+    $rqStmt = $conn->query("SELECT COUNT(*) AS c FROM appointments a INNER JOIN clinical_records cr ON a.appointment_id = cr.appointment_id WHERE a.status = 'in_progress' AND cr.status != 'complete'");
+    if ($rqStmt && ($rqRow = $rqStmt->fetch_assoc())) {
+        $recordsQueueCount = (int)($rqRow['c'] ?? 0);
+    }
+    // Pending reschedule requests
+    $rrStmt = $conn->query("SELECT COUNT(*) AS c FROM appointment_reschedule_requests WHERE status = 'pending'");
+    if ($rrStmt && ($rrRow = $rrStmt->fetch_assoc())) {
+        $pendingReqCount = (int)($rrRow['c'] ?? 0);
+    }
+    // Guest bookings (new customers)
+    $gbStmt = $conn->query("SELECT COUNT(*) AS c FROM bookings WHERE status IN ('pending_verification','verified')");
+    if ($gbStmt && ($gbRow = $gbStmt->fetch_assoc())) {
+        $guestBookingsCount = (int)($gbRow['c'] ?? 0);
+    }
+} catch (Throwable $e) {
+    error_log('Error computing sidebar dot counts: ' . $e->getMessage());
+}
+
 $header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
 if ($header_display_name === '') {
     $header_display_name = (string)($_SESSION['email'] ?? 'User');
@@ -145,7 +169,7 @@ switch ($role_key) {
             <a href="secretary.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
                 <div class="ms-2">
-                    <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
+                    <span class="fw-bold">Dental Clinic</span>
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
@@ -195,9 +219,10 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
-                    <span>Appointments</span>
+                    <span class="ms-2">Appointments</span>
+                    <span class="nav-dot<?php echo ((int)$recordsQueueCount > 0 || (int)$pendingReqCount > 0 || (int)$guestBookingsCount > 0) ? ' is-active' : ''; ?>" id="secretaryAppointmentsDot"></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -210,9 +235,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=arrivals" data-tooltip="Arrivals" title="Arrivals">
                     <i class="bi bi-person-check"></i>
                     <span class="ms-2">Arrivals</span>
-                    <?php if ((int)$pendingCount > 0): ?>
-                        <span class="badge bg-warning ms-auto" id="secretaryArrivalsBadge"><?php echo (int)$pendingCount; ?></span>
-                    <?php endif; ?>
+                    <span class="nav-dot<?php echo (int)$pendingCount > 0 ? ' is-active' : ''; ?>" id="secretaryArrivalsDot"></span>
                 </a>
             </li>
             <li class="nav-item">
@@ -231,11 +254,7 @@ switch ($role_key) {
                 <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
                     <i class="bi bi-envelope"></i>
                     <span class="ms-2">Contact Us</span>
-                    <?php if ((int)$newContactCount > 0): ?>
-                        <span class="badge bg-danger ms-auto" id="secretaryContactBadge"><?php echo (int)$newContactCount; ?></span>
-                    <?php else: ?>
-                        <span class="badge bg-danger ms-auto" id="secretaryContactBadge" style="display:none;">0</span>
-                    <?php endif; ?>
+                    <span class="nav-dot<?php echo (int)$newContactCount > 0 ? ' is-active' : ''; ?>" id="secretaryContactDot"></span>
                 </a>
             </li>
 

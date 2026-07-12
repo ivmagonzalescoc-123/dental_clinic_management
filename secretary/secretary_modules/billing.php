@@ -218,13 +218,14 @@ if (!$hasAnyData) {
     </div>
     <div class="card-body">
         <!-- Filters -->
-        <div class="module-search-toolbar mb-3">
+        <div class="module-search-toolbar mb-3 flex-wrap gap-2">
             <select id="billingFilterStatus" class="form-select form-select-sm" style="width: auto; min-width: 160px;">
                 <option value="all">All Statuses</option>
                 <option value="unpaid">Outstanding</option>
                 <option value="partial">Partial</option>
                 <option value="paid">Paid</option>
             </select>
+            <input type="date" id="billingFilterDate" class="form-control form-control-sm" style="width: auto; min-width: 160px;" title="Filter by service date">
             <div class="unified-table-search-wrap">
                 <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                 <input id="billingSearch" type="search" class="form-control unified-table-search-input"
@@ -262,6 +263,7 @@ if (!$hasAnyData) {
                             // each row includes data attributes for client-side filtering
                             ?>
                             <tr class="billing-data-row" data-status="<?php echo htmlspecialchars(strtolower($billing['status'] ?? 'unpaid')); ?>"
+                                data-date="<?php echo htmlspecialchars($billing['appointment_date']); ?>"
                                 data-patient="<?php echo htmlspecialchars(strtolower($billing['first_name'] . ' ' . $billing['last_name'])); ?>"
                                 data-doctor="<?php echo htmlspecialchars(strtolower(trim(($billing['doctor_first_name'] ?? '') . ' ' . ($billing['doctor_last_name'] ?? '')))); ?>"
                                 data-invoice="<?php echo htmlspecialchars(str_pad((string) $billing['billing_id'], 6, '0', STR_PAD_LEFT)); ?>"
@@ -296,8 +298,37 @@ if (!$hasAnyData) {
                                     </button>
 
                                     <?php if ($hasStatus && (($_SESSION['role'] ?? '') === 'secretary') && $st !== 'paid' && $balance > 0): ?>
+                                        <?php
+                                        // Check if billing has an installment plan
+                                        $hasInstallment = false;
+                                        $downPaymentAmount = 0;
+                                        $nextTermAmount = 0;
+                                        $instCheck = $conn->prepare('SELECT installment_id, down_payment_amount FROM billing_installments WHERE billing_id = ? LIMIT 1');
+                                        if ($instCheck) {
+                                            $instCheck->bind_param('i', $billing['billing_id']);
+                                            $instCheck->execute();
+                                            $instRow = $instCheck->get_result()->fetch_assoc();
+                                            $instCheck->close();
+                                            if ($instRow) {
+                                                $hasInstallment = true;
+                                                $downPaymentAmount = (float)($instRow['down_payment_amount'] ?? 0);
+                                                // Get first pending term amount
+                                                $termCheck = $conn->prepare('SELECT amount FROM billing_installment_terms WHERE installment_id = ? AND status = "pending" ORDER BY term_number ASC LIMIT 1');
+                                                if ($termCheck) {
+                                                    $termCheck->bind_param('i', $instRow['installment_id']);
+                                                    $termCheck->execute();
+                                                    $termRow = $termCheck->get_result()->fetch_assoc();
+                                                    $termCheck->close();
+                                                    if ($termRow) {
+                                                        $nextTermAmount = (float)($termRow['amount'] ?? 0);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        $paymentAmount = $hasInstallment ? ($nextTermAmount > 0 ? $nextTermAmount : $downPaymentAmount) : $balance;
+                                        ?>
                                         <button type="button" class="btn btn-sm btn-success ms-1"
-                                            onclick="openPaymentModal(<?php echo (int)$billing['billing_id']; ?>, <?php echo $balance; ?>)">
+                                            onclick="openPaymentModal(<?php echo (int)$billing['billing_id']; ?>, <?php echo $paymentAmount; ?>, <?php echo $balance; ?>, <?php echo $hasInstallment ? 'true' : 'false'; ?>)">
                                             Record Payment
                                         </button>
                                     <?php endif; ?>
@@ -377,14 +408,19 @@ if (!$hasAnyData) {
 <script>
     const BILLING_CSRF = '<?php echo htmlspecialchars($csrf_token); ?>';
 
-    function openPaymentModal(billingId, remainingBalance) {
+    function openPaymentModal(billingId, paymentAmount, remainingBalance, isInstallment) {
         document.getElementById('paymentBillingId').value = billingId;
+        const amount = Number(paymentAmount || 0);
         const balance = Number(remainingBalance || 0);
         const amountInput = document.getElementById('paymentAmount');
-        amountInput.value = balance.toFixed(2);
+        amountInput.value = amount.toFixed(2);
         amountInput.max = balance.toFixed(2);
         document.getElementById('paymentOrNumber').value = '';
-        document.getElementById('paymentBalanceHint').textContent = 'Remaining balance: ₱' + balance.toFixed(2);
+        if (isInstallment) {
+            document.getElementById('paymentBalanceHint').textContent = 'Installment payment due: ₱' + amount.toFixed(2) + ' (Total remaining: ₱' + balance.toFixed(2) + ')';
+        } else {
+            document.getElementById('paymentBalanceHint').textContent = 'Remaining balance: ₱' + balance.toFixed(2);
+        }
         new bootstrap.Modal(document.getElementById('paymentModal')).show();
     }
 
@@ -576,6 +612,7 @@ if (!$hasAnyData) {
 
     function filterBillingTable() {
         const status = (document.getElementById('billingFilterStatus')?.value || 'all').toLowerCase();
+        const dateFilter = (document.getElementById('billingFilterDate')?.value || '').trim();
         const rawQ = (document.getElementById('billingSearch')?.value || '').toLowerCase().trim();
         const q = rawQ.replace(/^#/, '');
         const tbody = document.querySelector('#billingTable tbody');
@@ -586,10 +623,14 @@ if (!$hasAnyData) {
 
         Array.from(tbody.querySelectorAll('tr.billing-data-row')).forEach(row => {
             const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+            const rowDate = row.getAttribute('data-date') || '';
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
             let match = true;
 
             if (status !== 'all' && rowStatus !== status) {
+                match = false;
+            }
+            if (dateFilter && rowDate !== dateFilter) {
                 match = false;
             }
             if (q && !searchBlob.includes(q)) {
@@ -619,9 +660,11 @@ if (!$hasAnyData) {
 
     document.addEventListener('DOMContentLoaded', function () {
         const statusEl = document.getElementById('billingFilterStatus');
+        const dateEl = document.getElementById('billingFilterDate');
         const searchEl = document.getElementById('billingSearch');
 
         if (statusEl) statusEl.addEventListener('change', filterBillingTable);
+        if (dateEl) dateEl.addEventListener('change', filterBillingTable);
         const clearEl = document.getElementById('billingSearchClear');
         if (searchEl) {
             searchEl.addEventListener('input', function () {

@@ -999,7 +999,6 @@
   
   window.updateNotificationBadge = function (unread) {
     const nb = document.getElementById('navNotificationBadge');
-    const subtitle = document.getElementById('navNotificationSubtitle');
     const count = parseInt(unread, 10) || 0;
     if (!nb) return;
     if (count <= 0) {
@@ -1007,16 +1006,12 @@
       nb.setAttribute('aria-hidden', 'true');
       nb.textContent = '0';
       nb.classList.remove('has-count');
-      if (subtitle) subtitle.textContent = 'You are all caught up';
       return;
     }
     nb.hidden = false;
     nb.setAttribute('aria-hidden', 'false');
     nb.textContent = count > 9 ? '9+' : String(count);
     nb.classList.add('has-count');
-    if (subtitle) {
-      subtitle.textContent = count === 1 ? '1 unread notification' : count + ' unread notifications';
-    }
   };
 
   window.markAllNotificationsRead = async function () {
@@ -1051,6 +1046,42 @@
         return escaped.replace(dateTimeRegex, '<span class="notification-datetime">$1</span>');
       }
 
+      function relativeTime(dateStr) {
+        if (!dateStr) return '';
+        const now = Date.now();
+        const then = new Date(dateStr).getTime();
+        if (isNaN(then)) return '';
+        const diff = Math.floor((now - then) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'min ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'hr ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+        return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+
+      function getNotifIcon(title, body) {
+        const text = ((title || '') + ' ' + (body || '')).toLowerCase();
+        if (text.includes('appointment') || text.includes('scheduled') || text.includes('confirmed')) return '<i class="bi bi-calendar-check"></i>';
+        if (text.includes('arrived') || text.includes('checked in') || text.includes('patient arrived')) return '<i class="bi bi-person-check"></i>';
+        if (text.includes('reschedule')) return '<i class="bi bi-calendar2-week"></i>';
+        if (text.includes('decline') || text.includes('cancel')) return '<i class="bi bi-x-circle"></i>';
+        if (text.includes('record') || text.includes('clinical')) return '<i class="bi bi-clipboard2-pulse"></i>';
+        if (text.includes('bill') || text.includes('payment') || text.includes('charge')) return '<i class="bi bi-receipt"></i>';
+        if (text.includes('message') || text.includes('contact')) return '<i class="bi bi-chat-dots"></i>';
+        if (text.includes('leave') || text.includes('schedule')) return '<i class="bi bi-calendar-x"></i>';
+        return '<i class="bi bi-bell"></i>';
+      }
+
+      function simplifyMessage(text) {
+        if (!text) return '';
+        let t = text.trim();
+        t = t.replace(/\s*on\s+\d{4}-\d{2}-\d{2}.*/i, '');
+        t = t.replace(/\s*—\s*\d{4}-\d{2}-\d{2}.*/i, '');
+        t = t.replace(/\s*\(.*?\)\s*$/i, '');
+        if (t.length > 120) t = t.slice(0, 117) + '...';
+        return t;
+      }
+
       const unread = parseInt(j.unread || 0, 10) || 0;
       window.updateNotificationBadge(unread);
 
@@ -1074,23 +1105,19 @@
             item.className = 'notification-dropdown-item' + (isUnread ? ' is-unread' : '');
             item.dataset.notificationId = n.notification_id || '';
 
-            const dot = document.createElement('span');
-            dot.className = 'notification-dropdown-item__dot';
-            dot.setAttribute('aria-hidden', 'true');
+            const icon = document.createElement('div');
+            icon.className = 'notification-dropdown-item__icon';
+            icon.innerHTML = getNotifIcon(n.title, n.body);
 
-            const content = document.createElement('div');
-            content.className = 'notification-dropdown-item__content';
-            const titleHtml = escapeHtml(n.title || 'Notification');
-            const bodyHtml = highlightDateTimes(n.body || '');
-            content.innerHTML = '<div class="notification-dropdown-item__title">' + titleHtml + '</div><div class="notification-dropdown-item__body">' + bodyHtml + '</div>';
+            const body = document.createElement('div');
+            body.className = 'notification-dropdown-item__body';
+            const message = escapeHtml(simplifyMessage(n.body || n.title || 'Notification'));
+            const timeStr = relativeTime(n.created_at);
+            body.innerHTML = '<div class="notification-dropdown-item__message">' + message + '</div>' +
+                (timeStr ? '<div class="notification-dropdown-item__time">' + timeStr + '</div>' : '');
 
-            const time = document.createElement('small');
-            time.className = 'notification-time';
-            time.textContent = n.created_at ? new Date(n.created_at).toLocaleString() : '';
-
-            item.appendChild(dot);
-            item.appendChild(content);
-            item.appendChild(time);
+            item.appendChild(icon);
+            item.appendChild(body);
 
             item.addEventListener('click', async function (e) {
               e.preventDefault();

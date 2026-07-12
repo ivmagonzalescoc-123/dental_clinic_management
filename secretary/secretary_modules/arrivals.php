@@ -148,11 +148,12 @@ async function doNoShow(id) {
         const resp = await fetch('../assets/api/arrivals/mark_no_show.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
-            const b = document.getElementById('secretaryArrivalsBadge');
-            if (b) {
-                const nextCount = Math.max(0, (parseInt(b.textContent, 10) || 1) - 1);
-                b.textContent = nextCount;
-                b.style.display = nextCount > 0 ? '' : 'none';
+            const dot = document.getElementById('secretaryArrivalsDot');
+            if (dot) {
+                const count = parseInt(dot.dataset.count || '0', 10);
+                const next = Math.max(0, count - 1);
+                dot.dataset.count = next;
+                dot.classList.toggle('is-active', next > 0);
             }
             showArrToast('Marked as no-show.', 'warning');
             loadArrivalSchedule(currentArrivalDate);
@@ -297,11 +298,12 @@ document.getElementById('arrivedConfirmBtn')?.addEventListener('click', async fu
         const resp = await fetch('../assets/api/arrivals/mark_arrived.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
-            const b = document.getElementById('secretaryArrivalsBadge');
-            if (b) {
-                const nextCount = Math.max(0, (parseInt(b.textContent, 10) || 1) - 1);
-                b.textContent = nextCount;
-                b.style.display = nextCount > 0 ? '' : 'none';
+            const dot = document.getElementById('secretaryArrivalsDot');
+            if (dot) {
+                const count = parseInt(dot.dataset.count || '0', 10);
+                const next = Math.max(0, count - 1);
+                dot.dataset.count = next;
+                dot.classList.toggle('is-active', next > 0);
             }
             bootstrap.Modal.getInstance(document.getElementById('arrivedModal'))?.hide();
             showArrToast(data.message, 'success');

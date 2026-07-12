@@ -66,8 +66,12 @@ async function loadDocArrival(date) {
         const badge = document.getElementById(date === DOC_TODAY ? 'docTodayBadge' : 'docTomorrowBadge');
         if (badge) badge.textContent = data.schedule.length;
         if (date === DOC_TODAY) {
-            const sideB = document.getElementById('doctorArrivalsBadge');
-            if (sideB) sideB.textContent = data.schedule.filter(r => ['pending','arrived','late','overdue'].includes(r.arrival_status)).length;
+            const dot = document.getElementById('doctorArrivalsDot');
+            if (dot) {
+                const count = data.schedule.filter(r => ['pending','arrived','late','overdue'].includes(r.arrival_status)).length;
+                dot.dataset.count = count;
+                dot.classList.toggle('is-active', count > 0);
+            }
         }
     } catch(e) {
         c.innerHTML = '<div class="alert alert-danger">Error: ' + e.message + '</div>';

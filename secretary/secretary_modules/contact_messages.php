@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchClearBtn = document.getElementById('contactMessageSearchClear');
     const searchMeta = document.getElementById('contactMessageSearchMeta');
     const newCountBadge = document.getElementById('contactNewCountBadge');
-    const sidebarBadge = document.getElementById('secretaryContactBadge');
+    const sidebarDot = document.getElementById('secretaryContactDot');
     const refreshBtn = document.getElementById('refreshContactMessagesBtn');
     const tabs = document.querySelectorAll('#contactMessageTabs .nav-link');
     const modalEl = document.getElementById('contactMessageModal');
@@ -154,13 +154,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateBadges(newCount) {
         if (newCountBadge) newCountBadge.textContent = String(newCount);
-        if (sidebarBadge) {
-            if (newCount > 0) {
-                sidebarBadge.textContent = String(newCount);
-                sidebarBadge.style.display = '';
-            } else {
-                sidebarBadge.style.display = 'none';
-            }
+        if (sidebarDot) {
+            sidebarDot.dataset.count = newCount;
+            sidebarDot.classList.toggle('is-active', newCount > 0);
         }
     }
 

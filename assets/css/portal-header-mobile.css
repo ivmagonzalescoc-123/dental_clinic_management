@@ -28,7 +28,7 @@ body.admin-portal {
         flex: 0 0 auto;
         min-width: 0;
         position: relative;
-        z-index: 140;
+        z-index: 100;
     }
 
     body.patient-portal #header .header-actions,
@@ -192,7 +192,7 @@ body.admin-portal {
     body.admin-portal #header.header-search-open .header-search-wrap {
         position: absolute !important;
         top: 50% !important;
-        left: var(--portal-search-left, 88px) !important;
+        left: 48px !important;
         right: var(--portal-search-right, 96px) !important;
         transform: translateY(-50%);
         width: auto !important;
@@ -307,6 +307,26 @@ body.admin-portal {
         width: 38px;
         height: 38px;
         margin-right: 0;
+        flex-shrink: 0;
+    }
+
+    body.patient-portal #header .logo .ms-2,
+    body.doctor-portal #header .logo .ms-2,
+    body.secretary-portal #header .logo .ms-2,
+    body.admin-portal #header .logo .ms-2 {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    body.patient-portal #header .logo .fw-bold,
+    body.doctor-portal #header .logo .fw-bold,
+    body.secretary-portal #header .logo .fw-bold,
+    body.admin-portal #header .logo .fw-bold {
+        font-size: 0.85rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
     }
 }
 

@@ -83,7 +83,7 @@ switch ($role_key) {
             <a href="patient.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
                 <div class="ms-2">
-                    <span class="d-none d-lg-block fw-bold">Dental Clinic</span>
+                    <span class="fw-bold">Dental Clinic</span>
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>

@@ -112,7 +112,7 @@
     }
 
     function renderBackgroundProfilingFields(data) {
-        return renderProfilingFields(data, BACKGROUND_LABELS, 'No patient background profiling on file.');
+        return renderProfilingFields(data, BACKGROUND_LABELS, 'No patient medical history on file.');
     }
 
     global.renderVisitClinicalFields = renderVisitClinicalFields;

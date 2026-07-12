@@ -642,13 +642,13 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'appointments' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($view); ?>" style="font-size:0.85rem;">
             <i class="bi bi-calendar-check"></i> Appointments
-            <span class="badge bg-primary ms-1"><?php echo (int)$totalCount; ?></span>
+            <span class="nav-dot is-active" id="dotAppointments" data-viewed=""></span>
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
             <i class="bi bi-person-plus"></i> New Customers
-            <span class="badge bg-warning text-dark ms-1"><?php echo (int)$guestBookingsCount; ?></span>
+            <span class="nav-dot<?php echo (int)$guestBookingsCount > 0 ? ' is-active' : ''; ?>" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
         </a>
     </li>
 </ul>
@@ -1119,9 +1119,13 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         <ul class="nav nav-pills mb-0">
             <?php foreach ($appointmentsViewFilters as $filterKey => $filterOpt): ?>
                 <li class="nav-item">
-                    <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($filterKey); ?>">
+                    <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($filterKey); ?>" data-subnav="<?php echo htmlspecialchars($filterKey); ?>">
                         <?php echo htmlspecialchars($filterOpt['label']); ?>
-                        <span class="badge bg-light text-dark ms-1"><?php echo (int)$filterOpt['count']; ?></span>
+                        <?php if ($filterKey === 'records_queue' && (int)$recordsQueueCount > 0): ?>
+                            <span class="nav-dot is-active" id="dotRecordsQueue" data-count="<?php echo (int)$recordsQueueCount; ?>"></span>
+                        <?php elseif ($filterKey === 'reschedule' && (int)$pendingReqCount > 0): ?>
+                            <span class="nav-dot is-active" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
+                        <?php endif; ?>
                     </a>
                 </li>
             <?php endforeach; ?>
@@ -1442,7 +1446,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                             </button>
                                         <?php endif; ?>
                                         
-                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View patient profiling">
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View medical history">
                                             <i class="bi bi-file-medical"></i>
                                         </button>
                                     </div>
@@ -1768,7 +1772,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Profiling</h5>
+                <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Medical History</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -1778,7 +1782,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         <div class="spinner-border spinner-border-sm" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        Loading profiling data...
+                        Loading medical history...
                     </div>
                 </div>
             </div>
@@ -2813,14 +2817,14 @@ async function openViewProfilingModal(patientId, firstName, lastName) {
     const contentDiv = document.getElementById('profilingContent');
 
     nameDiv.innerHTML = `<strong>Patient:</strong> ${firstName} ${lastName}`;
-    contentDiv.innerHTML = '<div class="text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div> Loading profiling data...</div>';
+    contentDiv.innerHTML = '<div class="text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div> Loading medical history...</div>';
 
     try {
         const res = await fetch(`../assets/api/patients/get_profiling.php?patient_id=${encodeURIComponent(patientId)}`);
         const j = await res.json();
 
         if (!j.success) {
-            contentDiv.innerHTML = '<div class="alert alert-warning">No profiling data available for this patient.</div>';
+            contentDiv.innerHTML = '<div class="alert alert-warning">No medical history available for this patient.</div>';
             return;
         }
 
@@ -2843,18 +2847,18 @@ async function openViewProfilingModal(patientId, firstName, lastName) {
         }
 
         if (!j.profiling) {
-            contentDiv.innerHTML = '<div class="alert alert-info">Patient background profiling has not been filled out yet. Use Manage Patients to add background info.</div>';
+            contentDiv.innerHTML = '<div class="alert alert-info">Patient medical history has not been filled out yet. Use Manage Patients to add background info.</div>';
             return;
         }
 
         if (typeof renderBackgroundProfilingFields === 'function') {
             contentDiv.innerHTML = renderBackgroundProfilingFields(j.profiling);
         } else {
-            contentDiv.innerHTML = '<div class="alert alert-warning">Unable to render profiling view.</div>';
+            contentDiv.innerHTML = '<div class="alert alert-warning">Unable to render medical history view.</div>';
         }
     } catch (err) {
         console.error(err);
-        contentDiv.innerHTML = '<div class="alert alert-danger">Error loading profiling data.</div>';
+        contentDiv.innerHTML = '<div class="alert alert-danger">Error loading medical history.</div>';
     }
 }
 
@@ -2875,19 +2879,24 @@ function escapeHtml(text) {
 <div class="modal fade" id="secretaryRecordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header bg-success text-white py-2">
-                <div class="me-auto pe-3">
-                    <h6 class="modal-title mb-0">Create Clinical Record</h6>
-                    <small id="secretaryRecordPatientName" class="fw-bold text-white-50"></small>
+            <div class="modal-header bg-success text-white py-2 px-3">
+                <div class="d-flex align-items-center gap-3 me-auto pe-3">
+                    <div id="recordPatientAvatar" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+                        <i class="bi bi-person-fill" style="font-size:1.2rem;opacity:0.7;"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title mb-0" id="secretaryRecordPatientName">Create Clinical Record</h6>
+                        <small id="secretaryRecordPatientDetails" class="text-white-50" style="font-size:0.72rem;"></small>
+                    </div>
                 </div>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
                 <!-- Tab Navigation -->
                 <ul class="nav nav-tabs nav-tabs-sm" id="recordTabs" role="tablist" style="padding: 0 16px; background: #f8f9fa;">
-                    <li class="nav-item"><a class="nav-link active py-2 px-3" data-bs-toggle="tab" href="#tabNotes" role="tab"><i class="bi bi-sticky-note"></i> Notes</a></li>
-                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabClinical" role="tab"><i class="bi bi-clipboard2-pulse"></i> Clinical</a></li>
-                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabOdontogram" role="tab"><i class="bi bi-box"></i> Odontogram</a></li>
+                    <li class="nav-item"><a class="nav-link active py-2 px-3" data-bs-toggle="tab" href="#tabNotes" role="tab"><i class="bi bi-journal-text"></i> Session Notes</a></li>
+                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabClinical" role="tab"><i class="bi bi-clipboard2-pulse"></i> Clinical Findings</a></li>
+                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabOdontogram" role="tab"><i class="bi bi-tooth"></i> Charting</a></li>
                     <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabBilling" role="tab"><i class="bi bi-receipt"></i> Billing</a></li>
                 </ul>
 
@@ -3252,26 +3261,46 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordPatientId = patientId;
 
     const patientNameEl = document.getElementById('secretaryRecordPatientName');
+    const patientDetailsEl = document.getElementById('secretaryRecordPatientDetails');
+    const patientAvatarEl = document.getElementById('recordPatientAvatar');
     if (patientNameEl) {
         patientNameEl.textContent = 'Loading patient...';
     }
+    if (patientDetailsEl) patientDetailsEl.textContent = '';
+    if (patientAvatarEl) patientAvatarEl.innerHTML = '<i class="bi bi-person-fill" style="font-size:1.2rem;opacity:0.7;"></i>';
     
     try {
+        // Fetch patient details
+        const patientRes = await fetch('../assets/api/patients/get_profiling.php?patient_id=' + patientId);
+        const patientData = await patientRes.json().catch(() => null);
+
         // Fetch doctor media and notes
         const res = await fetch('../assets/api/appointments/get_doctor_media.php?appointment_id=' + appointmentId);
         const data = await res.json();
         
         if (!data.success) {
-            if (patientNameEl) {
-                patientNameEl.textContent = '';
-            }
+            if (patientNameEl) patientNameEl.textContent = '';
+            if (patientDetailsEl) patientDetailsEl.textContent = '';
             notifySecretary('Unable to load appointment data. Please try again.', 'danger');
             return;
         }
 
+        // Populate patient header
         if (patientNameEl) {
             const patientName = String(data.appointment?.patient_name || '').trim();
-            patientNameEl.textContent = patientName ? 'Patient: ' + patientName : '';
+            patientNameEl.textContent = patientName || 'Create Clinical Record';
+        }
+
+        if (patientData && patientData.success && patientData.patient) {
+            const p = patientData.patient;
+            const details = [p.email, p.phone_number, p.address].filter(Boolean);
+            if (patientDetailsEl) {
+                patientDetailsEl.textContent = details.join(' | ');
+            }
+            if (patientAvatarEl && p.profile_image) {
+                const imgUrl = /^https?:\/\//i.test(p.profile_image) ? p.profile_image : '../' + p.profile_image.replace(/^\/+/, '');
+                patientAvatarEl.innerHTML = '<img src="' + escapeHtml(imgUrl) + '" alt="" style="width:100%;height:100%;object-fit:cover;">';
+            }
         }
         
         // Display photos
@@ -3709,4 +3738,100 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
 window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
 window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/')); ?>';
+</script>
+
+<script>
+(function() {
+    const STORAGE_KEY = 'sec_viewed_tabs';
+    const currentView = '<?php echo htmlspecialchars($view); ?>';
+    const currentSection = '<?php echo htmlspecialchars($activeSection); ?>';
+    const role = '<?php echo htmlspecialchars($_SESSION['role'] ?? ''); ?>';
+
+    function getViewedTabs() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e) { return {}; }
+    }
+
+    function setViewedTabs(data) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+    }
+
+    // Mark current tab as viewed
+    function markCurrentTabViewed() {
+        const viewed = getViewedTabs();
+        const key = role + ':' + currentSection + ':' + currentView;
+        viewed[key] = Date.now();
+        setViewedTabs(viewed);
+    }
+
+    // Check if a specific dot should be shown (not viewed)
+    function shouldShowDot(section, view) {
+        const viewed = getViewedTabs();
+        const key = role + ':' + section + ':' + view;
+        const lastViewed = viewed[key] || 0;
+        // Dot shows if never viewed or viewed more than 24 hours ago
+        return !lastViewed || (Date.now() - lastViewed) > 86400000;
+    }
+
+    // Update sidebar dot based on sub-dots
+    function updateSidebarDot() {
+        const sidebarDot = document.getElementById('secretaryAppointmentsDot');
+        if (!sidebarDot) return;
+
+        // Check all sub-tabs that have dots
+        const subDots = document.querySelectorAll('.nav-dot[data-count]');
+        let hasActiveDot = false;
+
+        subDots.forEach(function(dot) {
+            const count = parseInt(dot.dataset.count || '0', 10);
+            if (count > 0) {
+                const view = dot.id === 'dotRecordsQueue' ? 'records_queue' :
+                             dot.id === 'dotReschedule' ? 'reschedule' :
+                             dot.id === 'dotNewCustomers' ? 'new_customers' : '';
+                const section = dot.id === 'dotNewCustomers' ? 'new_customers' : 'appointments';
+                if (view && shouldShowDot(section, view)) {
+                    hasActiveDot = true;
+                }
+            }
+        });
+
+        // Also check the appointments section tab dot
+        const apptDot = document.getElementById('dotAppointments');
+        if (apptDot && apptDot.classList.contains('is-active')) {
+            if (shouldShowDot('appointments', 'all')) {
+                hasActiveDot = true;
+            }
+        }
+
+        sidebarDot.classList.toggle('is-active', hasActiveDot);
+    }
+
+    // Mark current tab viewed and update dots
+    markCurrentTabViewed();
+
+    // Update sub-tab dots based on viewed status
+    document.querySelectorAll('.nav-dot[data-count]').forEach(function(dot) {
+        const count = parseInt(dot.dataset.count || '0', 10);
+        if (count <= 0) {
+            dot.classList.remove('is-active');
+            return;
+        }
+        const view = dot.id === 'dotRecordsQueue' ? 'records_queue' :
+                     dot.id === 'dotReschedule' ? 'reschedule' :
+                     dot.id === 'dotNewCustomers' ? 'new_customers' : '';
+        const section = dot.id === 'dotNewCustomers' ? 'new_customers' : 'appointments';
+        if (view && !shouldShowDot(section, view)) {
+            dot.classList.remove('is-active');
+        }
+    });
+
+    // Update sidebar dot
+    const sidebarDot = document.getElementById('secretaryAppointmentsDot');
+    if (sidebarDot) {
+        let hasActiveDot = false;
+        document.querySelectorAll('.nav-dot.is-active').forEach(function(dot) {
+            if (dot !== sidebarDot) hasActiveDot = true;
+        });
+        sidebarDot.classList.toggle('is-active', hasActiveDot);
+    }
+})();
 </script>
