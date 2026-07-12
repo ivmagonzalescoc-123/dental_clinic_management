@@ -647,7 +647,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     </li>
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
-            <i class="bi bi-person-plus"></i> New Customers
+            <i class="bi bi-person-plus"></i> New Patients
             <span class="nav-dot" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
         </a>
     </li>
@@ -659,23 +659,52 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 <div class="card border-0">
     
     <div class="card-body">
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
             <div class="unified-table-search-wrap">
                 <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                 <input id="newCustomerSearch" type="search" class="form-control unified-table-search-input"
                     placeholder="Search by name, email, or phone..." aria-label="Search new customers">
                 <button type="button" class="unified-table-search-clear" id="newCustomerSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
             </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="statusFilterBtn">Status: All</button>
+                <ul class="dropdown-menu dropdown-menu-sm">
+                    <li><a class="dropdown-item new-cust-status-filter active" href="#" data-filter="all">All</a></li>
+                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="pending">Pending</a></li>
+                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="processed">Processed</a></li>
+                </ul>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="timeFilterBtn">Time: All</button>
+                <ul class="dropdown-menu dropdown-menu-sm">
+                    <li><a class="dropdown-item new-cust-time-filter active" href="#" data-filter="all">All Times</a></li>
+                    <li><a class="dropdown-item new-cust-time-filter" href="#" data-filter="morning">Morning</a></li>
+                    <li><a class="dropdown-item new-cust-time-filter" href="#" data-filter="afternoon">Afternoon</a></li>
+                </ul>
+            </div>
             <?php
                     $guestBookings = [];
-                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','converted') ORDER BY b.created_at DESC");
+                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','converted') AND NOT (b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
                     if ($gbRes) {
                         while ($gbRow = $gbRes->fetch_assoc()) {
                             $guestBookings[] = $gbRow;
                         }
                     }
+
+                    $archivedBookings = [];
+                    $abRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY b.preferred_date DESC");
+                    if ($abRes) {
+                        while ($abRow = $abRes->fetch_assoc()) {
+                            $archivedBookings[] = $abRow;
+                        }
+                    }
                     ?>
             <small class="text-muted">Showing <span id="newCustomerCount"><?php echo count($guestBookings); ?></span> records</small>
+            <?php if (count($archivedBookings) > 0): ?>
+            <button type="button" class="btn btn-sm btn-outline-warning" id="toggleArchiveBtn" onclick="toggleArchiveView()">
+                <i class="bi bi-archive"></i> Archive (<?php echo count($archivedBookings); ?>)
+            </button>
+            <?php endif; ?>
         </div>
         <div class="table-responsive">
             <table class="table table-hover" id="newCustomerTable" data-skip-table-search="1" data-skip-datatable="1">
@@ -689,13 +718,12 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <th>Time</th>
                         <th>Status</th>
                         <th>Requested</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($guestBookings)): ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No guest bookings yet.
                             </td>
@@ -703,7 +731,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <?php else: ?>
                         <?php foreach ($guestBookings as $gb): ?>
                             <?php $isConverted = ($gb['status'] === 'converted'); ?>
-                            <tr style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <tr data-status="<?php echo $isConverted ? 'processed' : 'pending'; ?>" data-time="<?php echo htmlspecialchars($gb['preferred_time']); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><?php echo htmlspecialchars($gb['email']); ?></td>
@@ -718,28 +746,52 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo date('M j, g:i A', strtotime($gb['created_at'])); ?></td>
-                                <td>
-                                    <?php if ($isConverted): ?>
-                                        <a href="secretary.php?page=appointments&section=appointments&view=all" class="btn btn-sm btn-outline-info" title="View appointment">
-                                            <i class="bi bi-eye"></i> View
-                                        </a>
-                                    <?php else: ?>
-                                        <button type="button" class="btn btn-sm btn-success"
-                                            onclick='openConvertBookingModal(<?php echo json_encode([
-                                                'booking_id' => (int)$gb['booking_id'],
-                                                'first_name' => $gb['first_name'],
-                                                'last_name' => $gb['last_name'],
-                                                'email' => $gb['email'],
-                                                'phone_number' => $gb['phone_number'] ?? '',
-                                                'date_of_birth' => $gb['date_of_birth'] ?? '',
-                                                'preferred_date' => $gb['preferred_date'],
-                                                'preferred_time' => $gb['preferred_time'],
-                                                'reason' => $gb['reason'] ?? '',
-                                            ]); ?>)'>
-                                            <i class="bi bi-arrow-right-circle"></i> Process
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Archived Bookings (hidden by default) -->
+<div class="card border-0 mt-3" id="archiveSection" style="display:none;">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0"><i class="bi bi-archive"></i> Archived Bookings (overdue, unprocessed)</h6>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleArchiveView()">
+            <i class="bi bi-arrow-left"></i> Back to Active
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Ref. No.</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Preferred Date</th>
+                        <th>Time</th>
+                        <th>Requested</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($archivedBookings)): ?>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No archived bookings.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($archivedBookings as $ab): ?>
+                            <tr style="opacity:0.6;">
+                                <td><strong>#<?php echo (int)$ab['booking_id']; ?></strong></td>
+                                <td><?php echo htmlspecialchars(trim($ab['first_name'] . ' ' . $ab['last_name'])); ?></td>
+                                <td><?php echo htmlspecialchars($ab['email']); ?></td>
+                                <td><?php echo htmlspecialchars($ab['phone_number'] ?? '—'); ?></td>
+                                <td><?php echo date('M j, Y', strtotime($ab['preferred_date'])); ?></td>
+                                <td><?php echo ucfirst($ab['preferred_time']); ?></td>
+                                <td><?php echo date('M j, g:i A', strtotime($ab['created_at'])); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -842,18 +894,26 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 </div>
 
 <script>
-// New Customer Search
+// New Customer Search & Filters
+var activeStatusFilter = 'all';
+var activeTimeFilter = 'all';
+
 function filterNewCustomerTable() {
     var input = document.getElementById('newCustomerSearch');
     var clearBtn = document.getElementById('newCustomerSearchClear');
-    var filter = input.value.toLowerCase();
+    var filter = input ? input.value.toLowerCase() : '';
     var table = document.getElementById('newCustomerTable');
     if (!table) return;
     var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
     var visibleCount = 0;
     for (var i = 0; i < rows.length; i++) {
         var text = rows[i].textContent.toLowerCase();
-        var show = text.indexOf(filter) > -1;
+        var rowStatus = rows[i].getAttribute('data-status') || '';
+        var rowTime = rows[i].getAttribute('data-time') || '';
+        var matchSearch = !filter || text.indexOf(filter) > -1;
+        var matchStatus = activeStatusFilter === 'all' || rowStatus === activeStatusFilter;
+        var matchTime = activeTimeFilter === 'all' || rowTime === activeTimeFilter;
+        var show = matchSearch && matchStatus && matchTime;
         rows[i].style.display = show ? '' : 'none';
         if (show) visibleCount++;
     }
@@ -861,11 +921,56 @@ function filterNewCustomerTable() {
     if (countEl) countEl.textContent = visibleCount;
     if (clearBtn) clearBtn.style.display = filter ? '' : 'none';
 }
+
 document.getElementById('newCustomerSearch')?.addEventListener('input', filterNewCustomerTable);
 document.getElementById('newCustomerSearchClear')?.addEventListener('click', function() {
     var input = document.getElementById('newCustomerSearch');
     if (input) { input.value = ''; filterNewCustomerTable(); }
 });
+
+// Status filter dropdown
+document.querySelectorAll('.new-cust-status-filter').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.new-cust-status-filter').forEach(function(i) { i.classList.remove('active'); });
+        item.classList.add('active');
+        activeStatusFilter = item.getAttribute('data-filter');
+        var label = activeStatusFilter === 'all' ? 'All' : activeStatusFilter.charAt(0).toUpperCase() + activeStatusFilter.slice(1);
+        document.getElementById('statusFilterBtn').textContent = 'Status: ' + label;
+        filterNewCustomerTable();
+    });
+});
+
+// Time filter dropdown
+document.querySelectorAll('.new-cust-time-filter').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.new-cust-time-filter').forEach(function(i) { i.classList.remove('active'); });
+        item.classList.add('active');
+        activeTimeFilter = item.getAttribute('data-filter');
+        var label = activeTimeFilter === 'all' ? 'All' : activeTimeFilter.charAt(0).toUpperCase() + activeTimeFilter.slice(1);
+        document.getElementById('timeFilterBtn').textContent = 'Time: ' + label;
+        filterNewCustomerTable();
+    });
+});
+
+// Archive toggle
+function toggleArchiveView() {
+    var mainCard = document.getElementById('newCustomerTable')?.closest('.card');
+    var archiveSection = document.getElementById('archiveSection');
+    var toggleBtn = document.getElementById('toggleArchiveBtn');
+    if (!mainCard || !archiveSection) return;
+
+    if (archiveSection.style.display === 'none') {
+        mainCard.style.display = 'none';
+        archiveSection.style.display = '';
+        if (toggleBtn) toggleBtn.textContent = 'Back to Active';
+    } else {
+        archiveSection.style.display = 'none';
+        mainCard.style.display = '';
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-archive"></i> Archive';
+    }
+}
 
 // Process Booking Modal
 var convertBookingData = {};
