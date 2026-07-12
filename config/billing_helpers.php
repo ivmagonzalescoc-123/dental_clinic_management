@@ -1,5 +1,21 @@
 <?php
 
+if (!function_exists('get_clinical_setting')) {
+    function get_clinical_setting($conn, $key, $default = null)
+    {
+        $stmt = $conn->prepare('SELECT setting_value FROM clinic_settings WHERE setting_key = ? LIMIT 1');
+        if (!$stmt) return $default;
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
+        if (!$row || !isset($row['setting_value'])) return $default;
+        $val = $row['setting_value'];
+        return is_numeric($val) ? (float)$val : $val;
+    }
+}
+
 if (!function_exists('billing_table_exists')) {
     function billing_table_exists($conn, $tableName)
     {
@@ -141,6 +157,20 @@ if (!function_exists('billing_ensure_tables')) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
         billing_migrate_billing_columns($conn);
+
+        $conn->query("CREATE TABLE IF NOT EXISTS clinic_settings (
+            setting_key VARCHAR(100) NOT NULL,
+            setting_value TEXT DEFAULT NULL,
+            description VARCHAR(255) DEFAULT NULL,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (setting_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+
+        // Seed consultation fee if not present
+        $checkFee = $conn->query("SELECT setting_key FROM clinic_settings WHERE setting_key = 'consultation_fee'");
+        if ($checkFee && $checkFee->num_rows === 0) {
+            $conn->query("INSERT INTO clinic_settings (setting_key, setting_value, description) VALUES ('consultation_fee', '500.00', 'Default consultation fee for consultation-only appointments')");
+        }
     }
 }
 

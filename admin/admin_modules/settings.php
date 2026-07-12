@@ -1,6 +1,13 @@
 <?php
 $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 ?>
+<?php if (isset($_SESSION['message'])): ?>
+    <div class="alert alert-<?php echo htmlspecialchars($_SESSION['message_type']); ?> alert-dismissible fade show" role="alert">
+        <?php echo htmlspecialchars($_SESSION['message']); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
+<?php endif; ?>
 
 <div class="card border-0 shadow-sm">
     <div class="card-header">

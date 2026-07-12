@@ -981,4 +981,16 @@ ALTER TABLE `users`
 
 ALTER TABLE `user_logs`
   ADD CONSTRAINT `fk_user_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+
+CREATE TABLE `clinic_settings` (
+  `setting_key` varchar(100) NOT NULL,
+  `setting_value` text DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`setting_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+INSERT INTO `clinic_settings` (`setting_key`, `setting_value`, `description`) VALUES
+('consultation_fee', '500.00', 'Default consultation fee for consultation-only appointments');
+
 COMMIT;

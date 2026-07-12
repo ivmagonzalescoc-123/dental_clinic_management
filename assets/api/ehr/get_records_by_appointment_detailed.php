@@ -150,7 +150,8 @@ if (!isset($record['radiographs_notes'])) $record['radiographs_notes'] = null;
 $patientName = '';
 $appointmentDate = '';
 $appointmentMeta = null;
-$apptStmt = $conn->prepare('SELECT a.appointment_date, a.status, a.completed_by_doctor_at, a.secretary_records_completed_at, p.first_name, p.last_name FROM appointments a INNER JOIN patients p ON p.patient_id = a.patient_id WHERE a.appointment_id = ? LIMIT 1');
+$patientInfo = null;
+$apptStmt = $conn->prepare('SELECT a.appointment_date, a.status, a.completed_by_doctor_at, a.secretary_records_completed_at, p.first_name, p.last_name, p.email, p.phone_number, p.address, p.profile_image FROM appointments a INNER JOIN patients p ON p.patient_id = a.patient_id WHERE a.appointment_id = ? LIMIT 1');
 if ($apptStmt) {
     $apptStmt->bind_param('i', $appointment_id);
     $apptStmt->execute();
@@ -163,6 +164,13 @@ if ($apptStmt) {
             'status' => (string)($apptRow['status'] ?? ''),
             'completed_by_doctor_at' => $apptRow['completed_by_doctor_at'] ?? null,
             'secretary_records_completed_at' => $apptRow['secretary_records_completed_at'] ?? null,
+        ];
+        $patientInfo = [
+            'name' => $patientName,
+            'email' => (string)($apptRow['email'] ?? ''),
+            'phone' => (string)($apptRow['phone_number'] ?? ''),
+            'address' => (string)($apptRow['address'] ?? ''),
+            'profile_image' => (string)($apptRow['profile_image'] ?? ''),
         ];
     }
 }
@@ -282,6 +290,7 @@ echo json_encode([
     'success' => true,
     'record' => $record,
     'appointment' => $appointmentMeta,
+    'patient_info' => $patientInfo,
     'record_status' => $recordStatus,
     'is_doctor_session_only' => $isDoctorSessionOnly,
     'is_finalized_record' => $isFinalizedRecord,

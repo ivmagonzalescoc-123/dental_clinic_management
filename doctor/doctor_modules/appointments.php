@@ -605,68 +605,117 @@ if ($stmt) {
                         <div class="modal-body" style="max-height:75vh; overflow:auto;">
                             <div id="historyContent">
                                 <div id="histWorkflowBanner" class="alert alert-info py-2 small mb-3" style="display:none;"></div>
-                                <div class="mb-3"><strong>Patient:</strong> <span id="histPatientName"></span></div>
-                                <div class="mb-3"><strong>Appointment Date:</strong> <span id="histApptDate"></span></div>
 
-                                <div class="mb-3" id="histBackgroundWrap">
-                                    <h6>Patient Background (Profiling)</h6>
-                                    <div id="histBackgroundContent" class="small"></div>
-                                </div>
-
-                                <div class="mb-3" id="histVisitClinicalWrap">
-                                    <h6>Visit Clinical Exam (This Appointment)</h6>
-                                    <div id="histVisitClinicalContent" class="small"></div>
-                                </div>
-
-                                <div class="mb-3"><strong>Clinical Notes:</strong>
-                                    <pre id="histNotes" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                                </div>
-                                <div class="mb-3"><strong>Clinical Summary:</strong>
-                                    <pre id="histSummary" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                                </div>
-                                <div class="mb-3"><strong>Prescriptions:</strong>
-                                    <div id="histPrescriptions" class="table-responsive">
-                                        <table class="table table-sm table-bordered">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Medicine Name</th>
-                                                    <th>Brand</th>
-                                                    <th>Dosage</th>
-                                                    <th>Duration</th>
-                                                    <th>Notes</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody></tbody>
-                                        </table>
+                                <!-- Patient Header: Avatar + Name + Details -->
+                                <div class="d-flex align-items-center gap-3 mb-3 p-2" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                                    <div id="histPatientAvatar" style="flex-shrink:0;"></div>
+                                    <div class="min-w-0">
+                                        <div id="histPatientName" style="font-size:1rem;font-weight:700;color:#1e293b;"></div>
+                                        <div id="histPatientDetails" style="font-size:0.82rem;color:#64748b;"></div>
                                     </div>
                                 </div>
-                                <div class="mb-3"><strong>Follow-up Date:</strong> <span id="histFollowUpDate" class="badge bg-info text-dark"></span></div>
-                                <div class="mb-3"><strong>Services Availed:</strong>
-                                    <ul id="histServices"></ul>
-                                </div>
-                                <div class="mb-3" id="histTreatmentWrap" style="display:none;"><strong>Treatment Plan:</strong>
-                                    <pre id="histTreatment" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                                </div>
-                                <div class="mb-3" id="histMaterialsWrap" style="display:none;"><strong>Materials Used:</strong>
-                                    <pre id="histMaterials" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                                </div>
-                                <div class="mb-3"><strong>Images:</strong>
-                                    <div id="histImages" class="row g-2"></div>
+
+                                <!-- Row 1: Appointment Date + Follow-up -->
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <div class="hist-field"><span class="hist-label">Appointment Date</span><span id="histApptDate" class="hist-value"></span></div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="hist-field"><span class="hist-label">Follow-up Date</span><span id="histFollowUpDate" class="hist-value badge bg-info text-dark"></span></div>
+                                    </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
-                                        <label class="form-label mb-0"><strong>Odontogram (read-only)</strong></label>
-                                        <div class="d-flex gap-2">
-                                            <button type="button" id="histOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                                <!-- Row 2: Background + Clinical Exam -->
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6" id="histBackgroundWrap">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Patient Background (Profiling)</span>
+                                            <div id="histBackgroundContent" class="small"></div>
                                         </div>
                                     </div>
-                                    <div id="histOdontogramViewport" class="odontogram-viewport">
-                                        <button type="button" id="histOdontogramFullscreenCloseBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                                            <i class="bi bi-x-lg"></i> Close
-                                        </button>
-                                        <div id="histOdontogramWrap" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
-                                            <iframe id="histOdontoFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
+                                    <div class="col-md-6" id="histVisitClinicalWrap">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Visit Clinical Exam</span>
+                                            <div id="histVisitClinicalContent" class="small"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Notes + Summary -->
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Clinical Notes</span>
+                                            <pre id="histNotes" class="hist-pre"></pre>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Clinical Summary</span>
+                                            <pre id="histSummary" class="hist-pre"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Prescriptions (full width) -->
+                                <div class="mb-2">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Prescriptions</span>
+                                        <div id="histPrescriptions" class="table-responsive">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="table-light">
+                                                    <tr><th>Medicine</th><th>Brand</th><th>Dosage</th><th>Duration</th><th>Notes</th></tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 5: Services + Treatment + Materials -->
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Services Availed</span>
+                                            <ul id="histServices" class="mb-0 small"></ul>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4" id="histTreatmentWrap" style="display:none;">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Treatment Plan</span>
+                                            <pre id="histTreatment" class="hist-pre"></pre>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4" id="histMaterialsWrap" style="display:none;">
+                                        <div class="hist-section">
+                                            <span class="hist-section-title">Materials Used</span>
+                                            <pre id="histMaterials" class="hist-pre"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 6: Images (full width) -->
+                                <div class="mb-2">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Images</span>
+                                        <div id="histImages" class="row g-2"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 7: Odontogram (full width) -->
+                                <div class="mb-2">
+                                    <div class="hist-section">
+                                        <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
+                                            <span class="hist-section-title mb-0">Odontogram (read-only)</span>
+                                            <button type="button" id="histOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                                        </div>
+                                        <div id="histOdontogramViewport" class="odontogram-viewport">
+                                            <button type="button" id="histOdontogramFullscreenCloseBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                                                <i class="bi bi-x-lg"></i> Close
+                                            </button>
+                                            <div id="histOdontogramWrap" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
+                                                <iframe id="histOdontoFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -680,6 +729,55 @@ if ($stmt) {
             </div>
 
 <style>
+/* Compact history modal */
+.hist-field {
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+}
+.hist-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 1px;
+}
+.hist-value {
+    display: block;
+    font-size: 0.85rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+.hist-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    height: 100%;
+}
+.hist-section-title {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.hist-pre {
+    white-space: pre-wrap;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    margin-bottom: 0;
+    max-height: 120px;
+    overflow-y: auto;
+}
 .doctor-recent-appointments-table thead th {
     white-space: nowrap;
 }
@@ -1286,8 +1384,30 @@ async function openHistoryModal(appointmentId) {
             workflowBanner.style.display = '';
         }
 
-        // show patient+date
-        document.getElementById('histPatientName').textContent = rec._patient_name || 'Unknown patient';
+        // show patient header with avatar
+        const patientInfo = j.patient_info || {};
+        const patientName = patientInfo.name || rec._patient_name || 'Unknown patient';
+        document.getElementById('histPatientName').textContent = patientName;
+
+        // Render avatar
+        const avatarEl = document.getElementById('histPatientAvatar');
+        if (avatarEl) {
+            const imgPath = String(patientInfo.profile_image || '').trim();
+            if (imgPath !== '') {
+                const imgUrl = /^https?:\/\//i.test(imgPath) ? imgPath : '../' + imgPath.replace(/^\/+/, '');
+                avatarEl.innerHTML = '<img src="' + escapeHtml(imgUrl) + '" alt="" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0;">';
+            } else {
+                avatarEl.innerHTML = '<div style="width:46px;height:46px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;"><i class="bi bi-person-fill" style="font-size:1.2rem;color:#94a3b8;"></i></div>';
+            }
+        }
+
+        // Render details line: email | phone | address
+        const detailsEl = document.getElementById('histPatientDetails');
+        if (detailsEl) {
+            const parts = [patientInfo.email, patientInfo.phone, patientInfo.address].filter(Boolean);
+            detailsEl.textContent = parts.join(' | ') || '';
+        }
+
         document.getElementById('histApptDate').textContent = rec._appointment_date || rec.submitted_at || '';
         document.getElementById('histNotes').textContent = rec.doctor_notes || '';
 

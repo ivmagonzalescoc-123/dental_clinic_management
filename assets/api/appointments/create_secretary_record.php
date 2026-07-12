@@ -364,6 +364,19 @@ try {
         }
     }
 
+    // Auto-add consultation fee if no line items
+    if (empty($lineItems)) {
+        $consultationFee = get_clinical_setting($conn, 'consultation_fee', 0);
+        if ($consultationFee > 0) {
+            $lineItems[] = [
+                'description' => 'Consultation Fee',
+                'amount' => $consultationFee,
+                'item_type' => 'fee',
+            ];
+            $subtotal = $consultationFee;
+        }
+    }
+
     $subtotal = round($subtotal, 2);
     if ($discountType === 'custom' && $discountNotes === '') {
         $discountNotes = 'Doctor-approved custom discount';

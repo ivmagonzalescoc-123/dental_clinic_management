@@ -87,48 +87,90 @@ if ($stmt) {
                     </div>
                     <div class="modal-body" style="max-height:75vh; overflow:auto;">
                         <div id="histContentRec">
-                            <div class="mb-3"><strong>Patient:</strong> <span id="histPatientNameRec"></span></div>
-                            <div class="mb-3"><strong>Submitted At:</strong> <span id="histSubmittedAtRec"></span></div>
-
-                            <div class="mb-3" id="histBackgroundRecWrap">
-                                <h6>Patient Background (Profiling)</h6>
-                                <div id="histBackgroundRecContent" class="small"></div>
+                            <!-- Patient Header: Avatar + Name + Details -->
+                            <div class="d-flex align-items-center gap-3 mb-3 p-2" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                                <div id="histPatientAvatarRec" style="flex-shrink:0;"></div>
+                                <div class="min-w-0">
+                                    <div id="histPatientNameRec" style="font-size:1rem;font-weight:700;color:#1e293b;"></div>
+                                    <div id="histPatientDetailsRec" style="font-size:0.82rem;color:#64748b;"></div>
+                                </div>
                             </div>
 
-                            <div class="mb-3" id="histVisitClinicalRecWrap">
-                                <h6>Visit Clinical Exam (This Appointment)</h6>
-                                <div id="histVisitClinicalRecContent" class="small"></div>
+                            <!-- Row 1: Submitted At -->
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-12">
+                                    <div class="hist-field"><span class="hist-label">Submitted At</span><span id="histSubmittedAtRec" class="hist-value"></span></div>
+                                </div>
                             </div>
 
-                            <div class="mb-3"><strong>Clinical Notes:</strong>
-                                <pre id="histNotesRec" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                            </div>
-                            <div class="mb-3"><strong>Services Availed:</strong>
-                                <ul id="histServicesRec"></ul>
-                            </div>
-                            <div class="mb-3" id="histTreatmentRecWrap" style="display:none;"><strong>Treatment Plan:</strong>
-                                <pre id="histTreatmentRec" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                            </div>
-                            <div class="mb-3" id="histMaterialsRecWrap" style="display:none;"><strong>Materials Used:</strong>
-                                <pre id="histMaterialsRec" style="white-space:pre-wrap;background:#f8f9fa;padding:10px;border-radius:4px;"></pre>
-                            </div>
-                            <div class="mb-3"><strong>Images:</strong>
-                                <div id="histImagesRec" class="row g-2"></div>
-                            </div>
-
-                            <div class="mb-3">
-                                <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
-                                    <label class="form-label mb-0"><strong>Odontogram (read-only)</strong></label>
-                                    <div class="d-flex gap-2">
-                                        <button type="button" id="histOdontogramFullscreenBtnRec" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                            <!-- Row 2: Background + Clinical Exam -->
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6" id="histBackgroundRecWrap">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Patient Background (Profiling)</span>
+                                        <div id="histBackgroundRecContent" class="small"></div>
                                     </div>
                                 </div>
-                                <div id="histOdontogramViewportRec" class="odontogram-viewport">
-                                    <button type="button" id="histOdontogramFullscreenCloseBtnRec" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                                        <i class="bi bi-x-lg"></i> Close
-                                    </button>
-                                    <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
-                                        <iframe id="histOdontoFrameRec" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
+                                <div class="col-md-6" id="histVisitClinicalRecWrap">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Visit Clinical Exam</span>
+                                        <div id="histVisitClinicalRecContent" class="small"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Clinical Notes (full width) -->
+                            <div class="mb-2">
+                                <div class="hist-section">
+                                    <span class="hist-section-title">Clinical Notes</span>
+                                    <pre id="histNotesRec" class="hist-pre"></pre>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Services + Treatment + Materials -->
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Services Availed</span>
+                                        <ul id="histServicesRec" class="mb-0 small"></ul>
+                                    </div>
+                                </div>
+                                <div class="col-md-4" id="histTreatmentRecWrap" style="display:none;">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Treatment Plan</span>
+                                        <pre id="histTreatmentRec" class="hist-pre"></pre>
+                                    </div>
+                                </div>
+                                <div class="col-md-4" id="histMaterialsRecWrap" style="display:none;">
+                                    <div class="hist-section">
+                                        <span class="hist-section-title">Materials Used</span>
+                                        <pre id="histMaterialsRec" class="hist-pre"></pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 5: Images (full width) -->
+                            <div class="mb-2">
+                                <div class="hist-section">
+                                    <span class="hist-section-title">Images</span>
+                                    <div id="histImagesRec" class="row g-2"></div>
+                                </div>
+                            </div>
+
+                            <!-- Row 6: Odontogram (full width) -->
+                            <div class="mb-2">
+                                <div class="hist-section">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
+                                        <span class="hist-section-title mb-0">Odontogram (read-only)</span>
+                                        <button type="button" id="histOdontogramFullscreenBtnRec" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                                    </div>
+                                    <div id="histOdontogramViewportRec" class="odontogram-viewport">
+                                        <button type="button" id="histOdontogramFullscreenCloseBtnRec" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                                            <i class="bi bi-x-lg"></i> Close
+                                        </button>
+                                        <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
+                                            <iframe id="histOdontoFrameRec" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -142,6 +184,55 @@ if ($stmt) {
         </div>
 
         <style>
+        /* Compact history modal */
+        .hist-field {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-bottom: 4px;
+        }
+        .hist-label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-bottom: 1px;
+        }
+        .hist-value {
+            display: block;
+            font-size: 0.85rem;
+            color: #1e293b;
+            font-weight: 500;
+        }
+        .hist-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            height: 100%;
+        }
+        .hist-section-title {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .hist-pre {
+            white-space: pre-wrap;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            margin-bottom: 0;
+            max-height: 120px;
+            overflow-y: auto;
+        }
         .odontogram-viewport {
             position: relative;
         }
@@ -345,6 +436,24 @@ if ($stmt) {
 
                 document.getElementById('histPatientNameRec').textContent = rec._patient_name || 'Unknown patient';
                 document.getElementById('histSubmittedAtRec').textContent = rec.submitted_at || rec._appointment_date || '';
+
+                // Render patient avatar and details
+                const patientInfo = j.patient_info || {};
+                const avatarRecEl = document.getElementById('histPatientAvatarRec');
+                if (avatarRecEl) {
+                    const imgPath = String(patientInfo.profile_image || '').trim();
+                    if (imgPath !== '') {
+                        const imgUrl = /^https?:\/\//i.test(imgPath) ? imgPath : '../' + imgPath.replace(/^\/+/, '');
+                        avatarRecEl.innerHTML = '<img src="' + escapeHtml(imgUrl) + '" alt="" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid #e2e8f0;">';
+                    } else {
+                        avatarRecEl.innerHTML = '<div style="width:46px;height:46px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;"><i class="bi bi-person-fill" style="font-size:1.2rem;color:#94a3b8;"></i></div>';
+                    }
+                }
+                const detailsRecEl = document.getElementById('histPatientDetailsRec');
+                if (detailsRecEl) {
+                    const parts = [patientInfo.email, patientInfo.phone, patientInfo.address].filter(Boolean);
+                    detailsRecEl.textContent = parts.join(' | ') || '';
+                }
                 document.getElementById('histNotesRec').textContent = rec.doctor_notes || '';
 
                 const backgroundEl = document.getElementById('histBackgroundRecContent');

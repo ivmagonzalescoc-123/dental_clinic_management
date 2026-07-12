@@ -109,6 +109,7 @@
    */
   ;(function() {
     var isNavigating = false
+    var currentAbort = null
 
     /**
      * Persistent body guard: removes any element appended to document.body
@@ -283,16 +284,38 @@
       document.body.style.removeProperty('padding-right')
     }
 
+    function destroyAllFullCalendars() {
+      // Destroy tracked instances
+      if (window.__fcInstances && window.__fcInstances.length) {
+        window.__fcInstances.forEach(function(cal) {
+          try { cal.destroy() } catch(e) {}
+        })
+        window.__fcInstances = []
+      }
+      // Aggressively find and remove any leftover FullCalendar DOM
+      document.querySelectorAll('#main .fc, #main .fc-root, #main [data-fullcalendar]').forEach(function(el) {
+        try { el.remove() } catch(e) {}
+      })
+    }
+
     function ajaxNavigate(url) {
-      if (isNavigating) return
+      if (currentAbort) {
+        currentAbort.abort()
+      }
+      currentAbort = new AbortController()
       isNavigating = true
       cleanupModalState()
       setPageLoading(true)
 
-      fetch(url, { credentials: 'same-origin' })
+      fetch(url, { credentials: 'same-origin', signal: currentAbort.signal })
         .then(function(r) { return r.text() })
         .then(function(html) {
           setPageLoading(false)
+          currentAbort = null
+
+          // Destroy all FullCalendar instances BEFORE swapping DOM
+          destroyAllFullCalendars()
+
           var parser = new DOMParser()
           var doc = parser.parseFromString(html, 'text/html')
           var newMain = doc.querySelector('#main')
@@ -313,8 +336,10 @@
           isNavigating = false
           window.dispatchEvent(new CustomEvent('page-loaded', { detail: { page: page } }))
         })
-        .catch(function() {
+        .catch(function(err) {
+          if (err.name === 'AbortError') return
           setPageLoading(false)
+          destroyAllFullCalendars()
           cleanupModalState()
           window.location.href = url
           isNavigating = false
