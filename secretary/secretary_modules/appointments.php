@@ -700,11 +700,9 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     }
                     ?>
             <small class="text-muted">Showing <span id="newCustomerCount"><?php echo count($guestBookings); ?></span> records</small>
-            <?php if (count($archivedBookings) > 0): ?>
-            <button type="button" class="btn btn-sm btn-outline-warning" id="toggleArchiveBtn" onclick="toggleArchiveView()">
-                <i class="bi bi-archive"></i> Archive (<?php echo count($archivedBookings); ?>)
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleArchiveBtn" onclick="toggleArchiveView()">
+                <i class="bi bi-archive"></i> Archive<?php if (count($archivedBookings) > 0): ?> (<?php echo count($archivedBookings); ?>)<?php endif; ?>
             </button>
-            <?php endif; ?>
         </div>
         <div class="table-responsive">
             <table class="table table-hover" id="newCustomerTable" data-skip-table-search="1" data-skip-datatable="1">
@@ -976,6 +974,7 @@ document.querySelectorAll('.new-cust-time-filter').forEach(function(item) {
 });
 
 // Archive toggle
+var archiveCount = <?php echo count($archivedBookings); ?>;
 function toggleArchiveView() {
     var mainCard = document.getElementById('newCustomerTable')?.closest('.card');
     var archiveSection = document.getElementById('archiveSection');
@@ -985,11 +984,11 @@ function toggleArchiveView() {
     if (archiveSection.style.display === 'none') {
         mainCard.style.display = 'none';
         archiveSection.style.display = '';
-        if (toggleBtn) toggleBtn.textContent = 'Back to Active';
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-arrow-left"></i> Back to Active';
     } else {
         archiveSection.style.display = 'none';
         mainCard.style.display = '';
-        if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-archive"></i> Archive';
+        if (toggleBtn) toggleBtn.innerHTML = '<i class="bi bi-archive"></i> Archive' + (archiveCount > 0 ? ' (' + archiveCount + ')' : '');
     }
 }
 

@@ -45,6 +45,10 @@ if (!$conn->set_charset("utf8mb4")) {
 // Set timezone from environment (default: Asia/Manila)
 date_default_timezone_set(env('APP_TIMEZONE', 'Asia/Manila'));
 
+// Set MySQL session timezone to match PHP timezone so current_timestamp() stores local time
+$tzOffset = date('P');
+$conn->query("SET time_zone = '" . $conn->real_escape_string($tzOffset) . "'");
+
 // Disable mysqli throwing exceptions by default here (we will use explicit checks)
 if (function_exists('mysqli_report')) {
     // Turn off automatic reporting to avoid uncaught mysqli_sql_exception

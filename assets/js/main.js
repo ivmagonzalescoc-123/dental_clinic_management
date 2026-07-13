@@ -1077,9 +1077,11 @@
         const then = new Date(dateStr).getTime();
         if (isNaN(then)) return '';
         const diff = Math.floor((now - then) / 1000);
-        if (diff < 60) return 'just now';
-        if (diff < 3600) return Math.floor(diff / 60) + 'min ago';
-        if (diff < 86400) return Math.floor(diff / 3600) + 'hr ago';
+        if (diff < 0) return 'just now';
+        if (diff < 5) return 'just now';
+        if (diff < 60) return diff + 's ago';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
         if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
         return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       }
@@ -1139,7 +1141,7 @@
             const message = escapeHtml(simplifyMessage(n.body || n.title || 'Notification'));
             const timeStr = relativeTime(n.created_at);
             body.innerHTML = '<div class="notification-dropdown-item__message">' + message + '</div>' +
-                (timeStr ? '<div class="notification-dropdown-item__time">' + timeStr + '</div>' : '');
+                (timeStr ? '<div class="notification-dropdown-item__time" data-created-at="' + escapeHtml(n.created_at) + '">' + timeStr + '</div>' : '');
 
             item.appendChild(icon);
             item.appendChild(body);
@@ -1324,6 +1326,13 @@
   });
   // start polling notifications every 30s
   setInterval(fetchNotifications, 30000);
+  // update displayed notification times every 5s
+  setInterval(function() {
+    document.querySelectorAll('.notification-dropdown-item__time').forEach(function(el) {
+      var created = el.dataset.createdAt;
+      if (created) el.textContent = relativeTime(created);
+    });
+  }, 5000);
   // initial
   fetchNotifications();
 

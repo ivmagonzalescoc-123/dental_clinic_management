@@ -186,4 +186,22 @@ if (isset($rec['recommended_services']) && is_array($rec['recommended_services']
 if (!isset($rec['radiographs_notes'])) $rec['radiographs_notes'] = null;
 if (!isset($rec['primary_image'])) $rec['primary_image'] = null;
 
+// Load pre-selected services from selected_services table (set by secretary during booking/arrival)
+if ($appointment_id > 0) {
+    $ssStmt = $conn->prepare('SELECT ss.service_id, s.service_name, s.initial_price FROM selected_services ss INNER JOIN services s ON s.service_id = ss.service_id WHERE ss.appointment_id = ?');
+    $ssStmt->bind_param('i', $appointment_id);
+    $ssStmt->execute();
+    $ssRes = $ssStmt->get_result();
+    $selectedSvcs = [];
+    while ($ssRow = $ssRes->fetch_assoc()) {
+        $selectedSvcs[] = [
+            'service_id' => (int)$ssRow['service_id'],
+            'service_name' => $ssRow['service_name'],
+            'initial_price' => (float)$ssRow['initial_price'],
+        ];
+    }
+    $ssStmt->close();
+    $rec['selected_services'] = $selectedSvcs;
+}
+
 echo json_encode(['success'=>true,'record'=>$rec]);

@@ -322,6 +322,18 @@ if ($sstmt) {
                     odEl.value = rec.odontogram ? JSON.stringify(rec.odontogram) : '';
                 }
                 syncOdontogramFrame();
+
+                // Pre-load selected services from secretary/arrival
+                if (Array.isArray(rec.selected_services) && rec.selected_services.length > 0) {
+                    ehrSelectedServices = rec.selected_services.map(function(s) {
+                        return {
+                            service_id: s.service_id,
+                            name: s.service_name,
+                            price: parseFloat(s.initial_price || 0)
+                        };
+                    });
+                    renderEhrServicesTable();
+                }
             } catch (e) { console.warn('prefill failed', e); }
         }
 

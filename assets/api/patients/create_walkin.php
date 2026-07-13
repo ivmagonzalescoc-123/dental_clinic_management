@@ -85,7 +85,7 @@ try {
 
     $patientName = trim($first_name . ' ' . ($middle_name !== '' ? $middle_name . ' ' : '') . $last_name);
     $subject = 'Patient Account - ' . email_clinic_name();
-    $message = email_patient_account_created_text($patientName, $email, $generated_password);
+    $message = 'Welcome ' . $patientName . '! Your account has been created. Email: ' . $email . ' | Temporary Password: ' . $generated_password . '. Please change your password after logging in.';
     $htmlMessage = email_patient_account_created_html($patientName, $email, $generated_password);
 
     $emailSent = reminder_send_email($email, $subject, $message, $htmlMessage);

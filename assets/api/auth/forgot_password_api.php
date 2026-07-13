@@ -141,7 +141,7 @@ if ($emailMode === 'smtp' && !smtp_is_configured() && !$isDev) {
 
 $expiresMinutes = 15;
 $subject = 'Password Reset - ' . email_clinic_name();
-$message = email_password_reset_otp_text($otp, $expiresMinutes);
+$message = 'Your password reset code is: ' . $otp . '. It expires in ' . $expiresMinutes . ' minutes.';
 $htmlMessage = email_password_reset_otp_html($otp, $expiresMinutes);
 $sent = reminder_send_email($email, $subject, $message, $htmlMessage);
 

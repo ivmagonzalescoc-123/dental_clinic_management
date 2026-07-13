@@ -74,6 +74,14 @@ try {
     error_log('get_notifications error: ' . $e->getMessage());
 }
 
+// Format timestamps as ISO 8601 with timezone offset
+foreach ($rows as &$row) {
+    if (!empty($row['created_at'])) {
+        $row['created_at'] = date('c', strtotime($row['created_at']));
+    }
+}
+unset($row);
+
 echo json_encode(['success'=>true,'notifications'=>$rows,'unread'=>$unread]);
 
 ?>
