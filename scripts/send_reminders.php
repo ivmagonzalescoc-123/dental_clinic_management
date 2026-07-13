@@ -247,7 +247,7 @@ if (!function_exists('auto_mark_no_show_end_of_day')) {
 // Guard: ensure schedule_reminders and patient_schedules tables exist
 if (!function_exists('table_exists') || !table_exists($conn, 'schedule_reminders') || !table_exists($conn, 'patient_schedules')) {
     error_log('send_reminders: required scheduling tables missing; aborting reminders run');
-    exit(0);
+    return;
 }
 
 // Queue late and no-show workflow reminders before dispatch
@@ -277,7 +277,7 @@ $sql = "SELECT r.reminder_id, r.patient_schedule_id, r.remind_at, r.channel, r.p
 $res = $conn->query($sql);
 if (!$res) {
     error_log('Reminder fetch failed: ' . $conn->error);
-    exit(1);
+    return;
 }
 
 $secretaryIds = fetch_secretary_ids($conn);
@@ -354,7 +354,5 @@ while ($row = $res->fetch_assoc()) {
         error_log('send_reminders: dispatch failed for reminder_id=' . $reminder_id . ' channel=' . $channel);
     }
 }
-
-echo "done\n";
 
 ?>

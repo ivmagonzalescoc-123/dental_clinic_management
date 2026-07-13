@@ -4,6 +4,7 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', dirname(__FILE__) . '/error.log');
 
+ob_start();
 session_start();
 header('Content-Type: application/json');
 

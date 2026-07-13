@@ -718,12 +718,13 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <th>Time</th>
                         <th>Status</th>
                         <th>Requested</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($guestBookings)): ?>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
+                            <td colspan="9" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No guest bookings yet.
                             </td>
@@ -746,6 +747,26 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                     <?php endif; ?>
                                 </td>
                                 <td><?php echo date('M j, g:i A', strtotime($gb['created_at'])); ?></td>
+                                <td>
+                                    <?php if ($isConverted): ?>
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-sm btn-success"
+                                            onclick='openConvertBookingModal(<?php echo json_encode([
+                                                'booking_id' => (int)$gb['booking_id'],
+                                                'first_name' => $gb['first_name'],
+                                                'last_name' => $gb['last_name'],
+                                                'email' => $gb['email'],
+                                                'phone_number' => $gb['phone_number'] ?? '',
+                                                'date_of_birth' => $gb['date_of_birth'] ?? '',
+                                                'preferred_date' => $gb['preferred_date'],
+                                                'preferred_time' => $gb['preferred_time'],
+                                                'reason' => $gb['reason'] ?? '',
+                                            ]); ?>)'>
+                                            <i class="bi bi-arrow-right-circle"></i> Process
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

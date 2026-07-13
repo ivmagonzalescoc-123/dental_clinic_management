@@ -31,14 +31,17 @@ function auth_generate_login_captcha_payload(): array
     ];
 }
 
-function auth_fail($message = 'Invalid email or password', $code = 401)
+function auth_fail($message = 'Invalid email or password', $code = 401, $regenerateCaptcha = false)
 {
     http_response_code($code);
-    echo json_encode([
+    $payload = [
         'success' => false,
         'message' => $message,
-        'captcha' => auth_generate_login_captcha_payload(),
-    ]);
+    ];
+    if ($regenerateCaptcha) {
+        $payload['captcha'] = auth_generate_login_captcha_payload();
+    }
+    echo json_encode($payload);
     exit;
 }
 
@@ -167,7 +170,7 @@ $captchaExpected = (string)($_SESSION['login_captcha_answer'] ?? '');
 $captchaExpiresAt = (int)($_SESSION['login_captcha_expires_at'] ?? 0);
 
 if ($captchaAnswer === '' || $captchaExpected === '' || ($captchaExpiresAt > 0 && time() > $captchaExpiresAt) || !hash_equals($captchaExpected, $captchaAnswer)) {
-    auth_fail('Captcha verification failed. Please try again.', 400);
+    auth_fail('Captcha verification failed. Please try again.', 400, true);
 }
 
 unset($_SESSION['login_captcha_answer'], $_SESSION['login_captcha_expires_at']);

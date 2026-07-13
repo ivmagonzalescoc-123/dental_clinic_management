@@ -1,10 +1,5 @@
 <?php
-/**
- * Database Connection Configuration
- *
- * All credentials are read from the project root .env file via config/env.php:
- *   DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT
- */
+ob_start();
 
 require_once __DIR__ . '/env.php';
 
@@ -81,5 +76,7 @@ if (PHP_SAPI !== 'cli' && env('APP_ENV', 'development') === 'development') {
         reminder_auto_cron($conn);
     }
 }
+
+ob_end_clean();
 
 ?>

@@ -1522,7 +1522,6 @@ $aboutPoints = [
 
                 if (data.success) {
                     bookingEmail = email;
-                    bookingId = data.booking_id || 0;
                     // Show OTP section
                     document.getElementById('booking-form').classList.add('hidden');
                     document.getElementById('booking-otp-section').classList.remove('hidden');
@@ -1565,7 +1564,6 @@ $aboutPoints = [
 
             try {
                 const fd = new FormData();
-                fd.append('booking_id', bookingId);
                 fd.append('otp', otp);
 
                 const response = await fetch('assets/api/bookings/verify_booking_otp.php', {
@@ -1578,7 +1576,7 @@ $aboutPoints = [
                     // Show success
                     document.getElementById('booking-otp-section').classList.add('hidden');
                     document.getElementById('booking-success-section').classList.remove('hidden');
-                    document.getElementById('booking-ref-display').textContent = '#' + bookingId;
+                    document.getElementById('booking-ref-display').textContent = '#' + (data.booking_id || '');
                 } else {
                     if (otpAlert) {
                         otpAlert.className = 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';

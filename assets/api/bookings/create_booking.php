@@ -18,9 +18,11 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 
+    security_start_session();
+
     if (!$conn) throw new Exception('Database connection failed');
 
-    // CSRF validation (token from index.php)
+    // CSRF validation
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrfToken)) {
         http_response_code(403);
@@ -51,7 +53,7 @@ try {
         $prefTime = 'morning';
     }
 
-    // Validate date format and range (must be today or future, within 30 days)
+    // Validate date format and range
     $dt = DateTime::createFromFormat('Y-m-d', $prefDate);
     if (!$dt || $dt->format('Y-m-d') !== $prefDate) {
         throw new Exception('Invalid date format. Use YYYY-MM-DD.');
@@ -70,9 +72,9 @@ try {
         throw new Exception('Clinic is closed on Sundays. Please select another date.');
     }
 
-    // Check duplicate booking (same email + same preferred date, not cancelled/converted)
+    // Check duplicate booking (same email + same preferred date, verified only)
     $dupStmt = $conn->prepare(
-        "SELECT booking_id FROM bookings WHERE email = ? AND preferred_date = ? AND status IN ('pending_verification','verified') LIMIT 1"
+        "SELECT booking_id FROM bookings WHERE email = ? AND preferred_date = ? AND status IN ('verified','converted') LIMIT 1"
     );
     if ($dupStmt) {
         $dupStmt->bind_param('ss', $email, $prefDate);
@@ -83,6 +85,14 @@ try {
             throw new Exception('You already have a booking for this date. Please wait for your existing booking to be processed.');
         }
         $dupStmt->close();
+    }
+
+    // Clean up expired pending_verification bookings for this email+date (older than 10 min)
+    $cleanup = $conn->prepare("DELETE FROM bookings WHERE email = ? AND preferred_date = ? AND status = 'pending_verification' AND created_at < DATE_SUB(NOW(), INTERVAL 10 MINUTE)");
+    if ($cleanup) {
+        $cleanup->bind_param('ss', $email, $prefDate);
+        $cleanup->execute();
+        $cleanup->close();
     }
 
     // Check if email already has a patient account
@@ -108,25 +118,25 @@ try {
     $otpHash = hash('sha256', $otp);
     $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
-    // Insert booking
-    $sql = "INSERT INTO bookings (first_name, last_name, email, phone_number, date_of_birth, preferred_date, preferred_time, reason, otp_hash, otp_expires_at, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_verification')";
-    $stmt = $conn->prepare($sql);
-    if (!$stmt) throw new Exception('Database error: ' . $conn->error);
-
-    $dobVal = $dob !== '' ? $dob : null;
-    $reasonVal = $reason !== '' ? $reason : null;
-    $phoneVal = $phone !== '' ? $phone : null;
-
-    $stmt->bind_param('ssssssssss', $firstName, $lastName, $email, $phoneVal, $dobVal, $prefDate, $prefTime, $reasonVal, $otpHash, $otpExpires);
-    if (!$stmt->execute()) throw new Exception('Failed to save booking: ' . $stmt->error);
-    $bookingId = (int)$conn->insert_id;
-    $stmt->close();
+    // Store booking data in SESSION (no DB insert yet)
+    $_SESSION['pending_booking'] = [
+        'first_name'    => $firstName,
+        'last_name'     => $lastName,
+        'email'         => $email,
+        'phone_number'  => $phone !== '' ? $phone : null,
+        'date_of_birth' => $dob !== '' ? $dob : null,
+        'preferred_date'=> $prefDate,
+        'preferred_time'=> $prefTime,
+        'reason'        => $reason !== '' ? $reason : null,
+        'otp_hash'      => $otpHash,
+        'otp_expires_at'=> $otpExpires,
+        'created_at'    => date('Y-m-d H:i:s'),
+    ];
 
     // Send OTP email
     $patientName = trim($firstName . ' ' . $lastName);
     $subject = 'Booking Verification - ' . email_clinic_name();
-    $textContent = email_booking_otp_text($otp, $patientName);
+    $textContent = 'Your verification code is: ' . $otp . '. It expires in 10 minutes.';
     $htmlContent = email_booking_otp_html($otp, $patientName);
 
     $emailSent = reminder_send_email($email, $subject, $textContent, $htmlContent);
@@ -134,7 +144,6 @@ try {
     echo json_encode([
         'success'    => true,
         'message'    => 'OTP sent to your email. Please verify to complete your booking.',
-        'booking_id' => $bookingId,
         'email_sent' => $emailSent,
     ]);
 
