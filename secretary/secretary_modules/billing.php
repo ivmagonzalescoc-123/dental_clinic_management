@@ -423,21 +423,31 @@ if (!$hasAnyData) {
     </div><!-- end billing records tab pane -->
 
     <!-- Payment History Tab -->
-    <div class="tab-pane" id="tabPaymentHistory" style="display: none;">
+    <div class="tab-pane" id="tabPaymentHistory">
         <div class="card border-0">
             <div class="card-body">
                 <div class="module-search-toolbar mb-3 flex-wrap gap-2">
+                    <select id="paymentFilterMethod" class="form-select form-select-sm" style="width: auto; min-width: 140px;">
+                        <option value="all">All Methods</option>
+                        <option value="cash">Cash</option>
+                        <option value="card">Card</option>
+                        <option value="gcash">GCash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                    </select>
+                    <input type="date" id="paymentFilterDateFrom" class="form-control form-control-sm" style="width: auto; min-width: 140px;" title="From date">
+                    <span class="text-muted align-self-center">–</span>
+                    <input type="date" id="paymentFilterDateTo" class="form-control form-control-sm" style="width: auto; min-width: 140px;" title="To date">
                     <div class="unified-table-search-wrap">
                         <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                         <input id="paymentSearch" type="search" class="form-control unified-table-search-input"
-                            placeholder="Search patient, OR number, or method..." aria-label="Search payments">
+                            placeholder="Search patient, OR number..." aria-label="Search payments">
                         <button type="button" class="unified-table-search-clear" id="paymentSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
                     </div>
                     <small class="text-muted">Showing <span id="paymentCount"><?php echo count($payments); ?></span> payments</small>
                 </div>
 
                 <div class="table-responsive">
-                    <table class="table table-hover" id="paymentTable">
+                    <table class="table table-hover" id="paymentTable" data-skip-table-search="1">
                         <thead>
                             <tr>
                                 <th>OR #</th>
@@ -460,7 +470,9 @@ if (!$hasAnyData) {
                                         data-search="<?php echo htmlspecialchars(strtolower(
                                             $pay['first_name'] . ' ' . $pay['last_name'] . ' ' .
                                             $pay['or_number'] . ' ' . $pay['payment_method']
-                                        )); ?>">
+                                        )); ?>"
+                                        data-method="<?php echo htmlspecialchars(strtolower($pay['payment_method'])); ?>"
+                                        data-date="<?php echo htmlspecialchars(date('Y-m-d', strtotime($pay['paid_at']))); ?>">
                                         <td><strong><?php echo htmlspecialchars($pay['or_number']); ?></strong></td>
                                         <td><?php echo htmlspecialchars($pay['first_name'] . ' ' . $pay['last_name']); ?></td>
                                         <td class="text-success fw-bold">₱<?php echo number_format((float)$pay['amount'], 2); ?></td>
@@ -622,8 +634,8 @@ if (!$hasAnyData) {
     });
 
     function viewInvoice(billing) {
-        const appRoot = window.location.pathname.split('/').slice(0, 2).join('/') || '';
-        fetch(appRoot + '/assets/api/billing/get_billing_details.php?billing_id=' + encodeURIComponent(billing.billing_id))
+        document.getElementById('invoiceContent').innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div> Loading invoice...</div>';
+        fetch('../assets/api/billing/get_billing_details.php?billing_id=' + encodeURIComponent(billing.billing_id))
             .then(r => r.json()).then(details => {
                 if (!details.success) return;
                 const lineItems = details.line_items || [];
@@ -720,6 +732,7 @@ if (!$hasAnyData) {
                 document.getElementById('invoiceContent').innerHTML = invoiceHtml;
             }).catch(err => {
                 console.error('Could not load billing details', err);
+                document.getElementById('invoiceContent').innerHTML = '<div class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>Unable to load invoice details. Please try again.</div>';
             });
     }
 
@@ -834,50 +847,42 @@ if (!$hasAnyData) {
         }
 
         filterBillingTable();
-
-        // Payment history search
-        const paymentSearchEl = document.getElementById('paymentSearch');
-        const paymentClearEl = document.getElementById('paymentSearchClear');
-        if (paymentSearchEl) {
-            paymentSearchEl.addEventListener('input', function () {
-                if (paymentClearEl) paymentClearEl.style.display = paymentSearchEl.value ? '' : 'none';
-                clearTimeout(paymentSearchEl._timer);
-                paymentSearchEl._timer = setTimeout(filterPaymentTable, 150);
-            });
-            paymentSearchEl.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    paymentSearchEl.value = '';
-                    if (paymentClearEl) paymentClearEl.style.display = 'none';
-                    filterPaymentTable();
-                }
-            });
-        }
-        if (paymentClearEl && paymentSearchEl) {
-            paymentClearEl.addEventListener('click', function () {
-                paymentSearchEl.value = '';
-                paymentClearEl.style.display = 'none';
-                filterPaymentTable();
-                paymentSearchEl.focus();
-            });
-        }
-    });
 </script>
 
 <script>
     function filterPaymentTable() {
         const q = (document.getElementById('paymentSearch')?.value || '').toLowerCase().trim();
+        const method = (document.getElementById('paymentFilterMethod')?.value || 'all').toLowerCase();
+        const dateFrom = document.getElementById('paymentFilterDateFrom')?.value || '';
+        const dateTo = document.getElementById('paymentFilterDateTo')?.value || '';
         const tbody = document.querySelector('#paymentTable tbody');
         if (!tbody) return;
         let visible = 0;
         Array.from(tbody.querySelectorAll('tr.payment-data-row')).forEach(row => {
             const searchBlob = (row.getAttribute('data-search') || '').toLowerCase();
-            const match = !q || searchBlob.includes(q);
+            const rowMethod = (row.getAttribute('data-method') || '').toLowerCase();
+            const rowDate = row.getAttribute('data-date') || '';
+            const matchSearch = !q || searchBlob.includes(q);
+            const matchMethod = method === 'all' || rowMethod === method;
+            const matchDateFrom = !dateFrom || rowDate >= dateFrom;
+            const matchDateTo = !dateTo || rowDate <= dateTo;
+            const match = matchSearch && matchMethod && matchDateFrom && matchDateTo;
             row.style.display = match ? '' : 'none';
             if (match) visible++;
         });
         const countEl = document.getElementById('paymentCount');
         if (countEl) countEl.textContent = visible;
     }
+
+    document.getElementById('paymentSearch')?.addEventListener('input', filterPaymentTable);
+    document.getElementById('paymentFilterMethod')?.addEventListener('change', filterPaymentTable);
+    document.getElementById('paymentFilterDateFrom')?.addEventListener('change', filterPaymentTable);
+    document.getElementById('paymentFilterDateTo')?.addEventListener('change', filterPaymentTable);
+    document.getElementById('paymentSearchClear')?.addEventListener('click', function() {
+        var el = document.getElementById('paymentSearch');
+        if (el) el.value = '';
+        filterPaymentTable();
+    });
 </script>
 
 <script>

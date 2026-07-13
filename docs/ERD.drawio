@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="draw.io" modified="2026-07-13" agent="5.0" version="21.0.0">
+  <diagram id="erd-dental-clinic" name="ERD">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ========== USERS & AUTH ========== -->
+
+        <!-- role -->
+        <mxCell id="role" value="role" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dbeafe;strokeColor=#93c5fd;fontColor=#1e40af;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="160" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="role_role_id" value="PK role_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="role">
+          <mxGeometry width="160" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="role_role_name" value="role_name ENUM" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="role">
+          <mxGeometry width="160" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="role_description" value="description TEXT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="role">
+          <mxGeometry width="160" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- users -->
+        <mxCell id="users" value="users" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dbeafe;strokeColor=#93c5fd;fontColor=#1e40af;" vertex="1" parent="1">
+          <mxGeometry x="260" y="40" width="200" height="310" as="geometry"/>
+        </mxCell>
+        <mxCell id="users_user_id" value="PK user_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_first_name" value="first_name VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_last_name" value="last_name VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_email" value="UK email VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_role_id" value="FK role_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_added_by" value="FK added_by INT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_phone" value="phone_number VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_is_active" value="is_active TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="205" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_profile_image" value="profile_image VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="230" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_work_type" value="work_type ENUM" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="255" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="users_password_hash" value="password_hash VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dbeafe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="users">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="280" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== PATIENTS ========== -->
+
+        <!-- patients -->
+        <mxCell id="patients" value="patients" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dcfce7;strokeColor=#86efac;fontColor=#166534;" vertex="1" parent="1">
+          <mxGeometry x="520" y="40" width="180" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="patients_patient_id" value="PK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_first_name" value="first_name VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_last_name" value="last_name VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_email" value="email VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_phone" value="phone_number VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_address" value="address TEXT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_added_by" value="FK added_by INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_profile_image" value="profile_image VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="205" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="patients_password_hash" value="password_hash VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patients">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="230" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- patient_profiling -->
+        <mxCell id="patient_profiling" value="patient_profiling" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dcfce7;strokeColor=#86efac;fontColor=#166534;" vertex="1" parent="1">
+          <mxGeometry x="740" y="40" width="200" height="200" as="geometry"/>
+        </mxCell>
+        <mxCell id="pp_pk" value="PK profiling_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_patient" value="FK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_record" value="FK record_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_medical" value="medical_history TEXT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_allergies" value="allergies VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_hypertensive" value="is_hypertensive TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pp_diabetic" value="is_diabetic TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="patient_profiling">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== SERVICES ========== -->
+
+        <!-- services -->
+        <mxCell id="services" value="services" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#e0f2fe;strokeColor=#7dd3fc;fontColor=#0369a1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="400" width="200" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_pk" value="PK service_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="svc_name" value="service_name VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="svc_price" value="initial_price DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="svc_duration" value="default_duration_minutes INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="svc_is_active" value="is_active TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="svc_added_by" value="FK added_by INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="services">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== APPOINTMENTS ========== -->
+
+        <!-- bookings -->
+        <mxCell id="bookings" value="bookings" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fce7f3;strokeColor=#f9a8d4;fontColor=#9d174d;" vertex="1" parent="1">
+          <mxGeometry x="40" y="620" width="180" height="230" as="geometry"/>
+        </mxCell>
+        <mxCell id="bk_pk" value="PK booking_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_name" value="first_name + last_name" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_email" value="email VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_pref_date" value="preferred_date DATE" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_pref_time" value="preferred_time ENUM" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_otp" value="otp_hash CHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_status" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bk_reason" value="reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="bookings">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="205" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- appointments -->
+        <mxCell id="appointments" value="appointments" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fce7f3;strokeColor=#f9a8d4;fontColor=#9d174d;" vertex="1" parent="1">
+          <mxGeometry x="340" y="620" width="220" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="apt_pk" value="PK appointment_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_date" value="appointment_date DATE" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_patient" value="FK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_user" value="FK user_id INT (doctor)" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_timeslot" value="FK timeslot_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_booking" value="FK booking_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_rescheduled" value="FK rescheduled_from INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_status" value="status ENUM (12 values)" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="205" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_reason" value="reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="230" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_is_emergency" value="is_emergency TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="255" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_notes" value="notes TEXT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="280" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="apt_created" value="created_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="appointments">
+          <mxGeometry width="220" height="25" as="geometry"><mxPoint y="305" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- selected_services -->
+        <mxCell id="selected_services" value="selected_services" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#e0f2fe;strokeColor=#7dd3fc;fontColor=#0369a1;" vertex="1" parent="1">
+          <mxGeometry x="600" y="620" width="180" height="105" as="geometry"/>
+        </mxCell>
+        <mxCell id="ss_pk" value="PK selected_service_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="selected_services">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ss_appt" value="FK appointment_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="selected_services">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ss_svc" value="FK service_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="selected_services">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== CLINICAL RECORDS ========== -->
+
+        <!-- clinical_records -->
+        <mxCell id="clinical_records" value="clinical_records" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f3e8ff;strokeColor=#c4b5fd;fontColor=#6b21a8;" vertex="1" parent="1">
+          <mxGeometry x="840" y="620" width="200" height="210" as="geometry"/>
+        </mxCell>
+        <mxCell id="cr_pk" value="PK record_id INT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_appt" value="FK appointment_id INT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_doctor" value="FK doctor_id INT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_patient" value="FK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_summary" value="summary TEXT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_notes" value="doctor_notes TEXT" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="cr_status" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#f3e8ff;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="clinical_records">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- tooth_status -->
+        <mxCell id="tooth_status" value="tooth_status" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#e0f2fe;strokeColor=#7dd3fc;fontColor=#0369a1;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="620" width="180" height="155" as="geometry"/>
+        </mxCell>
+        <mxCell id="ts_pk" value="PK tooth_status_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="tooth_status">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ts_record" value="FK record_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="tooth_status">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ts_tooth" value="FK tooth_selected INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="tooth_status">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ts_type" value="FK status_type_id INT" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="tooth_status">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="ts_surface" value="tooth_surface VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#e0f2fe;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="tooth_status">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== BILLING ========== -->
+
+        <!-- billing -->
+        <mxCell id="billing" value="billing" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fee2e2;strokeColor=#fca5a5;fontColor=#991b1b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="890" width="200" height="260" as="geometry"/>
+        </mxCell>
+        <mxCell id="bill_pk" value="PK billing_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_appt" value="FK appointment_id INT (UK)" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_total" value="total_amount DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_subtotal" value="subtotal_amount DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_discount" value="discount_type ENUM" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_status" value="status ENUM (unpaid/partial/paid)" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="155" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_user" value="FK user_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="180" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_processed" value="FK processed_by INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="205" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bill_paid" value="amount_paid DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing">
+          <mxGeometry width="200" height="25" as="geometry"><mxPoint y="230" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- billing_line_items -->
+        <mxCell id="billing_line_items" value="billing_line_items" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fee2e2;strokeColor=#fca5a5;fontColor=#991b1b;" vertex="1" parent="1">
+          <mxGeometry x="280" y="890" width="180" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="bli_pk" value="PK item_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing_line_items">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bli_billing" value="FK billing_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing_line_items">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bli_svc" value="FK service_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing_line_items">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="bli_amount" value="amount DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="billing_line_items">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- payments -->
+        <mxCell id="payments" value="payments" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fee2e2;strokeColor=#fca5a5;fontColor=#991b1b;" vertex="1" parent="1">
+          <mxGeometry x="500" y="890" width="180" height="155" as="geometry"/>
+        </mxCell>
+        <mxCell id="pay_pk" value="PK payment_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="payments">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="30" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pay_billing" value="FK billing_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="payments">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="55" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pay_amount" value="amount DECIMAL" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="payments">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="80" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pay_method" value="payment_method VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="payments">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="105" as="offset"/></mxGeometry>
+        </mxCell>
+        <mxCell id="pay_recorded" value="FK recorded_by INT" style="shape=partialRectangle;connectable=0;fillColor=#fee2e2;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;" vertex="1" parent="payments">
+          <mxGeometry width="180" height="25" as="geometry"><mxPoint y="130" as="offset"/></mxGeometry>
+        </mxCell>
+
+        <!-- ========== RELATIONSHIPS (edges) ========== -->
+
+        <!-- role -> users -->
+        <mxCell id="e_role_users" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#94a3b8;fontSize=9;" edge="1" source="role_role_id" target="users_role_id" parent="1"/>
+
+        <!-- users -> users (self ref: added_by) -->
+        <mxCell id="e_users_addedby" value="self" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#94a3b8;fontSize=9;dashed=1;" edge="1" source="users_added_by" target="users_user_id" parent="1"/>
+
+        <!-- users -> patients (added_by) -->
+        <mxCell id="e_users_patients" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.8;entryDx=0;entryDy=0;strokeColor=#86efac;fontSize=9;" edge="1" source="users_user_id" target="patients_added_by" parent="1"/>
+
+        <!-- patients -> patient_profiling -->
+        <mxCell id="e_patients_pp" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#86efac;fontSize=9;" edge="1" source="patients_patient_id" target="pp_patient" parent="1"/>
+
+        <!-- patients -> appointments -->
+        <mxCell id="e_patients_appt" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#f9a8d4;fontSize=9;" edge="1" source="patients_patient_id" target="apt_patient" parent="1"/>
+
+        <!-- users -> appointments (doctor) -->
+        <mxCell id="e_users_appt" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#f9a8d4;fontSize=9;" edge="1" source="users_user_id" target="apt_user" parent="1"/>
+
+        <!-- bookings -> appointments -->
+        <mxCell id="e_bk_apt" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#f9a8d4;fontSize=9;" edge="1" source="bk_pk" target="apt_booking" parent="1"/>
+
+        <!-- appointments -> selected_services -->
+        <mxCell id="e_appt_ss" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7dd3fc;fontSize=9;" edge="1" source="apt_pk" target="ss_appt" parent="1"/>
+
+        <!-- services -> selected_services -->
+        <mxCell id="e_svc_ss" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7dd3fc;fontSize=9;" edge="1" source="svc_pk" target="ss_svc" parent="1"/>
+
+        <!-- appointments -> clinical_records -->
+        <mxCell id="e_appt_cr" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.6;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#c4b5fd;fontSize=9;" edge="1" source="apt_pk" target="cr_appt" parent="1"/>
+
+        <!-- clinical_records -> tooth_status -->
+        <mxCell id="e_cr_ts" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7dd3fc;fontSize=9;" edge="1" source="cr_pk" target="ts_record" parent="1"/>
+
+        <!-- appointments -> billing -->
+        <mxCell id="e_appt_bill" value="1:1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#fca5a5;fontSize=9;" edge="1" source="apt_pk" target="bill_appt" parent="1"/>
+
+        <!-- billing -> billing_line_items -->
+        <mxCell id="e_bill_bli" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#fca5a5;fontSize=9;" edge="1" source="bill_pk" target="bli_billing" parent="1"/>
+
+        <!-- billing -> payments -->
+        <mxCell id="e_bill_pay" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#fca5a5;fontSize=9;" edge="1" source="bill_pk" target="pay_billing" parent="1"/>
+
+        <!-- services -> billing_line_items -->
+        <mxCell id="e_svc_bli" value="1:N" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7dd3fc;fontSize=9;" edge="1" source="svc_pk" target="bli_svc" parent="1"/>
+
+        <!-- users -> billing (processed_by) -->
+        <mxCell id="e_users_bill" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;strokeColor=#94a3b8;fontSize=9;dashed=1;" edge="1" source="users_user_id" target="bill_processed" parent="1"/>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
