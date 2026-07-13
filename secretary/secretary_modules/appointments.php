@@ -822,7 +822,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 
 <!-- Process Booking to Appointment Modal -->
 <div class="modal fade" id="convertBookingModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-dialog modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header bg-success text-white py-2 px-3">
                 <h5 class="modal-title" style="font-size:0.9rem;">
@@ -837,41 +837,41 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <strong>Patient:</strong> <span id="convertBookingPatientInfo"></span>
                     </div>
 
-                    <!-- 2-Column: Doctor + Services -->
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold" style="font-size:0.8rem;">Select Doctor *</label>
-                            <select id="convertDoctorSelect" name="user_id" class="form-select form-select-sm" required style="font-size:0.82rem;">
-                                <option value="">-- Select Doctor --</option>
-                                <?php foreach ($doctors as $d): ?>
-                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
-                                <?php endforeach; ?>
+                    <!-- Doctor -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem;">Select Doctor *</label>
+                        <select id="convertDoctorSelect" name="user_id" class="form-select form-select-sm" required style="font-size:0.82rem;">
+                            <option value="">-- Select Doctor --</option>
+                            <?php foreach ($doctors as $d): ?>
+                                <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- Services -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
+                        <div class="input-group input-group-sm">
+                            <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
+                                <option value="">-- Select Service --</option>
                             </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
-                            <div class="input-group input-group-sm">
-                                <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
-                                    <option value="">-- Select Service --</option>
-                                </select>
-                                <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()" style="font-size:0.78rem;">
-                                    <i class="bi bi-plus"></i> Add
-                                </button>
-                            </div>
+                            <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()" style="font-size:0.78rem;">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
                         </div>
                     </div>
 
                     <!-- Selected Services Table -->
                     <div class="mb-2">
                         <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Services</label>
-                        <div class="table-responsive" style="max-height:180px;overflow-y:auto;">
+                        <div class="table-responsive" style="max-height:150px;overflow-y:auto;">
                             <table class="table table-sm table-bordered mb-0" id="processServicesTable">
                                 <thead class="table-light" style="position:sticky;top:0;">
                                     <tr style="font-size:0.75rem;">
                                         <th>Service Name</th>
-                                        <th style="width:90px;">Est. Time</th>
-                                        <th style="width:90px;">Price</th>
-                                        <th style="width:40px;"></th>
+                                        <th style="width:70px;">Time</th>
+                                        <th style="width:80px;">Price</th>
+                                        <th style="width:35px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="processServicesBody">
@@ -899,6 +899,12 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <select id="convertTimeslotSelect" name="timeslot_id" class="form-select form-select-sm" required disabled style="font-size:0.82rem;">
                             <option value="">-- Select Doctor first --</option>
                         </select>
+                    </div>
+
+                    <!-- Reason (optional) -->
+                    <div class="mb-2">
+                        <label class="form-label fw-bold" style="font-size:0.8rem;">Reason for Visit <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea id="convertReason" class="form-control form-control-sm" rows="2" style="font-size:0.82rem;" placeholder="Optional reason or notes..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3">
@@ -1198,12 +1204,15 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             return;
         }
 
+        var patientWasNew = !patientData.already_exists;
+
         // 2. Create appointment with services and arrived status
         var apptFd = new FormData();
         apptFd.append('patient_id', patientData.patient_id);
         apptFd.append('appointment_date', convertBookingData.preferred_date || '');
         apptFd.append('user_id', doctorId);
-        apptFd.append('reason', convertBookingData.reason || '');
+        var modalReason = document.getElementById('convertReason')?.value?.trim() || '';
+        apptFd.append('reason', modalReason || convertBookingData.reason || '');
         apptFd.append('is_online_appointment', '0');
         apptFd.append('timeslot_id', timeslotId);
         apptFd.append('status', 'checked_in');
@@ -1225,6 +1234,12 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
             setTimeout(function() { location.reload(); }, 1500);
         } else {
+            // Appointment failed — clean up orphaned patient if we just created them
+            if (patientWasNew && patientData.patient_id) {
+                try {
+                    await fetch('../assets/api/patients/delete_patient.php?patient_id=' + patientData.patient_id, { method: 'POST' });
+                } catch(e) { /* best effort cleanup */ }
+            }
             notifySecretary('Error creating appointment: ' + (apptData.message || 'Unknown error'), 'danger');
         }
     } catch (err) {

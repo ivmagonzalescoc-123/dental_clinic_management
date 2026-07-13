@@ -154,10 +154,7 @@ function appt_validate_appointment_date($date)
 function appt_validate_reason($reason)
 {
     $reason = is_string($reason) ? trim($reason) : '';
-    if ($reason === '') {
-        return [false, 'Reason is required.'];
-    }
-    if (mb_strlen($reason) > 500) {
+    if ($reason !== '' && mb_strlen($reason) > 500) {
         return [false, 'Reason must be 500 characters or less.'];
     }
     return [true, $reason];
