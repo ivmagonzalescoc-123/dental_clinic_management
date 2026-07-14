@@ -1049,6 +1049,21 @@
     await fetchNotifications();
   };
 
+  function relativeTime(dateStr) {
+    if (!dateStr) return '';
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    if (isNaN(then)) return '';
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 0) return 'just now';
+    if (diff < 5) return 'just now';
+    if (diff < 60) return diff + 's ago';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
   async function fetchNotifications() {
     try {
       const resp = await fetch(appRoot + '/assets/api/notifications/get_notifications.php', { cache: 'no-store' });
@@ -1069,21 +1084,6 @@
         const escaped = escapeHtml(value);
         const dateTimeRegex = /(\b\d{4}-\d{2}-\d{2}(?:[ T]\d{1,2}:\d{2}(?::\d{2})?)?\b|\b\d{1,2}:\d{2}(?::\d{2})?\s?(?:AM|PM|am|pm)?\b|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b)/g;
         return escaped.replace(dateTimeRegex, '<span class="notification-datetime">$1</span>');
-      }
-
-      function relativeTime(dateStr) {
-        if (!dateStr) return '';
-        const now = Date.now();
-        const then = new Date(dateStr).getTime();
-        if (isNaN(then)) return '';
-        const diff = Math.floor((now - then) / 1000);
-        if (diff < 0) return 'just now';
-        if (diff < 5) return 'just now';
-        if (diff < 60) return diff + 's ago';
-        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-        if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
-        return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       }
 
       function getNotifIcon(title, body) {

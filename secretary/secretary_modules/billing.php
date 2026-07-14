@@ -632,7 +632,9 @@ if (!$hasAnyData) {
             paymentSubmitting = false;
         }
     });
+</script>
 
+<script>
     function viewInvoice(billing) {
         document.getElementById('invoiceContent').innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div> Loading invoice...</div>';
         fetch('../assets/api/billing/get_billing_details.php?billing_id=' + encodeURIComponent(billing.billing_id))
@@ -739,22 +741,15 @@ if (!$hasAnyData) {
     function printInvoice() {
         const invoiceContent = document.getElementById('invoiceContent').innerHTML;
         const printWindow = window.open('', '', 'height=600,width=900');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Invoice</title>
-                <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-                <style>
-                    body { font-family: Arial, sans-serif; }
-                    .container { margin: 20px; }
-                </style>
-            </head>
-            <body>
-                ${invoiceContent}
-                <script>window.print();<\/script>
-            </body>
-            </html>
-        `);
+        const scriptTag = '<scr' + 'ipt>window.print();</scr' + 'ipt>';
+        printWindow.document.write(
+            '<html><head><title>Invoice</title>' +
+            '<link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">' +
+            '<style>body{font-family:Arial,sans-serif;}.container{margin:20px;}</style>' +
+            '</head><body>' + invoiceContent +
+            scriptTag +
+            '</body></html>'
+        );
         printWindow.document.close();
     }
 
@@ -847,6 +842,7 @@ if (!$hasAnyData) {
         }
 
         filterBillingTable();
+    });
 </script>
 
 <script>
