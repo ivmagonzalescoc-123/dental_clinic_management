@@ -447,7 +447,7 @@ $aboutPoints = [
             </a>
 
             <ul class="hidden items-center gap-8 text-sm font-medium md:flex" aria-label="Main">
-                <li><a href="#track-booking" class="nav-link transition-colors duration-200">Track Booking</a></li>
+                <li><a href="#track-booking" class="nav-link transition-colors duration-200">Track Appointment</a></li>
                 <li><a href="#services" class="nav-link transition-colors duration-200">Services</a></li>
                 <li><a href="#about" class="nav-link transition-colors duration-200">About</a></li>
                 <li><a href="#testimonials" class="nav-link transition-colors duration-200">Testimonials</a></li>
@@ -472,7 +472,7 @@ $aboutPoints = [
         <!-- Mobile menu -->
         <div id="mobileMenu" class="hidden border-b md:hidden" style="background: #f7f9fc; border-color: rgba(29,111,216,0.1);">
             <ul class="flex flex-col gap-4 px-6 pb-6 pt-4">
-                <li><a href="#track-booking" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Track Booking</a></li>
+                <li><a href="#track-booking" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Track Appointment</a></li>
                 <li><a href="#services" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Services</a></li>
                 <li><a href="#about" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">About</a></li>
                 <li><a href="#testimonials" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Testimonials</a></li>
@@ -538,16 +538,16 @@ $aboutPoints = [
         <section id="track-booking" class="py-16" style="background: linear-gradient(135deg, #eef4ff 0%, #f0fdf4 100%);">
             <div class="mx-auto max-w-6xl px-6">
                 <div class="reveal mx-auto max-w-xl text-center">
-                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Booking Status</span>
-                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600;">Track Your Booking</h2>
-                    <p class="mt-3 text-muted-foreground leading-relaxed">Enter your booking number to check the status of your appointment request.</p>
+                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Appointment Status</span>
+                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600;">Track Your Appointment</h2>
+                    <p class="mt-3 text-muted-foreground leading-relaxed">Enter your appointment number to check the status of your appointment request.</p>
 
                     <div class="mt-6 flex items-center gap-2">
                         <div class="relative flex-1">
                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
                             </span>
-                            <input type="text" id="bookingTrackInput" placeholder="Enter booking number (e.g. 1001)" class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                            <input type="text" id="bookingTrackInput" placeholder="Enter appointment number (e.g. 1001)" class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
                         </div>
                         <button type="button" id="bookingTrackBtn" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 whitespace-nowrap">
                             Track
@@ -558,7 +558,7 @@ $aboutPoints = [
                     <div id="bookingTrackResult" class="mt-6 hidden">
                         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                             <div class="flex items-center justify-between mb-1">
-                                <h3 class="text-sm font-bold text-slate-900">Booking #<span id="trackBookingId"></span></h3>
+                                <h3 class="text-sm font-bold text-slate-900">Appointment No. :<span id="trackBookingId"></span></h3>
                                 <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
                             </div>
 
@@ -576,7 +576,7 @@ $aboutPoints = [
                                 <!-- Step 2 -->
                                 <div class="flex flex-col items-center" style="min-width:80px;">
                                     <div id="step2Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">2</div>
-                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Reminder<br>Sent</span>
+                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Arrived at<br>Clinic</span>
                                 </div>
                                 <!-- Line 2 -->
                                 <div class="flex-1 flex items-center pt-5 px-1">
@@ -585,7 +585,7 @@ $aboutPoints = [
                                 <!-- Step 3 -->
                                 <div class="flex flex-col items-center" style="min-width:80px;">
                                     <div id="step3Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">3</div>
-                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Successful<br>Visit</span>
+                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Appointment<br>Completed</span>
                                 </div>
                             </div>
                         </div>
@@ -1114,8 +1114,8 @@ $aboutPoints = [
                 </div>
                 <h3 class="text-base font-bold text-slate-900">Booking Confirmed!</h3>
                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">A confirmation email has been sent to your email address.</p>
-                <p class="mt-2 text-sm text-slate-400">Your Booking Ref# is <strong id="booking-ref-display" class="text-slate-700"></strong></p>
-                <p class="mt-3 text-xs text-slate-400">You can track your booking status anytime using the <a href="#track-booking" class="text-primary font-semibold hover:underline">Track Booking</a> section on our homepage.</p>
+                <p class="mt-2 text-sm text-slate-400">Your Booking Appointment Ref No. is <strong id="booking-ref-display" class="text-slate-700"></strong></p>
+                <p class="mt-3 text-xs text-slate-400">You can track your appointment status anytime using the <a href="#track-booking" class="text-primary font-semibold hover:underline">Track Appointment</a> section on our homepage.</p>
                 <button type="button" data-auth-close class="mt-4 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                     Done
                 </button>
@@ -1298,10 +1298,15 @@ $aboutPoints = [
             const resultCard = document.getElementById('bookingTrackResult');
             const errorEl = document.getElementById('bookingTrackError');
 
-            function setStep(circleId, labelId, active) {
+            function setStep(circleId, labelId, active, isError) {
                 const circle = document.getElementById(circleId);
                 const label = document.getElementById(labelId);
-                if (active) {
+                if (isError) {
+                    circle.className = circle.className
+                        .replace('border-dashed border-slate-300 text-slate-400', 'border-solid border-red-500 bg-red-500 text-white');
+                    label.className = label.className.replace('text-slate-400', 'text-red-600');
+                    circle.innerHTML = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+                } else if (active) {
                     circle.className = circle.className
                         .replace('border-dashed border-slate-300 text-slate-400', 'border-solid border-green-500 bg-green-500 text-white');
                     label.className = label.className.replace('text-slate-400', 'text-green-600');
@@ -1309,9 +1314,12 @@ $aboutPoints = [
                 }
             }
 
-            function setLineActive(lineId) {
+            function setLineActive(lineId, isError) {
                 const line = document.getElementById(lineId);
-                if (line) line.className = line.className.replace('bg-slate-200', 'bg-green-500');
+                if (line) {
+                    const color = isError ? 'bg-red-500' : 'bg-green-500';
+                    line.className = line.className.replace('bg-slate-200', color);
+                }
             }
 
             function resetSteps() {
@@ -1331,7 +1339,7 @@ $aboutPoints = [
             function doTrack() {
                 var id = (input.value || '').trim().replace(/[^0-9]/g, '');
                 if (!id) {
-                    errorEl.textContent = 'Please enter a booking number.';
+                    errorEl.textContent = 'Please enter a appointment number.';
                     errorEl.classList.remove('hidden');
                     resultCard.classList.add('hidden');
                     return;
@@ -1363,14 +1371,26 @@ $aboutPoints = [
                             return;
                         }
 
-                        statusEl.textContent = 'In Progress';
-                        statusEl.style.backgroundColor = '#e3eeff';
-                        statusEl.style.color = '#1d6fd8';
-
                         resetSteps();
-                        if (data.step1) setStep('step1Circle', 'step1Label', true);
-                        if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
-                        if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
+                        
+                        if (data.hasError) {
+                            statusEl.textContent = 'Not Arrived';
+                            statusEl.style.backgroundColor = '#fee2e2';
+                            statusEl.style.color = '#dc2626';
+                            setStep('step1Circle', 'step1Label', false, true);
+                            setStep('step2Circle', 'step2Label', false, true);
+                            setStep('step3Circle', 'step3Label', false, true);
+                            setLineActive('line1', true);
+                            setLineActive('line2', true);
+                        } else {
+                            statusEl.textContent = 'In Progress';
+                            statusEl.style.backgroundColor = '#e3eeff';
+                            statusEl.style.color = '#1d6fd8';
+                            
+                            if (data.step1) setStep('step1Circle', 'step1Label', true);
+                            if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
+                            if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
+                        }
                         resultCard.classList.remove('hidden');
                     })
                     .catch(function() {

@@ -25,31 +25,62 @@ if (!$row) {
     exit;
 }
 
-// Determine steps: 1=created, 2=reminder sent, 3=successful visit
+// Determine steps: 1=booking created, 2=arrived at clinic, 3=appointment completed
 $cancelled = false;
+$hasError = false;
 $step1 = true; // Booking always exists
-$step2 = false; // Reminder sent?
-$step3 = false; // Successfully processed?
+$step2 = false; // Patient arrived at clinic?
+$step3 = false; // Appointment completed?
 
+// Error cases: cancelled, no-show, or overdue without arrival (> 1 day)
 if ($row['status'] === 'cancelled') {
     $cancelled = true;
+    $hasError = true;
     $step1 = false;
-} elseif ($row['status'] === 'converted') {
-    // Processed — check if reminder was sent
-    $step3 = true;
-    if (!empty($row['converted_to_appointment_id'])) {
-        $remStmt = $conn->prepare('SELECT reminder_id FROM schedule_reminders WHERE patient_schedule_id IN (SELECT schedule_id FROM patient_schedules WHERE appointment_id = ?) AND sent_at IS NOT NULL LIMIT 1');
-        if ($remStmt) {
-            $apptId = (int)$row['converted_to_appointment_id'];
-            $remStmt->bind_param('i', $apptId);
-            $remStmt->execute();
-            $remRes = $remStmt->get_result();
-            $step2 = $remRes && $remRes->num_rows > 0;
-            $remStmt->close();
+} elseif ($row['status'] === 'no-show') {
+    $hasError = true;
+} else {
+    // Check if converted to appointment
+    $apptStmt = $conn->prepare('SELECT appointment_id, status FROM appointments WHERE booking_id = ? LIMIT 1');
+    if ($apptStmt) {
+        $apptStmt->bind_param('i', $bookingId);
+        $apptStmt->execute();
+        $apptRes = $apptStmt->get_result();
+        $appointment = $apptRes ? $apptRes->fetch_assoc() : null;
+        $apptStmt->close();
+        
+        if ($appointment) {
+            // Step 2: Check if patient arrived (checked in at clinic)
+            $arrivalStmt = $conn->prepare('SELECT schedule_id FROM patient_schedules WHERE appointment_id = ? LIMIT 1');
+            if ($arrivalStmt) {
+                $arrivalStmt->bind_param('i', $appointment['appointment_id']);
+                $arrivalStmt->execute();
+                $arrivalRes = $arrivalStmt->get_result();
+                $step2 = $arrivalRes && $arrivalRes->num_rows > 0;
+                $arrivalStmt->close();
+            }
+            
+            // Step 3: Check if appointment is completed (has billing record)
+            $billingStmt = $conn->prepare('SELECT billing_id FROM billing WHERE appointment_id = ? LIMIT 1');
+            if ($billingStmt) {
+                $billingStmt->bind_param('i', $appointment['appointment_id']);
+                $billingStmt->execute();
+                $billingRes = $billingStmt->get_result();
+                $step3 = $billingRes && $billingRes->num_rows > 0;
+                $billingStmt->close();
+            }
+        } else {
+            // Converted but no appointment found - check if un-processed and overdue (> 1 day)
+            $createdTime = strtotime($row['created_at']);
+            $now = time();
+            $dayInSeconds = 86400;
+            
+            if ($now - $createdTime > $dayInSeconds) {
+                $hasError = true;
+            }
         }
     }
 }
-// pending_verification or verified → only step 1
 
 echo json_encode([
     'success' => true,
@@ -58,5 +89,6 @@ echo json_encode([
     'step2' => $step2,
     'step3' => $step3,
     'cancelled' => $cancelled,
+    'hasError' => $hasError,
 ]);
 ?>
