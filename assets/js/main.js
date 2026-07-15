@@ -53,6 +53,27 @@
     return String(clone.textContent || '').replace(/\s+/g, ' ').trim()
   }
 
+  /**
+   * Header clock — updates time and icon every second
+   */
+  function updateHeaderClock() {
+    var display = select('#headerClockDisplay')
+    var icon = select('.header-clock__icon')
+    if (!display) return
+    var now = new Date()
+    var h = now.getHours()
+    var m = now.getMinutes()
+    var ampm = h >= 12 ? 'PM' : 'AM'
+    var h12 = h % 12 || 12
+    display.textContent = h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm
+    if (icon) {
+      var isNight = h < 6 || h >= 18
+      icon.className = 'header-clock__icon bi ' + (isNight ? 'bi-moon-stars' : 'bi-sun')
+    }
+  }
+  updateHeaderClock()
+  setInterval(updateHeaderClock, 1000)
+
   function convertInlineAlertsToToasts(scope) {
     const root = scope instanceof HTMLElement ? scope : document
     const alerts = root.querySelectorAll('.alert.alert-dismissible.fade.show:not([data-toastified="1"])')
@@ -95,12 +116,20 @@
     })
   }
 
+  if (select('.mobile-sidebar-toggle')) {
+    on('click', '.mobile-sidebar-toggle', function(e) {
+      var body = select('body')
+      if (!body || body.classList.contains('patient-portal')) return
+      body.classList.toggle('toggle-sidebar')
+    })
+  }
+
   document.addEventListener('click', function (e) {
     if (window.innerWidth > 991) return
     var body = select('body')
     if (!body || body.classList.contains('patient-portal')) return
     if (!body.classList.contains('toggle-sidebar')) return
-    if (e.target.closest('#sidebar') || e.target.closest('.toggle-sidebar-btn')) return
+    if (e.target.closest('#sidebar') || e.target.closest('.toggle-sidebar-btn') || e.target.closest('.mobile-sidebar-toggle')) return
     body.classList.remove('toggle-sidebar')
   })
 

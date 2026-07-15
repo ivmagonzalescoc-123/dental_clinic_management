@@ -12,7 +12,7 @@ body.patient-portal {
     body.patient-portal #main {
         margin-left: 0 !important;
         margin-right: 0 !important;
-        margin-top: 70px !important;
+        margin-top: 56px !important;
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
@@ -256,7 +256,7 @@ body.patient-portal {
     body.patient-portal #main {
         padding-left: 8px;
         padding-right: 8px;
-        margin-top: 70px !important;
+        margin-top: 56px !important;
     }
 
     body.patient-portal .pagetitle {

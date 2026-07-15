@@ -109,9 +109,9 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260614-section-nav1" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260715-header1" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260614-header-mobile4" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260715-header1" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260614-section-nav1" rel="stylesheet">
     <link href="../assets/css/appointment-services.css" rel="stylesheet">
 </head>
@@ -127,6 +127,10 @@ switch ($role_key) {
     <!-- ======= Header ======= -->
     <header id="header" class="header fixed-top d-flex align-items-center">
         <div class="d-flex align-items-center">
+            <button class="mobile-sidebar-toggle d-lg-none" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-list toggle-icon-open"></i>
+                <i class="bi bi-x-lg toggle-icon-closed"></i>
+            </button>
             <a href="doctor.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
                 <div class="ms-2">
@@ -134,9 +138,6 @@ switch ($role_key) {
                     <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
                 </div>
             </a>
-            <button class="toggle-sidebar-btn ms-2" type="button" aria-label="Toggle sidebar">
-                <i class="bi bi-list"></i>
-            </button>
         </div>
 
         <div class="header-actions ms-auto d-flex align-items-center flex-shrink-0">
@@ -148,6 +149,8 @@ switch ($role_key) {
 
         <nav class="header-nav">
             <ul class="d-flex align-items-center">
+                <?php include dirname(__DIR__) . '/includes/header_clock.php'; ?>
+
                 <?php
                 $notifications_portal_url = 'doctor.php?page=notifications';
                 include dirname(__DIR__) . '/includes/notification_dropdown.php';
@@ -164,6 +167,12 @@ switch ($role_key) {
 
     <!-- ======= Sidebar ======= -->
     <aside id="sidebar" class="sidebar">
+        <div class="sidebar-toggle-area">
+            <button class="toggle-sidebar-btn" type="button" aria-label="Toggle sidebar">
+                <i class="bi bi-list toggle-icon-open"></i>
+                <i class="bi bi-chevron-double-right toggle-icon-closed"></i>
+            </button>
+        </div>
         <ul class="sidebar-nav" id="sidebar-nav">
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=dashboard" data-tooltip="Dashboard" title="Dashboard">
@@ -318,7 +327,7 @@ switch ($role_key) {
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
-    <script src="../assets/js/main.js?v=20260614-header-mobile4"></script>
+    <script src="../assets/js/main.js?v=20260715-header2"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>

@@ -4,10 +4,8 @@ $notifications_portal_url = $notifications_portal_url ?? '#';
 <li class="nav-item header-dropdown header-dropdown--notifications">
     <a class="nav-link nav-icon nav-notifications header-dropdown__toggle" href="#" role="button"
         aria-label="Notifications" id="navNotificationsToggle" data-portal-dropdown-toggle aria-haspopup="true" aria-expanded="false">
-        <span class="nav-notifications__wrap">
-            <i class="bi bi-bell"></i>
-            <span id="navNotificationBadge" class="nav-notifications__badge" hidden aria-hidden="true">0</span>
-        </span>
+        <i class="bi bi-bell"></i>
+        <span id="navNotificationBadge" class="nav-notifications__badge" hidden aria-hidden="true">0</span>
     </a>
     <div class="header-dropdown__menu notifications-menu" role="menu">
         <div id="navNotificationEmpty" class="notifications-menu__empty" hidden>
