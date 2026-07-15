@@ -41,15 +41,12 @@ if ($aStmt) {
 
 ?>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h4 class="card-title mb-0">Scheduling</h4>
+<h4 class="card-title mb-0">Scheduling</h4>
         <div>
             <button class="btn btn-sm btn-outline-primary" id="btnOpenCreateSchedule">Create Schedule</button>
         </div>
     </div>
-    <div class="card-body">
-        <?php if (empty($schedules)): ?>
+    <?php if (empty($schedules)): ?>
             <div class="alert alert-info">No schedules found.</div>
         <?php else: ?>
             <div class="table-responsive">
@@ -85,8 +82,6 @@ if ($aStmt) {
             </div>
         <?php endif; ?>
     </div>
-</div>
-
 <!-- Create Schedule Modal -->
 <div class="modal fade" id="createScheduleModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
@@ -110,7 +105,6 @@ if ($aStmt) {
         <div class="mb-2"><button id="btnSuggestSlots" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
         <div id="suggestionsWrap" class="list-group mt-2"></div>
         <div class="mt-2 text-muted small">You can also use <strong>Auto-schedule</strong> to create a schedule based on profiling suggestions.</div>
-      </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button id="btnAutoSchedule" type="button" class="btn btn-warning">Auto-schedule</button>
@@ -118,8 +112,6 @@ if ($aStmt) {
       </div>
     </div>
   </div>
-</div>
-
 <script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
 <link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
 <script>

@@ -185,7 +185,6 @@ if ($sstmt) {
             </table>
         </div>
     </div>
-
     <!-- Camera Modal -->
     <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -215,7 +214,6 @@ if ($sstmt) {
             </div>
         </div>
     </div>
-
     <!-- Photo Viewer Modal -->
     <div class="modal fade" id="photoViewerModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -238,7 +236,7 @@ if ($sstmt) {
     </div>
     </form>
     </div>
-    </div>
+</div>
 
 <?php
 // The original profiling.js logic is intentionally preserved in this file to

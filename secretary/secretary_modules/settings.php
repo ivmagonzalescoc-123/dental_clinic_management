@@ -2,12 +2,8 @@
 $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 ?>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Account Settings</h5>
-    </div>
-    <div class="card-body">
-        <?php if ($forceChange): ?>
+<h5 class="card-title mb-0">Account Settings</h5>
+    <?php if ($forceChange): ?>
             <div class="alert alert-warning">For security, you must change your default password before using other pages.</div>
         <?php endif; ?>
         <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
@@ -39,9 +35,6 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
             ?>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
-    </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;

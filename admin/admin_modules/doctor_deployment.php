@@ -138,12 +138,8 @@ $weekdayNames = [
 ];
 ?>
 
-<div class="card border-0">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Doctor's Worktype</h5>
-    </div>
-    <div class="card-body">
-        <?php if ($message !== ''): ?>
+<h5 class="card-title mb-0">Doctor's Worktype</h5>
+    <?php if ($message !== ''): ?>
             <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($message); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -151,8 +147,7 @@ $weekdayNames = [
         <?php endif; ?>
 
         <form method="POST" class="card border-0 bg-light mb-3">
-            <div class="card-body row g-2 align-items-end">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <div class="col-md-4">
                     <label class="form-label">Doctor</label>
                     <select name="doctor_id" id="deploy_doctor_id" class="form-select" required>
@@ -241,8 +236,6 @@ $weekdayNames = [
             </table>
         </div>
     </div>
-</div>
-
 <script>
 (function() {
     function toggleDeployDays() {

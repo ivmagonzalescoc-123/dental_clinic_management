@@ -102,7 +102,6 @@ if ($stmt) {
                                     <div class="hist-field"><span class="hist-label">Submitted At</span><span id="histSubmittedAtRec" class="hist-value"></span></div>
                                 </div>
                             </div>
-
                             <!-- Row 2: Background + Clinical Exam -->
                             <div class="row g-2 mb-2">
                                 <div class="col-md-6" id="histBackgroundRecWrap">
@@ -117,8 +116,6 @@ if ($stmt) {
                                         <div id="histVisitClinicalRecContent" class="small"></div>
                                     </div>
                                 </div>
-                            </div>
-
                             <!-- Row 3: Clinical Notes (full width) -->
                             <div class="mb-2">
                                 <div class="hist-section">
@@ -126,7 +123,6 @@ if ($stmt) {
                                     <pre id="histNotesRec" class="hist-pre"></pre>
                                 </div>
                             </div>
-
                             <!-- Row 4: Services + Treatment + Materials -->
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4">
@@ -147,8 +143,6 @@ if ($stmt) {
                                         <pre id="histMaterialsRec" class="hist-pre"></pre>
                                     </div>
                                 </div>
-                            </div>
-
                             <!-- Row 5: Images (full width) -->
                             <div class="mb-2">
                                 <div class="hist-section">
@@ -156,7 +150,6 @@ if ($stmt) {
                                     <div id="histImagesRec" class="row g-2"></div>
                                 </div>
                             </div>
-
                             <!-- Row 6: Odontogram (full width) -->
                             <div class="mb-2">
                                 <div class="hist-section">
@@ -182,7 +175,6 @@ if ($stmt) {
                 </div>
             </div>
         </div>
-
         <style>
         /* Compact history modal */
         .hist-field {

@@ -490,7 +490,6 @@ $basePatientParams = [
         </div>
     </div>
 </div>
-
 <script>
 async function openPatientProfileModal(patientId, patientName) {
     const modalEl = document.getElementById('patientProfileModal');

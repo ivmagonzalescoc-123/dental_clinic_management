@@ -729,7 +729,7 @@ if (!function_exists('reminder_insert_patient_inapp_notification')) {
  * Call this from page loads — only fires in development mode.
  */
 if (!function_exists('reminder_auto_cron')) {
-    function reminder_auto_cron($conn, int $intervalMinutes = 5): void
+    function reminder_auto_cron($conn, int $intervalMinutes = 1): void
     {
         if (defined('REMINDER_WORKER_RUNNING')) {
             return;

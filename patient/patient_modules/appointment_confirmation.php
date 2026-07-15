@@ -16,12 +16,9 @@ if ($appointment_id > 0) {
 }
 ?>
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Appointment Confirmation</h5>
-    </div>
-    <div class="card-body">
-        <?php if (!$appointment): ?>
+<h5 class="card-title mb-0">Appointment Confirmation</h5>
+
+    <?php if (!$appointment): ?>
             <div class="alert alert-warning">Appointment not found.</div>
         <?php else: ?>
             <p><strong>Appointment ID:</strong> <?php echo htmlspecialchars($appointment['appointment_id']); ?></p>
@@ -35,5 +32,4 @@ if ($appointment_id > 0) {
             <?php endif; ?>
             <a href="patient.php?page=appointments" class="btn btn-secondary">Back to Appointments</a>
         <?php endif; ?>
-    </div>
-</div>
+

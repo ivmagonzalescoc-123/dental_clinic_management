@@ -279,7 +279,7 @@ switch ($role_key) {
         <section class="section">
             <div class="row">
                 <div class="col-lg-12">
-                    <?php if (!$dashboardLayout): ?><div class="card"><div class="card-body"><?php endif; ?>
+                    <?php if (!$dashboardLayout && $page !== 'manage_patients'): ?><div class="card"><div class="card-body"><?php endif; ?>
                             <!-- Dynamic Content Area -->
                             <?php
                             try {
@@ -332,7 +332,7 @@ switch ($role_key) {
                                 echo '<div class="alert alert-danger">An internal error occurred loading this page. Please contact the administrator.</div>';
                             }
                             ?>
-                    <?php if (!$dashboardLayout): ?></div></div><?php endif; ?>
+                    <?php if (!$dashboardLayout && $page !== 'manage_patients'): ?></div></div><?php endif; ?>
                 </div>
             </div>
         </section>

@@ -48,7 +48,6 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
         </form>
     </div>
 </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;

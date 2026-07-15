@@ -175,9 +175,7 @@ if ($filter === 'all') {
 }
 ?>
 
-<div class="card border-0">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Doctor Leaves</h5>
+<h5 class="card-title mb-0">Doctor Leaves</h5>
         <nav class="module-section-nav module-section-nav--compact" aria-label="Leave status filter">
             <div class="module-section-nav__track">
                 <div class="btn-group" role="group" aria-label="Filter leaves">
@@ -188,18 +186,14 @@ if ($filter === 'all') {
                 </div>
             </div>
         </nav>
-    </div>
-    <div class="card-body">
-        <?php if ($message !== ''): ?>
+    <?php if ($message !== ''): ?>
             <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show" role="alert">
                 <?php echo htmlspecialchars($message); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
 
-        <div class="card border-0 bg-light mb-3">
-            <div class="card-body">
-                <form method="GET" action="admin.php" class="row g-2 align-items-end mb-2">
+        <form method="GET" action="admin.php" class="row g-2 align-items-end mb-2">
                     <input type="hidden" name="page" value="<?php echo htmlspecialchars($leavesBasePage); ?>">
                     <?php if ($inDoctorManagement): ?>
                         <input type="hidden" name="tab" value="leaves">
@@ -240,8 +234,6 @@ if ($filter === 'all') {
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
 
         <div class="table-responsive">
             <table class="table table-hover datatable" data-skip-table-search="1">
@@ -318,5 +310,3 @@ if ($filter === 'all') {
                 </tbody>
             </table>
         </div>
-    </div>
-</div>

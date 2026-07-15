@@ -10,14 +10,7 @@ $csrf_token = security_generate_csrf_token();
 ?>
 
 <!-- EHR Queue - Secretary Clinical Record Creation -->
-<div class="card border-0 mb-3">
-    <div class="card-header">
-        <h2 class="card-title mb-0">
-            <i class="bi bi-journal-medical"></i> EHR Queue - Pending Clinical Record Creation
-        </h2>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
+<div class="table-responsive">
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
@@ -80,8 +73,6 @@ $csrf_token = security_generate_csrf_token();
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 
 <!-- Secretary Record Creation Modal -->
 <div class="modal fade" id="secretaryRecordModal" tabindex="-1" aria-hidden="true">

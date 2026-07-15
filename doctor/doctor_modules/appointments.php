@@ -614,7 +614,6 @@ if ($stmt) {
                                         <div id="histPatientDetails" style="font-size:0.82rem;color:#64748b;"></div>
                                     </div>
                                 </div>
-
                                 <!-- Row 1: Appointment Date + Follow-up -->
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-6">
@@ -624,7 +623,6 @@ if ($stmt) {
                                         <div class="hist-field"><span class="hist-label">Follow-up Date</span><span id="histFollowUpDate" class="hist-value badge bg-info text-dark"></span></div>
                                     </div>
                                 </div>
-
                                 <!-- Row 2: Background + Clinical Exam -->
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-6" id="histBackgroundWrap">
@@ -640,7 +638,6 @@ if ($stmt) {
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Row 3: Notes + Summary -->
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-6">
@@ -656,7 +653,6 @@ if ($stmt) {
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Row 4: Prescriptions (full width) -->
                                 <div class="mb-2">
                                     <div class="hist-section">
@@ -671,7 +667,6 @@ if ($stmt) {
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Row 5: Services + Treatment + Materials -->
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-4">
@@ -693,7 +688,6 @@ if ($stmt) {
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Row 6: Images (full width) -->
                                 <div class="mb-2">
                                     <div class="hist-section">
@@ -701,7 +695,6 @@ if ($stmt) {
                                         <div id="histImages" class="row g-2"></div>
                                     </div>
                                 </div>
-
                                 <!-- Row 7: Odontogram (full width) -->
                                 <div class="mb-2">
                                     <div class="hist-section">
@@ -727,7 +720,6 @@ if ($stmt) {
                     </div>
                 </div>
             </div>
-
 <style>
 /* Compact history modal */
 .hist-field {
@@ -1540,7 +1532,6 @@ async function openHistoryModal(appointmentId) {
         </div>
     </div>
 </div>
-
 <script>
 window.doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 function notifyDoctor(message, type) {
@@ -1659,8 +1650,6 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                     <div id="photoGalleryContainer" class="row g-2">
                         <p class="text-muted small">No photos uploaded yet</p>
                     </div>
-                </div>
-
                 <!-- Upload Photo Section -->
                 <div class="mb-4 p-3 bg-light rounded">
                     <h6 class="mb-3">
@@ -1704,8 +1693,6 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                             <input type="text" id="finishChargeReason" class="form-control" placeholder="Reason (e.g., Overtime fee)">
                         </div>
                     </div>
-                </div>
-
                 <!-- Services Section -->
                 <div class="mb-4 p-3 bg-light rounded">
                     <h6 class="mb-3">
@@ -1750,7 +1737,6 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
         </div>
     </div>
 </div>
-
 <!-- Hidden video element for camera capture -->
 <video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d6efd; border-radius: 5px;"></video>
 <canvas id="cameraCaptureCanvas" style="display: none;"></canvas>

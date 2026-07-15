@@ -74,7 +74,6 @@ if ($userId > 0) {
         <?php endif; ?>
     </div>
 </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('profileForm');

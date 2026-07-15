@@ -18,12 +18,8 @@ if ($userId > 0) {
 }
 ?>
 
-<div class="card border-0">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">My Profile</h5>
-    </div>
-    <div class="card-body">
-        <?php if (!$user): ?>
+<h5 class="card-title mb-0">My Profile</h5>
+    <?php if (!$user): ?>
             <div class="alert alert-warning">Unable to load account details.</div>
         <?php else: ?>
             <div id="profileAlert"></div>
@@ -72,9 +68,6 @@ if ($userId > 0) {
                 </div>
             </form>
         <?php endif; ?>
-    </div>
-</div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('profileForm');

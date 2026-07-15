@@ -68,20 +68,18 @@ function secretary_patient_format_datetime(?string $value): string
     <?php unset($_SESSION['message'], $_SESSION['message_type']); ?>
 <?php endif; ?>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center gap-2">
-        <div>
-            <h5 class="card-title mb-0">Patient Management</h5>
-            <p class="text-muted small mb-0 mt-1">View profiles, update account details, manage medical background, and reset login passwords.</p>
-        </div>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
-            <i class="bi bi-person-plus"></i> Add Patient
-        </button>
+<div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h5 class="card-title mb-0">Patient Management</h5>
+        <p class="text-muted small mb-0 mt-1">View profiles, update account details, manage medical background, and reset login passwords.</p>
     </div>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+        <i class="bi bi-person-plus"></i> Add Patient
+    </button>
+</div>
 
-    <div class="card-body">
-        <div class="table-responsive history-table-wrap">
-            <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
+<div class="table-responsive history-table-wrap">
+    <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
                 <thead>
                     <tr>
                         <th>ID</th>
@@ -124,8 +122,6 @@ function secretary_patient_format_datetime(?string $value): string
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 
 <!-- Add Patient Modal -->
 <div class="modal fade" id="addPatientModal" tabindex="-1" aria-hidden="true">

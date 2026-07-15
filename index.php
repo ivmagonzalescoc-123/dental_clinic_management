@@ -554,20 +554,40 @@ $aboutPoints = [
                         </button>
                     </div>
 
-                    <!-- Result Card (hidden by default) -->
-                    <div id="bookingTrackResult" class="mt-5 hidden text-left">
-                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <div class="flex items-center justify-between mb-3">
+                    <!-- Progress Steps (hidden by default) -->
+                    <div id="bookingTrackResult" class="mt-6 hidden">
+                        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div class="flex items-center justify-between mb-1">
                                 <h3 class="text-sm font-bold text-slate-900">Booking #<span id="trackBookingId"></span></h3>
                                 <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
                             </div>
-                            <div class="grid grid-cols-2 gap-3 text-sm">
-                                <div><span class="text-slate-500">Name:</span> <span id="trackBookingName" class="font-medium text-slate-800"></span></div>
-                                <div><span class="text-slate-500">Email:</span> <span id="trackBookingEmail" class="font-medium text-slate-800"></span></div>
-                                <div><span class="text-slate-500">Preferred Date:</span> <span id="trackBookingDate" class="font-medium text-slate-800"></span></div>
-                                <div><span class="text-slate-500">Time:</span> <span id="trackBookingTime" class="font-medium text-slate-800"></span></div>
+
+                            <!-- Steps -->
+                            <div class="flex items-start mt-5">
+                                <!-- Step 1 -->
+                                <div class="flex flex-col items-center" style="min-width:80px;">
+                                    <div id="step1Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">1</div>
+                                    <span id="step1Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Booking<br>Created</span>
+                                </div>
+                                <!-- Line 1 -->
+                                <div class="flex-1 flex items-center pt-5 px-1">
+                                    <div id="line1" class="h-0.5 w-full bg-slate-200 transition-colors duration-300"></div>
+                                </div>
+                                <!-- Step 2 -->
+                                <div class="flex flex-col items-center" style="min-width:80px;">
+                                    <div id="step2Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">2</div>
+                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Reminder<br>Sent</span>
+                                </div>
+                                <!-- Line 2 -->
+                                <div class="flex-1 flex items-center pt-5 px-1">
+                                    <div id="line2" class="h-0.5 w-full bg-slate-200 transition-colors duration-300"></div>
+                                </div>
+                                <!-- Step 3 -->
+                                <div class="flex flex-col items-center" style="min-width:80px;">
+                                    <div id="step3Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">3</div>
+                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Successful<br>Visit</span>
+                                </div>
                             </div>
-                            <div id="trackBookingNote" class="mt-3 text-xs text-slate-500 border-t border-slate-100 pt-3"></div>
                         </div>
                     </div>
 
@@ -890,7 +910,7 @@ $aboutPoints = [
                 </div>
 
                 <button type="submit" class="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                    Login to Dashboard
+                    LOGIN
                 </button>
 
                 <?php if ($googleClientId !== ''): ?>
@@ -1094,7 +1114,8 @@ $aboutPoints = [
                 </div>
                 <h3 class="text-base font-bold text-slate-900">Booking Confirmed!</h3>
                 <p class="mt-2 text-sm text-slate-500 leading-relaxed">A confirmation email has been sent to your email address.</p>
-                <p class="mt-2 text-sm text-slate-400">Appointment Ref# <strong id="booking-ref-display" class="text-slate-700"></strong></p>
+                <p class="mt-2 text-sm text-slate-400">Your Booking Ref# is <strong id="booking-ref-display" class="text-slate-700"></strong></p>
+                <p class="mt-3 text-xs text-slate-400">You can track your booking status anytime using the <a href="#track-booking" class="text-primary font-semibold hover:underline">Track Booking</a> section on our homepage.</p>
                 <button type="button" data-auth-close class="mt-4 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
                     Done
                 </button>
@@ -1277,14 +1298,38 @@ $aboutPoints = [
             const resultCard = document.getElementById('bookingTrackResult');
             const errorEl = document.getElementById('bookingTrackError');
 
-            function formatDate(dateStr) {
-                if (!dateStr) return '—';
-                const d = new Date(dateStr);
-                return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            function setStep(circleId, labelId, active) {
+                const circle = document.getElementById(circleId);
+                const label = document.getElementById(labelId);
+                if (active) {
+                    circle.className = circle.className
+                        .replace('border-dashed border-slate-300 text-slate-400', 'border-solid border-green-500 bg-green-500 text-white');
+                    label.className = label.className.replace('text-slate-400', 'text-green-600');
+                    circle.innerHTML = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>';
+                }
+            }
+
+            function setLineActive(lineId) {
+                const line = document.getElementById(lineId);
+                if (line) line.className = line.className.replace('bg-slate-200', 'bg-green-500');
+            }
+
+            function resetSteps() {
+                [1,2,3].forEach(function(i) {
+                    var c = document.getElementById('step' + i + 'Circle');
+                    var l = document.getElementById('step' + i + 'Label');
+                    c.className = 'flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300';
+                    c.innerHTML = i;
+                    l.className = 'mt-2 text-xs font-medium text-slate-400 text-center leading-tight';
+                });
+                ['line1','line2'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.className = 'h-0.5 w-full bg-slate-200 transition-colors duration-300';
+                });
             }
 
             function doTrack() {
-                const id = (input.value || '').trim().replace(/[^0-9]/g, '');
+                var id = (input.value || '').trim().replace(/[^0-9]/g, '');
                 if (!id) {
                     errorEl.textContent = 'Please enter a booking number.';
                     errorEl.classList.remove('hidden');
@@ -1306,17 +1351,26 @@ $aboutPoints = [
                             errorEl.classList.remove('hidden');
                             return;
                         }
-                        const b = data.booking;
-                        document.getElementById('trackBookingId').textContent = b.booking_id;
-                        const statusEl = document.getElementById('trackBookingStatus');
-                        statusEl.textContent = b.status_label;
-                        statusEl.style.backgroundColor = b.status_bg;
-                        statusEl.style.color = b.status_color;
-                        document.getElementById('trackBookingName').textContent = b.name;
-                        document.getElementById('trackBookingEmail').textContent = b.email;
-                        document.getElementById('trackBookingDate').textContent = formatDate(b.preferred_date);
-                        document.getElementById('trackBookingTime').textContent = b.preferred_time === 'morning' ? 'Morning' : 'Afternoon';
-                        document.getElementById('trackBookingNote').textContent = b.note;
+                        document.getElementById('trackBookingId').textContent = data.booking_id;
+                        var statusEl = document.getElementById('trackBookingStatus');
+
+                        if (data.cancelled) {
+                            statusEl.textContent = 'Cancelled';
+                            statusEl.style.backgroundColor = '#fee2e2';
+                            statusEl.style.color = '#dc2626';
+                            resetSteps();
+                            resultCard.classList.remove('hidden');
+                            return;
+                        }
+
+                        statusEl.textContent = 'In Progress';
+                        statusEl.style.backgroundColor = '#e3eeff';
+                        statusEl.style.color = '#1d6fd8';
+
+                        resetSteps();
+                        if (data.step1) setStep('step1Circle', 'step1Label', true);
+                        if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
+                        if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
                         resultCard.classList.remove('hidden');
                     })
                     .catch(function() {

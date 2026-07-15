@@ -544,8 +544,6 @@ foreach ($roles as $roleRow) {
             </div>
         </div>
     </div>
-</div>
-
 <!-- ========== ADD USER MODAL ========== -->
 <div class="modal fade" id="addUserModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -940,9 +938,7 @@ foreach ($roles as $roleRow) {
                         </div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
-                        <div class="card border">
-                            <div class="card-body py-2 px-3">
-                                <h6 class="mb-1" style="font-size:0.82rem;font-weight:600;">Set Password</h6>
+                        <h6 class="mb-1" style="font-size:0.82rem;font-weight:600;">Set Password</h6>
                                 <form id="setPatientPasswordForm">
                                     <?php
                                     $password_field_id = 'set_patient_password';
@@ -959,9 +955,7 @@ foreach ($roles as $roleRow) {
                             </div>
                         </div>
 
-                        <div class="card border">
-                            <div class="card-body py-2 px-3">
-                                <h6 class="card-title">Generate Temporary Password</h6>
+                        <h6 class="card-title">Generate Temporary Password</h6>
                                 <p class="text-muted small mb-3">Creates a secure random password you can copy and share with the patient.</p>
                                 <form method="POST" action="../assets/api/patients/reset_patient_password.php" id="resetPatientPasswordForm" data-confirm="Generate a new temporary password?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
@@ -978,8 +972,6 @@ foreach ($roles as $roleRow) {
             </div>
         </div>
     </div>
-</div>
-
 <script>
 // Edit User Function
 function editUser(user) {
@@ -1054,7 +1046,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" class="form-control font-monospace" id="tempPasswordValue" readonly autocomplete="off">
                     <button type="button" class="btn btn-outline-primary" id="tempPasswordCopyBtn">Copy</button>
                 </div>
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
             </div>
