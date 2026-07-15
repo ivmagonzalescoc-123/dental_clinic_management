@@ -118,7 +118,7 @@ if (!function_exists('wf_notify_doctor_finished')) {
         $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
         $title = 'Records needed';
         $body = $ref . ' is ready for clinical record submission.';
-        wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=appointments&view=records_queue');
+        wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=ehr_queue');
     }
 }
 

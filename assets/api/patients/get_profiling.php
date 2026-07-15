@@ -23,7 +23,9 @@ if ($patient_id <= 0) {
 }
 
 try {
-    $stmt = $conn->prepare('SELECT patient_id, first_name, last_name, middle_name, date_of_birth, gender, phone_number, email, address, profile_image, last_login_at, created_at FROM patients WHERE patient_id = ?');
+    // Ensure occupation column exists
+    $conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS occupation varchar(150) DEFAULT NULL AFTER address");
+    $stmt = $conn->prepare('SELECT patient_id, first_name, last_name, middle_name, date_of_birth, gender, phone_number, email, address, occupation, profile_image, last_login_at, created_at FROM patients WHERE patient_id = ?');
     if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
     $stmt->bind_param('i', $patient_id);
     $stmt->execute();
@@ -38,7 +40,7 @@ try {
     }
 
     $profiling = null;
-    $pfStmt = $conn->prepare('SELECT race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+    $pfStmt = $conn->prepare('SELECT race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
     if ($pfStmt) {
         $pfStmt->bind_param('i', $patient_id);
         $pfStmt->execute();
@@ -48,7 +50,6 @@ try {
         if ($pfRow) {
             $profiling = [
                 'race' => $pfRow['race'] ?? null,
-                'occupation' => $pfRow['occupation'] ?? null,
                 'medical_history' => $pfRow['medical_history'] ?? null,
                 'medications' => $pfRow['medications'] ?? null,
                 'allergies' => $pfRow['allergies'] ?? null,

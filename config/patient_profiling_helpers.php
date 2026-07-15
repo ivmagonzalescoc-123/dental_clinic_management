@@ -25,11 +25,10 @@ if (!function_exists('background_profiling_field_keys')) {
     function background_profiling_field_keys(): array
     {
         return [
-            'race', 'occupation', 'medical_history', 'medications', 'allergies',
+            'race', 'medical_history', 'medications', 'allergies',
             'smoking', 'alcohol', 'hypertensive', 'diabetic', 'asthmatic',
             'heart_disease', 'hiv_positive', 'bleeding_disorder', 'asa', 'pregnancy_status',
-            'previous_dental_treatment', 'dental_anxiety', 'emergency_contact',
-            'emergency_phone', 'background_notes',
+            'previous_dental_treatment', 'dental_anxiety', 'background_notes',
         ];
     }
 }
@@ -74,7 +73,6 @@ if (!function_exists('background_profiling_field_labels')) {
     {
         return [
             'race' => 'Race',
-            'occupation' => 'Occupation',
             'medical_history' => 'Medical History',
             'medications' => 'Medications',
             'allergies' => 'Allergies',
@@ -90,8 +88,6 @@ if (!function_exists('background_profiling_field_labels')) {
             'pregnancy_status' => 'Pregnancy Status',
             'previous_dental_treatment' => 'Previous Dental Treatment',
             'dental_anxiety' => 'Dental Anxiety',
-            'emergency_contact' => 'Emergency Contact',
-            'emergency_phone' => 'Emergency Phone',
             'background_notes' => 'Additional Notes',
         ];
     }
@@ -109,7 +105,8 @@ if (!function_exists('filter_profiling_data')) {
                 continue;
             }
             $value = $data[$key];
-            if (is_bool($value) || is_numeric($value) || (is_string($value) && trim($value) !== '')) {
+            // Keep all values including empty strings (converted to N/A by caller)
+            if (is_bool($value) || is_numeric($value) || is_string($value)) {
                 $out[$key] = $value;
             }
         }

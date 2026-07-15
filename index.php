@@ -229,12 +229,15 @@ $aboutPoints = [
             position: fixed;
             inset: 0;
             z-index: 70;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
         }
-        .auth-overlay.open { display: flex; }
+        .auth-overlay.open { opacity: 1; visibility: visible; }
         .auth-backdrop {
             position: absolute;
             inset: 0;
@@ -252,7 +255,7 @@ $aboutPoints = [
             overflow: hidden;
             background-color: #fff;
             box-shadow: 0 25px 60px -15px rgba(15, 30, 53, 0.35);
-            animation: authPanelIn 0.22s ease;
+            animation: authPanelIn 0.25s ease;
         }
         .auth-panel .auth-header {
             flex-shrink: 0;
@@ -309,12 +312,15 @@ $aboutPoints = [
             position: fixed;
             inset: 0;
             z-index: 80;
-            display: none;
+            display: flex;
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
         }
-        .terms-overlay.open { display: flex; }
+        .terms-overlay.open { opacity: 1; visibility: visible; }
         .terms-backdrop {
             position: absolute;
             inset: 0;
@@ -412,6 +418,14 @@ $aboutPoints = [
         .back-to-top-btn.is-visible {
             display: flex;
         }
+
+        /* Complaint checklist checkboxes */
+        .complaint-check {
+            width: 1rem;
+            height: 1rem;
+            accent-color: #1d6fd8;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="font-sans antialiased text-foreground bg-background">
@@ -433,6 +447,7 @@ $aboutPoints = [
             </a>
 
             <ul class="hidden items-center gap-8 text-sm font-medium md:flex" aria-label="Main">
+                <li><a href="#track-booking" class="nav-link transition-colors duration-200">Track Booking</a></li>
                 <li><a href="#services" class="nav-link transition-colors duration-200">Services</a></li>
                 <li><a href="#about" class="nav-link transition-colors duration-200">About</a></li>
                 <li><a href="#testimonials" class="nav-link transition-colors duration-200">Testimonials</a></li>
@@ -457,6 +472,7 @@ $aboutPoints = [
         <!-- Mobile menu -->
         <div id="mobileMenu" class="hidden border-b md:hidden" style="background: #f7f9fc; border-color: rgba(29,111,216,0.1);">
             <ul class="flex flex-col gap-4 px-6 pb-6 pt-4">
+                <li><a href="#track-booking" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Track Booking</a></li>
                 <li><a href="#services" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Services</a></li>
                 <li><a href="#about" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">About</a></li>
                 <li><a href="#testimonials" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Testimonials</a></li>
@@ -516,6 +532,48 @@ $aboutPoints = [
             <a href="#services" class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-white/90 transition-colors animate-bounce" aria-label="Scroll down">
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
             </a>
+        </section>
+
+        <!-- Track Your Booking -->
+        <section id="track-booking" class="py-16" style="background: linear-gradient(135deg, #eef4ff 0%, #f0fdf4 100%);">
+            <div class="mx-auto max-w-6xl px-6">
+                <div class="reveal mx-auto max-w-xl text-center">
+                    <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Booking Status</span>
+                    <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600;">Track Your Booking</h2>
+                    <p class="mt-3 text-muted-foreground leading-relaxed">Enter your booking number to check the status of your appointment request.</p>
+
+                    <div class="mt-6 flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+                            </span>
+                            <input type="text" id="bookingTrackInput" placeholder="Enter booking number (e.g. 1001)" class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
+                        </div>
+                        <button type="button" id="bookingTrackBtn" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 whitespace-nowrap">
+                            Track
+                        </button>
+                    </div>
+
+                    <!-- Result Card (hidden by default) -->
+                    <div id="bookingTrackResult" class="mt-5 hidden text-left">
+                        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-sm font-bold text-slate-900">Booking #<span id="trackBookingId"></span></h3>
+                                <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3 text-sm">
+                                <div><span class="text-slate-500">Name:</span> <span id="trackBookingName" class="font-medium text-slate-800"></span></div>
+                                <div><span class="text-slate-500">Email:</span> <span id="trackBookingEmail" class="font-medium text-slate-800"></span></div>
+                                <div><span class="text-slate-500">Preferred Date:</span> <span id="trackBookingDate" class="font-medium text-slate-800"></span></div>
+                                <div><span class="text-slate-500">Time:</span> <span id="trackBookingTime" class="font-medium text-slate-800"></span></div>
+                            </div>
+                            <div id="trackBookingNote" class="mt-3 text-xs text-slate-500 border-t border-slate-100 pt-3"></div>
+                        </div>
+                    </div>
+
+                    <div id="bookingTrackError" class="mt-4 hidden text-sm text-red-500 font-medium"></div>
+                </div>
+            </div>
         </section>
 
         <!-- Services -->
@@ -780,13 +838,10 @@ $aboutPoints = [
 
         <!-- Login -->
         <section id="authPanelLogin" class="auth-panel hidden max-w-md" aria-label="Login">
-            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
-                <div class="flex items-center gap-2.5">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-900">Welcome back</h2>
-                        <p class="text-[11px] text-slate-500">Sign in to your account</p>
-                    </div>
+            <div class="auth-header flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
+                <div class="flex-1 text-center">
+                    <h2 class="text-xl font-bold text-slate-900">Welcome back</h2>
+                    <p class="text-xs text-slate-500">Sign in to your account</p>
                 </div>
                 <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -796,7 +851,7 @@ $aboutPoints = [
             <div class="auth-body">
             <form id="login-form" class="space-y-4 px-5 py-4 sm:px-7" novalidate>
                 <div class="space-y-1.5">
-                    <!-- <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label> -->
+                    <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label>
                     <div class="relative">
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
@@ -807,7 +862,7 @@ $aboutPoints = [
                 </div>
 
                 <div class="space-y-1.5">
-                    <!-- <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label> -->
+                    <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label>
                     <div class="relative">
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
@@ -822,8 +877,7 @@ $aboutPoints = [
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password</button>
-                    <button type="button" data-auth-switch="booking" class="font-medium text-primary hover:text-primary transition-colors">Book Appointment</button>
+                    <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password?</button>
                 </div>
 
                 <div class="space-y-2">
@@ -939,15 +993,69 @@ $aboutPoints = [
                 </div>
 
                 <div>
-                    <label for="book-reason" class="mb-1 block text-xs font-semibold text-slate-600">Reason</label>
-                    <textarea id="book-reason" name="reason" rows="2" placeholder="e.g. Regular checkup, tooth pain..."
+                    <label class="mb-1 block text-xs font-semibold text-slate-600">Initial Complaint</label>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Headache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Headache</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Toothache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Toothache</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Broken / Chipped Tooth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Broken / Chipped Tooth</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Swollen Gums" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Swollen Gums</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Bleeding Gums" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Bleeding Gums</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Sensitive Teeth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Sensitive Teeth</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Loose Tooth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Loose Tooth</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Tooth Decay / Cavity" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Tooth Decay / Cavity</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Jaw Pain" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Jaw Pain</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Difficulty Chewing" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Difficulty Chewing</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Bad Breath" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Bad Breath</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="checkbox" name="complaint[]" value="Abscess / Pus" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Abscess / Pus</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="book-reason" class="mb-1 block text-xs font-semibold text-slate-600">Additional Details <span class="font-normal text-slate-400">(optional)</span></label>
+                    <textarea id="book-reason" name="reason" rows="2" placeholder="Any other details about your condition..."
                         class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
                 </div>
 
                 <div id="booking-alert" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
 
                 <button type="submit" id="booking-submit-btn" class="block w-full rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                    Request Appointment
+                    Book an Appointment
                 </button>
 
                 <p class="text-center text-xs text-slate-500">
@@ -1161,6 +1269,67 @@ $aboutPoints = [
                 window.showAppToast(String(message || ''), tone);
             }
         }
+
+        // ----- Booking Tracker -----
+        (function() {
+            const input = document.getElementById('bookingTrackInput');
+            const btn = document.getElementById('bookingTrackBtn');
+            const resultCard = document.getElementById('bookingTrackResult');
+            const errorEl = document.getElementById('bookingTrackError');
+
+            function formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+
+            function doTrack() {
+                const id = (input.value || '').trim().replace(/[^0-9]/g, '');
+                if (!id) {
+                    errorEl.textContent = 'Please enter a booking number.';
+                    errorEl.classList.remove('hidden');
+                    resultCard.classList.add('hidden');
+                    return;
+                }
+                errorEl.classList.add('hidden');
+                resultCard.classList.add('hidden');
+                btn.textContent = 'Searching...';
+                btn.disabled = true;
+
+                fetch('../assets/api/bookings/track_booking.php?booking_id=' + id)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        btn.textContent = 'Track';
+                        btn.disabled = false;
+                        if (!data.success) {
+                            errorEl.textContent = data.message || 'Booking not found.';
+                            errorEl.classList.remove('hidden');
+                            return;
+                        }
+                        const b = data.booking;
+                        document.getElementById('trackBookingId').textContent = b.booking_id;
+                        const statusEl = document.getElementById('trackBookingStatus');
+                        statusEl.textContent = b.status_label;
+                        statusEl.style.backgroundColor = b.status_bg;
+                        statusEl.style.color = b.status_color;
+                        document.getElementById('trackBookingName').textContent = b.name;
+                        document.getElementById('trackBookingEmail').textContent = b.email;
+                        document.getElementById('trackBookingDate').textContent = formatDate(b.preferred_date);
+                        document.getElementById('trackBookingTime').textContent = b.preferred_time === 'morning' ? 'Morning' : 'Afternoon';
+                        document.getElementById('trackBookingNote').textContent = b.note;
+                        resultCard.classList.remove('hidden');
+                    })
+                    .catch(function() {
+                        btn.textContent = 'Track';
+                        btn.disabled = false;
+                        errorEl.textContent = 'Something went wrong. Please try again.';
+                        errorEl.classList.remove('hidden');
+                    });
+            }
+
+            if (btn) btn.addEventListener('click', doTrack);
+            if (input) input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doTrack(); } });
+        })();
 
         // ----- Header scroll behavior (Figma-style transparent → solid) -----
         const siteHeader = document.getElementById('siteHeader');
@@ -1475,7 +1644,11 @@ $aboutPoints = [
             const dob = document.getElementById('book-dob').value;
             const prefDate = document.getElementById('book-pref-date').value;
             const prefTime = document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning';
-            const reason = document.getElementById('book-reason').value.trim();
+            const checkedComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
+            const reasonText = document.getElementById('book-reason').value.trim();
+            const reason = checkedComplaints.length > 0
+                ? (reasonText ? checkedComplaints.join(', ') + ' — ' + reasonText : checkedComplaints.join(', '))
+                : reasonText;
             const submitBtn = document.getElementById('booking-submit-btn');
 
             if (!firstName || !lastName) {
@@ -1611,7 +1784,12 @@ $aboutPoints = [
                 fd.append('date_of_birth', document.getElementById('book-dob').value);
                 fd.append('preferred_date', document.getElementById('book-pref-date').value);
                 fd.append('preferred_time', document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning');
-                fd.append('reason', document.getElementById('book-reason').value.trim());
+                const resendComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
+                const resendReasonText = document.getElementById('book-reason').value.trim();
+                const resendReason = resendComplaints.length > 0
+                    ? (resendReasonText ? resendComplaints.join(', ') + ' — ' + resendReasonText : resendComplaints.join(', '))
+                    : resendReasonText;
+                fd.append('reason', resendReason);
                 fd.append('csrf_token', csrfToken);
 
                 await fetch('assets/api/bookings/create_booking.php', { method: 'POST', body: fd });

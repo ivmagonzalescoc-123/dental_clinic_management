@@ -1,4 +1,7 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
 header('Content-Type: application/json');
 
 include '../../../config/database.php';
@@ -32,6 +35,35 @@ if (!security_validate_csrf_token($csrf)) {
 }
 
 $patient_id = (int)($_POST['patient_id'] ?? 0);
+
+if (empty($patient_id)) {
+    echo json_encode(['success' => false, 'message' => 'Patient ID is required.']);
+    exit;
+}
+
+// Check if this is a partial update (only gender or specific fields)
+$isPartialUpdate = isset($_POST['gender']) && !isset($_POST['first_name']);
+
+if ($isPartialUpdate) {
+    // Partial update - only update provided fields
+    $gender = security_clean_string($_POST['gender'] ?? '', 20);
+    $sql = 'UPDATE patients SET gender=? WHERE patient_id=?';
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        exit;
+    }
+    $stmt->bind_param('si', $gender, $patient_id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Gender updated successfully.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Error updating gender: ' . $stmt->error]);
+    }
+    $stmt->close();
+    exit;
+}
+
+// Full update - validate all required fields
 $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
 $middle_name = security_clean_string($_POST['middle_name'] ?? '', 100);
 $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
@@ -40,8 +72,12 @@ $date_of_birth = security_clean_string($_POST['date_of_birth'] ?? '', 20);
 $gender = security_clean_string($_POST['gender'] ?? '', 20);
 $phone_number = security_clean_string($_POST['phone_number'] ?? '', 30);
 $address = security_clean_string($_POST['address'] ?? '', 500);
+$occupation = security_clean_string($_POST['occupation'] ?? '', 150);
 
-if (empty($patient_id) || empty($first_name) || empty($last_name) || empty($email) || empty($date_of_birth)) {
+// Ensure occupation column exists in patients table
+$conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS occupation varchar(150) DEFAULT NULL AFTER address");
+
+if (empty($first_name) || empty($last_name) || empty($email) || empty($date_of_birth)) {
     echo json_encode(['success' => false, 'message' => 'All required fields must be filled.']);
     exit;
 }
@@ -64,14 +100,14 @@ if ($check_result->num_rows > 0) {
 }
 $check_stmt->close();
 
-$sql = 'UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=? WHERE patient_id=?';
+$sql = 'UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=?, occupation=? WHERE patient_id=?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
     exit;
 }
 
-$stmt->bind_param('ssssssssi', $first_name, $middle_name, $last_name, $email, $date_of_birth, $gender, $phone_number, $address, $patient_id);
+$stmt->bind_param('sssssssssi', $first_name, $middle_name, $last_name, $email, $date_of_birth, $gender, $phone_number, $address, $occupation, $patient_id);
 
 if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Patient updated successfully.']);

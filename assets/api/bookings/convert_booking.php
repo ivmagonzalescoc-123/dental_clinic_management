@@ -4,6 +4,7 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', dirname(__FILE__) . '/error.log');
 
+ob_start();
 header('Content-Type: application/json');
 
 session_start();
@@ -11,6 +12,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 
 if (!isset($_SESSION['user_id'])) {
+    ob_end_clean();
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Authentication required.']);
     exit;
@@ -18,6 +20,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['admin', 'secretary'], true)) {
+    ob_end_clean();
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Access denied.']);
     exit;
@@ -37,9 +40,11 @@ try {
     $stmt->execute();
     $stmt->close();
 
+    ob_end_clean();
     echo json_encode(['success' => true, 'message' => 'Booking marked as converted.']);
 
 } catch (Exception $e) {
+    ob_end_clean();
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

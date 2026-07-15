@@ -79,8 +79,8 @@ $recordsQueueCount = 0;
 $pendingReqCount = 0;
 $guestBookingsCount = 0;
 try {
-    // Records queue: appointments with clinical records but no secretary record yet
-    $rqStmt = $conn->query("SELECT COUNT(*) AS c FROM appointments a INNER JOIN clinical_records cr ON a.appointment_id = cr.appointment_id WHERE a.status = 'in_progress' AND cr.status != 'complete'");
+    // Records queue: appointments awaiting secretary clinical record creation
+    $rqStmt = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE status = 'awaiting_secretary_records'");
     if ($rqStmt && ($rqRow = $rqStmt->fetch_assoc())) {
         $recordsQueueCount = (int)($rqRow['c'] ?? 0);
     }
@@ -239,6 +239,13 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=ehr_queue" data-tooltip="EHR Queue" title="EHR Queue">
+                    <i class="bi bi-journal-medical"></i>
+                    <span class="ms-2">EHR Queue</span>
+                    <span class="nav-dot<?php echo (int)$recordsQueueCount > 0 ? ' is-active' : ''; ?>" id="secretaryEhrDot"></span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=billing" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-receipt"></i>
                     <span>Billing</span>
@@ -303,6 +310,9 @@ switch ($role_key) {
                                         break;
                                     case "arrivals":
                                         include "secretary_modules/arrivals.php";
+                                        break;
+                                    case "ehr_queue":
+                                        include "secretary_modules/ehr_queue.php";
                                         break;
                                     case "notifications":
                                         include "secretary_modules/notifications.php";

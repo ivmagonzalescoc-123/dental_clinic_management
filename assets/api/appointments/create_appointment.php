@@ -423,6 +423,7 @@ try {
         ? 'Appointment created and confirmed.'
         : 'Appointment created successfully! Awaiting secretary approval.';
 
+    ob_end_clean();
     echo json_encode([
         'success'        => true,
         'message'        => $responseMsg,
@@ -434,6 +435,7 @@ try {
     if ($conn && $conn->connect_errno === 0) {
         try { $conn->rollback(); } catch (Exception $re) {}
     }
+    ob_end_clean();
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }

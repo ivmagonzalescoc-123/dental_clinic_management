@@ -1,8 +1,11 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+header('Content-Type: application/json');
 include '../../../config/database.php';
 include_once '../../../config/session_check.php';
 include_once '../../../config/patient_profiling_helpers.php';
-header('Content-Type: application/json');
 $role = $_SESSION['role'] ?? '';
 if (!in_array($role, ['doctor','admin','secretary'])) {
     http_response_code(403);
@@ -26,35 +29,34 @@ try {
 
     $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patient_id AND record_id IS NULL");
 
+    // Use N/A for empty text fields to avoid NULLs in database
+    $na = 'N/A';
+
     if (!empty($profiling)) {
-        $p_race = $profiling['race'] ?? null;
-        $p_occupation = $profiling['occupation'] ?? null;
-        $p_medical_history = $profiling['medical_history'] ?? null;
-        $p_medications = $profiling['medications'] ?? null;
-        $p_allergies = $profiling['allergies'] ?? null;
-        $p_smoking = $profiling['smoking'] ?? null;
-        $p_alcohol = $profiling['alcohol'] ?? null;
+        $p_race = $profiling['race'] ?: $na;
+        $p_medical_history = $profiling['medical_history'] ?: $na;
+        $p_medications = $profiling['medications'] ?: $na;
+        $p_allergies = $profiling['allergies'] ?: $na;
+        $p_smoking = $profiling['smoking'] ?: $na;
+        $p_alcohol = $profiling['alcohol'] ?: $na;
         $p_hypertensive = (int)($profiling['hypertensive'] ?? 0);
         $p_diabetic = (int)($profiling['diabetic'] ?? 0);
         $p_asthmatic = (int)($profiling['asthmatic'] ?? 0);
         $p_heart_disease = (int)($profiling['heart_disease'] ?? 0);
         $p_hiv_positive = (int)($profiling['hiv_positive'] ?? 0);
-        $p_bleeding_disorder = $profiling['bleeding_disorder'] ?? null;
-        $p_asa = $profiling['asa'] ?? null;
-        $p_pregnancy_status = $profiling['pregnancy_status'] ?? null;
-        $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?? null;
-        $p_dental_anxiety = $profiling['dental_anxiety'] ?? null;
-        $p_emergency_contact = $profiling['emergency_contact'] ?? null;
-        $p_emergency_phone = $profiling['emergency_phone'] ?? null;
-        $p_background_notes = $profiling['background_notes'] ?? null;
+        $p_bleeding_disorder = $profiling['bleeding_disorder'] ?: $na;
+        $p_asa = $profiling['asa'] ?: $na;
+        $p_pregnancy_status = $profiling['pregnancy_status'] ?: $na;
+        $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?: $na;
+        $p_dental_anxiety = $profiling['dental_anxiety'] ?: $na;
+        $p_background_notes = $profiling['background_notes'] ?: $na;
 
-        $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         if (!$stmt) throw new Exception('Insert prepare failed: ' . $conn->error);
         $stmt->bind_param(
-            'isssssssiiiiissssssss',
+            'isssssssiiiiissss',
             $patient_id,
             $p_race,
-            $p_occupation,
             $p_medical_history,
             $p_medications,
             $p_allergies,
@@ -70,8 +72,6 @@ try {
             $p_pregnancy_status,
             $p_previous_dental_treatment,
             $p_dental_anxiety,
-            $p_emergency_contact,
-            $p_emergency_phone,
             $p_background_notes
         );
         if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);

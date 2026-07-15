@@ -1,4 +1,8 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ob_start();
 header('Content-Type: application/json');
 include dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
@@ -23,11 +27,11 @@ try {
     $first_name = trim($_POST['first_name'] ?? '');
     $middle_name = trim($_POST['middle_name'] ?? '');
     $last_name = trim($_POST['last_name'] ?? '');
-    $date_of_birth = trim($_POST['date_of_birth'] ?? null);
-    $gender = trim($_POST['gender'] ?? null);
-    $phone_number = trim($_POST['phone_number'] ?? null);
+    $date_of_birth = trim($_POST['date_of_birth'] ?? '');
+    $gender = trim($_POST['gender'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $address = trim($_POST['address'] ?? null);
+    $address = trim($_POST['address'] ?? '');
 
     if (empty($first_name) || empty($last_name)) {
         throw new Exception('First name and last name are required');
@@ -115,10 +119,12 @@ try {
         $response['email_warning'] = 'Welcome email failed to send. Verify Brevo/SMTP settings in .env.';
     }
 
+    ob_end_clean();
     echo json_encode($response);
     exit;
 
 } catch (Exception $e) {
+    ob_end_clean();
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
     exit;
