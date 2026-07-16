@@ -663,6 +663,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <ul class="dropdown-menu dropdown-menu-sm">
                     <li><a class="dropdown-item new-cust-status-filter active" href="#" data-filter="all">All</a></li>
                     <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="pending">Pending</a></li>
+                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="approved">Approved</a></li>
                     <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="processed">Processed</a></li>
                 </ul>
             </div>
@@ -676,7 +677,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
             </div>
             <?php
                     $guestBookings = [];
-                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','converted') AND NOT (b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
+                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
                     if ($gbRes) {
                         while ($gbRow = $gbRes->fetch_assoc()) {
                             $guestBookings[] = $gbRow;
@@ -722,7 +723,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <?php else: ?>
                         <?php foreach ($guestBookings as $gb): ?>
                             <?php $isConverted = ($gb['status'] === 'converted'); ?>
-                            <tr data-status="<?php echo $isConverted ? 'processed' : 'pending'; ?>" data-time="<?php echo htmlspecialchars($gb['preferred_time']); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo htmlspecialchars($gb['preferred_time']); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><?php echo htmlspecialchars($gb['email']); ?></td>
@@ -732,6 +733,8 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 <td>
                                     <?php if ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
+                                    <?php elseif ($gb['status'] === 'approved'): ?>
+                                        <span class="badge bg-info"><i class="bi bi-check-circle"></i> Approved</span>
                                     <?php else: ?>
                                         <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
                                     <?php endif; ?>
@@ -741,6 +744,14 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                     <?php if ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
                                     <?php else: ?>
+                                        <div class="d-flex gap-1 flex-wrap">
+                                        <?php if ($gb['status'] !== 'approved'): ?>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
+                                                <i class="bi bi-check2-square"></i> Approve
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="badge bg-info"><i class="bi bi-check"></i> Approved</span>
+                                        <?php endif; ?>
                                         <button type="button" class="btn btn-sm btn-success"
                                             onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
                                                 'booking_id' => (int)$gb['booking_id'],
@@ -755,6 +766,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                             ]), ENT_QUOTES, 'UTF-8'); ?>)'>
                                             <i class="bi bi-arrow-right-circle"></i> Process
                                         </button>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -1019,6 +1031,46 @@ function openConvertBookingModal(booking) {
 
     var modal = new bootstrap.Modal(document.getElementById('convertBookingModal'));
     modal.show();
+}
+
+// Approve a booking
+async function approveBooking(bookingId) {
+    if (typeof showConfirmModal === 'function') {
+        if (!(await showConfirmModal({
+            title: 'Approve Booking',
+            message: 'Approve this booking request? The patient will see "Booking Confirmed" in their tracker.',
+            confirmText: 'Approve'
+        }))) return;
+    }
+
+    try {
+        const resp = await fetch('../assets/api/bookings/approve_booking.php?booking_id=' + bookingId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'csrf_token=' + encodeURIComponent(window.secretaryCsrfToken || '')
+        });
+        const data = await resp.json();
+        if (data.success) {
+            if (typeof showArrToast === 'function') {
+                showArrToast('Booking approved.', 'success');
+            } else if (typeof showToast === 'function') {
+                showToast('Booking approved.', 'success');
+            }
+            location.reload();
+        } else {
+            if (typeof showArrToast === 'function') {
+                showArrToast(data.message || 'Failed to approve.', 'danger');
+            } else if (typeof showToast === 'function') {
+                showToast(data.message || 'Failed to approve.', 'danger');
+            }
+        }
+    } catch(e) {
+        if (typeof showArrToast === 'function') {
+            showArrToast('Error: ' + e.message, 'danger');
+        } else if (typeof showToast === 'function') {
+            showToast('Error: ' + e.message, 'danger');
+        }
+    }
 }
 
 // Load services when doctor changes

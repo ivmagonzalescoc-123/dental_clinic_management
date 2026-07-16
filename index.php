@@ -576,7 +576,7 @@ $aboutPoints = [
                                 <!-- Step 2 -->
                                 <div class="flex flex-col items-center" style="min-width:80px;">
                                     <div id="step2Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">2</div>
-                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Arrived at<br>Clinic</span>
+                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Booking<br>Confirmed</span>
                                 </div>
                                 <!-- Line 2 -->
                                 <div class="flex-1 flex items-center pt-5 px-1">
@@ -585,7 +585,7 @@ $aboutPoints = [
                                 <!-- Step 3 -->
                                 <div class="flex flex-col items-center" style="min-width:80px;">
                                     <div id="step3Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">3</div>
-                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Appointment<br>Completed</span>
+                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Visit<br>Clinic</span>
                                 </div>
                             </div>
                         </div>
@@ -981,7 +981,7 @@ $aboutPoints = [
                     </div>
                     <div>
                         <label for="book-phone" class="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
-                        <input type="tel" id="book-phone" name="phone_number" required placeholder="0917 123 4567" autocomplete="tel"
+                        <input type="tel" id="book-phone" name="phone_number" required placeholder="+63 9XX XXX XXXX" autocomplete="tel" pattern="+63[0-9]{10}"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
                     </div>
                 </div>
@@ -1015,10 +1015,7 @@ $aboutPoints = [
                 <div>
                     <label class="mb-1 block text-xs font-semibold text-slate-600">Initial Complaint</label>
                     <div class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Headache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Headache</span>
-                        </label>
+                        
                         <label class="flex items-center gap-2 cursor-pointer group">
                             <input type="checkbox" name="complaint[]" value="Toothache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
                             <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Toothache</span>
@@ -1373,23 +1370,27 @@ $aboutPoints = [
 
                         resetSteps();
                         
-                        if (data.hasError) {
-                            statusEl.textContent = 'Not Arrived';
-                            statusEl.style.backgroundColor = '#fee2e2';
-                            statusEl.style.color = '#dc2626';
-                            setStep('step1Circle', 'step1Label', false, true);
-                            setStep('step2Circle', 'step2Label', false, true);
-                            setStep('step3Circle', 'step3Label', false, true);
-                            setLineActive('line1', true);
-                            setLineActive('line2', true);
-                        } else {
-                            statusEl.textContent = 'In Progress';
+                        resetSteps();
+                        if (data.step1) setStep('step1Circle', 'step1Label', true);
+                        if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
+                        if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
+                        
+                        if (data.status === 'converted') {
+                            statusEl.textContent = 'Appointment Ready';
+                            statusEl.style.backgroundColor = '#dcfce7';
+                            statusEl.style.color = '#166534';
+                        } else if (data.status === 'approved') {
+                            statusEl.textContent = 'Booking Confirmed';
                             statusEl.style.backgroundColor = '#e3eeff';
                             statusEl.style.color = '#1d6fd8';
-                            
-                            if (data.step1) setStep('step1Circle', 'step1Label', true);
-                            if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
-                            if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
+                        } else if (data.hasError) {
+                            statusEl.textContent = 'Pending Approval';
+                            statusEl.style.backgroundColor = '#fef3c7';
+                            statusEl.style.color = '#92400e';
+                        } else {
+                            statusEl.textContent = 'Awaiting Approval';
+                            statusEl.style.backgroundColor = '#fef3c7';
+                            statusEl.style.color = '#92400e';
                         }
                         resultCard.classList.remove('hidden');
                     })
@@ -1735,6 +1736,11 @@ $aboutPoints = [
             }
             if (!phone) {
                 setBookingAlert('Phone number is required.', 'warning');
+                return;
+            }
+            const phoneClean = phone.replace(/[\s\-()]/g, '');
+            if (!/^\+63\d{10}$/.test(phoneClean)) {
+                setBookingAlert('Phone number must be in +63 format (e.g. +639171234567).', 'warning');
                 return;
             }
             if (!dob) {

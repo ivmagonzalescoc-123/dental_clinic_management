@@ -101,7 +101,7 @@ try {
     }
     $notes = $notesResult;
 
-    $allowedStatus = ['scheduled', 'confirmed', 'arrived'];
+    $allowedStatus = ['scheduled', 'confirmed', 'arrived', 'checked_in'];
     if (!in_array($status, $allowedStatus, true)) {
         $status = 'scheduled';
     }
@@ -283,7 +283,7 @@ try {
         $is_online_appointment = 1;
     }
 
-    if (!$isPatientRequester && strtolower($requester_role) === 'secretary') {
+    if (!$isPatientRequester && strtolower($requester_role) === 'secretary' && $status !== 'checked_in') {
         $status = 'confirmed';
     }
 
