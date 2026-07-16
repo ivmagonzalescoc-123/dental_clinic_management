@@ -677,7 +677,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
             </div>
             <?php
                     $guestBookings = [];
-                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
+                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id, a.status AS converted_appt_status FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
                     if ($gbRes) {
                         while ($gbRow = $gbRes->fetch_assoc()) {
                             $guestBookings[] = $gbRow;
@@ -685,7 +685,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     }
 
                     $archivedBookings = [];
-                    $abRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status = 'verified' AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY b.preferred_date DESC");
+                    $abRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY b.preferred_date DESC");
                     if ($abRes) {
                         while ($abRow = $abRes->fetch_assoc()) {
                             $archivedBookings[] = $abRow;
@@ -722,14 +722,24 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         </tr>
                     <?php else: ?>
                         <?php foreach ($guestBookings as $gb): ?>
-                            <?php $isConverted = ($gb['status'] === 'converted'); ?>
-                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo htmlspecialchars($gb['preferred_time']); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <?php
+                                // A linked appointment already past creation (checked in, in session, or further)
+                                // means this booking is already processed, even if bookings.status never got flipped
+                                // to 'converted' (e.g. the convert_booking status update failed after the appointment
+                                // was created). Treat both cases as processed so the Process button can't be re-clicked.
+                                $alreadyProcessedAppt = in_array($gb['converted_appt_status'] ?? '', [
+                                    'checked_in', 'in_progress', 'completed_by_doctor',
+                                    'awaiting_secretary_records', 'records_complete', 'completed',
+                                ], true);
+                                $isConverted = ($gb['status'] === 'converted') || $alreadyProcessedAppt;
+                            ?>
+                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'morning' : 'afternoon'; ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><?php echo htmlspecialchars($gb['email']); ?></td>
                                 <td><?php echo htmlspecialchars($gb['phone_number'] ?? '—'); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
-                                <td><span class="badge bg-<?php echo $gb['preferred_time'] === 'morning' ? 'warning' : 'info'; ?>"><?php echo ucfirst($gb['preferred_time']); ?></span></td>
+                                <td><span class="badge bg-<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'warning' : 'info'; ?>"><?php echo htmlspecialchars($gb['preferred_time']); ?></span></td>
                                 <td>
                                     <?php if ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
@@ -797,13 +807,14 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <th>Phone</th>
                         <th>Preferred Date</th>
                         <th>Time</th>
+                        <th>Status</th>
                         <th>Requested</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($archivedBookings)): ?>
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-3">No archived bookings.</td>
+                            <td colspan="8" class="text-center text-muted py-3">No archived bookings.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($archivedBookings as $ab): ?>
@@ -813,7 +824,14 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 <td><?php echo htmlspecialchars($ab['email']); ?></td>
                                 <td><?php echo htmlspecialchars($ab['phone_number'] ?? '—'); ?></td>
                                 <td><?php echo date('M j, Y', strtotime($ab['preferred_date'])); ?></td>
-                                <td><?php echo ucfirst($ab['preferred_time']); ?></td>
+                                <td><?php echo htmlspecialchars($ab['preferred_time']); ?></td>
+                                <td>
+                                    <?php if ($ab['status'] === 'approved'): ?>
+                                        <span class="badge bg-info"><i class="bi bi-check-circle"></i> Approved</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?php echo date('M j, g:i A', strtotime($ab['created_at'])); ?></td>
                             </tr>
                         <?php endforeach; ?>
@@ -839,6 +857,11 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <div class="modal-body py-2 px-3">
                     <div class="alert alert-info mb-2 py-2 px-3" style="font-size:0.82rem;">
                         <strong>Patient:</strong> <span id="convertBookingPatientInfo"></span>
+                    </div>
+
+                    <!-- Static walk-in note: processing always books the appointment for today -->
+                    <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#0d6efd1a;border:1px solid #0d6efd44;border-radius:6px;font-size:0.78rem;color:#0d47a1;font-weight:600;">
+                        <i class="bi bi-person-walking"></i> <span id="convertWalkInNoteText">Walk-in Today</span>
                     </div>
 
                     <!-- Doctor -->
@@ -1020,6 +1043,16 @@ function openConvertBookingModal(booking) {
         reasonField.value = booking.reason || '';
     }
 
+    // Processing always books the appointment for today (walk-in), regardless of the
+    // booking's preferred_date — that record is left untouched.
+    var todayStr = getTodayDateStringSecretary();
+    var noteText = document.getElementById('convertWalkInNoteText');
+    if (noteText) {
+        noteText.textContent = (booking.preferred_date && booking.preferred_date !== todayStr)
+            ? 'Walk-in Today — original preferred date was ' + booking.preferred_date
+            : 'Walk-in Today';
+    }
+
     // Reset services table
     renderProcessServicesTable();
 
@@ -1031,6 +1064,13 @@ function openConvertBookingModal(booking) {
 
     var modal = new bootstrap.Modal(document.getElementById('convertBookingModal'));
     modal.show();
+}
+
+function getTodayDateStringSecretary() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
 }
 
 // Approve a booking
@@ -1110,8 +1150,8 @@ document.getElementById('convertDoctorSelect')?.addEventListener('change', async
         console.error('Failed to load services:', err);
     }
 
-    // Load available timeslots for preferred date
-    loadProcessTimeslots(doctorId, convertBookingData.preferred_date);
+    // Load available timeslots for today — processing always books a walk-in for today.
+    loadProcessTimeslots(doctorId, getTodayDateStringSecretary());
 });
 
 function loadProcessTimeslots(doctorId, date) {
@@ -1121,7 +1161,12 @@ function loadProcessTimeslots(doctorId, date) {
         timeslotSelect.disabled = true;
         return;
     }
-    fetch('../assets/api/appointments/get_timeslots.php?doctor_id=' + doctorId + '&date=' + date)
+    var duration = processSelectedServices.reduce(function(sum, s) { return sum + (s.duration || 0); }, 0);
+    var url = '../assets/api/appointments/get_timeslots.php?doctor_id=' + doctorId + '&date=' + date;
+    if (duration > 0) {
+        url += '&duration=' + duration;
+    }
+    fetch(url)
         .then(function(r) { return r.json(); })
         .then(function(data) {
             timeslotSelect.innerHTML = '<option value="">-- Select Start Time --</option>';
@@ -1162,12 +1207,21 @@ function addProcessService() {
 
     select.value = '';
     renderProcessServicesTable();
+    refreshProcessTimeslots();
 }
 
 // Remove service from table
 function removeProcessService(serviceId) {
     processSelectedServices = processSelectedServices.filter(function(s) { return s.service_id !== serviceId; });
     renderProcessServicesTable();
+    refreshProcessTimeslots();
+}
+
+// Re-fetch the timeslot dropdown for the currently selected doctor, factoring in duration.
+function refreshProcessTimeslots() {
+    var doctorId = document.getElementById('convertDoctorSelect').value;
+    if (!doctorId) return;
+    loadProcessTimeslots(doctorId, getTodayDateStringSecretary());
 }
 
 // Render services table
@@ -1214,25 +1268,23 @@ function escapeProcessHtml(str) {
 document.getElementById('convertBookingForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     var submitBtn = document.getElementById('convertSubmitBtn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Processing...';
+    if (submitBtn.disabled) return; // guard against double-submit while already processing
 
     var bookingId = document.getElementById('convertBookingId').value;
     var doctorId = document.getElementById('convertDoctorSelect').value;
     var timeslotId = document.getElementById('convertTimeslotSelect').value;
+    var appointmentDate = getTodayDateStringSecretary();
 
     if (!doctorId) {
         notifySecretary('Please select a doctor.', 'warning');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Process Booking';
         return;
     }
     if (!timeslotId) {
         notifySecretary('Please select a start time.', 'warning');
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Process Booking';
         return;
     }
+
+    DentalUI.btnLoading(submitBtn, 'Processing...');
 
     try {
         // 1. Create patient account
@@ -1249,8 +1301,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 
         if (!patientData.success || !patientData.patient_id) {
             notifySecretary('Error creating patient: ' + (patientData.message || 'Unknown error'), 'danger');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Process Booking';
+            DentalUI.btnRestore(submitBtn);
             return;
         }
 
@@ -1259,7 +1310,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         // 2. Create appointment with services and arrived status
         var apptFd = new FormData();
         apptFd.append('patient_id', patientData.patient_id);
-        apptFd.append('appointment_date', convertBookingData.preferred_date || '');
+        // Processing always books the appointment for today (walk-in) — bookings.preferred_date is left untouched.
+        apptFd.append('appointment_date', appointmentDate);
         apptFd.append('user_id', doctorId);
         var modalReason = document.getElementById('convertReason')?.value?.trim() || '';
         apptFd.append('reason', modalReason || convertBookingData.reason || '');
@@ -1281,8 +1333,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         if (apptData.success) {
             // Mark booking as converted
             await fetch('../assets/api/bookings/convert_booking.php?booking_id=' + bookingId, { method: 'POST' });
+
+            var modalEl = document.getElementById('convertBookingModal');
+            var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalInstance.hide();
+
             notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
-            setTimeout(function() { location.reload(); }, 1500);
+            DentalUI.btnRestore(submitBtn);
+            return;
         } else {
             // Appointment failed — clean up orphaned patient if we just created them
             if (patientWasNew && patientData.patient_id) {
@@ -1296,8 +1354,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         notifySecretary('Error: ' + err.message, 'danger');
     }
 
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Process Booking';
+    DentalUI.btnRestore(submitBtn);
 });
 </script>
 
@@ -1581,6 +1638,43 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 <?php endif; ?>
 
 <style>
+#convertBookingModal .modal-dialog {
+    max-height: 90vh;
+    margin-top: 5vh;
+    margin-bottom: 5vh;
+}
+@media (min-width: 576px) {
+    #convertBookingModal .modal-dialog {
+        max-width: 550px; /* ~10% wider than Bootstrap's default 500px */
+    }
+}
+#convertBookingModal .modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#convertBookingModal .modal-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: calc(90vh - 110px);
+    scrollbar-width: thin;
+}
+#convertBookingModal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+#convertBookingModal .modal-body::-webkit-scrollbar-thumb {
+    background: #c7d2e0;
+    border-radius: 4px;
+}
+#convertBookingModal .modal-footer {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    z-index: 2;
+}
 .secretary-booking-calendar {
     border: 1px solid #dbe7e4;
     border-radius: 14px;

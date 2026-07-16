@@ -20,14 +20,14 @@ if (!in_array($role, ['admin', 'secretary', 'doctor'])) {
 $doctor_id     = isset($_POST['doctor_id'])     ? (int)$_POST['doctor_id']     : 0;
 $from_date     = isset($_POST['from_date'])     ? trim($_POST['from_date'])     : date('Y-m-d');
 $to_date       = isset($_POST['to_date'])       ? trim($_POST['to_date'])       : date('Y-m-d', strtotime('+14 days'));
-$slot_duration = isset($_POST['slot_duration']) ? (int)$_POST['slot_duration'] : 30;
+$slot_duration = isset($_POST['slot_duration']) ? (int)$_POST['slot_duration'] : APPT_BASE_SLOT_MINUTES;
 
 if (!$doctor_id) {
     echo json_encode(['success' => false, 'message' => 'doctor_id is required']);
     exit;
 }
 
-if ($slot_duration < 10 || $slot_duration > 480) $slot_duration = 30;
+if ($slot_duration < 10 || $slot_duration > 480) $slot_duration = APPT_BASE_SLOT_MINUTES;
 
 try {
     // Load availability

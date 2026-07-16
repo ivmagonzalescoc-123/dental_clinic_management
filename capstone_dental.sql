@@ -212,6 +212,7 @@ CREATE TABLE `timeslot` (
   `start_time` time NOT NULL,
   `end_time` time NOT NULL,
   `status` enum('available','booked','blocked','break') DEFAULT 'available',
+  `appointment_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -244,6 +245,7 @@ CREATE TABLE `appointments` (
   `patient_id` int(11) NOT NULL,
   `is_emergency` tinyint(1) DEFAULT 0,
   `completed_by_doctor_at` datetime DEFAULT NULL,
+  `session_started_at` datetime DEFAULT NULL,
   `secretary_records_completed_at` datetime DEFAULT NULL,
   `booking_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -552,11 +554,11 @@ CREATE TABLE `bookings` (
   `phone_number` varchar(30) DEFAULT NULL,
   `date_of_birth` date DEFAULT NULL,
   `preferred_date` date NOT NULL,
-  `preferred_time` enum('morning','afternoon') NOT NULL DEFAULT 'morning',
+  `preferred_time` varchar(20) NOT NULL DEFAULT '8:00 AM',
   `reason` varchar(500) DEFAULT NULL,
   `otp_hash` char(64) DEFAULT NULL,
   `otp_expires_at` datetime DEFAULT NULL,
-  `status` enum('pending_verification','verified','converted','cancelled') NOT NULL DEFAULT 'pending_verification',
+  `status` enum('pending_verification','verified','approved','converted','cancelled') NOT NULL DEFAULT 'pending_verification',
   `converted_to_appointment_id` int(11) DEFAULT NULL,
   `converted_to_patient_id` int(11) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
@@ -619,7 +621,8 @@ ALTER TABLE `services`
 ALTER TABLE `timeslot`
   ADD PRIMARY KEY (`timeslot_id`),
   ADD UNIQUE KEY `uq_doctor_slot` (`doctor_id`,`slot_date`,`start_time`),
-  ADD KEY `idx_timeslot_doc_date_status` (`doctor_id`,`slot_date`,`status`);
+  ADD KEY `idx_timeslot_doc_date_status` (`doctor_id`,`slot_date`,`status`),
+  ADD KEY `idx_timeslot_appointment_id` (`appointment_id`);
 
 ALTER TABLE `timeslot_service`
   ADD PRIMARY KEY (`id`),
@@ -889,6 +892,9 @@ ALTER TABLE `appointments`
 
 ALTER TABLE `appointment_media`
   ADD CONSTRAINT `appointment_media_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE;
+
+ALTER TABLE `timeslot`
+  ADD CONSTRAINT `fk_timeslot_appointment` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE SET NULL;
 
 ALTER TABLE `appointment_doctor_notes`
   ADD CONSTRAINT `appointment_doctor_notes_ibfk_1` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`appointment_id`) ON DELETE CASCADE;

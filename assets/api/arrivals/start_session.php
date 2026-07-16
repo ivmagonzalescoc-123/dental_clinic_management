@@ -76,7 +76,7 @@ try {
     }
 
     // Assign doctor and mark appointment in_progress
-    $updA = $conn->prepare("UPDATE appointments SET user_id = ?, status = 'in_progress' WHERE appointment_id = ?");
+    $updA = $conn->prepare("UPDATE appointments SET user_id = ?, status = 'in_progress', session_started_at = COALESCE(session_started_at, NOW()) WHERE appointment_id = ?");
     $updA->bind_param('ii', $doctor_id, $appointment_id);
     $updA->execute();
     $updA->close();

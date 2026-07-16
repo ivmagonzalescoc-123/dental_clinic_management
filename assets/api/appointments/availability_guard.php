@@ -1,5 +1,9 @@
 <?php
 
+if (!defined('APPT_BASE_SLOT_MINUTES')) {
+    define('APPT_BASE_SLOT_MINUTES', 10);
+}
+
 function appt_table_exists(mysqli $conn, $tableName)
 {
     $safeName = $conn->real_escape_string($tableName);
@@ -72,18 +76,19 @@ function appt_ensure_standard_timeslots_for_doctor_date(mysqli $conn, $doctorId,
         return;
     }
 
-    // 20-minute slots, lunch break 12:00-13:00, clinic hours 08:00-17:00.
+    // 10-minute slots, lunch break 12:00-13:00, clinic hours 08:00-17:00.
     $windows = [
         ['08:00:00', '12:00:00'],
         ['13:00:00', '17:00:00'],
     ];
+    $slotSeconds = APPT_BASE_SLOT_MINUTES * 60;
 
     foreach ($windows as $window) {
         $startSec = strtotime($date . ' ' . $window[0]);
         $endSec = strtotime($date . ' ' . $window[1]);
-        for ($cur = $startSec; $cur + 1200 <= $endSec; $cur += 1200) {
+        for ($cur = $startSec; $cur + $slotSeconds <= $endSec; $cur += $slotSeconds) {
             $slotStart = date('H:i:s', $cur);
-            $slotEnd = date('H:i:s', $cur + 1200);
+            $slotEnd = date('H:i:s', $cur + $slotSeconds);
 
             $check = $conn->prepare(
                 'SELECT timeslot_id FROM timeslot WHERE doctor_id = ? AND slot_date = ? AND start_time = ? AND end_time = ? LIMIT 1'

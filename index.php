@@ -283,6 +283,21 @@ $aboutPoints = [
             box-shadow: none;
             outline: none;
         }
+        .auth-field.field-invalid {
+            border-color: #ef4444 !important;
+            background-color: #fff !important;
+        }
+        .auth-field.field-invalid:focus {
+            border-color: #ef4444 !important;
+        }
+        .auth-field-msg {
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+            color: #ef4444;
+            display: none;
+            line-height: 1.3;
+        }
+        .auth-field-msg.show { display: block; }
 
         .auth-panel .auth-header,
         .terms-panel > div:first-child {
@@ -879,6 +894,7 @@ $aboutPoints = [
                         <input type="email" id="login-email" name="email" autocomplete="email" required placeholder="Enter your email"
                             class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
                     </div>
+                    <p class="auth-field-msg" id="login-email-error"></p>
                 </div>
 
                 <div class="space-y-1.5">
@@ -965,11 +981,13 @@ $aboutPoints = [
                         <label for="book-first-name" class="mb-1 block text-xs font-semibold text-slate-600">First Name</label>
                         <input type="text" id="book-first-name" name="first_name" required placeholder="First name"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                        <p class="auth-field-msg" id="book-first-name-error"></p>
                     </div>
                     <div>
                         <label for="book-last-name" class="mb-1 block text-xs font-semibold text-slate-600">Last Name</label>
                         <input type="text" id="book-last-name" name="last_name" required placeholder="Last name"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                        <p class="auth-field-msg" id="book-last-name-error"></p>
                     </div>
                 </div>
 
@@ -978,11 +996,43 @@ $aboutPoints = [
                         <label for="book-email" class="mb-1 block text-xs font-semibold text-slate-600">Email</label>
                         <input type="email" id="book-email" name="email" required placeholder="you@example.com" autocomplete="email"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                        <p class="auth-field-msg" id="book-email-error"></p>
                     </div>
                     <div>
                         <label for="book-phone" class="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
-                        <input type="tel" id="book-phone" name="phone_number" required placeholder="+63 9XX XXX XXXX" autocomplete="tel" pattern="+63[0-9]{10}"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                        <div class="flex">
+                            <select id="book-phone-code" name="phone_code"
+                                class="auth-field shrink-0 rounded-l-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm text-slate-700 border-r-0 cursor-pointer focus:border-primary focus:ring-0 focus:outline-none"
+                                style="min-width: 70px; max-width: 70px;">
+                                <option value="+63" selected>+63</option>
+                                <option value="+1">+1</option>
+                                <option value="+44">+44</option>
+                                <option value="+61">+61</option>
+                                <option value="+81">+81</option>
+                                <option value="+82">+82</option>
+                                <option value="+86">+86</option>
+                                <option value="+91">+91</option>
+                                <option value="+65">+65</option>
+                                <option value="+60">+60</option>
+                                <option value="+62">+62</option>
+                                <option value="+66">+66</option>
+                                <option value="+84">+84</option>
+                                <option value="+971">+971</option>
+                                <option value="+966">+966</option>
+                                <option value="+49">+49</option>
+                                <option value="+33">+33</option>
+                                <option value="+34">+34</option>
+                                <option value="+39">+39</option>
+                                <option value="+55">+55</option>
+                                <option value="+52">+52</option>
+                                <option value="+27">+27</option>
+                                <option value="+234">+234</option>
+                                <option value="+254">+254</option>
+                            </select>
+                            <input type="tel" id="book-phone" name="phone_number" required placeholder="9XX XXX XXXX" autocomplete="tel" inputmode="numeric" maxlength="10"
+                                class="auth-field w-full rounded-r-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                        </div>
+                        <p class="auth-field-msg" id="book-phone-error"></p>
                     </div>
                 </div>
 
@@ -991,24 +1041,26 @@ $aboutPoints = [
                         <label for="book-dob" class="mb-1 block text-xs font-semibold text-slate-600">Birthdate</label>
                         <input type="date" id="book-dob" name="date_of_birth" required
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
+                        <p class="auth-field-msg" id="book-dob-error"></p>
                     </div>
                     <div>
                         <label for="book-pref-date" class="mb-1 block text-xs font-semibold text-slate-600">Preferred Date</label>
                         <input type="date" id="book-pref-date" name="preferred_date" required
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
+                        <p class="auth-field-msg" id="book-pref-date-error"></p>
                     </div>
                     <div>
                         <label class="mb-1 block text-xs font-semibold text-slate-600">Time</label>
-                        <div class="flex gap-1.5">
-                            <label class="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm cursor-pointer hover:border-primary/40 transition-colors flex-1">
-                                <input type="radio" name="preferred_time" value="morning" checked class="text-primary focus:ring-primary/40">
-                                <span class="text-slate-700">AM</span>
-                            </label>
-                            <label class="flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm cursor-pointer hover:border-primary/40 transition-colors flex-1">
-                                <input type="radio" name="preferred_time" value="afternoon" class="text-primary focus:ring-primary/40">
-                                <span class="text-slate-700">PM</span>
-                            </label>
+                        <div class="flex items-center gap-0">
+                            <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="8"
+                                class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border border-slate-200 rounded-l-lg px-1 py-2.5 outline-none focus:border-primary transition-colors">
+                            <span class="text-base font-bold text-slate-400 px-0.5">:</span>
+                            <input type="text" id="book-minute" inputmode="numeric" maxlength="2" placeholder="00"
+                                class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border-y border-slate-200 px-1 py-2.5 outline-none focus:border-primary transition-colors">
+                            <button type="button" id="btn-meridiem" class="px-3 py-2.5 text-xs font-bold bg-slate-50/80 text-primary border border-slate-200 rounded-r-lg cursor-pointer hover:bg-primary/5 transition-colors">AM</button>
                         </div>
+                        <input type="hidden" id="book-time" name="preferred_time" value="8:00 AM">
+                        <p class="auth-field-msg" id="book-time-error"></p>
                     </div>
                 </div>
 
@@ -1105,15 +1157,42 @@ $aboutPoints = [
             </div>
 
             <!-- Step 3: Success (hidden by default) -->
-            <div id="booking-success-section" class="hidden px-5 py-6 sm:px-7 text-center">
-                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div id="booking-success-section" class="hidden px-5 py-6 sm:px-8 text-center">
+                <!-- Animated check -->
+                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50" style="box-shadow: 0 0 0 6px rgba(34,197,94,0.1);">
+                    <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
-                <h3 class="text-base font-bold text-slate-900">Booking Confirmed!</h3>
-                <p class="mt-2 text-sm text-slate-500 leading-relaxed">A confirmation email has been sent to your email address.</p>
-                <p class="mt-2 text-sm text-slate-400">Your Booking Appointment Ref No. is <strong id="booking-ref-display" class="text-slate-700"></strong></p>
-                <p class="mt-3 text-xs text-slate-400">You can track your appointment status anytime using the <a href="#track-booking" class="text-primary font-semibold hover:underline">Track Appointment</a> section on our homepage.</p>
-                <button type="button" data-auth-close class="mt-4 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+
+                <h3 class="text-lg font-bold text-slate-900">Booking Confirmed!</h3>
+                <p class="mt-1.5 text-sm text-slate-500">A confirmation email has been sent to your inbox.</p>
+
+                <!-- Tracking number card -->
+                <div class="mt-5 rounded-xl border border-green-200 bg-green-50/60 px-5 py-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-green-700 mb-2">Your Reference Number</p>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="booking-ref-display" class="text-2xl font-bold text-green-700 tracking-wide" style="font-family: 'Courier New', monospace;">—</span>
+                        <button type="button" id="copyBookingRefBtn" class="rounded-md border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors" title="Copy to clipboard">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Next steps -->
+                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
+                    <p class="text-xs font-semibold text-slate-700 mb-2">What happens next?</p>
+                    <div class="space-y-2">
+                        <div class="flex items-start gap-2.5">
+                            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">1</span>
+                            <p class="text-xs text-slate-600 leading-relaxed">We'll review your booking and send a confirmation to your email.</p>
+                        </div>
+                        <div class="flex items-start gap-2.5">
+                            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">2</span>
+                            <p class="text-xs text-slate-600 leading-relaxed">Use your reference number to track your appointment status anytime.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" data-auth-close class="mt-5 w-full rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
                     Done
                 </button>
             </div>
@@ -1346,7 +1425,7 @@ $aboutPoints = [
                 btn.textContent = 'Searching...';
                 btn.disabled = true;
 
-                fetch('../assets/api/bookings/track_booking.php?booking_id=' + id)
+                fetch('assets/api/bookings/track_booking.php?booking_id=' + id)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         btn.textContent = 'Track';
@@ -1628,6 +1707,16 @@ $aboutPoints = [
         });
 
         // ----- Login -----
+        function validateLoginEmail() {
+            const val = document.getElementById('login-email').value.trim();
+            if (!val) { showFieldError('login-email', 'login-email-error', 'Email is required.'); return false; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { showFieldError('login-email', 'login-email-error', 'Enter a valid email address.'); return false; }
+            clearFieldError('login-email', 'login-email-error');
+            return true;
+        }
+
+        document.getElementById('login-email')?.addEventListener('blur', validateLoginEmail);
+
         document.getElementById('login-form')?.addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -1709,6 +1798,169 @@ $aboutPoints = [
         let bookingEmail = '';
         let bookingId = 0;
 
+        // ----- Booking inline validation (on blur) -----
+        function showFieldError(inputId, errorId, message) {
+            const input = document.getElementById(inputId);
+            const errorEl = document.getElementById(errorId);
+            if (input) input.classList.add('field-invalid');
+            if (errorEl) { errorEl.textContent = message; errorEl.classList.add('show'); }
+        }
+
+        function clearFieldError(inputId, errorId) {
+            const input = document.getElementById(inputId);
+            const errorEl = document.getElementById(errorId);
+            if (input) input.classList.remove('field-invalid');
+            if (errorEl) { errorEl.textContent = ''; errorEl.classList.remove('show'); }
+        }
+
+        function validateBookEmail() {
+            const val = document.getElementById('book-email').value.trim();
+            if (!val) { showFieldError('book-email', 'book-email-error', 'Email is required.'); return false; }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) { showFieldError('book-email', 'book-email-error', 'Enter a valid email address.'); return false; }
+            clearFieldError('book-email', 'book-email-error');
+            return true;
+        }
+
+        function validateBookFirstName() {
+            const val = document.getElementById('book-first-name').value.trim();
+            if (!val) { showFieldError('book-first-name', 'book-first-name-error', 'First name is required.'); return false; }
+            clearFieldError('book-first-name', 'book-first-name-error');
+            return true;
+        }
+
+        function validateBookLastName() {
+            const val = document.getElementById('book-last-name').value.trim();
+            if (!val) { showFieldError('book-last-name', 'book-last-name-error', 'Last name is required.'); return false; }
+            clearFieldError('book-last-name', 'book-last-name-error');
+            return true;
+        }
+
+        function validateBookDob() {
+            const val = document.getElementById('book-dob').value;
+            if (!val) { showFieldError('book-dob', 'book-dob-error', 'Date of birth is required.'); return false; }
+            clearFieldError('book-dob', 'book-dob-error');
+            return true;
+        }
+
+        function validateBookPrefDate() {
+            const val = document.getElementById('book-pref-date').value;
+            if (!val) { showFieldError('book-pref-date', 'book-pref-date-error', 'Preferred date is required.'); return false; }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (new Date(val) < today) { showFieldError('book-pref-date', 'book-pref-date-error', 'Preferred date cannot be in the past.'); return false; }
+            clearFieldError('book-pref-date', 'book-pref-date-error');
+            return true;
+        }
+
+        function validateBookPhone() {
+            const code = document.getElementById('book-phone-code').value;
+            const raw = document.getElementById('book-phone').value.trim();
+            if (!raw) { showFieldError('book-phone', 'book-phone-error', 'Phone number is required.'); return false; }
+            const digits = raw.replace(/\D/g, '');
+            if (digits.length < 7 || digits.length > 15) { showFieldError('book-phone', 'book-phone-error', 'Enter a valid phone number (7–15 digits).'); return false; }
+            if (code === '+63' && (!/^\d{10}$/.test(digits) || !digits.startsWith('9'))) {
+                showFieldError('book-phone', 'book-phone-error', 'PH numbers must be 10 digits starting with 9 (e.g. 9171234567).');
+                return false;
+            }
+            clearFieldError('book-phone', 'book-phone-error');
+            return true;
+        }
+
+        ['book-email'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookEmail);
+        });
+        ['book-first-name'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookFirstName);
+        });
+        ['book-last-name'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookLastName);
+        });
+        ['book-dob'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookDob);
+        });
+        ['book-pref-date'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookPrefDate);
+        });
+        ['book-phone'].forEach(function(id) {
+            document.getElementById(id)?.addEventListener('blur', validateBookPhone);
+            document.getElementById(id)?.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 10);
+            });
+        });
+
+        function validateBookTime() {
+            const raw = document.getElementById('book-time').value.trim();
+            if (!raw) { showFieldError('book-time', 'book-time-error', 'Time is required.'); return false; }
+            const match = raw.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+            if (!match) { showFieldError('book-time', 'book-time-error', 'Please set a valid time.'); return false; }
+            let h = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const meridiem = match[3].toUpperCase();
+            let h24 = h;
+            if (meridiem === 'AM' && h === 12) h24 = 0;
+            else if (meridiem === 'PM' && h !== 12) h24 = h + 12;
+            const mins = h24 * 60 + m;
+            if (mins < 480) { showFieldError('book-time', 'book-time-error', 'Earliest time is 8:00 AM.'); return false; }
+            if (mins > 990) { showFieldError('book-time', 'book-time-error', 'Latest time is 4:30 PM (cut-off before 5 PM closing).'); return false; }
+            clearFieldError('book-time', 'book-time-error');
+            return true;
+        }
+
+        // ----- Time picker logic -----
+        (function() {
+            const hourEl = document.getElementById('book-hour');
+            const minEl = document.getElementById('book-minute');
+            const merBtn = document.getElementById('btn-meridiem');
+            const hiddenEl = document.getElementById('book-time');
+            let currentMeridiem = 'AM';
+
+            function syncTime() {
+                const h = (hourEl.value || '').padStart(2, '0');
+                const m = (minEl.value || '').padStart(2, '0');
+                hiddenEl.value = h + ':' + m + ' ' + currentMeridiem;
+            }
+
+            function syncAndValidate() {
+                syncTime();
+                if (hourEl.value && minEl.value) validateBookTime();
+            }
+
+            merBtn.addEventListener('click', function() {
+                currentMeridiem = currentMeridiem === 'AM' ? 'PM' : 'AM';
+                merBtn.textContent = currentMeridiem;
+                syncAndValidate();
+            });
+
+            hourEl.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 2);
+                if (parseInt(this.value, 10) > 12) this.value = '12';
+                if (parseInt(this.value, 10) === 0 && this.value.length === 2) this.value = '12';
+                syncAndValidate();
+            });
+
+            hourEl.addEventListener('blur', function() {
+                let v = parseInt(this.value, 10);
+                if (isNaN(v) || v < 1) v = 1;
+                if (v > 12) v = 12;
+                this.value = v;
+                syncAndValidate();
+            });
+
+            minEl.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 2);
+                if (parseInt(this.value, 10) > 59) this.value = '59';
+                syncAndValidate();
+            });
+
+            minEl.addEventListener('blur', function() {
+                let v = parseInt(this.value, 10);
+                if (isNaN(v) || v < 0) v = 0;
+                if (v > 59) v = 59;
+                this.value = v < 10 ? '0' + v : '' + v;
+                syncAndValidate();
+            });
+        })();
+
         document.getElementById('booking-form')?.addEventListener('submit', async function(event) {
             event.preventDefault();
 
@@ -1718,7 +1970,7 @@ $aboutPoints = [
             const phone = document.getElementById('book-phone').value.trim();
             const dob = document.getElementById('book-dob').value;
             const prefDate = document.getElementById('book-pref-date').value;
-            const prefTime = document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning';
+            const prefTime = document.getElementById('book-time')?.value || '8:00 AM';
             const checkedComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
             const reasonText = document.getElementById('book-reason').value.trim();
             const reason = checkedComplaints.length > 0
@@ -1726,29 +1978,15 @@ $aboutPoints = [
                 : reasonText;
             const submitBtn = document.getElementById('booking-submit-btn');
 
-            if (!firstName || !lastName) {
-                setBookingAlert('First name and last name are required.', 'warning');
-                return;
-            }
-            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                setBookingAlert('Please enter a valid email address.', 'warning');
-                return;
-            }
-            if (!phone) {
-                setBookingAlert('Phone number is required.', 'warning');
-                return;
-            }
-            const phoneClean = phone.replace(/[\s\-()]/g, '');
-            if (!/^\+63\d{10}$/.test(phoneClean)) {
-                setBookingAlert('Phone number must be in +63 format (e.g. +639171234567).', 'warning');
-                return;
-            }
-            if (!dob) {
-                setBookingAlert('Date of birth is required.', 'warning');
-                return;
-            }
-            if (!prefDate) {
-                setBookingAlert('Please select your preferred date.', 'warning');
+            const fnValid = validateBookFirstName();
+            const lnValid = validateBookLastName();
+            const emailValid = validateBookEmail();
+            const phoneValid = validateBookPhone();
+            const dobValid = validateBookDob();
+            const prefDateValid = validateBookPrefDate();
+            const timeValid = validateBookTime();
+
+            if (!fnValid || !lnValid || !emailValid || !phoneValid || !dobValid || !prefDateValid || !timeValid) {
                 return;
             }
 
@@ -1760,7 +1998,7 @@ $aboutPoints = [
                 fd.append('first_name', firstName);
                 fd.append('last_name', lastName);
                 fd.append('email', email);
-                fd.append('phone_number', phone);
+                fd.append('phone_number', document.getElementById('book-phone-code').value + phone.replace(/\D/g, ''));
                 fd.append('date_of_birth', dob);
                 fd.append('preferred_date', prefDate);
                 fd.append('preferred_time', prefTime);
@@ -1830,6 +2068,24 @@ $aboutPoints = [
                     document.getElementById('booking-otp-section').classList.add('hidden');
                     document.getElementById('booking-success-section').classList.remove('hidden');
                     document.getElementById('booking-ref-display').textContent = '#' + (data.booking_id || '');
+
+                    // Copy button
+                    document.getElementById('copyBookingRefBtn')?.addEventListener('click', function() {
+                        const ref = '#' + (data.booking_id || '');
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(ref);
+                        } else {
+                            const tmp = document.createElement('textarea');
+                            tmp.value = ref;
+                            document.body.appendChild(tmp);
+                            tmp.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(tmp);
+                        }
+                        const btn = this;
+                        btn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>';
+                        setTimeout(function() { btn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'; }, 1500);
+                    });
                 } else {
                     if (otpAlert) {
                         otpAlert.className = 'mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700';
@@ -1860,10 +2116,10 @@ $aboutPoints = [
                 fd.append('first_name', document.getElementById('book-first-name').value.trim());
                 fd.append('last_name', document.getElementById('book-last-name').value.trim());
                 fd.append('email', bookingEmail);
-                fd.append('phone_number', document.getElementById('book-phone').value.trim());
+                fd.append('phone_number', document.getElementById('book-phone-code').value + document.getElementById('book-phone').value.trim().replace(/\D/g, ''));
                 fd.append('date_of_birth', document.getElementById('book-dob').value);
                 fd.append('preferred_date', document.getElementById('book-pref-date').value);
-                fd.append('preferred_time', document.querySelector('input[name="preferred_time"]:checked')?.value || 'morning');
+                fd.append('preferred_time', document.getElementById('book-time')?.value || '8:00 AM');
                 const resendComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
                 const resendReasonText = document.getElementById('book-reason').value.trim();
                 const resendReason = resendComplaints.length > 0

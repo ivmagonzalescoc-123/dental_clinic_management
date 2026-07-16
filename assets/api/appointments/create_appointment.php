@@ -218,7 +218,7 @@ try {
         }
 
         // Validate consecutive slots for the full duration
-        if ($total_duration_minutes > 20) {
+        if ($total_duration_minutes > APPT_BASE_SLOT_MINUTES) {
             $slots_stmt = $conn->prepare(
                 "SELECT timeslot_id, start_time, end_time
                  FROM timeslot
@@ -342,7 +342,7 @@ try {
     // Mark the required timeslots as booked
     if ($timeslot_id > 0) {
         $slots_to_book = [$timeslot_id];
-        if ($total_duration_minutes > 20) {
+        if ($total_duration_minutes > APPT_BASE_SLOT_MINUTES) {
             $slots_stmt = $conn->prepare(
                 "SELECT timeslot_id, start_time, end_time
                  FROM timeslot
@@ -376,11 +376,11 @@ try {
         }
 
         $placeholders = implode(',', array_fill(0, count($slots_to_book), '?'));
-        $types = str_repeat('i', count($slots_to_book));
+        $types = 'i' . str_repeat('i', count($slots_to_book));
         $tbUpd = $conn->prepare(
-            "UPDATE timeslot SET status = 'booked' WHERE timeslot_id IN ($placeholders) AND status = 'available'"
+            "UPDATE timeslot SET status = 'booked', appointment_id = ? WHERE timeslot_id IN ($placeholders) AND status = 'available'"
         );
-        $tbUpd->bind_param($types, ...$slots_to_book);
+        $tbUpd->bind_param($types, $appointment_id, ...$slots_to_book);
         $tbUpd->execute();
         if ($tbUpd->affected_rows < count($slots_to_book)) {
             $tbUpd->close();

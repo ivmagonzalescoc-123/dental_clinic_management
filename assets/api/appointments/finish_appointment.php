@@ -21,6 +21,8 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+include_once __DIR__ . '/availability_guard.php';
 
 // Discard any PHP warnings buffered during includes
 if (ob_get_level()) ob_end_clean();
@@ -116,7 +118,7 @@ if ($cached !== null) {
 try {
     // Verify appointment exists and belongs to doctor
     $stmt = $conn->prepare('
-        SELECT a.appointment_id, a.status, a.user_id, a.patient_id 
+        SELECT a.appointment_id, a.status, a.user_id, a.patient_id, a.session_started_at
         FROM appointments a
         WHERE a.appointment_id = ?
         LIMIT 1
@@ -379,14 +381,62 @@ try {
     // 4. Update appointment status to awaiting_secretary_records
     $completedByDoctorAt = date('Y-m-d H:i:s');
     $stmt = $conn->prepare('
-        UPDATE appointments 
+        UPDATE appointments
         SET status = \'awaiting_secretary_records\', completed_by_doctor_at = ?
         WHERE appointment_id = ?
     ');
     $stmt->bind_param('si', $completedByDoctorAt, $appointmentId);
     $stmt->execute();
     $stmt->close();
-    
+
+    // 4b. Release any reserved timeslots beyond what the doctor actually used.
+    $releasedSlots = 0;
+    $sessionStartedAt = $appt['session_started_at'] ?? null;
+    if (!empty($sessionStartedAt)) {
+        $slotsStmt = $conn->prepare(
+            "SELECT timeslot_id FROM timeslot WHERE appointment_id = ? ORDER BY start_time ASC"
+        );
+        $slotsStmt->bind_param('i', $appointmentId);
+        $slotsStmt->execute();
+        $reservedSlotIds = [];
+        $slotsRes = $slotsStmt->get_result();
+        while ($slotRow = $slotsRes->fetch_assoc()) {
+            $reservedSlotIds[] = (int)$slotRow['timeslot_id'];
+        }
+        $slotsStmt->close();
+
+        $reservedCount = count($reservedSlotIds);
+        if ($reservedCount > 1) {
+            $actualMinutes = (strtotime($completedByDoctorAt) - strtotime($sessionStartedAt)) / 60;
+            $actualMinutes = max(0, $actualMinutes);
+            $neededSlots = max(1, (int)ceil($actualMinutes / APPT_BASE_SLOT_MINUTES));
+
+            if ($neededSlots < $reservedCount) {
+                $slotsToFree = array_slice($reservedSlotIds, $neededSlots);
+                $placeholders = implode(',', array_fill(0, count($slotsToFree), '?'));
+                $types = str_repeat('i', count($slotsToFree));
+                $freeStmt = $conn->prepare(
+                    "UPDATE timeslot SET status = 'available', appointment_id = NULL WHERE timeslot_id IN ($placeholders) AND status = 'booked'"
+                );
+                $freeStmt->bind_param($types, ...$slotsToFree);
+                $freeStmt->execute();
+                $releasedSlots = $freeStmt->affected_rows;
+                $freeStmt->close();
+
+                if ($releasedSlots > 0 && function_exists('log_system_event')) {
+                    log_system_event(
+                        $conn,
+                        'appointment.release_unused_slots',
+                        'appointments',
+                        $appointmentId,
+                        "Released {$releasedSlots} unused slot(s) after early finish (used ~" . (int)ceil($actualMinutes) . "min of " . ($reservedCount * APPT_BASE_SLOT_MINUTES) . "min reserved)",
+                        $doctorId
+                    );
+                }
+            }
+        }
+    }
+
     // Log action
     $action = 'appointment.finish_by_doctor';
     $details = 'Doctor finished appointment. Notes: ' . (!empty($notes) ? 'Yes' : 'No') . '. Photos: ' . ($photoCount > 0 ? $photoCount : 'None');
