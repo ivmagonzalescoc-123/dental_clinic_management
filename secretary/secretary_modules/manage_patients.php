@@ -71,7 +71,6 @@ function secretary_patient_format_datetime(?string $value): string
 <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="card-title mb-0">Patient Management</h5>
-        <p class="text-muted small mb-0 mt-1">View profiles, update account details, manage medical background, and reset login passwords.</p>
     </div>
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
         <i class="bi bi-person-plus"></i> Add Patient

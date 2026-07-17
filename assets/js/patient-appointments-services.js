@@ -5,7 +5,7 @@
 
 function initPatientServiceSelectorIfPresent() {
     const el = document.getElementById('serviceSelector');
-    if (el && !el.querySelector('.svc-collapsed')) {
+    if (el) {
         initializePatientServiceSelector();
     }
 }

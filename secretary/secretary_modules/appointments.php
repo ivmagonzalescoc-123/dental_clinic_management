@@ -619,6 +619,16 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 }
 ?>
 
+<div class="module-page-header mb-3">
+    <h4 class="mb-0">
+        <?php if ($activeSection === 'new_customers'): ?>
+            <span class="module-page-header__crumb">Appointments</span> <span class="module-page-header__sep">&gt;</span> New Patients
+        <?php else: ?>
+            Appointments
+        <?php endif; ?>
+    </h4>
+</div>
+
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
@@ -659,7 +669,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <button type="button" class="unified-table-search-clear" id="newCustomerSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
             </div>
             <div class="dropdown">
-                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="statusFilterBtn">Status: All</button>
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="statusFilterBtn">Status: All</button>
                 <ul class="dropdown-menu dropdown-menu-sm">
                     <li><a class="dropdown-item new-cust-status-filter active" href="#" data-filter="all">All</a></li>
                     <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="pending">Pending</a></li>
@@ -860,7 +870,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     </div>
 
                     <!-- Static walk-in note: processing always books the appointment for today -->
-                    <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#0d6efd1a;border:1px solid #0d6efd44;border-radius:6px;font-size:0.78rem;color:#0d47a1;font-weight:600;">
+                    <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;font-size:0.78rem;color:#0f766e;font-weight:600;">
                         <i class="bi bi-person-walking"></i> <span id="convertWalkInNoteText">Walk-in Today</span>
                     </div>
 
@@ -882,7 +892,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                             <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
                                 <option value="">-- Select Service --</option>
                             </select>
-                            <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()" style="font-size:0.78rem;">
+                            <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()">
                                 <i class="bi bi-plus"></i> Add
                             </button>
                         </div>
@@ -1279,7 +1289,7 @@ function renderProcessServicesTable() {
         tr.innerHTML = '<td>' + escapeProcessHtml(s.name) + '</td>' +
             '<td>' + s.duration + ' min</td>' +
             '<td>₱' + s.price.toLocaleString() + '</td>' +
-            '<td><button type="button" class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeProcessService(' + s.service_id + ')" style="font-size:0.7rem;"><i class="bi bi-x"></i></button></td>';
+            '<td><button type="button" class="btn btn-outline-danger btn-sm py-0 px-1" onclick="removeProcessService(' + s.service_id + ')"><i class="bi bi-x"></i></button></td>';
         tbody.appendChild(tr);
     });
 

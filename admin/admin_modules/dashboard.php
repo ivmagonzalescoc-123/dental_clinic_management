@@ -83,25 +83,6 @@ $secretariesTotal = dashboard_scalar_int(
 		: "SELECT COUNT(*) FROM users u INNER JOIN role r ON r.role_id = u.role_id WHERE r.role_name = 'secretary'"
 );
 
-$pipelineScheduled = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'scheduled'");
-$pipelineConfirmed = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'confirmed'");
-$pipelineCheckedIn = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'checked_in'");
-$pipelineInProgress = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'in_progress'");
-$pipelineAwaitingRecords = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status = 'awaiting_secretary_records'");
-$pipelineCompleted = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM appointments WHERE status IN ('completed','records_complete')");
-
-$pipelineBilled = 0;
-$pipelinePaid = 0;
-if (table_exists_local($conn, 'billing')) {
-	$pipelineBilled = dashboard_scalar_int($conn, 'SELECT COUNT(*) FROM billing');
-	if (column_exists($conn, 'billing', 'status')) {
-		$pipelinePaid = dashboard_scalar_int($conn, "SELECT COUNT(*) FROM billing WHERE status = 'paid'");
-	}
-}
-
-$pipelineTotal = max(1, $pipelineScheduled + $pipelineConfirmed + $pipelineCheckedIn + $pipelineInProgress + $pipelineAwaitingRecords + $pipelineCompleted);
-$pipelineCompletionPct = (int)round(($pipelineCompleted / $pipelineTotal) * 100);
-
 // Today's appointments (top list)
 $todayAppointments = [];
 $stmt = $conn->prepare("
@@ -170,29 +151,6 @@ if ($res) {
 
 	<div class="col-12 col-md-6 col-xl-3">
 		<?php dashboard_render_kpi_card('Users Active', (string)(int)$usersTotal, 'bi-person-badge', 'violet'); ?>
-	</div>
-
-	<div class="col-12">
-		<div class="card dental-surface-card">
-			<div class="card-body">
-				<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-					<h5 class="card-title mb-0">Dental Management Pipeline <span>| End-to-end workflow</span></h5>
-					<span class="badge bg-primary">Completion: <?php echo (int)$pipelineCompletionPct; ?>%</span>
-				</div>
-				<div class="progress mb-3" style="height: 10px;">
-					<div class="progress-bar bg-success" role="progressbar" style="width: <?php echo (int)$pipelineCompletionPct; ?>%" aria-valuenow="<?php echo (int)$pipelineCompletionPct; ?>" aria-valuemin="0" aria-valuemax="100"></div>
-				</div>
-				<div class="row g-2">
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Scheduled</div><div class="h5 mb-0"><?php echo (int)$pipelineScheduled; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Confirmed</div><div class="h5 mb-0"><?php echo (int)$pipelineConfirmed; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Checked In</div><div class="h5 mb-0"><?php echo (int)$pipelineCheckedIn; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">In Progress</div><div class="h5 mb-0"><?php echo (int)$pipelineInProgress; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Awaiting Records</div><div class="h5 mb-0"><?php echo (int)$pipelineAwaitingRecords; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Completed</div><div class="h5 mb-0"><?php echo (int)$pipelineCompleted; ?></div></div></div>
-					<div class="col-6 col-md-3 col-xl-2"><div class="dental-pipeline-stat"><div class="small text-muted">Billed / Paid</div><div class="h5 mb-0"><?php echo (int)$pipelineBilled; ?> / <?php echo (int)$pipelinePaid; ?></div></div></div>
-				</div>
-			</div>
-		</div>
 	</div>
 
 	<div class="col-12 col-xl-6">

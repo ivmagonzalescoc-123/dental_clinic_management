@@ -318,8 +318,19 @@ if ($view === 'user_logs') {
 ?>
 
 <div class="card">
-    <div class="card-header">
-        <h2 class="card-title mb-0">System Logs</h2>
+    <div class="card-header module-page-header">
+        <h2 class="card-title mb-0">
+            <span class="module-page-header__crumb">System Logs</span> <span class="module-page-header__sep">&gt;</span>
+            <?php
+            $systemLogsViewLabels = [
+                'user_logs' => 'Login Logs',
+                'active_users' => 'Active Users',
+                'patient_sessions' => 'Patient Sessions',
+                'audit_logs' => 'Audit Logs',
+            ];
+            echo $systemLogsViewLabels[$view] ?? 'Login Logs';
+            ?>
+        </h2>
     </div>
 
     <div class="card-body border-bottom py-2">

@@ -342,6 +342,19 @@ if ($stmt) {
 }
 ?>
 
+<div class="module-page-header mb-3">
+    <h4 class="mb-0">
+        <span class="module-page-header__crumb">Appointments</span>
+        <?php if ($appointmentsTab === 'general'): ?>
+            <span class="module-page-header__sep">&gt;</span> Calendar &amp; List
+        <?php elseif ($appointmentsTab === 'followup'): ?>
+            <span class="module-page-header__sep">&gt;</span> Follow-up
+        <?php else: ?>
+            <span class="module-page-header__sep">&gt;</span> Recent
+        <?php endif; ?>
+    </h4>
+</div>
+
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
@@ -440,7 +453,6 @@ if ($stmt) {
     <div class="card border-0 mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h2 class="card-title mb-0"><i class="bi bi-calendar3"></i> Appointments Calendar</h2>
-            <div class="small text-muted">Hover a day to preview names. Click a date to filter the table below.</div>
         </div>
         <div class="card-body">
             <div id="doctorAppointmentsCalendar"></div>
@@ -533,7 +545,6 @@ if ($stmt) {
     <div class="card border-0">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h2 class="card-title mb-0"><i class="bi bi-calendar-range"></i> Follow-up Appointments</h2>
-            <div class="small text-muted">All scheduled follow-up entries assigned to you.</div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -874,17 +885,17 @@ if ($stmt) {
 }
 
 .doctor-record-btn-clickable {
-    border-color: #1173c1;
+    border-color: #0d9488;
     color: #ffffff;
-    background: #1173c1;
+    background: #0d9488;
 }
 
 .doctor-record-btn-clickable:hover,
 .doctor-record-btn-clickable:focus {
-    border-color: #0a4f88;
-    background: #0a4f88;
+    border-color: #0f766e;
+    background: #0f766e;
     color: #ffffff;
-    box-shadow: 0 0 0 0.12rem rgba(17, 115, 193, 0.22);
+    box-shadow: 0 0 0 0.12rem rgba(13, 148, 136, 0.22);
 }
 
 .doctor-record-btn-disabled,
@@ -1738,7 +1749,7 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
     </div>
 </div>
 <!-- Hidden video element for camera capture -->
-<video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d6efd; border-radius: 5px;"></video>
+<video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d9488; border-radius: 5px;"></video>
 <canvas id="cameraCaptureCanvas" style="display: none;"></canvas>
 
 <script>

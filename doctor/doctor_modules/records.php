@@ -31,7 +31,6 @@ if ($stmt) {
 <div class="card">
     <div class="card-body">
         <h4>Clinical Records</h4>
-        <p class="text-muted">List of clinical records you created or are assigned to.</p>
 
         <div class="table-responsive">
             <table class="table table-hover datatable" data-skip-table-search="1">

@@ -148,6 +148,7 @@ $weekdayNames = [
 
         <form method="POST" class="card border-0 bg-light mb-3">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <div class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label">Doctor</label>
                     <select name="doctor_id" id="deploy_doctor_id" class="form-select" required>
@@ -176,8 +177,8 @@ $weekdayNames = [
                         <?php endforeach; ?>
                     </div>
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Save Worktype</button>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary text-nowrap">Save Worktype</button>
                 </div>
             </div>
         </form>

@@ -109,7 +109,6 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h5 class="mb-0"><i class="bi bi-calendar2-check me-2"></i>Doctor Schedule</h5>
-    <span class="text-muted small">Click a date to view doctor availability</span>
 </div>
 
 <div class="row g-3">
@@ -131,6 +130,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
                 <span class="text-muted small"><?php echo count($doctors); ?> doctors</span>
             </div>
             <div class="card-body p-2">
+                <div class="table-responsive">
                 <table class="table table-bordered ds-cal mb-0">
                     <thead><tr><?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $d): ?><th><?php echo $d; ?></th><?php endforeach; ?></tr></thead>
                     <tbody>
@@ -156,6 +156,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
                         endfor; echo '</tr>'; endwhile; ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -192,23 +193,24 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 </div>
 
 <style>
-.ds-cal th{text-align:center;background:#f8fafc;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;padding:8px 4px}
+.ds-cal{min-width:560px}
+.ds-cal th{text-align:center;background:#f8fafc;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;padding:8px 4px;white-space:nowrap;width:14.2857%}
 .ds-cell{vertical-align:middle;padding:8px 6px;min-height:72px;background:#fff;text-align:center;cursor:pointer;transition:all .15s ease}
 .ds-cell:hover{background:#f0f7ff}
-.ds-cell.ds-selected{background:#dbeafe!important;box-shadow:inset 0 0 0 2px #1173c1}
-.ds-today{background:#eff6ff!important;box-shadow:inset 0 0 0 2px #1173c1}
-.ds-today:hover{background:#dbeafe!important}
+.ds-cell.ds-selected{background:#ccfbf1!important;box-shadow:inset 0 0 0 2px #0d9488}
+.ds-today{background:#f0fdfa!important;box-shadow:inset 0 0 0 2px #0d9488}
+.ds-today:hover{background:#ccfbf1!important}
 .ds-closed{background:#f9fafb;cursor:default;opacity:.6}
 .ds-leave{background:#fff5f5}
 .ds-cell-empty{background:#f9fafb;cursor:default}
 .ds-num{font-weight:700;font-size:.9rem;color:#1e293b}
-.ds-dot{width:6px;height:6px;border-radius:50%;background:#1173c1;display:inline-block;margin-left:3px}
+.ds-dot{width:6px;height:6px;border-radius:50%;background:#0d9488;display:inline-block;margin-left:3px}
 .ds-cnt{font-size:.62rem;color:#64748b;margin-top:2px;font-weight:600}
 .ds-detail-date{font-size:.82rem;font-weight:700;color:#475569;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
 .ds-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;margin-bottom:6px;transition:background .12s ease}
 .ds-row:hover{background:#f8fafc}
 .ds-name{font-size:.82rem;font-weight:700;color:#1e293b}
-.ds-hours{font-size:.75rem;font-weight:600;color:#1173c1}
+.ds-hours{font-size:.75rem;font-weight:600;color:#0d9488}
 .ds-type{font-size:.65rem;color:#94a3b8}
 .ds-badge{font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:999px}
 .ds-avail{background:#dcfce7;color:#166534}

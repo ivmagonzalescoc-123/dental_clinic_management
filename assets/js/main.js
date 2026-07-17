@@ -139,6 +139,7 @@
   ;(function() {
     var isNavigating = false
     var currentAbort = null
+    var navToken = 0
 
     /**
      * Persistent body guard: removes any element appended to document.body
@@ -331,6 +332,7 @@
       if (currentAbort) {
         currentAbort.abort()
       }
+      var myToken = ++navToken
       currentAbort = new AbortController()
       isNavigating = true
       cleanupModalState()
@@ -339,6 +341,11 @@
       fetch(url, { credentials: 'same-origin', signal: currentAbort.signal })
         .then(function(r) { return r.text() })
         .then(function(html) {
+          // A newer navigation started after this fetch began (and may have already
+          // resolved by the time abort() was called) — discard this stale response
+          // instead of letting it overwrite what the newer click just loaded.
+          if (myToken !== navToken) return
+
           setPageLoading(false)
           currentAbort = null
 
@@ -367,6 +374,7 @@
         })
         .catch(function(err) {
           if (err.name === 'AbortError') return
+          if (myToken !== navToken) return
           setPageLoading(false)
           destroyAllFullCalendars()
           cleanupModalState()

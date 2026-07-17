@@ -142,7 +142,6 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
         <h5 class="card-title mb-1">Doctor Schedule</h5>
-        <small class="text-muted">Click a date to view doctor availability</small>
     </div>
 </div>
 
@@ -169,6 +168,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
                 <span class="text-muted small"><?php echo count($doctors); ?> doctors</span>
             </div>
             <div class="card-body p-2">
+                <div class="table-responsive">
                 <table class="table table-bordered ds-calendar mb-0">
                     <thead>
                         <tr><?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $d): ?><th><?php echo $d; ?></th><?php endforeach; ?></tr>
@@ -209,6 +209,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
                         ?>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -279,6 +280,9 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 </div>
 
 <style>
+.ds-calendar {
+    min-width: 560px;
+}
 .ds-calendar th {
     text-align: center;
     background: #f8fafc;
@@ -288,6 +292,8 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
     letter-spacing: 0.04em;
     color: #64748b;
     padding: 8px 4px;
+    white-space: nowrap;
+    width: 14.2857%;
 }
 .ds-day {
     vertical-align: middle;
@@ -299,13 +305,13 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
     transition: all 0.15s ease;
 }
 .ds-day:hover { background: #f0f7ff; }
-.ds-day-today { background: #eff6ff !important; box-shadow: inset 0 0 0 2px #1173c1; }
+.ds-day-today { background: #f0fdfa !important; box-shadow: inset 0 0 0 2px #0d9488; }
 .ds-day-today:hover { background: #dbeafe !important; }
 .ds-day-closed { background: #f9fafb; cursor: default; opacity: 0.6; }
 .ds-day-leave { background: #fff5f5; }
 .ds-day-empty { background: #f9fafb; cursor: default; }
 .ds-day-num { font-weight: 700; font-size: 0.9rem; color: #1e293b; }
-.ds-today-dot { width: 6px; height: 6px; border-radius: 50%; background: #1173c1; display: inline-block; margin-left: 3px; }
+.ds-today-dot { width: 6px; height: 6px; border-radius: 50%; background: #0d9488; display: inline-block; margin-left: 3px; }
 .ds-day-count { font-size: 0.62rem; color: #64748b; margin-top: 2px; font-weight: 600; }
 
 /* Day detail panel */
@@ -321,7 +327,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 }
 .ds-doctor-row:hover { background: #f8fafc; }
 .ds-doctor-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; }
-.ds-doctor-hours { font-size: 0.75rem; font-weight: 600; color: #1173c1; }
+.ds-doctor-hours { font-size: 0.75rem; font-weight: 600; color: #0d9488; }
 .ds-doctor-type { font-size: 0.65rem; color: #94a3b8; }
 .ds-status-badge {
     font-size: 0.65rem;

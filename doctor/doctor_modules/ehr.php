@@ -328,7 +328,7 @@ if ($sstmt) {
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #0d6efd;
+    background: #0d9488;
     color: #fff;
     display: flex;
     align-items: center;

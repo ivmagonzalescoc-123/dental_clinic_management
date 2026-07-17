@@ -118,7 +118,6 @@ foreach ($schedules as $row) {
 <div class="card border-0 mb-3 mt-4">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h2 class="card-title mb-0"><i class="bi bi-calendar-range me-2"></i>Follow-up Appointments</h2>
-        <span class="text-muted small">Scheduled follow-up visits linked to appointments above.</span>
     </div>
     <div class="card-body">
 <form class="card border mb-3" method="GET" action="secretary.php">

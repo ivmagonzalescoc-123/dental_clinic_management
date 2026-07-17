@@ -143,7 +143,7 @@ body.patient-portal {
     }
 
     body.patient-portal .patient-appt-card > .card-header {
-        background: #1173c1;
+        background: #0d9488;
         color: #fff;
         border-radius: 10px;
         padding: 0.85rem 0.9rem;
@@ -370,24 +370,24 @@ body.patient-portal {
 
 .patient-mobile-nav-item.active {
     color: #fff;
-    background: #1173c1;
+    background: #0d9488;
 }
 
 .patient-mobile-nav-item:focus-visible {
-    outline: 2px solid rgba(17, 115, 193, 0.5);
+    outline: 2px solid rgba(13, 148, 136, 0.5);
     outline-offset: 2px;
 }
 
 .patient-mobile-nav-item:hover,
 .patient-mobile-nav-item:focus {
-    color: #1173c1;
+    color: #0d9488;
     background: #f1f5f9;
 }
 
 .patient-mobile-nav-item.active:hover,
 .patient-mobile-nav-item.active:focus {
     color: #fff;
-    background: #1173c1;
+    background: #0d9488;
 }
 
 .patient-mobile-nav-item:active {

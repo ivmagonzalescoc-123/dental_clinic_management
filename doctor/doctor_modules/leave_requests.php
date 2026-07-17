@@ -254,6 +254,13 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
 }
 ?>
 
+<div class="module-page-header mb-3">
+    <h4 class="mb-0">
+        <span class="module-page-header__crumb">Scheduling</span> <span class="module-page-header__sep">&gt;</span>
+        <?php echo $scheduleView === 'leave_requests' ? 'Leave Requests' : 'My Schedule'; ?>
+    </h4>
+</div>
+
 <nav class="module-section-nav" aria-label="Schedule sections">
     <div class="module-section-nav__track">
         <ul class="nav nav-tabs mb-0">
@@ -286,8 +293,6 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
         </div>
     </div>
     <div class="card-body">
-        <p class="text-muted mb-3">This calendar shows your availability days and leave status, not patient bookings.</p>
-
         <div class="row g-2 mb-3">
             <div class="col-sm-4">
                 <div class="schedule-stat-chip schedule-stat-available">Available Days: <?php echo (int)$availableDays; ?></div>
@@ -522,7 +527,7 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
 }
 .dr-cal-today {
     background: #f0f7ff !important;
-    box-shadow: inset 0 0 0 2px #1173c1;
+    box-shadow: inset 0 0 0 2px #0d9488;
 }
 .dr-cal-today:hover {
     background: #e8f2ff !important;
@@ -545,12 +550,12 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #1173c1;
+    background: #0d9488;
 }
 .dr-cal-hours {
     font-size: 0.68rem;
     font-weight: 600;
-    color: #1173c1;
+    color: #0d9488;
     background: #eff6ff;
     border-radius: 6px;
     padding: 2px 6px;

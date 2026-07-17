@@ -275,7 +275,7 @@ $basePatientParams = [
             </div>
 
             <div class="dropdown" data-bs-auto-close="outside">
-                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     Filters
                 </button>
                 <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 320px;">

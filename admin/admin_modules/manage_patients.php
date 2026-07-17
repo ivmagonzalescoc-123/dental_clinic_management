@@ -71,7 +71,6 @@ function admin_patient_format_datetime(?string $value): string
 <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="card-title mb-0">Patient Management</h5>
-        <p class="text-muted small mb-0 mt-1">View profiles, update account details, manage medical background, and reset login passwords.</p>
     </div>
     <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
         <i class="bi bi-person-plus"></i> Add Patient
@@ -254,7 +253,7 @@ function admin_patient_format_datetime(?string $value): string
                             </div>
                             <div id="editPatientAlert" class="mt-1"></div>
                             <div class="d-flex justify-content-end mt-1">
-                                <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.8rem;">Save</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
                             </div>
                         </form>
                     </div>
@@ -369,7 +368,7 @@ function admin_patient_format_datetime(?string $value): string
                             <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Notes</label><textarea id="pf_background_notes" class="form-control" rows="1" placeholder="Additional notes..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
 
                             <div class="d-flex justify-content-end mt-1">
-                                <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Save</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
                             </div>
                         </form>
                     </div>
@@ -405,7 +404,7 @@ function admin_patient_format_datetime(?string $value): string
                                     $password_field_attrs = 'required minlength="8" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
                                     include dirname(dirname(__DIR__)) . '/includes/password_field.php';
                                     ?>
-                                    <button type="submit" class="btn btn-primary btn-sm mt-1" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Update</button>
+                                    <button type="submit" class="btn btn-primary btn-sm mt-1">Update</button>
                                 </form>
                             </div>
                         </div>
@@ -417,7 +416,7 @@ function admin_patient_format_datetime(?string $value): string
                                 <form method="POST" action="../assets/api/patients/reset_patient_password.php" id="resetPatientPasswordForm" data-confirm="Generate a new temporary password?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                                     <input type="hidden" name="patient_id" id="reset_patient_id" value="">
-                                    <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.7rem;">
+                                    <button type="submit" class="btn btn-primary btn-sm">
                                         <i class="bi bi-key"></i> Generate
                                     </button>
                                 </form>

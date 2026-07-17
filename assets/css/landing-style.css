@@ -1,17 +1,17 @@
 /* Minimalist Landing Page Styles */
 :root {
-    --primary: #1173c1;
-    --primary-dark: #0a4f88;
-    --primary-deep: #083f6d;
-    --primary-rgb: 17, 115, 193;
-    --primary-gradient: #1173c1;
-    --primary-gradient-hover: #0a4f88;
-    --bs-primary: #1173c1;
-    --bs-primary-rgb: 17, 115, 193;
-    --bs-info: #1173c1;
-    --bs-info-rgb: 17, 115, 193;
-    --bs-link-color: #1173c1;
-    --bs-link-hover-color: #0a4f88;
+    --primary: #0d9488;
+    --primary-dark: #0f766e;
+    --primary-deep: #115e59;
+    --primary-rgb: 13, 148, 136;
+    --primary-gradient: #0d9488;
+    --primary-gradient-hover: #0f766e;
+    --bs-primary: #0d9488;
+    --bs-primary-rgb: 13, 148, 136;
+    --bs-info: #0d9488;
+    --bs-info-rgb: 13, 148, 136;
+    --bs-link-color: #0d9488;
+    --bs-link-hover-color: #0f766e;
     --secondary: #64748b;
     --light: #f8fafc;
     --border: #e2e8f0;

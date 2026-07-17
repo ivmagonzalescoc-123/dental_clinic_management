@@ -6,9 +6,9 @@
   --ux-border-soft: #edf2f8;
   --ux-text: #122132;
   --ux-muted: #5d6f85;
-  --ux-accent: #0b6fbf;
-  --ux-accent-soft: #e3f2ff;
-  --ux-radius: 14px;
+  --ux-accent: var(--primary-color, #0d9488);
+  --ux-accent-soft: var(--primary-soft, #f0fdfa);
+  --ux-radius: var(--radius-card, 14px);
 }
 
 #main .section {
@@ -58,12 +58,41 @@
   color: var(--ux-text);
   font-weight: 700;
   margin-bottom: 0.58rem;
+  letter-spacing: -0.01em;
 }
+#main h1 { font-size: 1.75rem; }
+#main h2 { font-size: 1.5rem; }
+#main h3 { font-size: 1.3rem; }
+#main h4 { font-size: 1.15rem; }
+#main h5, #main .card-title { font-size: 1.02rem; }
+#main h6 { font-size: 0.92rem; font-weight: 600; }
 
 #main p,
 #main .text-muted,
 #main small {
   color: var(--ux-muted) !important;
+}
+
+/* Module page header (breadcrumb-style for sub-views, e.g. "Appointments > New Patients") */
+#main .module-page-header {
+  display: flex;
+  align-items: center;
+}
+#main .module-page-header h1,
+#main .module-page-header h2,
+#main .module-page-header h3,
+#main .module-page-header h4,
+#main .module-page-header h5 {
+  margin-bottom: 0;
+}
+#main .module-page-header__crumb {
+  color: var(--ux-muted);
+  font-weight: 600;
+}
+#main .module-page-header__sep {
+  color: var(--ux-muted);
+  margin: 0 0.35rem;
+  font-weight: 400;
 }
 
 /* Table readability for high-density medical workflows */
@@ -170,13 +199,13 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 }
 
 #main .table tbody td a:not(.btn):not(.dropdown-item) {
-  color: #1173c1;
+  color: #0d9488;
   font-weight: 600;
   text-decoration: none;
 }
 
 #main .table tbody td a:not(.btn):not(.dropdown-item):hover {
-  color: #0a4f88;
+  color: #0f766e;
   text-decoration: underline;
 }
 
@@ -237,7 +266,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dataTable-wrapper .dataTable-selector:focus,
 #main .datatable-wrapper .datatable-input:focus,
 #main .datatable-wrapper .datatable-selector:focus {
-  border-color: #1173c1;
+  border-color: #0d9488;
   box-shadow: none;
   outline: none;
 }
@@ -288,7 +317,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .form-control:focus,
 #main .form-select:focus,
 #main textarea.form-control:focus {
-  border-color: #1173c1;
+  border-color: #0d9488;
   box-shadow: none;
   outline: none;
 }
@@ -477,14 +506,14 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .pagination .page-link:hover {
   background: #eef6ff;
   border-color: #b9d4ee;
-  color: #1173c1;
+  color: #0d9488;
 }
 
 #main .pagination .page-item.active .page-link {
-  background: #1173c1;
-  border-color: #1173c1;
+  background: #0d9488;
+  border-color: #0d9488;
   color: #fff;
-  box-shadow: 0 4px 10px rgba(17, 115, 193, 0.22);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.22);
 }
 
 #main .datatable-pagination a,
@@ -508,17 +537,17 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dataTable-pagination button:hover {
   background: #eef6ff !important;
   border-color: #b9d4ee !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
 }
 
 #main .datatable-pagination .datatable-active a,
 #main .datatable-pagination .datatable-active button,
 #main .dataTable-pagination .datatable-active a,
 #main .dataTable-pagination .datatable-active button {
-  background: #1173c1 !important;
-  border-color: #1173c1 !important;
+  background: #0d9488 !important;
+  border-color: #0d9488 !important;
   color: #fff !important;
-  box-shadow: 0 4px 10px rgba(17, 115, 193, 0.2);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
 }
 
 #main .modal-content {
@@ -538,7 +567,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   border-top-left-radius: 14px;
   border-top-right-radius: 14px;
   border-bottom: 0;
-  background: linear-gradient(135deg, var(--primary-color, #1173c1) 0%, var(--primary-hover, #0a4f88) 100%);
+  background: linear-gradient(135deg, var(--primary-color, #0d9488) 0%, var(--primary-hover, #0f766e) 100%);
   color: #ffffff;
 }
 
@@ -562,7 +591,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 }
 
 #main .modal-header[class*="bg-"] {
-  background: linear-gradient(135deg, var(--primary-color, #1173c1) 0%, var(--primary-hover, #0a4f88) 100%) !important;
+  background: linear-gradient(135deg, var(--primary-color, #0d9488) 0%, var(--primary-hover, #0f766e) 100%) !important;
   border-bottom: 0;
 }
 
@@ -741,8 +770,8 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   padding: 1.1rem 1.25rem;
   border-radius: 14px;
   border: 0;
-  background: linear-gradient(135deg, #1173c1 0%, #0a4f88 100%);
-  box-shadow: 0 12px 32px rgba(17, 115, 193, 0.2);
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+  box-shadow: 0 12px 32px rgba(13, 148, 136, 0.2);
 }
 
 #main .dental-dashboard-hero h4 {
@@ -773,6 +802,11 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   backdrop-filter: blur(4px);
 }
 
+#main .dental-dashboard-hero .module-page-header__crumb,
+#main .dental-dashboard-hero .module-page-header__sep {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
 #main .dental-kpi-card {
   position: relative;
   overflow: visible;
@@ -801,7 +835,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   justify-content: center;
   flex-shrink: 0;
   background: #f0f7ff;
-  color: #1173c1;
+  color: #0d9488;
   border: 1px solid #dceaf7;
   font-size: 1.2rem;
 }
@@ -890,8 +924,8 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   border-radius: 14px;
   background: #ffffff;
   box-shadow:
-    0 8px 20px rgba(17, 115, 193, 0.16),
-    0 18px 38px rgba(17, 115, 193, 0.12),
+    0 8px 20px rgba(13, 148, 136, 0.16),
+    0 18px 38px rgba(13, 148, 136, 0.12),
     0 2px 6px rgba(15, 35, 60, 0.05);
   overflow: hidden;
 }
@@ -915,13 +949,13 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dental-surface-card .card-link-action {
   font-size: 0.82rem;
   font-weight: 600;
-  color: #1173c1;
+  color: #0d9488;
   text-decoration: none;
   white-space: nowrap;
 }
 
 #main .dental-surface-card .card-link-action:hover {
-  color: #0a4f88;
+  color: #0f766e;
   text-decoration: underline;
 }
 
@@ -934,7 +968,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 
 #main .dental-dashboard-shell .progress-bar {
   border-radius: 999px;
-  background: linear-gradient(90deg, #1173c1, #3d9ae8);
+  background: linear-gradient(90deg, #0d9488, #3d9ae8);
 }
 
 #main .dental-pipeline-stat {
@@ -1030,7 +1064,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .clinic-report-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: #1173c1;
+  background: #0d9488;
 }
 
 #main .clinic-report-bar-fill.is-service {
@@ -1070,8 +1104,8 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dental-chart-expand-btn:hover {
   background: #eef6ff;
   border-color: #b9d4f0;
-  color: #1173c1;
-  box-shadow: 0 4px 14px rgba(17, 115, 193, 0.12);
+  color: #0d9488;
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.12);
 }
 
 #main .dental-chart-frame {
@@ -1105,7 +1139,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 }
 
 .dental-chart-modal .modal-header {
-  background: linear-gradient(135deg, var(--primary-color, #1173c1) 0%, var(--primary-hover, #0a4f88) 100%);
+  background: linear-gradient(135deg, var(--primary-color, #0d9488) 0%, var(--primary-hover, #0f766e) 100%);
   border-bottom: 0;
   padding: 1rem 1.25rem;
 }
@@ -1232,7 +1266,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .appointments-view-filter:focus,
 #main .datatable-top .form-select:focus,
 #main .dataTable-top .form-select:focus {
-  border-color: #1173c1;
+  border-color: #0d9488;
   box-shadow: none;
   outline: none;
 }
@@ -1243,7 +1277,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dataTable-top .unified-table-search-input:focus,
 #main .header-search .unified-table-search-input:focus,
 .header-search .unified-table-search-input:focus {
-  border-color: #1173c1 !important;
+  border-color: #0d9488 !important;
   box-shadow: none !important;
   outline: none !important;
 }
@@ -1287,9 +1321,9 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .unified-table-search-toolbar .btn-primary,
 #main .datatable-top .btn-primary,
 #main .dataTable-top .btn-primary {
-  border-color: #1173c1;
-  background: #1173c1;
-  box-shadow: 0 4px 12px rgba(17, 115, 193, 0.18);
+  border-color: #0d9488;
+  background: #0d9488;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.18);
 }
 
 #main .card-header .btn-primary:hover,
@@ -1297,9 +1331,9 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .unified-table-search-toolbar .btn-primary:hover,
 #main .datatable-top .btn-primary:hover,
 #main .dataTable-top .btn-primary:hover {
-  background: #0a4f88;
-  border-color: #0a4f88;
-  box-shadow: 0 6px 14px rgba(10, 79, 136, 0.22);
+  background: #0f766e;
+  border-color: #0f766e;
+  box-shadow: 0 6px 14px rgba(15, 118, 110, 0.22);
 }
 
 #main .card-header .btn-outline-primary,
@@ -1309,7 +1343,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dataTable-top .btn-outline-primary {
   background: #fff;
   border-color: #b9d4ee;
-  color: #1173c1;
+  color: #0d9488;
 }
 
 #main .card-header .btn-outline-primary:hover,
@@ -1318,8 +1352,8 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .datatable-top .btn-outline-primary:hover,
 #main .dataTable-top .btn-outline-primary:hover {
   background: #eef6ff;
-  border-color: #1173c1;
-  color: #0a4f88;
+  border-color: #0d9488;
+  color: #0f766e;
   box-shadow: none;
 }
 
@@ -1349,7 +1383,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 
 #main .card-header .btn-link.text-muted:hover,
 #main .module-search-toolbar .btn-link.text-muted:hover {
-  color: #1173c1 !important;
+  color: #0d9488 !important;
   text-decoration: underline;
 }
 
@@ -1380,14 +1414,14 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .module-search-toolbar .btn-group > .btn.btn-primary,
 #main .module-search-toolbar .btn-group > .btn.active {
   background: #fff !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
   box-shadow: 0 2px 8px rgba(15, 35, 60, 0.08) !important;
 }
 
 #main .card-header .btn-group > .btn.btn-outline-primary:hover,
 #main .module-search-toolbar .btn-group > .btn.btn-outline-primary:hover {
   background: rgba(255, 255, 255, 0.72) !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
 }
 
 /* ========== Unified module section navigation (page switchers) ========== */
@@ -1454,7 +1488,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .module-section-nav .nav-link:hover,
 #main .module-section-nav .btn-group > .btn:hover {
   background: rgba(255, 255, 255, 0.72) !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
 }
 
 #main .module-section-nav .nav-link.active,
@@ -1465,7 +1499,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .module-section-nav .btn-group > .btn.btn-dark,
 #main .module-section-nav .btn-group > .btn.active {
   background: #fff !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
   box-shadow: 0 2px 8px rgba(15, 35, 60, 0.08) !important;
 }
 
@@ -1478,7 +1512,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .module-section-nav .nav-link.active .badge,
 #main .module-section-nav .nav-link.show .badge {
   background: #e8f3fc !important;
-  color: #1173c1 !important;
+  color: #0d9488 !important;
   border: 1px solid #cfe4f7;
 }
 
@@ -1583,15 +1617,15 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 }
 
 #main .btn-primary {
-  box-shadow: 0 4px 12px rgba(17, 115, 193, 0.2);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
 }
 
 #main .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(17, 115, 193, 0.26);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.26);
 }
 
 #main .btn:focus-visible {
-  outline: 2px solid rgba(17, 115, 193, 0.4);
+  outline: 2px solid rgba(13, 148, 136, 0.4);
   outline-offset: 2px;
 }
 
@@ -1644,7 +1678,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 .modal .modal-header {
   border-bottom: 0;
   padding: 1rem 1.2rem;
-  background: linear-gradient(135deg, var(--primary-color, #1173c1) 0%, var(--primary-hover, #0a4f88) 100%);
+  background: linear-gradient(135deg, var(--primary-color, #0d9488) 0%, var(--primary-hover, #0f766e) 100%);
   color: #ffffff;
 }
 
@@ -1791,4 +1825,129 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   font-size: 1.3rem;
+}
+
+/* ========== DARK MODE (module content) ========== */
+[data-theme="dark"] #main {
+  --ux-bg: #0f172a;
+  --ux-surface: #16223a;
+  --ux-border: #2f3d52;
+  --ux-border-soft: #263449;
+  --ux-text: #e2e8f0;
+  --ux-muted: #94a3b8;
+  --ux-accent: #2dd4bf;
+  --ux-accent-soft: rgba(45, 212, 191, 0.12);
+}
+
+[data-theme="dark"] #main .card .card-header {
+  background: linear-gradient(180deg, #16223a 0%, #131e33 100%);
+  border-bottom: 1px solid var(--ux-border-soft);
+}
+
+[data-theme="dark"] #main .module-search-toolbar,
+[data-theme="dark"] #main .unified-table-search-toolbar,
+[data-theme="dark"] #main .datatable-top,
+[data-theme="dark"] #main .dataTable-top,
+[data-theme="dark"] #main .datatable-bottom,
+[data-theme="dark"] #main .dataTable-bottom {
+  background: #16223a;
+  border-color: #2f3d52;
+}
+
+[data-theme="dark"] #main .module-search-toolbar.appointments-filter-toolbar,
+[data-theme="dark"] #main .appointments-filter-toolbar {
+  background: #16223a;
+  border-color: #2f3d52;
+}
+
+[data-theme="dark"] #main .table-responsive,
+[data-theme="dark"] #main .history-table-wrap.table-responsive {
+  background: var(--ux-surface);
+  border-color: var(--ux-border);
+}
+
+[data-theme="dark"] #main .table thead th,
+[data-theme="dark"] #main .dataTable-table thead th {
+  background: #1c2c47;
+  color: #94a3b8;
+  border-bottom: 1px solid var(--ux-border);
+}
+
+[data-theme="dark"] #main .table,
+[data-theme="dark"] #main .dataTable-table {
+  --bs-table-striped-bg: #182437;
+  --bs-table-hover-bg: rgba(45, 212, 191, 0.06);
+  --bs-table-border-color: var(--ux-border);
+}
+
+[data-theme="dark"] #main .table tbody td,
+[data-theme="dark"] #main .dataTable-table tbody td {
+  border-top: 1px solid var(--ux-border);
+}
+
+[data-theme="dark"] #main .table-hover tbody tr:hover,
+[data-theme="dark"] #main .dataTable-table tbody tr:hover {
+  background: rgba(45, 212, 191, 0.06);
+}
+
+[data-theme="dark"] #main .table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: #182437;
+}
+
+[data-theme="dark"] #main .table-striped > tbody > tr:nth-of-type(even) > * {
+  background-color: transparent;
+}
+
+[data-theme="dark"] #main .table tbody td a:not(.btn):not(.dropdown-item) {
+  color: #2dd4bf;
+}
+
+[data-theme="dark"] #main .table tbody td a:not(.btn):not(.dropdown-item):hover {
+  color: #5eead4;
+}
+
+[data-theme="dark"] #main .dental-kpi-card,
+[data-theme="dark"] #main .dental-surface-card,
+[data-theme="dark"] #main .dental-chart-card {
+  background: #16223a;
+  border-color: #2f3d52;
+}
+
+[data-theme="dark"] #main .dental-kpi-icon {
+  background: rgba(45, 212, 191, 0.12);
+  color: #2dd4bf;
+  border-color: rgba(45, 212, 191, 0.2);
+}
+
+[data-theme="dark"] #main .dental-kpi-card__label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] #main .dental-kpi-card__value {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] #main .card-header .btn-outline-secondary,
+[data-theme="dark"] #main .module-search-toolbar .btn-outline-secondary,
+[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-secondary {
+  background: transparent;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] #main .card-header .btn-group,
+[data-theme="dark"] #main .module-search-toolbar .btn-group,
+[data-theme="dark"] #main .module-section-nav__track {
+  background: #1c2c47;
+  border-color: #2f3d52;
+}
+
+[data-theme="dark"] #main .card-header .btn-group > .btn.btn-primary,
+[data-theme="dark"] #main .card-header .btn-group > .btn.active,
+[data-theme="dark"] #main .module-search-toolbar .btn-group > .btn.btn-primary,
+[data-theme="dark"] #main .module-search-toolbar .btn-group > .btn.active,
+[data-theme="dark"] #main .module-section-nav .nav-link.active,
+[data-theme="dark"] #main .module-section-nav .btn-group > .btn.active {
+  background: #263449 !important;
+  color: #2dd4bf !important;
 }

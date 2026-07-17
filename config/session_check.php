@@ -12,6 +12,16 @@ require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/database.php';
 security_start_session();
 
+// These portal pages are session-driven and change on every request (sidebar counts,
+// active nav state, per-user data). Without this, browsers can heuristically cache a
+// response and replay a stale/broken render on later normal or back/forward navigation
+// until a hard refresh forces a real fetch.
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 if (!defined('SESSION_TIMEOUT_SECONDS')) {
     define('SESSION_TIMEOUT_SECONDS', 30 * 60);
 }

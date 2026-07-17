@@ -5,7 +5,6 @@ contact_messages_ensure_table($conn);
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="card-title mb-1">Contact Us Inquiries</h5>
-        <small class="text-muted">Messages submitted from the public website contact form.</small>
     </div>
     <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshContactMessagesBtn">
         Refresh

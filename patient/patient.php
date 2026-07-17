@@ -35,6 +35,16 @@ switch ($role_key) {
 <html lang="en">
 
 <head>
+    <script>
+    (function () {
+        try {
+            var t = localStorage.getItem('dental_theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) {}
+    })();
+    </script>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport">
     <title>Azucena's Dental Clinic</title>
@@ -48,7 +58,7 @@ switch ($role_key) {
     <!-- Google Fonts -->
     <link href="https://fonts.gstatic.com" rel="preconnect">
     <link
-        href="https://fonts.googleapis.com/css?family=Mothwing:300,300i,400,400i,600,600i,700,700i"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
     <!-- Vendor CSS Files -->
@@ -61,15 +71,24 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260715-header1" rel="stylesheet">
-    <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260614-section-nav1" rel="stylesheet">
-    <link href="../assets/css/appointment-services.css?v=20260717-1" rel="stylesheet">
-    <link href="../assets/css/patient-mobile.css?v=20260614-section-nav1" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260715-header1" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260718-dark2" rel="stylesheet">
+    <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260718-dark2" rel="stylesheet">
+    <link href="../assets/css/appointment-services.css?v=20260718-dark1" rel="stylesheet">
+    <link href="../assets/css/patient-mobile.css?v=20260718-dark1" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260718-dark1" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
+    <script>
+    (function () {
+        try {
+            if (window.innerWidth > 991 && localStorage.getItem('sidebar-collapsed') === 'true') {
+                document.body.classList.add('toggle-sidebar');
+            }
+        } catch (e) {}
+    })();
+    </script>
 
     <!-- Global Loading Overlay -->
     <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;">
@@ -82,10 +101,6 @@ switch ($role_key) {
         <div class="d-flex align-items-center">
             <a href="patient.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
-                <div class="ms-2">
-                    <span class="fw-bold">Dental Clinic</span>
-                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
-                </div>
             </a>
         </div>
 
@@ -98,6 +113,13 @@ switch ($role_key) {
 
         <nav class="header-nav">
             <ul class="d-flex align-items-center">
+                <li class="nav-item me-2">
+                    <button type="button" class="theme-toggle-btn">
+                        <i class="bi bi-sun-fill"></i>
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                </li>
+
                 <?php include dirname(__DIR__) . '/includes/header_clock.php'; ?>
 
                 <?php
@@ -120,7 +142,7 @@ switch ($role_key) {
     <aside id="sidebar" class="sidebar">
         <div class="sidebar-toggle-area">
             <button class="toggle-sidebar-btn" type="button" aria-label="Toggle sidebar">
-                <i class="bi bi-list toggle-icon-open"></i>
+                <i class="bi bi-chevron-double-left toggle-icon-open"></i>
                 <i class="bi bi-chevron-double-right toggle-icon-closed"></i>
             </button>
         </div>
@@ -266,10 +288,11 @@ switch ($role_key) {
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
     <script src="../assets/js/main.js?v=20260715-header2"></script>
+    <script src="../assets/js/theme-toggle.js?v=20260718-dark1"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>
-    <script src="../assets/js/appointment-service-manager.js?v=20260717-1"></script>
-    <script src="../assets/js/patient-appointments-services.js?v=20260717-1"></script>
+    <script src="../assets/js/appointment-service-manager.js?v=20260718-fix1"></script>
+    <script src="../assets/js/patient-appointments-services.js?v=20260718-fix1"></script>
     <script src="../assets/js/media-gallery.js?v=20260717-1"></script>
     <script src="../assets/js/profiling-display.js?v=20260717-1"></script>
 

@@ -10,7 +10,6 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
         <?php if ($forceChange): ?>
             <div class="alert alert-warning">For security, you must change your default password before using other pages.</div>
         <?php endif; ?>
-        <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
         <div id="passwordChangeAlert" class="mt-3"></div>
         <form id="passwordChangeForm" class="mt-3 account-settings-form" autocomplete="off">
             <?php

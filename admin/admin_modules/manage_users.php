@@ -345,7 +345,15 @@ foreach ($roles as $roleRow) {
 }
 ?>
 
- 
+<div class="module-page-header mb-3">
+    <h4 class="mb-0">
+        <?php if ($user_type === 'patients'): ?>
+            <span class="module-page-header__crumb">User Management</span> <span class="module-page-header__sep">&gt;</span> Patients
+        <?php else: ?>
+            <span class="module-page-header__crumb">User Management</span> <span class="module-page-header__sep">&gt;</span> System Users
+        <?php endif; ?>
+    </h4>
+</div>
 
 <!-- Alert Messages -->
 <?php if (isset($_SESSION['message'])): ?>
@@ -494,20 +502,20 @@ foreach ($roles as $roleRow) {
 
     <!-- PATIENTS TABLE -->
     <div class="tab-pane fade <?php echo $user_type === 'patients' ? 'show active' : ''; ?>" id="patients-content" role="tabpanel">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center gap-2">
+        <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+            <div>
                 <h5 class="card-title mb-0">Patient Settings</h5>
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
-                    <i class="bi bi-plus-circle"></i> Add Patient
-                </button>
             </div>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                <i class="bi bi-plus-circle"></i> Add Patient
+            </button>
+        </div>
 
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
+        <div class="table-responsive">
+            <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
+                <thead>
+                    <tr>
+                        <th>ID</th>
                                 <th>Patient</th>
                                 <th>Phone</th>
                                 <th>DOB</th>
@@ -541,8 +549,6 @@ foreach ($roles as $roleRow) {
                         </tbody>
                     </table>
                 </div>
-            </div>
-        </div>
     </div>
 <!-- ========== ADD USER MODAL ========== -->
 <div class="modal fade" id="addUserModal" tabindex="-1">

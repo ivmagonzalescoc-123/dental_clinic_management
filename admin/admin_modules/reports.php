@@ -453,6 +453,7 @@ $reportRangeNav = [
 
 $reportTypes = [
     'sales' => ['icon' => 'bi-currency-dollar', 'label' => 'Sales Reports'],
+    'appointments' => ['icon' => 'bi-calendar-check', 'label' => 'Appointment Reports'],
     'demographic' => ['icon' => 'bi-people', 'label' => 'Demographic Reports'],
     'trend' => ['icon' => 'bi-graph-up', 'label' => 'Trend & Predictive'],
 ];
@@ -722,9 +723,12 @@ $reportNavQuery = array_merge(
 ?>
 
 <div class="dental-dashboard-shell clinic-reports-shell" id="clinicReportPrintArea">
-    <div class="dental-dashboard-hero">
+    <div class="dental-dashboard-hero module-page-header">
         <div>
-            <h4 class="mb-0">Clinic Reports</h4>
+            <h4 class="mb-0">
+                <span class="module-page-header__crumb">Clinic Reports</span> <span class="module-page-header__sep">&gt;</span>
+                <?php echo htmlspecialchars($reportTypes[$reportType]['label'] ?? 'Sales Reports'); ?>
+            </h4>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="dental-chip"><?php echo htmlspecialchars($periodLabel); ?></span>
@@ -797,50 +801,60 @@ $reportNavQuery = array_merge(
     <div class="row g-3 mb-3">
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Total Billed</h6>
-                <div class="display-6 fw-bold">₱<?php echo number_format($totalBilled, 2); ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-cash-stack"></i></div>
+                <div class="dental-kpi-label">Total Billed</div>
+                <div class="dental-kpi-value">₱<?php echo number_format($totalBilled, 2); ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Collected</h6>
-                <div class="display-6 fw-bold text-success">₱<?php echo number_format($totalCollected, 2); ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-check-circle"></i></div>
+                <div class="dental-kpi-label">Collected</div>
+                <div class="dental-kpi-value text-success">₱<?php echo number_format($totalCollected, 2); ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Outstanding</h6>
-                <div class="display-6 fw-bold <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--amber"><i class="bi bi-exclamation-circle"></i></div>
+                <div class="dental-kpi-label">Outstanding</div>
+                <div class="dental-kpi-value <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Collection Rate</h6>
-                <div class="display-6 fw-bold"><?php echo $collectionRate; ?>%</div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
+                <div class="dental-kpi-label">Collection Rate</div>
+                <div class="dental-kpi-value"><?php echo $collectionRate; ?>%</div>
             </div>
         </div>
     </div>
 
+    <p class="dental-section-eyebrow">Averages</p>
     <div class="row g-3 mb-3">
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Avg Revenue / Patient</h6>
-                <div class="display-6 fw-bold">₱<?php echo number_format($avgRevenuePerPatient, 2); ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-person"></i></div>
+                <div class="dental-kpi-label">Avg Revenue / Patient</div>
+                <div class="dental-kpi-value">₱<?php echo number_format($avgRevenuePerPatient, 2); ?></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Avg Revenue / Visit</h6>
-                <div class="display-6 fw-bold">₱<?php echo number_format($avgRevenuePerAppointment, 2); ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-check"></i></div>
+                <div class="dental-kpi-label">Avg Revenue / Visit</div>
+                <div class="dental-kpi-value">₱<?php echo number_format($avgRevenuePerAppointment, 2); ?></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Total Invoices</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$billingCount; ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-receipt"></i></div>
+                <div class="dental-kpi-label">Total Invoices</div>
+                <div class="dental-kpi-value"><?php echo (int)$billingCount; ?></div>
             </div>
         </div>
     </div>
+
+    <p class="dental-section-eyebrow">Revenue Breakdown</p>
 
     <div class="row g-3 mb-3">
         <div class="col-lg-8">
@@ -971,33 +985,209 @@ $reportNavQuery = array_merge(
     </div>
     <?php endif; ?>
 
+    <?php elseif ($reportType === 'appointments'): ?>
+    <div class="row g-3 mb-3">
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar3"></i></div>
+                <div class="dental-kpi-label">Total Appointments</div>
+                <div class="dental-kpi-value"><?php echo (int)$totalAppointments; ?></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-check-circle"></i></div>
+                <div class="dental-kpi-label">Completed Visits</div>
+                <div class="dental-kpi-value text-success"><?php echo (int)$completedVisits; ?></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--red"><i class="bi bi-x-circle"></i></div>
+                <div class="dental-kpi-label">No-Shows</div>
+                <div class="dental-kpi-value <?php echo $noShows > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$noShows; ?></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
+                <div class="dental-kpi-label">Completion Rate</div>
+                <div class="dental-kpi-value"><?php echo $completionRate; ?>%</div>
+            </div>
+        </div>
+    </div>
+
+    <p class="dental-section-eyebrow">Overview</p>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Appointments Overview</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportDailyChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Status Breakdown</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportStatusChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportStatusChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Top Services</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportServicesChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="reportServicesChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="dental-section-eyebrow">Doctor Performance</p>
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card dental-surface-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Doctor Activity</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Doctor</th>
+                                    <th class="text-end">Total Appointments</th>
+                                    <th class="text-end">Completed</th>
+                                    <th class="text-end">No-Shows</th>
+                                    <th class="text-end">Completion</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($doctorActivity)): ?>
+                                    <tr><td colspan="5" class="text-muted text-center py-3">No doctor data for this period.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($doctorActivity as $doc): ?>
+                                        <?php
+                                        $total = (int)$doc['total_visits'];
+                                        $done = (int)$doc['completed_visits'];
+                                        $rate = $total > 0 ? round(($done / $total) * 100) : 0;
+                                        ?>
+                                        <tr>
+                                            <td class="fw-semibold"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></td>
+                                            <td class="text-end"><?php echo $total; ?></td>
+                                            <td class="text-end text-success fw-semibold"><?php echo $done; ?></td>
+                                            <td class="text-end <?php echo (int)$doc['no_shows'] > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$doc['no_shows']; ?></td>
+                                            <td class="text-end"><?php echo (int)$rate; ?>%</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="dental-section-eyebrow">Recent Activity</p>
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card dental-surface-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Recent Completed Visits</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Patient</th>
+                                    <th>Doctor</th>
+                                    <th>Services</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($recentVisits)): ?>
+                                    <tr><td colspan="5" class="text-muted text-center py-3">No completed visits in this period.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach ($recentVisits as $visit): ?>
+                                        <?php $st = (string)($visit['status'] ?? 'completed'); ?>
+                                        <tr>
+                                            <td><?php echo date('M d, Y', strtotime($visit['appointment_date'])); ?></td>
+                                            <td><?php echo htmlspecialchars(trim(($visit['patient_first'] ?? '') . ' ' . ($visit['patient_last'] ?? ''))); ?></td>
+                                            <td><?php echo htmlspecialchars(trim(($visit['doctor_first'] ?? '') . ' ' . ($visit['doctor_last'] ?? ''))); ?></td>
+                                            <td class="small"><?php echo htmlspecialchars($visit['services'] ?? '—'); ?></td>
+                                            <td>
+                                                <span class="badge bg-<?php echo dashboard_appt_status_badge_class($st); ?>">
+                                                    <?php echo htmlspecialchars(reports_format_status($st)); ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <?php elseif ($reportType === 'demographic'): ?>
     <div class="row g-3 mb-3">
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Total Patients Seen</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$patientsSeen; ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-people"></i></div>
+                <div class="dental-kpi-label">Total Patients Seen</div>
+                <div class="dental-kpi-value"><?php echo (int)$patientsSeen; ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">New Patients</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$newPatients; ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-person-plus"></i></div>
+                <div class="dental-kpi-label">New Patients</div>
+                <div class="dental-kpi-value"><?php echo (int)$newPatients; ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Total Appointments</h6>
-                <div class="display-6 fw-bold"><?php echo (int)$totalAppointments; ?></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar3"></i></div>
+                <div class="dental-kpi-label">Total Appointments</div>
+                <div class="dental-kpi-value"><?php echo (int)$totalAppointments; ?></div>
             </div>
         </div>
         <div class="col-md-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Completion Rate</h6>
-                <div class="display-6 fw-bold"><?php echo $completionRate; ?>%</div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
+                <div class="dental-kpi-label">Completion Rate</div>
+                <div class="dental-kpi-value"><?php echo $completionRate; ?>%</div>
             </div>
         </div>
     </div>
+
+    <p class="dental-section-eyebrow">Patient Insights</p>
 
     <div class="row g-3 mb-3">
         <div class="col-lg-6">
@@ -1138,27 +1328,29 @@ $reportNavQuery = array_merge(
     <?php elseif ($reportType === 'trend'): ?>
     <div class="row g-3 mb-3">
         <div class="col-md-4">
-            <div class="card dental-kpi-card p-3 h-100 border-primary">
-                <h6 class="mb-1"><i class="bi bi-graph-up-arrow text-primary"></i> Predicted Next Month</h6>
-                <div class="display-6 fw-bold text-primary"><?php echo $nextMonthPredicted; ?></div>
-                <small class="text-muted">appointments forecast</small>
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up-arrow"></i></div>
+                <div class="dental-kpi-label">Predicted Next Month</div>
+                <div class="dental-kpi-value text-primary"><?php echo $nextMonthPredicted; ?> <small>appointments</small></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">12-Month Total</h6>
-                <div class="display-6 fw-bold"><?php echo array_sum($monthlyTrendAppts); ?></div>
-                <small class="text-muted">appointments</small>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-range"></i></div>
+                <div class="dental-kpi-label">12-Month Total</div>
+                <div class="dental-kpi-value"><?php echo array_sum($monthlyTrendAppts); ?> <small>appointments</small></div>
             </div>
         </div>
         <div class="col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
-                <h6 class="mb-1">Avg Monthly Appointments</h6>
-                <div class="display-6 fw-bold"><?php echo count($monthlyTrendAppts) > 0 ? round(array_sum($monthlyTrendAppts) / count($monthlyTrendAppts)) : 0; ?></div>
-                <small class="text-muted">per month</small>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-bar-chart"></i></div>
+                <div class="dental-kpi-label">Avg Monthly Appointments</div>
+                <div class="dental-kpi-value"><?php echo count($monthlyTrendAppts) > 0 ? round(array_sum($monthlyTrendAppts) / count($monthlyTrendAppts)) : 0; ?> <small>per month</small></div>
             </div>
         </div>
     </div>
+
+    <p class="dental-section-eyebrow">Forecast</p>
 
     <div class="row g-3 mb-3">
         <div class="col-lg-8">
@@ -1270,6 +1462,7 @@ $reportNavQuery = array_merge(
         </div>
     </div>
 
+    <p class="dental-section-eyebrow">Recommendations</p>
     <div class="row g-3 mb-3">
         <div class="col-lg-6">
             <div class="card dental-surface-card h-100">
@@ -1375,138 +1568,6 @@ $reportNavQuery = array_merge(
     </div>
 
     <?php endif; ?>
-
-    <?php if ($reportType !== 'trend'): ?>
-    <div class="row g-3 mb-3">
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Appointments Overview</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportDailyChart" aria-label="Enlarge chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportDailyChart" class="clinic-simple-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Status Breakdown</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportStatusChart" aria-label="Enlarge chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportStatusChart" class="clinic-simple-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-4">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Top Services</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="reportServicesChart" aria-label="Enlarge chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="reportServicesChart" class="clinic-simple-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
-
-    <div class="col-12 mb-3">
-        <div class="card dental-surface-card">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Doctor Activity</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Doctor</th>
-                                <th class="text-end">Total Appointments</th>
-                                <th class="text-end">Completed</th>
-                                <th class="text-end">No-Shows</th>
-                                <th class="text-end">Completion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($doctorActivity)): ?>
-                                <tr><td colspan="5" class="text-muted text-center py-3">No doctor data for this period.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($doctorActivity as $doc): ?>
-                                    <?php
-                                    $total = (int)$doc['total_visits'];
-                                    $done = (int)$doc['completed_visits'];
-                                    $rate = $total > 0 ? round(($done / $total) * 100) : 0;
-                                    ?>
-                                    <tr>
-                                        <td class="fw-semibold"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></td>
-                                        <td class="text-end"><?php echo $total; ?></td>
-                                        <td class="text-end text-success fw-semibold"><?php echo $done; ?></td>
-                                        <td class="text-end <?php echo (int)$doc['no_shows'] > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$doc['no_shows']; ?></td>
-                                        <td class="text-end"><?php echo (int)$rate; ?>%</td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-12">
-        <div class="card dental-surface-card">
-            <div class="card-body">
-                <h5 class="card-title mb-3">Recent Completed Visits</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Patient</th>
-                                <th>Doctor</th>
-                                <th>Services</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($recentVisits)): ?>
-                                <tr><td colspan="5" class="text-muted text-center py-3">No completed visits in this period.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($recentVisits as $visit): ?>
-                                    <?php $st = (string)($visit['status'] ?? 'completed'); ?>
-                                    <tr>
-                                        <td><?php echo date('M d, Y', strtotime($visit['appointment_date'])); ?></td>
-                                        <td><?php echo htmlspecialchars(trim(($visit['patient_first'] ?? '') . ' ' . ($visit['patient_last'] ?? ''))); ?></td>
-                                        <td><?php echo htmlspecialchars(trim(($visit['doctor_first'] ?? '') . ' ' . ($visit['doctor_last'] ?? ''))); ?></td>
-                                        <td class="small"><?php echo htmlspecialchars($visit['services'] ?? '—'); ?></td>
-                                        <td>
-                                            <span class="badge bg-<?php echo dashboard_appt_status_badge_class($st); ?>">
-                                                <?php echo htmlspecialchars(reports_format_status($st)); ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <div class="modal fade" id="adminChartExpandModal" tabindex="-1" aria-hidden="true">
@@ -1703,7 +1764,7 @@ $reportNavQuery = array_merge(
                         ],
                         xaxis: { categories: monthlyTrendLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
-                        colors: ['#1173c1', '#10b981'],
+                        colors: ['#0d9488', '#10b981'],
                         stroke: { curve: 'smooth', width: 2 },
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
@@ -1871,6 +1932,17 @@ $reportNavQuery = array_merge(
 </script>
 
 <style>
+.clinic-reports-filter {
+    background: #f8fafc;
+    border-radius: 12px;
+}
+.clinic-reports-filter .card-body {
+    padding: 0.85rem 1rem;
+}
+.clinic-reports-filter .form-label {
+    color: #64748b;
+    font-weight: 600;
+}
 .clinic-reports-filter .form-select,
 .clinic-reports-filter .form-control {
     border-radius: 8px;
@@ -1880,21 +1952,59 @@ $reportNavQuery = array_merge(
 .clinic-reports-filter .form-select:focus,
 .clinic-reports-filter .form-control:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(17, 115, 193, 0.1);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
 }
 .dental-kpi-card {
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    border: 1px solid #e9eef2;
     background: #fff;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
-.dental-kpi-card h6 {
-    color: #64748b;
-    font-size: 13px;
-    font-weight: 500;
+.dental-kpi-card:hover {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+    transform: translateY(-1px);
 }
-.dental-kpi-card .display-6 {
-    font-size: 1.8rem;
-    color: #1e293b;
+.dental-kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    margin-bottom: 10px;
+}
+.dental-kpi-icon--teal { background: var(--primary-soft, #f0fdfa); color: var(--primary-color, #0d9488); }
+.dental-kpi-icon--green { background: #dcfce7; color: #16a34a; }
+.dental-kpi-icon--red { background: #fee2e2; color: #dc3545; }
+.dental-kpi-icon--amber { background: #fef3c7; color: #b45309; }
+.dental-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 3px;
+}
+.dental-kpi-value {
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+.dental-kpi-value small {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #94a3b8;
+}
+.dental-section-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin: 0 0 0.6rem 2px;
 }
 .dental-chart-card {
     border-radius: 12px;
@@ -1963,6 +2073,58 @@ $reportNavQuery = array_merge(
     .clinic-reports-shell { padding: 0; }
     .card { break-inside: avoid; border: 1px solid #dee2e6 !important; }
 }
+
+[data-theme="dark"] .clinic-reports-filter {
+    background: #16223a;
+}
+[data-theme="dark"] .clinic-reports-filter .form-label {
+    color: #94a3b8;
+}
+[data-theme="dark"] .dental-kpi-label {
+    color: #94a3b8;
+}
+[data-theme="dark"] .dental-kpi-value {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .dental-chart-expand-btn {
+    border-color: #2f3d52;
+    color: #94a3b8;
+}
+[data-theme="dark"] .clinic-report-bar-track {
+    background: #263449;
+}
+[data-theme="dark"] .ai-chat-panel {
+    background: #16223a;
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .ai-chat-header {
+    background: #16223a;
+    border-bottom-color: #2f3d52;
+}
+[data-theme="dark"] .ai-chat-header-text h6 {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-chat-messages {
+    background: #0f172a;
+}
+[data-theme="dark"] .ai-chat-msg.bot {
+    background: #16223a;
+    color: #e2e8f0;
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .ai-chat-input-wrap {
+    background: #16223a;
+    border-top-color: #2f3d52;
+}
+[data-theme="dark"] .ai-chat-input {
+    background: #1c2c47;
+    border-color: #2f3d52;
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-chat-close {
+    background: #1c2c47;
+    color: #94a3b8;
+}
 </style>
 
 <div class="ai-chat-wrapper" id="aiChatWrapper">
@@ -2016,10 +2178,10 @@ $reportNavQuery = array_merge(
     width: 54px;
     height: 54px;
     border-radius: 16px;
-    background: linear-gradient(145deg, #1a80d9, #0a4f8e);
+    background: linear-gradient(145deg, #0d9488, #0f766e);
     color: #fff;
     border: none;
-    box-shadow: 0 4px 18px rgba(17,115,193,0.38), 0 2px 6px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 18px rgba(13, 148, 136,0.38), 0 2px 6px rgba(0,0,0,0.12);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -2078,14 +2240,14 @@ $reportNavQuery = array_merge(
     width: 38px;
     height: 38px;
     border-radius: 11px;
-    background: linear-gradient(135deg, #1a80d9 0%, #0a4f8e 100%);
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 17px;
     flex-shrink: 0;
     color: #fff;
-    box-shadow: 0 3px 10px rgba(17,115,193,0.28);
+    box-shadow: 0 3px 10px rgba(13, 148, 136,0.28);
 }
 .ai-chat-header-text h6 {
     margin: 0 0 2px;
@@ -2147,10 +2309,10 @@ $reportNavQuery = array_merge(
 }
 .ai-chat-msg.user {
     align-self: flex-end;
-    background: linear-gradient(135deg, #1a80d9, #0a4f8e);
+    background: linear-gradient(135deg, #0d9488, #0f766e);
     color: #fff;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 2px 8px rgba(17,115,193,0.22);
+    box-shadow: 0 2px 8px rgba(13, 148, 136,0.22);
 }
 .ai-chat-msg.bot {
     align-self: flex-start;
@@ -2224,15 +2386,15 @@ $reportNavQuery = array_merge(
     background: #f8fafc;
 }
 .ai-chat-input:focus {
-    border-color: #1a80d9;
+    border-color: #0d9488;
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(26,128,217,0.1);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136,0.1);
 }
 .ai-chat-send {
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #1a80d9, #0a4f8e);
+    background: linear-gradient(135deg, #0d9488, #0f766e);
     color: #fff;
     border: none;
     cursor: pointer;
@@ -2242,14 +2404,14 @@ $reportNavQuery = array_merge(
     flex-shrink: 0;
     transition: opacity 0.2s, transform 0.2s;
     font-size: 15px;
-    box-shadow: 0 2px 8px rgba(17,115,193,0.25);
+    box-shadow: 0 2px 8px rgba(13, 148, 136,0.25);
 }
 .ai-chat-send:hover { opacity: 0.88; transform: scale(1.06); }
 .ai-chat-send:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 .ai-metric {
     font-size: 28px;
     font-weight: 800;
-    color: #1a80d9;
+    color: #0d9488;
     line-height: 1.1;
     margin-bottom: 4px;
 }

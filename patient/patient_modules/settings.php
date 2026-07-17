@@ -21,8 +21,6 @@ if ($_settingsPatientId > 0 && isset($conn)) {
     <div class="card-body">
         <?php if ($_settingsIsGoogleAccount): ?>
         <p class="text-muted">Your account uses Google Sign-In. Set a password below if you also want to log in with email and password.</p>
-        <?php else: ?>
-        <p class="text-muted">Update your password anytime. Password must meet policy requirements.</p>
         <?php endif; ?>
         <div id="passwordChangeAlert" class="mt-3"></div>
         <form id="passwordChangeForm" class="mt-3 account-settings-form" autocomplete="off">

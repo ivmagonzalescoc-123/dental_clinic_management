@@ -222,4 +222,4 @@ if ($patientId > 0) {
     </div>
 </div>
 
-<?php dashboard_render_appt_chart_script('patientAppt7Chart', $chartLabels, $seriesValues, '#0b6fbf', 'area'); ?>
+<?php dashboard_render_appt_chart_script('patientAppt7Chart', $chartLabels, $seriesValues, '#0d9488', 'area'); ?>

@@ -317,6 +317,16 @@ if ($tsRes) {
 }
 
 ?>
+<div class="module-page-header mb-3">
+    <h4 class="mb-0">
+        <span class="module-page-header__crumb">Services</span>
+        <?php if ($tab === 'timeslot'): ?>
+            <span class="module-page-header__sep">&gt;</span> Service Time
+        <?php elseif ($tab === 'consultation'): ?>
+            <span class="module-page-header__sep">&gt;</span> Consultation Fee
+        <?php endif; ?>
+    </h4>
+</div>
 <?php if (isset($_SESSION['message'])): ?>
     <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
         <?php echo htmlspecialchars($_SESSION['message']); ?>
@@ -342,21 +352,19 @@ if ($tsRes) {
 </nav>
 
 <?php if ($tab === 'services'): ?>
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">Services</h2>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addServiceModal">
-            <i class="bi bi-plus-circle"></i> Add Service
-        </button>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="card-title mb-0">Services</h2>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+        <i class="bi bi-plus-circle"></i> Add Service
+    </button>
+</div>
+<?php if (!$hasIsActive): ?>
+    <div class="alert alert-warning">
+        Archive uses delete because the current services table has no is_active field.
     </div>
-    <div class="card-body">
-        <?php if (!$hasIsActive): ?>
-            <div class="alert alert-warning">
-                Archive uses delete because the current services table has no is_active field.
-            </div>
-        <?php endif; ?>
+<?php endif; ?>
 
-        <div class="table-responsive">
+<div class="table-responsive">
             <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                 <thead>
                     <tr>
@@ -391,18 +399,14 @@ if ($tsRes) {
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 <?php elseif ($tab === 'timeslot'): ?>
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h2 class="card-title mb-0">Service Averate Time</h2>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#serviceTimeModal" onclick="openServiceTimeModal(null)">
-            <i class="bi bi-plus-circle"></i> Add Service Time
-        </button>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="card-title mb-0">Service Averate Time</h2>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#serviceTimeModal" onclick="openServiceTimeModal(null)">
+        <i class="bi bi-plus-circle"></i> Add Service Time
+    </button>
+</div>
+<div class="table-responsive">
             <table class="table table-hover datatable align-middle" data-skip-table-search="1">
                 <thead>
                     <tr>
@@ -445,8 +449,6 @@ if ($tsRes) {
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
 <?php endif; ?>
 
 <!-- Add Service Modal -->
@@ -592,30 +594,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 ?>
 
 <?php if ($tab === 'consultation'): ?>
-<div class="card">
-    <div class="card-header">
-        <h2 class="card-title mb-0">Consultation Fee Configuration</h2>
+<h2 class="card-title mb-3">Consultation Fee Configuration</h2>
+<p class="text-muted small mb-3">This fee is automatically added to billing when a doctor finishes a consultation with no services selected.</p>
+<form method="POST" action="admin.php?page=services&tab=consultation">
+    <input type="hidden" name="action" value="update_consultation_fee">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">Consultation Fee (₱)</label>
+            <input type="number" name="consultation_fee" class="form-control" step="0.01" min="0" value="<?php echo htmlspecialchars($consultationFee); ?>" required>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label fw-semibold">Description</label>
+            <input type="text" name="setting_description" class="form-control" value="Default consultation fee for consultation-only appointments" readonly style="background:#f1f5f9;">
+        </div>
+        <div class="col-md-3">
+            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-circle me-1"></i>Update</button>
+        </div>
     </div>
-    <div class="card-body">
-        <p class="text-muted small mb-3">This fee is automatically added to billing when a doctor finishes a consultation with no services selected.</p>
-        <form method="POST" action="admin.php?page=services&tab=consultation">
-            <input type="hidden" name="action" value="update_consultation_fee">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold">Consultation Fee (₱)</label>
-                    <input type="number" name="consultation_fee" class="form-control" step="0.01" min="0" value="<?php echo htmlspecialchars($consultationFee); ?>" required>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label fw-semibold">Description</label>
-                    <input type="text" name="setting_description" class="form-control" value="Default consultation fee for consultation-only appointments" readonly style="background:#f1f5f9;">
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-circle me-1"></i>Update</button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
+</form>
 <?php endif; ?>
 
 <script>

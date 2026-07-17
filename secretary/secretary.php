@@ -127,6 +127,16 @@ switch ($role_key) {
 <html lang="en">
 
 <head>
+    <script>
+    (function () {
+        try {
+            var t = localStorage.getItem('dental_theme');
+            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        } catch (e) {}
+    })();
+    </script>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Azucena's Dental Clinic</title>
@@ -137,7 +147,11 @@ switch ($role_key) {
     <link href="../assets/img/clinic-logo.png" rel="icon">
     <link href="../assets/img/apple-touch-icon.png" rel="apple-touch-icon">
 
-    <!-- Google Fonts removed to avoid cross-origin stylesheet issues -->
+    <!-- Google Fonts -->
+    <link href="https://fonts.gstatic.com" rel="preconnect">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <!-- Vendor CSS Files -->
     <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -149,13 +163,22 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260715-header1" rel="stylesheet">
-    <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260715-header1" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260614-section-nav1" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260718-dark2" rel="stylesheet">
+    <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260718-dark1" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260718-dark2" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">
+    <script>
+    (function () {
+        try {
+            if (window.innerWidth > 991 && localStorage.getItem('sidebar-collapsed') === 'true') {
+                document.body.classList.add('toggle-sidebar');
+            }
+        } catch (e) {}
+    })();
+    </script>
 
     <!-- Global Loading Overlay -->
     <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;">
@@ -172,10 +195,6 @@ switch ($role_key) {
             </button>
             <a href="secretary.php?page=dashboard" class="logo d-flex align-items-center">
                 <img src="../assets/img/clinic-logo.png" alt="">
-                <div class="ms-2">
-                    <span class="fw-bold">Dental Clinic</span>
-                    <small class="d-none d-lg-block text-muted"><?php echo htmlspecialchars($header_role_label); ?></small>
-                </div>
             </a>
         </div>
 
@@ -188,6 +207,13 @@ switch ($role_key) {
 
         <nav class="header-nav">
             <ul class="d-flex align-items-center">
+                <li class="nav-item me-2">
+                    <button type="button" class="theme-toggle-btn">
+                        <i class="bi bi-sun-fill"></i>
+                        <i class="bi bi-moon-stars-fill"></i>
+                    </button>
+                </li>
+
                 <?php include dirname(__DIR__) . '/includes/header_clock.php'; ?>
 
                 <?php
@@ -210,7 +236,7 @@ switch ($role_key) {
     <aside id="sidebar" class="sidebar">
         <div class="sidebar-toggle-area">
             <button class="toggle-sidebar-btn" type="button" aria-label="Toggle sidebar">
-                <i class="bi bi-list toggle-icon-open"></i>
+                <i class="bi bi-chevron-double-left toggle-icon-open"></i>
                 <i class="bi bi-chevron-double-right toggle-icon-closed"></i>
             </button>
         </div>
@@ -228,9 +254,9 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
+                <a class="nav-link collapsed" href="secretary.php?page=appointments" data-tooltip="Appointments" title="Appointments">
                     <i class="bi bi-calendar2-week"></i>
-                    <span class="ms-2">Appointments</span>
+                    <span>Appointments</span>
                     <span class="nav-dot" id="secretaryAppointmentsDot"></span>
                 </a>
             </li>
@@ -241,16 +267,16 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=arrivals" data-tooltip="Arrivals" title="Arrivals">
+                <a class="nav-link collapsed" href="secretary.php?page=arrivals" data-tooltip="Arrivals" title="Arrivals">
                     <i class="bi bi-person-check"></i>
-                    <span class="ms-2">Arrivals</span>
+                    <span>Arrivals</span>
                     <span class="nav-dot<?php echo (int)$pendingCount > 0 ? ' is-active' : ''; ?>" id="secretaryArrivalsDot"></span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=ehr_queue" data-tooltip="EHR Queue" title="EHR Queue">
+                <a class="nav-link collapsed" href="secretary.php?page=ehr_queue" data-tooltip="EHR Queue" title="EHR Queue">
                     <i class="bi bi-journal-medical"></i>
-                    <span class="ms-2">EHR Queue</span>
+                    <span>EHR Queue</span>
                     <span class="nav-dot<?php echo (int)$recordsQueueCount > 0 ? ' is-active' : ''; ?>" id="secretaryEhrDot"></span>
                 </a>
             </li>
@@ -267,9 +293,9 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed d-flex align-items-center" href="secretary.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
+                <a class="nav-link collapsed" href="secretary.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
                     <i class="bi bi-envelope"></i>
-                    <span class="ms-2">Contact Us</span>
+                    <span>Contact Us</span>
                     <span class="nav-dot" id="secretaryContactDot"></span>
                 </a>
             </li>
@@ -378,6 +404,7 @@ switch ($role_key) {
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
     <script src="../assets/js/main.js?v=20260715-header2"></script>
+    <script src="../assets/js/theme-toggle.js?v=20260718-dark1"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>

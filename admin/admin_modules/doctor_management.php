@@ -6,9 +6,19 @@ if (!in_array($doctorTab, $allowedDoctorTabs, true)) {
 }
 ?>
 
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h5 class="mb-0"><i class="bi bi-calendar2-check me-2"></i>Doctor Management</h5>
-    <span class="text-muted small">Manage doctor schedule visibility, leave approvals, and worktype settings in one place.</span>
+<div class="module-page-header d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <h5 class="mb-0">
+        <i class="bi bi-calendar2-check me-2"></i><span class="module-page-header__crumb">Doctor Management</span> <span class="module-page-header__sep">&gt;</span>
+        <?php
+        if ($doctorTab === 'leaves') {
+            echo 'Doctor Leaves';
+        } elseif ($doctorTab === 'deployment') {
+            echo 'Doctor Worktype';
+        } else {
+            echo 'Doctor Schedule';
+        }
+        ?>
+    </h5>
 </div>
 
 <nav class="module-section-nav" aria-label="Doctor management sections">

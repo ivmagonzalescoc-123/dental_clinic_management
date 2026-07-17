@@ -42,7 +42,6 @@ if ($patient_id > 0) {
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h5 class="card-title mb-0">Clinic Records</h5>
-            <small class="text-muted">Past clinical records from successful appointments.</small>
         </div>
         <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2"><?php echo count($records); ?> record<?php echo count($records) === 1 ? '' : 's'; ?></span>
     </div>

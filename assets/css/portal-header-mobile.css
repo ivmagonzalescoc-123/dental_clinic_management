@@ -41,8 +41,8 @@ body.admin-portal {
         padding: 0;
         border: none;
         border-radius: 10px;
-        background: rgba(17, 115, 193, 0.06);
-        color: #1173c1;
+        background: rgba(13, 148, 136, 0.06);
+        color: #0d9488;
         font-size: 20px;
         cursor: pointer;
         flex-shrink: 0;
@@ -50,7 +50,7 @@ body.admin-portal {
     }
 
     .mobile-sidebar-toggle:hover {
-        background: rgba(17, 115, 193, 0.12);
+        background: rgba(13, 148, 136, 0.12);
     }
 
     .mobile-sidebar-toggle .toggle-icon-closed {
@@ -169,7 +169,7 @@ body.admin-portal {
         border: 0;
         border-radius: 10px;
         background: transparent;
-        color: #1173c1;
+        color: #0d9488;
         font-size: 1.15rem;
         cursor: pointer;
         pointer-events: auto !important;
@@ -182,7 +182,7 @@ body.admin-portal {
     body.doctor-portal .header-search-toggle:active,
     body.secretary-portal .header-search-toggle:active,
     body.admin-portal .header-search-toggle:active {
-        background: rgba(17, 115, 193, 0.1);
+        background: rgba(13, 148, 136, 0.1);
     }
 
     body.patient-portal #header.header-search-open .header-search-toggle,
@@ -214,7 +214,7 @@ body.admin-portal {
         background: #f8fbff;
         border: 1px solid #c9deef;
         border-radius: 999px;
-        box-shadow: 0 4px 16px rgba(17, 115, 193, 0.12);
+        box-shadow: 0 4px 16px rgba(13, 148, 136, 0.12);
         transition:
             max-width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
             width 0.32s cubic-bezier(0.4, 0, 0.2, 1),
@@ -257,7 +257,7 @@ body.admin-portal {
         visibility: visible;
         pointer-events: auto !important;
         overflow: visible !important;
-        box-shadow: 0 6px 20px rgba(17, 115, 193, 0.16);
+        box-shadow: 0 6px 20px rgba(13, 148, 136, 0.16);
         border-width: 1px !important;
         z-index: 130;
     }
