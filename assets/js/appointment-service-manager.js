@@ -153,7 +153,7 @@ class AppointmentServiceManager {
     }
     
     /**
-     * Render service selection UI — custom dropdown style
+     * Render service selection UI — radio button style for patient, dropdown for doctor
      */
     renderServiceSelector(containerId, mode = 'patient') {
         const container = document.getElementById(containerId);
@@ -162,6 +162,63 @@ class AppointmentServiceManager {
         const selectedIds = new Set(this.selectedServices.map(s => String(s.service_id)));
         const count = this.selectedServices.length;
 
+        if (mode === 'patient') {
+            this._renderPatientServiceGrid(container, containerId, selectedIds, count);
+        } else {
+            this._renderDropdownSelector(container, containerId, selectedIds, count);
+        }
+    }
+
+    _renderPatientServiceGrid(container, containerId, selectedIds, count) {
+        if (!this.services.length) {
+            container.innerHTML = '<div class="text-muted small">No services available.</div>';
+            return;
+        }
+
+        const itemsHtml = this.services.map(s => {
+            const isSelected = selectedIds.has(String(s.service_id));
+            const dur = s.service_duration_minutes || s.default_duration_minutes || 20;
+            return `
+                <label class="svc-check-item${isSelected ? ' is-selected' : ''}" data-sid="${s.service_id}">
+                    <input type="checkbox" class="form-check-input svc-check-input" value="${s.service_id}" ${isSelected ? 'checked' : ''}>
+                    <span class="svc-check-info">
+                        <span class="svc-check-name">${this.escapeHtml(s.service_name)}</span>
+                        <span class="svc-check-meta">₱${parseFloat(s.initial_price).toFixed(0)} · ${dur}m</span>
+                    </span>
+                </label>`;
+        }).join('');
+
+        const durationHint = this.totalDuration > 0
+            ? `<div class="service-duration-hint">${this.totalDuration} min total · ${this.getRequiredTimeslots()} timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}</div>`
+            : '';
+
+        const selectedInputs = this.selectedServices.map(s =>
+            `<input type="hidden" name="selected_service_ids[]" value="${s.service_id}">`
+        ).join('');
+
+        const headerLabel = count > 0
+            ? `${count} service${count > 1 ? 's' : ''} selected`
+            : 'Tap to select services';
+
+        const html = `
+            <div class="svc-collapsed is-active" id="svcCollapsed">
+                <span class="svc-collapsed-label">
+                    <i class="bi bi-plus-circle"></i> ${headerLabel}
+                </span>
+            </div>
+            <div class="svc-expanded" id="svcExpanded">
+                <div class="svc-grid-list">${itemsHtml}</div>
+                ${durationHint}
+            </div>
+            <div id="selectedServiceInputs">${selectedInputs}
+                <input type="hidden" name="total_duration_minutes" value="${this.totalDuration}">
+            </div>`;
+
+        container.innerHTML = html;
+        this.attachPatientGridListeners(containerId);
+    }
+
+    _renderDropdownSelector(container, containerId, selectedIds, count) {
         const itemsHtml = this.services.map(s => {
             const isSelected = selectedIds.has(String(s.service_id));
             const dur = s.service_duration_minutes || s.default_duration_minutes || 20;
@@ -201,14 +258,17 @@ class AppointmentServiceManager {
 
         const html = `
             <div class="service-selector">
-                <div class="service-dropdown-trigger" id="svcDropdownTrigger">
+                <button type="button" class="service-dropdown-trigger" id="svcDropdownTrigger" aria-expanded="false">
                     <span class="trigger-text${count > 0 ? ' has-selection' : ''}">${triggerText}</span>
                     <span class="trigger-chevron">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                     </span>
-                </div>
+                </button>
                 <div class="service-dropdown-panel" id="svcDropdownPanel">
                     ${itemsHtml}
+                    <div class="service-dropdown-footer">
+                        <button type="button" class="btn btn-primary btn-sm w-100" id="svcConfirmBtn">Confirm Selection</button>
+                    </div>
                 </div>
                 <div class="service-selected-tags" id="svcSelectedTags">${tagsHtml}</div>
                 ${durationHint}
@@ -218,10 +278,55 @@ class AppointmentServiceManager {
             </div>`;
 
         container.innerHTML = html;
+        this.attachServiceDropdownListeners(containerId);
+    }
 
-        if (mode === 'patient') {
-            this.attachServiceDropdownListeners(containerId);
+    /**
+     * Attach event listeners to patient checkbox grid
+     */
+    attachPatientGridListeners(containerId) {
+        const container = document.getElementById(containerId);
+        const self = this;
+
+        // Toggle collapsed/expanded
+        const collapsed = container.querySelector('#svcCollapsed');
+        if (collapsed) {
+            collapsed.addEventListener('click', function(e) {
+                // Don't toggle if clicking a checkbox inside
+                if (e.target.closest('.svc-check-item')) return;
+                const expanded = container.querySelector('#svcExpanded');
+                if (expanded) {
+                    expanded.classList.toggle('d-none');
+                    collapsed.classList.toggle('is-active');
+                }
+            });
         }
+
+        // Handle checkbox selection
+        container.addEventListener('click', function(e) {
+            const item = e.target.closest('.svc-check-item');
+            if (!item) return;
+
+            const input = item.querySelector('.svc-check-input');
+            if (!input) return;
+
+            // Let the native checkbox toggle, then sync state
+            setTimeout(function() {
+                const sid = String(input.value);
+                if (input.checked) {
+                    const svc = self.services.find(s => String(s.service_id) === sid);
+                    if (svc && !self.selectedServices.find(s => String(s.service_id) === sid)) {
+                        self.selectedServices.push(svc);
+                    }
+                    item.classList.add('is-selected');
+                } else {
+                    self.selectedServices = self.selectedServices.filter(s => String(s.service_id) !== sid);
+                    item.classList.remove('is-selected');
+                }
+                self.recalcDuration();
+                self.updateDropdownUI(containerId);
+            }, 0);
+        });
     }
 
     /**
@@ -237,29 +342,48 @@ class AppointmentServiceManager {
         // Remove any old listeners first
         if (self._onDocClick) document.removeEventListener('click', self._onDocClick);
 
+        function closePanel() {
+            panel.classList.remove('is-open');
+            trigger.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+
         // Toggle dropdown
         trigger.addEventListener('click', function(e) {
             e.stopPropagation();
             const isOpen = panel.classList.contains('is-open');
             panel.classList.toggle('is-open', !isOpen);
             trigger.classList.toggle('is-open', !isOpen);
+            trigger.setAttribute('aria-expanded', String(!isOpen));
+        });
+
+        trigger.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                trigger.click();
+            }
         });
 
         // Stop all clicks inside the panel from closing it
         panel.addEventListener('click', function(e) {
             e.stopPropagation();
 
+            if (e.target.closest('#svcConfirmBtn')) {
+                closePanel();
+                return;
+            }
+
             const item = e.target.closest('.service-dropdown-item');
             if (!item) return;
 
-            const sid = parseInt(item.dataset.sid);
-            const idx = self.selectedServices.findIndex(s => s.service_id === sid);
+            const sid = String(item.dataset.sid);
+            const idx = self.selectedServices.findIndex(s => String(s.service_id) === sid);
 
             if (idx >= 0) {
                 self.selectedServices.splice(idx, 1);
                 item.classList.remove('is-selected');
             } else {
-                const svc = self.services.find(s => s.service_id === sid);
+                const svc = self.services.find(s => String(s.service_id) === sid);
                 if (svc) {
                     self.selectedServices.push(svc);
                     item.classList.add('is-selected');
@@ -271,10 +395,7 @@ class AppointmentServiceManager {
         });
 
         // Close on outside click
-        self._onDocClick = function() {
-            panel.classList.remove('is-open');
-            trigger.classList.remove('is-open');
-        };
+        self._onDocClick = closePanel;
         document.addEventListener('click', self._onDocClick);
 
         // Remove tag
@@ -283,8 +404,8 @@ class AppointmentServiceManager {
             if (!removeBtn) return;
             e.stopPropagation();
 
-            const sid = parseInt(removeBtn.dataset.remove);
-            self.selectedServices = self.selectedServices.filter(s => s.service_id !== sid);
+            const sid = String(removeBtn.dataset.remove);
+            self.selectedServices = self.selectedServices.filter(s => String(s.service_id) !== sid);
 
             const item = panel.querySelector(`.service-dropdown-item[data-sid="${sid}"]`);
             if (item) item.classList.remove('is-selected');
@@ -309,10 +430,32 @@ class AppointmentServiceManager {
         const container = document.getElementById(containerId);
         if (!container) return;
         const count = this.selectedServices.length;
+
+        // Patient grid mode — update collapsed header
+        const collapsedLabel = container.querySelector('.svc-collapsed-label');
+        if (collapsedLabel) {
+            const headerLabel = count > 0
+                ? `${count} service${count > 1 ? 's' : ''} selected`
+                : 'Tap to select services';
+            collapsedLabel.innerHTML = `<i class="bi bi-plus-circle"></i> ${headerLabel}`;
+        }
+
+        const durationHint = container.querySelector('.service-duration-hint');
+        if (durationHint) {
+            durationHint.innerHTML = this.totalDuration > 0
+                ? `${this.totalDuration} min total · ${this.getRequiredTimeslots()} timeslot${this.getRequiredTimeslots() === 1 ? '' : 's'}`
+                : '';
+        }
+
+        const hiddenInputs = container.querySelector('#selectedServiceInputs');
+        if (hiddenInputs) {
+            const inputs = this.selectedServices.map(s => `<input type="hidden" name="selected_service_ids[]" value="${s.service_id}">`).join('');
+            hiddenInputs.innerHTML = inputs + `<input type="hidden" name="total_duration_minutes" value="${this.totalDuration}">`;
+        }
+
+        // Doctor dropdown mode
         const triggerText = container.querySelector('.trigger-text');
         const tagsContainer = container.querySelector('#svcSelectedTags');
-        const durationHint = container.querySelector('.service-duration-hint');
-        const hiddenInputs = container.querySelector('#selectedServiceInputs');
 
         if (triggerText) {
             triggerText.textContent = count > 0 ? `${count} service${count > 1 ? 's' : ''} selected` : 'Tap to select services';

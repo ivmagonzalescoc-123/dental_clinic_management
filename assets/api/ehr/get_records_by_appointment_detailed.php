@@ -6,7 +6,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['doctor','secretary','admin'])) {
+if (!in_array($role, ['doctor','secretary','admin','patient'])) {
     http_response_code(403);
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
     exit;
@@ -30,6 +30,28 @@ if ($appointment_id <= 0) {
     http_response_code(400);
     echo json_encode(['success'=>false,'message'=>'Missing appointment_id']);
     exit;
+}
+
+if ($role === 'patient') {
+    $sessionPatientId = (int)($_SESSION['patient_id'] ?? 0);
+    if ($sessionPatientId <= 0) {
+        http_response_code(403);
+        echo json_encode(['success'=>false,'message'=>'Forbidden']);
+        exit;
+    }
+
+    $ownStmt = $conn->prepare('SELECT patient_id FROM appointments WHERE appointment_id = ? LIMIT 1');
+    if ($ownStmt) {
+        $ownStmt->bind_param('i', $appointment_id);
+        $ownStmt->execute();
+        $ownRow = $ownStmt->get_result()->fetch_assoc();
+        $ownStmt->close();
+        if (!$ownRow || (int)($ownRow['patient_id'] ?? 0) !== $sessionPatientId) {
+            http_response_code(403);
+            echo json_encode(['success'=>false,'message'=>'Forbidden']);
+            exit;
+        }
+    }
 }
 
 $stmt = $conn->prepare('SELECT * FROM clinical_records WHERE appointment_id = ?');

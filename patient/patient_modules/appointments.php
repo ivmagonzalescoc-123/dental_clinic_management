@@ -114,7 +114,6 @@ if ($patient_id) {
     border-radius: 999px;
 }
 .patient-appt-card .legend-open { background: #16a34a; }
-.patient-appt-card .legend-busy { background: #f59e0b; }
 .patient-appt-card .legend-blocked { background: #dc2626; }
 .patient-appt-card #appointmentCalendar .fc-toolbar-title {
     font-size: 1rem;
@@ -239,6 +238,9 @@ if ($patient_id) {
     padding-left: 14px;
     margin-bottom: 1.35rem;
 }
+.patient-appt-step.is-compact {
+    margin-bottom: 1rem;
+}
 .patient-appt-step-heading {
     display: flex;
     align-items: center;
@@ -267,6 +269,39 @@ if ($patient_id) {
 }
 .patient-appt-step-body .form-label {
     font-weight: 600;
+}
+.patient-symptom-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.6rem;
+}
+.patient-symptom-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dbe7e4;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.patient-symptom-option:hover {
+    border-color: #1173c1;
+    box-shadow: 0 8px 20px rgba(17, 115, 193, 0.08);
+    transform: translateY(-1px);
+}
+.patient-symptom-option input {
+    margin-top: 0.18rem;
+}
+.patient-symptom-label {
+    font-size: 0.92rem;
+    color: #0f172a;
+    line-height: 1.35;
+}
+.patient-appt-note {
+    color: #64748b;
+    font-size: 0.85rem;
 }
 .patient-calendar-placeholder {
     display: flex;
@@ -347,33 +382,53 @@ if ($patient_id) {
                                 <div id="appointmentCalendar" aria-live="polite"></div>
                                 <div class="calendar-legend">
                                     <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
-                                    <span class="legend-item"><span class="legend-dot legend-busy"></span>With bookings</span>
                                     <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-5 order-lg-2 patient-appt-form-col">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Choose Doctor <span class="text-muted fw-normal">(optional)</span></label>
-                            <select class="form-select" id="user_id" name="user_id" aria-label="Choose doctor">
-                                <option value="">Any available doctor</option>
+                        <div class="patient-appt-step is-compact">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">2</span>
+                                <span class="patient-appt-step-title">Choose Doctor</span>
+                            </div>
+                            <div class="patient-appt-step-body">
+                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Select a doctor <span class="text-muted fw-normal">(required)</span></label>
+                            <select class="form-select" id="user_id" name="user_id" aria-label="Choose doctor" required>
+                                <option value="" disabled selected>Select a doctor...</option>
                                 <?php foreach ($doctors_list as $d): ?>
                                     <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <div class="patient-appt-note mt-2">Selecting a doctor lets the clinic show the correct time slots for that provider.</div>
+                            </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Select Services <span class="text-muted fw-normal">(optional)</span></label>
+                        <div class="patient-appt-step is-compact">
+                            <div class="patient-appt-step-heading">
+                                <span class="patient-appt-step-num" aria-hidden="true">3</span>
+                                <span class="patient-appt-step-title">Select Services</span>
+                            </div>
+                            <div class="patient-appt-step-body">
+                            <label class="form-label fw-semibold" style="font-size:0.85rem;">Select services <span class="text-muted fw-normal">(optional)</span></label>
                             <div id="serviceSelector" class="service-selector">
-                                <small class="text-muted">Select a date first to load services.</small>
+                                <div class="svc-collapsed" id="svcCollapsed">
+                                    <span class="svc-collapsed-label">
+                                        <i class="bi bi-plus-circle"></i> Tap to select services
+                                    </span>
+                                </div>
+                                <div class="svc-expanded d-none" id="svcExpanded">
+                                    <div class="text-muted small mb-2">Loading services...</div>
+                                </div>
+                                <div id="selectedServiceInputs"><input type="hidden" name="total_duration_minutes" value="0"></div>
+                            </div>
                             </div>
                         </div>
 
                         <div class="patient-appt-step" id="patientTimeslotWrap">
                             <div class="patient-appt-step-heading">
-                                <span class="patient-appt-step-num" aria-hidden="true">2</span>
+                                <span class="patient-appt-step-num" aria-hidden="true">4</span>
                                 <span class="patient-appt-step-title">Choose Time Slot</span>
                             </div>
                             <div class="patient-appt-step-body">
@@ -386,11 +441,40 @@ if ($patient_id) {
 
                         <div class="patient-appt-step">
                             <div class="patient-appt-step-heading">
-                                <span class="patient-appt-step-num" aria-hidden="true">3</span>
-                                <span class="patient-appt-step-title">Reason for Appointment</span>
+                                <span class="patient-appt-step-num" aria-hidden="true">5</span>
+                                <span class="patient-appt-step-title">Symptoms & Additional Details</span>
                             </div>
                             <div class="patient-appt-step-body">
-                                <textarea class="form-control" id="reason" name="reason" rows="3" placeholder="Describe the reason" required></textarea>
+                                <label class="form-label fw-semibold" style="font-size:0.85rem;">Select symptoms <span class="text-muted fw-normal">(optional)</span></label>
+                                <div class="patient-symptom-grid mb-3" id="patientSymptomGrid">
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Toothache">
+                                        <span class="patient-symptom-label">Toothache</span>
+                                    </label>
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Sensitive teeth">
+                                        <span class="patient-symptom-label">Sensitive teeth</span>
+                                    </label>
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Bleeding gums">
+                                        <span class="patient-symptom-label">Bleeding gums</span>
+                                    </label>
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Swollen gums">
+                                        <span class="patient-symptom-label">Swollen gums</span>
+                                    </label>
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Broken or chipped tooth">
+                                        <span class="patient-symptom-label">Broken / chipped tooth</span>
+                                    </label>
+                                    <label class="patient-symptom-option">
+                                        <input type="checkbox" class="form-check-input patient-symptom-check" value="Routine checkup">
+                                        <span class="patient-symptom-label">Routine checkup</span>
+                                    </label>
+                                </div>
+                                <textarea class="form-control mb-2" id="notes" name="notes" rows="3" placeholder="Add any extra details the clinic should know..."></textarea>
+                                <input type="hidden" id="reason" name="reason" value="">
+                                <div class="patient-appt-note">Your selected symptoms will be combined into the appointment reason for the clinic.</div>
                             </div>
                         </div>
 
@@ -829,7 +913,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function isDateSelectable(dateStr) {
-        if (!dateStr || dateStr < todayIso) {
+        const hasDoctor = doctorSelect && String(doctorSelect.value || '').trim() !== '';
+        if (!hasDoctor || !dateStr || dateStr < todayIso) {
             return false;
         }
         const dateObj = new Date(dateStr + 'T00:00:00');
@@ -841,6 +926,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getBlockedReason(dateStr) {
+        if (!doctorSelect || String(doctorSelect.value || '').trim() === '') {
+            return 'Please choose a doctor first.';
+        }
         const item = availabilityByDate[dateStr];
         if (!item) {
             return 'No schedule available for this date.';
@@ -872,7 +960,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const badge = document.createElement('span');
         badge.className = 'appt-day-badge';
 
-        if (dateStr < todayIso) {
+        if (!doctorSelect || String(doctorSelect.value || '').trim() === '') {
+            arg.el.classList.add('appt-day-disabled');
+            badge.classList.add('state-closed');
+            badge.textContent = 'Select doctor';
+        } else if (dateStr < todayIso) {
             arg.el.classList.add('appt-day-disabled');
             badge.classList.add('state-closed');
             badge.textContent = 'Past';
@@ -881,15 +973,9 @@ document.addEventListener('DOMContentLoaded', function() {
             badge.classList.add('state-closed');
             badge.textContent = 'Closed';
         } else if (item && item.available) {
-            if ((item.count || 0) > 0) {
-                arg.el.classList.add('appt-day-busy');
-                badge.classList.add('state-busy');
-                badge.textContent = item.count + ' booked';
-            } else {
-                arg.el.classList.add('appt-day-open');
-                badge.classList.add('state-open');
-                badge.textContent = 'Open';
-            }
+            arg.el.classList.add('appt-day-open');
+            badge.classList.add('state-open');
+            badge.textContent = 'Available';
         } else if (item && !item.available) {
             // Data loaded but date is not available
             arg.el.classList.add('appt-day-closed');
@@ -986,10 +1072,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function loadDates() {
-        clearSelectedDate();
         const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
 
         setCalendarPanelVisible(true);
+
+        if (!doctorId) {
+            availabilityByDate = {};
+            calendarDataLoaded = false;
+            clearSelectedDate();
+            refreshDayCells();
+            if (timeslotHint) {
+                timeslotHint.textContent = 'Choose a doctor first to see available time slots.';
+            }
+            return;
+        }
+
+        clearSelectedDate();
 
         try {
             let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(String(DAYS_AHEAD));
@@ -1039,9 +1137,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedDuration = Number(window.patientSelectedServiceDuration || 0);
         if (!timeslotWrap || !timeslotSelect) return;
 
+        if (!doctorId) {
+            resetTimeslots();
+            if (timeslotHint) {
+                timeslotHint.textContent = 'Choose a doctor first to see available time slots.';
+            }
+            return;
+        }
+
         timeslotSelect.innerHTML = '<option value="">-- Select a time slot --</option>';
         if (!apptDate) {
             resetTimeslots();
+            if (timeslotHint) {
+                timeslotHint.textContent = 'Select a date to see available time slots.';
+            }
             return;
         }
 
@@ -1267,11 +1376,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const form = document.getElementById('createApptForm');
+    const symptomChecks = Array.from(document.querySelectorAll('.patient-symptom-check'));
+    const notesField = document.getElementById('notes');
+    const reasonField = document.getElementById('reason');
+
+    function syncReasonField() {
+        if (!reasonField) return;
+        const symptoms = symptomChecks
+            .filter(function(input) { return input.checked; })
+            .map(function(input) { return String(input.value || '').trim(); })
+            .filter(Boolean);
+        const noteText = notesField ? String(notesField.value || '').trim() : '';
+        let reasonText = symptoms.join(', ');
+        if (!reasonText) {
+            reasonText = noteText || 'General consultation';
+        }
+        reasonField.value = reasonText;
+    }
+
+    symptomChecks.forEach(function(input) {
+        input.addEventListener('change', syncReasonField);
+    });
+    if (notesField) {
+        notesField.addEventListener('input', syncReasonField);
+    }
+    syncReasonField();
+
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
 
             const doctorId = doctorSelect ? String(doctorSelect.value || '').trim() : '';
+            if (!doctorId) {
+                showAlert('Please choose a doctor before requesting an appointment.', 'warning');
+                return;
+            }
             const selectedDate = dateSelect ? String(dateSelect.value || '').trim() : '';
             if (!selectedDate) {
                 showAlert('Please select an available date on the calendar.', 'warning');
@@ -1290,7 +1429,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedSlot = timeslotSelect && timeslotSelect.selectedOptions.length > 0
                 ? String(timeslotSelect.selectedOptions[0].textContent || '').trim()
                 : 'TBD';
-            const selectedReason = document.getElementById('reason') ? String(document.getElementById('reason').value || '').trim() : '';
+            syncReasonField();
+            const selectedReason = reasonField ? String(reasonField.value || '').trim() : '';
 
             const submitBtn = document.getElementById('submitApptBtn');
             if (submitBtn) {
@@ -1322,12 +1462,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     showBookingToast(resp.message || 'Appointment created successfully.', 'success');
 
                     form.reset();
+                    syncReasonField();
                     clearSelectedDate();
                     setCalendarPanelVisible(false);
                     destroyCalendar();
-                    const serviceSelectorEl = document.getElementById('serviceSelector');
-                    if (serviceSelectorEl) {
-                        serviceSelectorEl.innerHTML = '<small class="text-muted">Please select a doctor first</small>';
+                    // Reset service selector to initial state
+                    const svcEl = document.getElementById('serviceSelector');
+                    if (svcEl) svcEl.innerHTML = '';
+                    if (typeof initPatientServiceSelectorIfPresent === 'function') {
+                        initPatientServiceSelectorIfPresent();
                     }
                 } else {
                     const failType = resp.warning ? 'warning' : 'danger';

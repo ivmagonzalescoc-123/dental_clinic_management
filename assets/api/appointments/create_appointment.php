@@ -109,6 +109,11 @@ try {
     // ── Doctor resolution ────────────────────────────────────────────────
     // If no doctor specified, resolve from the selected timeslot.
     $doctorAutoAssigned = false;
+    if ($isPatientRequester && $user_id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Please select a doctor before requesting your appointment.']);
+        exit;
+    }
+
     if ($user_id <= 0) {
         $tsLookup = $conn->prepare("SELECT doctor_id FROM timeslot WHERE timeslot_id = ? LIMIT 1");
         $tsLookup->bind_param('i', $timeslot_id);

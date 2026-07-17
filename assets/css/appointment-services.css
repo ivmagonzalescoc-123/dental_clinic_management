@@ -76,6 +76,14 @@
     display: block;
 }
 
+.service-dropdown-footer {
+    position: sticky;
+    bottom: 0;
+    padding: 8px;
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+}
+
 .service-dropdown-item {
     display: flex;
     align-items: center;
@@ -191,6 +199,104 @@
 
 .service-duration-hint {
     margin-top: 6px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+/* ========================================
+   Patient Service Selector (collapsible)
+   ======================================== */
+
+.svc-collapsed {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border: 1px solid #dbe7e4;
+    border-radius: 10px;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.svc-collapsed:hover {
+    border-color: #1173c1;
+    background: #f0f7ff;
+}
+
+.svc-collapsed.is-active {
+    border-color: #1173c1;
+    background: #f0f7ff;
+    box-shadow: 0 0 0 2px rgba(17, 115, 193, 0.12);
+}
+
+.svc-collapsed-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.svc-collapsed.is-active .svc-collapsed-label {
+    color: #1173c1;
+}
+
+.svc-expanded {
+    margin-top: 8px;
+}
+
+.svc-grid-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.6rem;
+}
+
+.svc-check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #dbe7e4;
+    border-radius: 12px;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+    margin: 0;
+}
+
+.svc-check-item:hover {
+    border-color: #1173c1;
+    box-shadow: 0 8px 20px rgba(17, 115, 193, 0.08);
+    transform: translateY(-1px);
+}
+
+.svc-check-item.is-selected {
+    border-color: #1173c1;
+    background: #f0f7ff;
+    box-shadow: 0 0 0 2px rgba(17, 115, 193, 0.15);
+}
+
+.svc-check-input {
+    margin-top: 0.18rem;
+}
+
+.svc-check-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.svc-check-name {
+    font-size: 0.92rem;
+    color: #0f172a;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
+.svc-check-meta {
     font-size: 0.78rem;
     color: #94a3b8;
 }

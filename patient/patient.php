@@ -64,7 +64,7 @@ switch ($role_key) {
     <link href="../assets/css/main.css?v=20260715-header1" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260614-short" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260614-section-nav1" rel="stylesheet">
-    <link href="../assets/css/appointment-services.css" rel="stylesheet">
+    <link href="../assets/css/appointment-services.css?v=20260717-1" rel="stylesheet">
     <link href="../assets/css/patient-mobile.css?v=20260614-section-nav1" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260715-header1" rel="stylesheet">
 </head>
@@ -144,6 +144,12 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="patient.php?page=clinic_records" data-tooltip="Clinic Records" title="Clinic Records">
+                    <i class="bi bi-journal-medical"></i>
+                    <span>Clinic Records</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="patient.php?page=transactions" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-cart"></i>
                     <span>Billing</span>
@@ -177,6 +183,9 @@ switch ($role_key) {
                                     break;
                                 case "services":
                                     include "patient_modules/services.php";
+                                    break;
+                                case "clinic_records":
+                                    include "patient_modules/clinic_records.php";
                                     break;
                                 case "transactions":
                                     include "patient_modules/transactions.php";
@@ -224,6 +233,10 @@ switch ($role_key) {
             <i class="bi bi-receipt" aria-hidden="true"></i>
             <span>Services</span>
         </a>
+        <a class="patient-mobile-nav-item" href="patient.php?page=clinic_records" data-page="clinic_records">
+            <i class="bi bi-journal-medical" aria-hidden="true"></i>
+            <span>Records</span>
+        </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=transactions" data-page="transactions">
             <i class="bi bi-cart" aria-hidden="true"></i>
             <span>Billing</span>
@@ -255,8 +268,10 @@ switch ($role_key) {
     <script src="../assets/js/main.js?v=20260715-header2"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>
-    <script src="../assets/js/appointment-service-manager.js?v=20260525-1"></script>
-    <script src="../assets/js/patient-appointments-services.js?v=20260525-1"></script>
+    <script src="../assets/js/appointment-service-manager.js?v=20260717-1"></script>
+    <script src="../assets/js/patient-appointments-services.js?v=20260717-1"></script>
+    <script src="../assets/js/media-gallery.js?v=20260717-1"></script>
+    <script src="../assets/js/profiling-display.js?v=20260717-1"></script>
 
     <!-- Active Navigation Highlight -->
     <script>
@@ -296,6 +311,7 @@ switch ($role_key) {
                     dashboard: ['home', 'overview', 'summary'],
                     appointments: ['booking', 'schedule', 'calendar'],
                     services: ['procedures', 'pricing', 'clinic services'],
+                    clinic_records: ['medical record', 'history', 'completed appointments'],
                     transactions: ['billing', 'payments', 'history'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']
