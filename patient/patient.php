@@ -351,7 +351,13 @@ switch ($role_key) {
                         '.search-suggest-title{font-size:14px;color:#153b66;font-weight:600;}' +
                         '.search-suggest-meta{font-size:12px;color:#6b7f95;}' +
                         '.search-suggest-empty{padding:10px 12px;font-size:13px;color:#71839a;}' +
-                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}';
+                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}' +
+                        '[data-theme="dark"] .search-suggest-menu{background:#16223a;border-color:#2f3d52;box-shadow:0 10px 24px rgba(0,0,0,.4);}' +
+                        '[data-theme="dark"] .search-suggest-item:hover,[data-theme="dark"] .search-suggest-item.active{background:rgba(45,212,191,.12);}' +
+                        '[data-theme="dark"] .search-suggest-title{color:#e2e8f0;}' +
+                        '[data-theme="dark"] .search-suggest-meta{color:#94a3b8;}' +
+                        '[data-theme="dark"] .search-suggest-empty{color:#94a3b8;}' +
+                        '[data-theme="dark"] .search-suggest-item mark{background:#3d3419;color:#fde68a;}';
                     document.head.appendChild(style);
                 }
 
