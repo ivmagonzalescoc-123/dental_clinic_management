@@ -99,7 +99,6 @@ CREATE TABLE `patient_profiling` (
   `has_heart_disease` tinyint(1) DEFAULT 0,
   `is_hiv_positive` tinyint(1) DEFAULT 0,
   `bleeding_disorder` varchar(255) DEFAULT NULL,
-  `asa_classification` varchar(50) DEFAULT NULL,
   `pregnancy_status` varchar(100) DEFAULT NULL,
   `previous_dental_treatment` text DEFAULT NULL,
   `dental_anxiety` varchar(100) DEFAULT NULL,
@@ -359,7 +358,8 @@ CREATE TABLE `tooth_status` (
   `tooth_selected` int(11) NOT NULL,
   `status_type_id` int(11) DEFAULT NULL,
   `tooth_surface` varchar(50) DEFAULT NULL,
-  `status` enum('healthy','decayed','filled','missing','crowned','root_canal','restored','unknown') DEFAULT 'unknown'
+  `status` enum('healthy','decayed','filled','missing','crowned','root_canal','restored','unknown') DEFAULT 'unknown',
+  `notes` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `clinical_records` (

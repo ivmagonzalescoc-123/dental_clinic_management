@@ -36,7 +36,7 @@ try {
     $phone      = trim($_POST['phone_number'] ?? '');
     $dob        = trim($_POST['date_of_birth'] ?? '');
     $prefDate   = trim($_POST['preferred_date'] ?? '');
-    $prefTime   = trim($_POST['preferred_time'] ?? 'morning');
+    $prefTime   = trim($_POST['preferred_time'] ?? '8:00 AM');
     $reason     = trim($_POST['reason'] ?? '');
 
     // Validation
@@ -49,9 +49,27 @@ try {
     if ($prefDate === '') {
         throw new Exception('Preferred date is required.');
     }
-    if (!in_array($prefTime, ['morning', 'afternoon'], true)) {
-        $prefTime = 'morning';
+    // Validate exact time (matches the frontend picker: H:MM AM/PM, 8:00 AM - 4:30 PM)
+    if (!preg_match('/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i', $prefTime, $timeMatch)) {
+        throw new Exception('Please select a valid preferred time.');
     }
+    $prefHour = (int)$timeMatch[1];
+    $prefMinute = (int)$timeMatch[2];
+    $prefMeridiem = strtoupper($timeMatch[3]);
+    if ($prefHour < 1 || $prefHour > 12) {
+        throw new Exception('Please select a valid preferred time.');
+    }
+    $prefHour24 = $prefHour % 12;
+    if ($prefMeridiem === 'PM') $prefHour24 += 12;
+    $prefMinutesOfDay = $prefHour24 * 60 + $prefMinute;
+    if ($prefMinutesOfDay < 480) {
+        throw new Exception('Earliest preferred time is 8:00 AM.');
+    }
+    if ($prefMinutesOfDay > 990) {
+        throw new Exception('Latest preferred time is 4:30 PM.');
+    }
+    // Normalize to a consistent "H:MM AM/PM" format for storage/display
+    $prefTime = $prefHour . ':' . str_pad((string)$prefMinute, 2, '0', STR_PAD_LEFT) . ' ' . $prefMeridiem;
 
     // Validate date format and range
     $dt = DateTime::createFromFormat('Y-m-d', $prefDate);

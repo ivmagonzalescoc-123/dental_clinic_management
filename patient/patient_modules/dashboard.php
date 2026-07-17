@@ -180,6 +180,45 @@ if ($patientId > 0) {
                 </div>
             </div>
         </div>
+
+        <?php if ($nextAppt): ?>
+        <div class="col-12">
+            <div class="card dental-surface-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-1">Next Appointment Progress</h5>
+                    <div class="text-muted small mb-3">
+                        <?php echo date('l, M d, Y', strtotime($nextAppt['appointment_date'])); ?>
+                        <?php $nextTimeLabel = dashboard_format_time($nextAppt['start_time'] ?? null); ?>
+                        <?php if ($nextTimeLabel !== ''): ?> &bull; <?php echo htmlspecialchars($nextTimeLabel); ?><?php endif; ?>
+                    </div>
+                    <?php
+                        $nextStatus = (string)($nextAppt['status'] ?? 'scheduled');
+                        $apptStep2 = in_array($nextStatus, ['confirmed', 'arrived', 'checked_in', 'in_progress', 'awaiting_secretary_records', 'records_complete', 'completed'], true);
+                        $apptStep3 = in_array($nextStatus, ['arrived', 'checked_in', 'in_progress', 'awaiting_secretary_records', 'records_complete', 'completed'], true);
+                        $apptSteps = [
+                            ['label' => 'Booked', 'active' => true],
+                            ['label' => 'Confirmed', 'active' => $apptStep2],
+                            ['label' => 'Arrived / Processing', 'active' => $apptStep3],
+                        ];
+                    ?>
+                    <div class="d-flex align-items-center" style="max-width:520px;">
+                        <?php foreach ($apptSteps as $i => $step): ?>
+                            <div class="d-flex flex-column align-items-center" style="flex:0 0 auto;">
+                                <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;
+                                    <?php echo $step['active'] ? 'background:#16a34a;color:#fff;border:2px solid #16a34a;' : 'background:#f1f5f9;color:#94a3b8;border:2px dashed #cbd5e1;'; ?>">
+                                    <?php if ($step['active']): ?><i class="bi bi-check-lg"></i><?php else: ?><?php echo $i + 1; ?><?php endif; ?>
+                                </div>
+                                <div class="small mt-1 text-center" style="max-width:90px;<?php echo $step['active'] ? 'color:#16a34a;font-weight:600;' : 'color:#94a3b8;'; ?>"><?php echo htmlspecialchars($step['label']); ?></div>
+                            </div>
+                            <?php if ($i < count($apptSteps) - 1): ?>
+                                <div style="flex:1 1 auto;height:3px;margin:0 6px;margin-bottom:20px;<?php echo $apptSteps[$i + 1]['active'] ? 'background:#16a34a;' : 'background:#e2e8f0;'; ?>"></div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

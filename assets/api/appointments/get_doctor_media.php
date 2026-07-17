@@ -35,7 +35,7 @@ if (!$appointmentId) {
 billing_ensure_tables($conn);
 
 try {
-    $stmt = $conn->prepare('SELECT a.appointment_id, a.status, p.patient_id, p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.email FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?');
+    $stmt = $conn->prepare('SELECT a.appointment_id, a.status, p.patient_id, p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.email, u.first_name AS doctor_first_name, u.last_name AS doctor_last_name FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id LEFT JOIN users u ON u.user_id = a.user_id WHERE a.appointment_id = ?');
     if (!$stmt) throw new Exception('Failed to load appointment: ' . $conn->error);
     $stmt->bind_param('i', $appointmentId);
     $stmt->execute();
@@ -82,7 +82,7 @@ try {
             $followUpDate = $crRow['follow_up_date'] ?? null;
             $summary = (string)($crRow['summary'] ?? '');
 
-            $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status_type_id, ts.tooth_surface, ts.status, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
+            $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status_type_id, ts.tooth_surface, ts.status, ts.notes, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
             $toothStmt->bind_param('i', $recId);
             $toothStmt->execute();
             $toothRes = $toothStmt->get_result();
@@ -95,9 +95,13 @@ try {
                     $toothNum = (int)$trow['tooth_selected'];
                     $code = (string)($trow['code'] ?? '');
                     $surface = (string)($trow['tooth_surface'] ?? 'O');
+                    $noteText = trim((string)($trow['notes'] ?? ''));
                     if ($toothNum <= 0) continue;
                     if (!isset($odontogramFormatted[$toothNum])) {
                         $odontogramFormatted[$toothNum] = ['comment' => '', 'surfaces' => []];
+                    }
+                    if ($noteText !== '' && $odontogramFormatted[$toothNum]['comment'] === '') {
+                        $odontogramFormatted[$toothNum]['comment'] = $noteText;
                     }
                     if ($surface !== '' && $code !== '') {
                         if (!isset($odontogramFormatted[$toothNum]['surfaces'][$surface])) {
@@ -199,6 +203,7 @@ try {
             'date_of_birth' => $appointment['date_of_birth'],
             'phone_number' => $appointment['phone_number'],
             'email' => $appointment['email'],
+            'doctor_name' => trim(($appointment['doctor_first_name'] ?? '') . ' ' . ($appointment['doctor_last_name'] ?? '')),
         ],
         'photos' => $photos,
         'notes' => $notes,

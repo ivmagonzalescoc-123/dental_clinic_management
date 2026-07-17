@@ -18,7 +18,7 @@ $pat = $res ? $res->fetch_assoc() : null;
 $stmt->close();
 if (!$pat) { echo json_encode(['success'=>false,'message'=>'Not found']); exit; }
 
-$pfStmt = $conn->prepare('SELECT race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+$pfStmt = $conn->prepare('SELECT race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
 if ($pfStmt) {
     $pfStmt->bind_param('i', $patient_id);
     $pfStmt->execute();

@@ -121,6 +121,7 @@ $csrf_token = security_generate_csrf_token();
                                 <label class="form-label fw-semibold small">Prescriptions</label>
                                 <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary mt-1 py-0" id="addPrescriptionBtn" style="font-size: 0.78rem;"><i class="bi bi-plus"></i> Add</button>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-1 py-0" id="printPrescriptionsBtn" style="font-size: 0.78rem;" disabled><i class="bi bi-printer"></i> Print</button>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold small">Follow-up</label>
@@ -197,10 +198,7 @@ $csrf_token = security_generate_csrf_token();
                                         <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th><th style="width:40px;"></th></tr></thead>
                                         <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="3" class="text-muted small">No services added.</td></tr></tbody>
                                     </table>
-                                </div>
-                                <div class="d-flex gap-1 mb-3">
-                                    <select id="addServiceSelect" class="form-select form-select-sm" style="max-width:220px; font-size:0.82rem;"><option value="">Add service...</option></select>
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0" id="addBillingServiceBtn" style="font-size:0.78rem;"><i class="bi bi-plus"></i></button>
+                                    <small class="text-muted">Services are set by the doctor during charting and can't be added here.</small>
                                 </div>
 
                                 <h6 class="small fw-bold mb-2">Additional Charges</h6>
@@ -231,6 +229,37 @@ $csrf_token = security_generate_csrf_token();
 
                                 <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
                                 <div id="installmentOptions" style="display:none;"><input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Monthly terms" style="max-width:140px; font-size:0.82rem;"></div>
+
+                                <hr class="my-2">
+                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="recordPaymentNow"><label class="form-check-label small fw-bold" for="recordPaymentNow">Record a payment now</label></div>
+                                <div id="paymentFields" style="display:none;">
+                                    <div class="mb-2">
+                                        <label class="form-label small mb-1">Amount Tendered</label>
+                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="paymentAmountTendered" placeholder="0.00" style="font-size:0.82rem;">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small mb-1">Payment Method</label>
+                                        <select class="form-select form-select-sm" id="paymentMethod" style="font-size:0.82rem;">
+                                            <option value="cash">Cash</option>
+                                            <option value="gcash">GCash</option>
+                                            <option value="card">Card</option>
+                                            <option value="bank">Bank Transfer</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small mb-1">OR Number <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="paymentOrNumber" maxlength="50" placeholder="Official receipt number" style="font-size:0.82rem;">
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small mb-1">Notes</label>
+                                        <input type="text" class="form-control form-control-sm" id="paymentNotes" placeholder="Optional" style="font-size:0.82rem;">
+                                    </div>
+                                    <div class="p-2 bg-light border rounded small">
+                                        <div class="d-flex justify-content-between"><span>Amount Applied</span><span id="paymentAmountAppliedDisplay">₱0.00</span></div>
+                                        <div class="d-flex justify-content-between"><span>Change</span><span id="paymentChangeDisplay">₱0.00</span></div>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">A partial payment must be at least 50% of the Total Due, or leave this unchecked to bill later.</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -327,6 +356,9 @@ $csrf_token = security_generate_csrf_token();
 <script>
 window.currentRecordAppointmentId = null;
 window.currentRecordPatientId = null;
+window.currentRecordPatientName = '';
+window.currentRecordDoctorName = '';
+window.currentRecordPatientDob = '';
 window.secretaryOdontogramData = {};
 window.SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
 window.BILLING_SENIOR_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_senior_discount_percent()); ?>;
@@ -354,12 +386,111 @@ function addPrescriptionRow(rx = {}) {
         <div class="col-md-2"><input type="text" class="form-control form-control-sm rx-brand" value="${rx.medicine_brand || ''}" placeholder="Brand"></div>
         <div class="col-md-2"><input type="text" class="form-control form-control-sm rx-duration" value="${rx.duration || ''}" placeholder="Duration"></div>
         <div class="col-md-2"><input type="text" class="form-control form-control-sm rx-notes" value="${rx.notes || ''}" placeholder="Notes"></div>
-        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.prescription-row').remove()"><i class="bi bi-trash"></i></button></div>
+        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.prescription-row').remove(); updatePrintPrescriptionsBtnState();"><i class="bi bi-trash"></i></button></div>
     `;
     body.appendChild(wrap);
+    updatePrintPrescriptionsBtnState();
 }
 
 document.getElementById('addPrescriptionBtn')?.addEventListener('click', () => addPrescriptionRow());
+
+function collectPrescriptionRows() {
+    const rows = [];
+    document.querySelectorAll('#prescriptionsBody .prescription-row').forEach(row => {
+        const med = row.querySelector('.rx-med')?.value?.trim() || '';
+        if (!med) return;
+        rows.push({
+            medicine_name: med,
+            dosage: row.querySelector('.rx-dosage')?.value || '',
+            medicine_brand: row.querySelector('.rx-brand')?.value || '',
+            duration: row.querySelector('.rx-duration')?.value || '',
+            notes: row.querySelector('.rx-notes')?.value || ''
+        });
+    });
+    return rows;
+}
+
+function updatePrintPrescriptionsBtnState() {
+    const btn = document.getElementById('printPrescriptionsBtn');
+    if (!btn) return;
+    btn.disabled = collectPrescriptionRows().length === 0;
+}
+
+document.getElementById('prescriptionsBody')?.addEventListener('input', function(ev) {
+    if (ev.target?.classList?.contains('rx-med')) {
+        updatePrintPrescriptionsBtnState();
+    }
+});
+
+function calculatePatientAge(dob) {
+    if (!dob) return '';
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return '';
+    const diff = new Date(Date.now() - d.getTime());
+    return Math.abs(diff.getUTCFullYear() - 1970);
+}
+
+function printPrescriptions() {
+    const rows = collectPrescriptionRows();
+    if (!rows.length) {
+        notifySecretary('Add at least one prescription before printing.', 'warning');
+        return;
+    }
+    const esc = escapeBillingHtml;
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const age = calculatePatientAge(currentRecordPatientDob);
+
+    let rxRowsHtml = '';
+    rows.forEach((rx, i) => {
+        rxRowsHtml += `
+            <div style="margin-bottom:10px;">
+                <div style="font-weight:700;">${i + 1}. ${esc(rx.medicine_name)}${rx.medicine_brand ? ' (' + esc(rx.medicine_brand) + ')' : ''}</div>
+                <div style="margin-left:14px;font-size:0.85em;color:#333;">
+                    ${rx.dosage ? esc(rx.dosage) : ''}${rx.dosage && rx.duration ? ' &mdash; ' : ''}${rx.duration ? esc(rx.duration) : ''}
+                    ${rx.notes ? '<div>' + esc(rx.notes) + '</div>' : ''}
+                </div>
+            </div>`;
+    });
+
+    const html = `
+        <div style="text-align:center;border-bottom:2px solid #16a34a;padding-bottom:8px;margin-bottom:12px;">
+            <img src="../assets/img/clinic-logo.png" style="height:48px;" onerror="this.style.display='none'">
+            <div style="font-size:1.15em;font-weight:700;margin-top:4px;">Azucena's Dental Clinic</div>
+            <div style="font-size:0.75em;color:#555;">Metz Arcade, Cagayan de Oro City, Philippines</div>
+            <div style="font-size:0.75em;color:#555;">Tel: (088) 123 4567</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.85em;margin-bottom:12px;">
+            <div><strong>Patient:</strong> ${esc(currentRecordPatientName || '')}${age !== '' ? ' (' + age + ' y/o)' : ''}</div>
+            <div><strong>Date:</strong> ${esc(today)}</div>
+        </div>
+        <div style="font-size:2em;font-weight:700;margin-bottom:8px;">&#8478;</div>
+        ${rxRowsHtml}
+        <div style="margin-top:40px;font-size:0.85em;">
+            <div>Prescribed by: Dr. ${esc(currentRecordDoctorName || '_________________________')}</div>
+            <div style="margin-top:6px;">PRC/PTR No.: ___________________________</div>
+            <div style="margin-top:26px;border-top:1px solid #333;width:220px;text-align:center;padding-top:2px;">Signature</div>
+        </div>
+    `;
+
+    const win = window.open('', '', 'height=700,width=500');
+    win.document.write(`
+        <html>
+        <head>
+            <title>Prescription</title>
+            <style>
+                @page { size: 5.5in 8.5in; margin: 0.4in; }
+                body { width: 5.5in; font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0.2in; }
+            </style>
+        </head>
+        <body>${html}</body>
+        </html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => { win.print(); }, 200);
+}
+
+document.getElementById('printPrescriptionsBtn')?.addEventListener('click', printPrescriptions);
 
 function postOdontogramToSecretaryFrame(data) {
     const frame = document.getElementById('odontogramFrame');
@@ -452,7 +583,6 @@ function resolveMediaUrl(filePath) {
     return base + '/' + path;
 }
 
-window.recordBillingCatalog = [];
 window.recordBillingServiceIds = new Set();
 
 async function openSecretaryRecordModal(appointmentId, patientId) {
@@ -485,9 +615,11 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         }
 
         // Populate patient header
+        currentRecordPatientName = String(data.appointment?.patient_name || '').trim();
+        currentRecordDoctorName = String(data.appointment?.doctor_name || '').trim();
+        currentRecordPatientDob = data.appointment?.date_of_birth || '';
         if (patientNameEl) {
-            const patientName = String(data.appointment?.patient_name || '').trim();
-            patientNameEl.textContent = patientName || 'Create Clinical Record';
+            patientNameEl.textContent = currentRecordPatientName || 'Create Clinical Record';
         }
 
         if (patientData && patientData.success && patientData.patient) {
@@ -539,9 +671,6 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
             data.prescriptions.forEach(rx => addPrescriptionRow(rx));
         }
 
-        recordBillingCatalog = data.available_services || [];
-        populateAddServiceSelect();
-
         const servicesBody = document.getElementById('billingServicesBody');
         servicesBody.innerHTML = '';
         recordBillingServiceIds.clear();
@@ -565,6 +694,12 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         document.getElementById('useInstallment').checked = false;
         document.getElementById('installmentOptions').style.display = 'none';
         document.getElementById('installmentTerms').value = '6';
+        document.getElementById('recordPaymentNow').checked = false;
+        document.getElementById('paymentFields').style.display = 'none';
+        document.getElementById('paymentAmountTendered').value = '';
+        document.getElementById('paymentMethod').value = 'cash';
+        document.getElementById('paymentOrNumber').value = '';
+        document.getElementById('paymentNotes').value = '';
         resetBillingDiscountFields();
         updateBillingTotals();
 
@@ -669,7 +804,36 @@ function updateBillingTotals() {
             discountRow.style.display = 'none';
         }
     }
+    updatePaymentCalculation();
 }
+
+function getBillingTotalDue() {
+    const subtotal = getBillingSubtotal();
+    const discount = getSelectedBillingDiscount();
+    const discountAmount = (discount.type === 'none' || discount.percent <= 0)
+        ? 0
+        : Math.round(subtotal * (discount.percent / 100) * 100) / 100;
+    return Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
+}
+
+function updatePaymentCalculation() {
+    const tendered = parseFloat(document.getElementById('paymentAmountTendered')?.value || '0') || 0;
+    const totalDue = getBillingTotalDue();
+    const amountApplied = Math.min(tendered, totalDue);
+    const change = Math.max(0, tendered - amountApplied);
+
+    const appliedEl = document.getElementById('paymentAmountAppliedDisplay');
+    const changeEl = document.getElementById('paymentChangeDisplay');
+    if (appliedEl) appliedEl.textContent = '₱' + formatBillingAmount(amountApplied);
+    if (changeEl) changeEl.textContent = '₱' + formatBillingAmount(change);
+}
+
+document.getElementById('recordPaymentNow')?.addEventListener('change', function() {
+    const fields = document.getElementById('paymentFields');
+    if (fields) fields.style.display = this.checked ? 'block' : 'none';
+    updatePaymentCalculation();
+});
+document.getElementById('paymentAmountTendered')?.addEventListener('input', updatePaymentCalculation);
 
 function resetBillingDiscountFields() {
     const none = document.getElementById('discountNone');
@@ -700,22 +864,6 @@ document.getElementById('billingChargesBody')?.addEventListener('click', functio
         updateBillingTotals();
     }
 });
-
-function populateAddServiceSelect() {
-    const select = document.getElementById('addServiceSelect');
-    if (!select) return;
-    select.innerHTML = '<option value="">Add service from price list...</option>';
-    recordBillingCatalog.forEach(svc => {
-        const sid = parseInt(svc.service_id, 10);
-        if (!sid || recordBillingServiceIds.has(sid)) return;
-        const opt = document.createElement('option');
-        opt.value = String(sid);
-        opt.textContent = svc.description + ' — ₱' + formatBillingAmount(svc.amount);
-        opt.dataset.description = svc.description;
-        opt.dataset.amount = svc.amount;
-        select.appendChild(opt);
-    });
-}
 
 function updateBillingServicesEmptyRow() {
     const tbody = document.getElementById('billingServicesBody');
@@ -759,13 +907,11 @@ function addBillingServiceRow(serviceId, desc, amount) {
         recordBillingServiceIds.delete(sid);
         tr.remove();
         updateBillingServicesEmptyRow();
-        populateAddServiceSelect();
         updateBillingTotals();
     });
     tbody.appendChild(tr);
     recordBillingServiceIds.add(sid);
     updateBillingServicesEmptyRow();
-    populateAddServiceSelect();
     updateBillingTotals();
 }
 
@@ -784,17 +930,6 @@ function addBillingChargeRow(desc = '', amount = '') {
     tbody.appendChild(tr);
     updateBillingTotals();
 }
-
-document.getElementById('addBillingServiceBtn')?.addEventListener('click', () => {
-    const select = document.getElementById('addServiceSelect');
-    if (!select || !select.value) {
-        notifySecretary('Select a service from the price list first.', 'warning');
-        return;
-    }
-    const opt = select.options[select.selectedIndex];
-    addBillingServiceRow(select.value, opt.dataset.description || opt.textContent, opt.dataset.amount || 0);
-    select.value = '';
-});
 
 document.getElementById('addBillingChargeBtn')?.addEventListener('click', () => {
     addBillingChargeRow();
@@ -866,18 +1001,32 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             }
         });
 
-        const prescriptions = [];
-        document.querySelectorAll('#prescriptionsBody .prescription-row').forEach(row => {
-            const med = row.querySelector('.rx-med')?.value?.trim() || '';
-            if (!med) return;
-            prescriptions.push({
-                medicine_name: med,
-                dosage: row.querySelector('.rx-dosage')?.value || '',
-                medicine_brand: row.querySelector('.rx-brand')?.value || '',
-                duration: row.querySelector('.rx-duration')?.value || '',
-                notes: row.querySelector('.rx-notes')?.value || ''
-            });
-        });
+        const prescriptions = collectPrescriptionRows();
+
+        // Optional payment recorded at record-creation time
+        const recordPaymentNow = document.getElementById('recordPaymentNow')?.checked || false;
+        const paymentTendered = parseFloat(document.getElementById('paymentAmountTendered')?.value || '0') || 0;
+        const paymentOrNumber = document.getElementById('paymentOrNumber')?.value?.trim() || '';
+        const totalDue = getBillingTotalDue();
+        const paymentAmountApplied = Math.min(paymentTendered, totalDue);
+
+        if (recordPaymentNow) {
+            if (paymentOrNumber === '') {
+                notifySecretary('OR number is required to record a payment.', 'warning');
+                secretaryRecordSubmitting = false;
+                return;
+            }
+            if (paymentAmountApplied <= 0) {
+                notifySecretary('Enter an amount tendered to record a payment, or uncheck "Record a payment now".', 'warning');
+                secretaryRecordSubmitting = false;
+                return;
+            }
+            if (paymentAmountApplied < totalDue && paymentAmountApplied < totalDue * 0.5) {
+                notifySecretary('A partial payment must be at least 50% of the Total Due, or leave it blank to pay in full/later.', 'warning');
+                secretaryRecordSubmitting = false;
+                return;
+            }
+        }
 
         const fd = new FormData();
         fd.append('appointment_id', currentRecordAppointmentId);
@@ -896,6 +1045,12 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         fd.append('follow_up_total_visits', document.getElementById('followUpTotalVisits')?.value || '0');
         fd.append('use_installment', document.getElementById('useInstallment')?.checked ? '1' : '0');
         fd.append('installment_terms', document.getElementById('installmentTerms')?.value || '0');
+        fd.append('record_payment', recordPaymentNow ? '1' : '0');
+        fd.append('payment_amount_applied', String(paymentAmountApplied));
+        fd.append('payment_amount_tendered', String(paymentTendered));
+        fd.append('payment_method', document.getElementById('paymentMethod')?.value || 'cash');
+        fd.append('payment_or_number', paymentOrNumber);
+        fd.append('payment_notes', document.getElementById('paymentNotes')?.value || '');
         fd.append('csrf_token', <?php echo json_encode($csrf_token); ?>);
         fd.append('idempotency_key', secretaryRecordIdempotencyKey);
         

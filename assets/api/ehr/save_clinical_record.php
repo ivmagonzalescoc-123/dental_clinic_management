@@ -248,16 +248,22 @@ try {
                 }
             }
 
-            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
             foreach ($odontogram as $fdiKey => $toothData) {
                 if (!is_array($toothData)) continue;
                 $toothNum = (int)$fdiKey;
                 if ($toothNum <= 0) continue;
                 $surfaces = $toothData['surfaces'] ?? [];
+                $comment = trim((string)($toothData['comment'] ?? ''));
+                $commentOrNull = $comment !== '' ? $comment : null;
                 if (empty($surfaces)) {
-                    $comment = trim((string)($toothData['comment'] ?? ''));
                     if ($comment !== '') {
-                        $tsStmt->bind_param('iiiss', $record_id, $toothNum, 0, '', $comment);
+                        // bind_param() requires variables, not literals, for by-reference args.
+                        // status_type_id must be NULL, not 0 — 0 doesn't exist in tooth_status_type
+                        // and violates the fk_tooth_status_type foreign key.
+                        $commentOnlyTypeId = null;
+                        $commentOnlySurface = '';
+                        $tsStmt->bind_param('iiisss', $record_id, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $comment, $commentOrNull);
                         $tsStmt->execute();
                     }
                     continue;
@@ -267,7 +273,7 @@ try {
                     foreach ($codeList as $code) {
                         $code = (string)$code;
                         $typeId = $codeToTypeId[$code] ?? 0;
-                        $tsStmt->bind_param('iiiss', $record_id, $toothNum, $typeId, $surfaceName, $code);
+                        $tsStmt->bind_param('iiisss', $record_id, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
                         $tsStmt->execute();
                     }
                 }
@@ -279,20 +285,41 @@ try {
             $profData = json_decode($profiling_json, true);
             if (is_array($profData)) {
                 $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patient_id AND record_id = $record_id");
-                $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                // bind_param() requires plain variables, not expressions, for by-reference args.
+                $pf_race = $profData['race'] ?? null;
+                $pf_occupation = $profData['occupation'] ?? null;
+                $pf_medical_history = $profData['medical_history'] ?? null;
+                $pf_medications = $profData['medications'] ?? null;
+                $pf_allergies = $profData['allergies'] ?? null;
+                $pf_smoking = $profData['smoking'] ?? null;
+                $pf_alcohol = $profData['alcohol'] ?? null;
+                $pf_hypertensive = (int)($profData['hypertensive'] ?? 0);
+                $pf_diabetic = (int)($profData['diabetic'] ?? 0);
+                $pf_asthmatic = (int)($profData['asthmatic'] ?? 0);
+                $pf_heart_disease = (int)($profData['heart_disease'] ?? 0);
+                $pf_hiv_positive = (int)($profData['hiv_positive'] ?? 0);
+                $pf_bleeding_disorder = $profData['bleeding_disorder'] ?? null;
+                $pf_pregnancy_status = $profData['pregnancy_status'] ?? null;
+                $pf_previous_dental_treatment = $profData['previous_dental_treatment'] ?? null;
+                $pf_dental_anxiety = $profData['dental_anxiety'] ?? null;
+                $pf_emergency_contact = $profData['emergency_contact'] ?? null;
+                $pf_emergency_phone = $profData['emergency_phone'] ?? null;
+                $pf_background_notes = $profData['background_notes'] ?? null;
+
+                $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $pfStmt->bind_param('iisssssssiiiiisssssss',
                     $patient_id, $record_id,
-                    $profData['race'] ?? null, $profData['occupation'] ?? null,
-                    $profData['medical_history'] ?? null, $profData['medications'] ?? null,
-                    $profData['allergies'] ?? null, $profData['smoking'] ?? null,
-                    $profData['alcohol'] ?? null,
-                    (int)($profData['hypertensive'] ?? 0), (int)($profData['diabetic'] ?? 0),
-                    (int)($profData['asthmatic'] ?? 0), (int)($profData['heart_disease'] ?? 0),
-                    (int)($profData['hiv_positive'] ?? 0),
-                    $profData['bleeding_disorder'] ?? null, $profData['asa'] ?? null,
-                    $profData['pregnancy_status'] ?? null, $profData['previous_dental_treatment'] ?? null,
-                    $profData['dental_anxiety'] ?? null, $profData['emergency_contact'] ?? null,
-                    $profData['emergency_phone'] ?? null, $profData['background_notes'] ?? null
+                    $pf_race, $pf_occupation,
+                    $pf_medical_history, $pf_medications,
+                    $pf_allergies, $pf_smoking,
+                    $pf_alcohol,
+                    $pf_hypertensive, $pf_diabetic,
+                    $pf_asthmatic, $pf_heart_disease,
+                    $pf_hiv_positive,
+                    $pf_bleeding_disorder,
+                    $pf_pregnancy_status, $pf_previous_dental_treatment,
+                    $pf_dental_anxiety, $pf_emergency_contact,
+                    $pf_emergency_phone, $pf_background_notes
                 );
                 $pfStmt->execute();
                 $pfStmt->close();

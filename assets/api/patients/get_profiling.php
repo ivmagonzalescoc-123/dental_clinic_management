@@ -40,7 +40,7 @@ try {
     }
 
     $profiling = null;
-    $pfStmt = $conn->prepare('SELECT race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+    $pfStmt = $conn->prepare('SELECT race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
     if ($pfStmt) {
         $pfStmt->bind_param('i', $patient_id);
         $pfStmt->execute();
@@ -61,7 +61,6 @@ try {
                 'heart_disease' => (int)($pfRow['has_heart_disease'] ?? 0),
                 'hiv_positive' => (int)($pfRow['is_hiv_positive'] ?? 0),
                 'bleeding_disorder' => $pfRow['bleeding_disorder'] ?? null,
-                'asa' => $pfRow['asa_classification'] ?? null,
                 'pregnancy_status' => $pfRow['pregnancy_status'] ?? null,
                 'previous_dental_treatment' => $pfRow['previous_dental_treatment'] ?? null,
                 'dental_anxiety' => $pfRow['dental_anxiety'] ?? null,

@@ -43,7 +43,6 @@
         heart_disease: 'Heart Disease',
         hiv_positive: 'HIV Positive',
         bleeding_disorder: 'Bleeding Disorder',
-        asa: 'ASA Classification',
         pregnancy_status: 'Pregnancy Status',
         previous_dental_treatment: 'Previous Dental Treatment',
         dental_anxiety: 'Dental Anxiety',

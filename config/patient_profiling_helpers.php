@@ -27,7 +27,7 @@ if (!function_exists('background_profiling_field_keys')) {
         return [
             'race', 'medical_history', 'medications', 'allergies',
             'smoking', 'alcohol', 'hypertensive', 'diabetic', 'asthmatic',
-            'heart_disease', 'hiv_positive', 'bleeding_disorder', 'asa', 'pregnancy_status',
+            'heart_disease', 'hiv_positive', 'bleeding_disorder', 'pregnancy_status',
             'previous_dental_treatment', 'dental_anxiety', 'background_notes',
         ];
     }
@@ -84,7 +84,6 @@ if (!function_exists('background_profiling_field_labels')) {
             'heart_disease' => 'Heart Disease',
             'hiv_positive' => 'HIV Positive',
             'bleeding_disorder' => 'Bleeding Disorder',
-            'asa' => 'ASA Classification',
             'pregnancy_status' => 'Pregnancy Status',
             'previous_dental_treatment' => 'Previous Dental Treatment',
             'dental_anxiety' => 'Dental Anxiety',

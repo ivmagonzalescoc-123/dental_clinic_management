@@ -45,16 +45,15 @@ try {
         $p_heart_disease = (int)($profiling['heart_disease'] ?? 0);
         $p_hiv_positive = (int)($profiling['hiv_positive'] ?? 0);
         $p_bleeding_disorder = $profiling['bleeding_disorder'] ?: $na;
-        $p_asa = $profiling['asa'] ?: $na;
         $p_pregnancy_status = $profiling['pregnancy_status'] ?: $na;
         $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?: $na;
         $p_dental_anxiety = $profiling['dental_anxiety'] ?: $na;
         $p_background_notes = $profiling['background_notes'] ?: $na;
 
-        $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         if (!$stmt) throw new Exception('Insert prepare failed: ' . $conn->error);
         $stmt->bind_param(
-            'isssssssiiiiissss',
+            'issssssiiiiisssss',
             $patient_id,
             $p_race,
             $p_medical_history,
@@ -68,7 +67,6 @@ try {
             $p_heart_disease,
             $p_hiv_positive,
             $p_bleeding_disorder,
-            $p_asa,
             $p_pregnancy_status,
             $p_previous_dental_treatment,
             $p_dental_anxiety,

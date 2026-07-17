@@ -894,7 +894,6 @@ foreach ($roles as $roleRow) {
                                 <div><label class="form-label">Allergies</label><input type="text" id="pf_allergies" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
                                 <div><label class="form-label">Smoking</label><input type="text" id="pf_smoking" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
                                 <div><label class="form-label">Alcohol</label><input type="text" id="pf_alcohol" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
-                                <div><label class="form-label">ASA Class</label><input type="text" id="pf_asa" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
                                 <div><label class="form-label">Pregnancy</label><input type="text" id="pf_pregnancy_status" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
                                 <div><label class="form-label">Dental Anxiety</label><input type="text" id="pf_dental_anxiety" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
                                 <div><label class="form-label">Bleeding Disorder</label><input type="text" id="pf_bleeding_disorder" class="form-control" style="padding:0.3rem 0.5rem;font-size:0.85rem;"></div>
@@ -1172,7 +1171,6 @@ function fillProfilingForm(profiling) {
     document.getElementById('pf_heart_disease').checked = !!pf.heart_disease;
     document.getElementById('pf_hiv_positive').checked = !!pf.hiv_positive;
     document.getElementById('pf_bleeding_disorder').value = pf.bleeding_disorder || '';
-    document.getElementById('pf_asa').value = pf.asa || '';
     document.getElementById('pf_pregnancy_status').value = pf.pregnancy_status || '';
     document.getElementById('pf_previous_dental_treatment').value = pf.previous_dental_treatment || '';
     document.getElementById('pf_dental_anxiety').value = pf.dental_anxiety || '';
@@ -1285,7 +1283,6 @@ document.getElementById('profilingForm').addEventListener('submit', function (ev
         heart_disease: document.getElementById('pf_heart_disease').checked,
         hiv_positive: document.getElementById('pf_hiv_positive').checked,
         bleeding_disorder: document.getElementById('pf_bleeding_disorder').value.trim(),
-        asa: document.getElementById('pf_asa').value.trim(),
         pregnancy_status: document.getElementById('pf_pregnancy_status').value.trim(),
         previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
         dental_anxiety: document.getElementById('pf_dental_anxiety').value.trim(),

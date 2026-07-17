@@ -225,16 +225,22 @@ try {
             }
         }
 
-        $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+        $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
         foreach ($odontogramData as $fdiKey => $toothData) {
             if (!is_array($toothData)) continue;
             $toothNum = (int)$fdiKey;
             if ($toothNum <= 0) continue;
             $surfaces = $toothData['surfaces'] ?? [];
+            $comment = trim((string)($toothData['comment'] ?? ''));
+            $commentOrNull = $comment !== '' ? $comment : null;
             if (empty($surfaces)) {
-                $comment = trim((string)($toothData['comment'] ?? ''));
                 if ($comment !== '') {
-                    $tsStmt->bind_param('iiiss', $recordId, $toothNum, 0, '', $comment);
+                    // bind_param() requires variables, not literals, for by-reference args.
+                    // status_type_id must be NULL, not 0 — 0 doesn't exist in tooth_status_type
+                    // and violates the fk_tooth_status_type foreign key.
+                    $commentOnlyTypeId = null;
+                    $commentOnlySurface = '';
+                    $tsStmt->bind_param('iiisss', $recordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $comment, $commentOrNull);
                     $tsStmt->execute();
                 }
                 continue;
@@ -244,7 +250,7 @@ try {
                 foreach ($codeList as $code) {
                     $code = (string)$code;
                     $typeId = $codeToTypeId[$code] ?? 0;
-                    $tsStmt->bind_param('iiiss', $recordId, $toothNum, $typeId, $surfaceName, $code);
+                    $tsStmt->bind_param('iiisss', $recordId, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
                     $tsStmt->execute();
                 }
             }

@@ -118,7 +118,7 @@ if (isset($rec['record_id']) && $rec['record_id']) {
 $odontogram = null;
 if (isset($rec['record_id']) && $rec['record_id']) {
     $recIdForOdonto = (int)$rec['record_id'];
-    $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status_type_id, ts.tooth_surface, ts.status, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
+    $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status_type_id, ts.tooth_surface, ts.status, ts.notes, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
     $toothStmt->bind_param('i', $recIdForOdonto);
     $toothStmt->execute();
     $toothRes = $toothStmt->get_result();
@@ -130,9 +130,13 @@ if (isset($rec['record_id']) && $rec['record_id']) {
         $toothNum = (int)$trow['tooth_selected'];
         $code = (string)($trow['code'] ?? '');
         $surface = (string)($trow['tooth_surface'] ?? 'O');
+        $noteText = trim((string)($trow['notes'] ?? ''));
         if ($toothNum <= 0) continue;
         if (!isset($odontogramFormatted[$toothNum])) {
             $odontogramFormatted[$toothNum] = ['comment' => '', 'surfaces' => []];
+        }
+        if ($noteText !== '' && $odontogramFormatted[$toothNum]['comment'] === '') {
+            $odontogramFormatted[$toothNum]['comment'] = $noteText;
         }
         if ($surface !== '' && $code !== '') {
             if (!isset($odontogramFormatted[$toothNum]['surfaces'][$surface])) {

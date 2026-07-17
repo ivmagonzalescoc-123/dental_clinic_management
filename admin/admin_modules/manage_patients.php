@@ -314,17 +314,6 @@ function admin_patient_format_datetime(?string $value): string
                                 </div>
                             </div>
 
-                            <!-- ASA Class -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">ASA Class <i class="bi bi-info-circle" style="font-size:0.75rem;cursor:help;color:#6c757d;" title="ASA Physical Status Classification:&#10;I — Normal healthy patient&#10;II — Mild systemic disease&#10;III — Severe systemic disease&#10;IV — Severe systemic disease, constant threat to life&#10;V — Moribund, not expected to survive without surgery"></i></label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_asa" id="pf_asa_1" value="ASA I"><label class="form-check-label fw-semibold" for="pf_asa_1" style="font-size:0.82rem;color:#334155;">I</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_asa" id="pf_asa_2" value="ASA II"><label class="form-check-label fw-semibold" for="pf_asa_2" style="font-size:0.82rem;color:#334155;">II</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_asa" id="pf_asa_3" value="ASA III"><label class="form-check-label fw-semibold" for="pf_asa_3" style="font-size:0.82rem;color:#334155;">III</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_asa" id="pf_asa_4" value="ASA IV"><label class="form-check-label fw-semibold" for="pf_asa_4" style="font-size:0.82rem;color:#334155;">IV</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_asa" id="pf_asa_5" value="ASA V"><label class="form-check-label fw-semibold" for="pf_asa_5" style="font-size:0.82rem;color:#334155;">V</label></div>
-                                </div>
-                            </div>
 
                             <!-- Dental Anxiety -->
                             <div class="mb-2">
@@ -587,7 +576,6 @@ function fillProfilingForm(profiling, patientGender) {
     document.getElementById('pf_heart_disease').checked = !!pf.heart_disease;
     document.getElementById('pf_hiv_positive').checked = !!pf.hiv_positive;
     setRadioValue('pf_bleeding_disorder', pf.bleeding_disorder || '');
-    setRadioValue('pf_asa', pf.asa || '');
     setRadioValue('pf_pregnancy_status', pf.pregnancy_status || '');
     document.getElementById('pf_previous_dental_treatment').value = pf.previous_dental_treatment || '';
     setRadioValue('pf_dental_anxiety', pf.dental_anxiety || '');
@@ -678,7 +666,6 @@ document.getElementById('profilingForm').addEventListener('submit', function (ev
         heart_disease: document.getElementById('pf_heart_disease').checked,
         hiv_positive: document.getElementById('pf_hiv_positive').checked,
         bleeding_disorder: getRadioValue('pf_bleeding_disorder'),
-        asa: getRadioValue('pf_asa'),
         pregnancy_status: getRadioValue('pf_pregnancy_status'),
         previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
         dental_anxiety: getRadioValue('pf_dental_anxiety'),

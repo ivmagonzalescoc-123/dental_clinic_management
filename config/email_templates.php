@@ -62,7 +62,7 @@ if (!function_exists('email_booking_confirmed_html')) {
         $clinic = email_clinic_name();
         $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
         $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
-        $timeLabel = $preferredTime === 'morning' ? 'Morning (8:00 AM - 12:00 PM)' : 'Afternoon (1:00 PM - 4:30 PM)';
+        $timeLabel = $preferredTime === 'morning' ? 'Morning (8:00 AM - 12:00 PM)' : ($preferredTime === 'afternoon' ? 'Afternoon (1:00 PM - 4:30 PM)' : htmlspecialchars($preferredTime, ENT_QUOTES, 'UTF-8'));
         $dateFormatted = date('l, F j, Y', strtotime($preferredDate));
         $year = date('Y');
         $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');

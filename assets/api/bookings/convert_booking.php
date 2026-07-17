@@ -34,14 +34,19 @@ try {
         throw new Exception('Invalid booking ID.');
     }
 
-    $stmt = $conn->prepare("UPDATE bookings SET status = 'converted' WHERE booking_id = ? AND status = 'verified'");
+    // A booking is normally 'approved' by the time it's processed (Approve is clicked
+    // before Process), so the WHERE clause must accept both 'verified' and 'approved' —
+    // requiring only 'verified' meant this update silently never matched in the common
+    // path, leaving bookings.status stuck even after a real appointment was created.
+    $stmt = $conn->prepare("UPDATE bookings SET status = 'converted' WHERE booking_id = ? AND status IN ('verified', 'approved')");
     if (!$stmt) throw new Exception('Database error.');
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
+    $affected = $stmt->affected_rows;
     $stmt->close();
 
     ob_end_clean();
-    echo json_encode(['success' => true, 'message' => 'Booking marked as converted.']);
+    echo json_encode(['success' => true, 'updated' => $affected > 0, 'message' => 'Booking marked as converted.']);
 
 } catch (Exception $e) {
     ob_end_clean();

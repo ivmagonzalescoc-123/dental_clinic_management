@@ -12,6 +12,7 @@ ob_start();
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
@@ -61,6 +62,12 @@ $installmentTerms = isset($_POST['installment_terms']) ? (int)$_POST['installmen
 $discountType = billing_normalize_discount_type($_POST['discount_type'] ?? 'none');
 $discountPercent = isset($_POST['discount_percent']) ? (float)$_POST['discount_percent'] : 0.0;
 $discountNotes = isset($_POST['discount_notes']) ? trim($_POST['discount_notes']) : '';
+$recordPayment = isset($_POST['record_payment']) ? (int)$_POST['record_payment'] : 0;
+$paymentAmountApplied = isset($_POST['payment_amount_applied']) ? (float)$_POST['payment_amount_applied'] : 0.0;
+$paymentAmountTendered = isset($_POST['payment_amount_tendered']) ? (float)$_POST['payment_amount_tendered'] : 0.0;
+$paymentMethod = isset($_POST['payment_method']) ? trim($_POST['payment_method']) : 'cash';
+$paymentOrNumber = isset($_POST['payment_or_number']) ? trim($_POST['payment_or_number']) : '';
+$paymentNotes = isset($_POST['payment_notes']) ? trim($_POST['payment_notes']) : '';
 $secretaryId = (int)($_SESSION['user_id'] ?? 0);
 $idempotencyKey = $_POST['idempotency_key'] ?? '';
 
@@ -191,16 +198,22 @@ try {
                 }
             }
 
-            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status) VALUES (?, ?, ?, ?, ?)');
+            $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
             foreach ($odontogramData as $fdiKey => $td) {
                 if (!is_array($td)) continue;
                 $toothNum = (int)$fdiKey;
                 if ($toothNum <= 0) continue;
                 $surfaces = $td['surfaces'] ?? [];
+                $comment = trim((string)($td['comment'] ?? ''));
+                $commentOrNull = $comment !== '' ? $comment : null;
                 if (empty($surfaces)) {
-                    $comment = trim((string)($td['comment'] ?? ''));
                     if ($comment !== '') {
-                        $tsStmt->bind_param('iiiss', $clinicalRecordId, $toothNum, 0, '', $comment);
+                        // bind_param() requires variables, not literals, for by-reference args.
+                        // status_type_id must be NULL, not 0 — 0 doesn't exist in tooth_status_type
+                        // and violates the fk_tooth_status_type foreign key.
+                        $commentOnlyTypeId = null;
+                        $commentOnlySurface = '';
+                        $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $comment, $commentOrNull);
                         $tsStmt->execute();
                     }
                     continue;
@@ -210,7 +223,7 @@ try {
                     foreach ($codeList as $code) {
                         $code = (string)$code;
                         $typeId = $codeToTypeId[$code] ?? 0;
-                        $tsStmt->bind_param('iiiss', $clinicalRecordId, $toothNum, $typeId, $surfaceName, $code);
+                        $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
                         $tsStmt->execute();
                     }
                 }
@@ -243,7 +256,6 @@ try {
             $pf_heart_disease = (int)($visitClinicalData['heart_disease'] ?? 0);
             $pf_hiv_positive = (int)($visitClinicalData['hiv_positive'] ?? 0);
             $pf_bleeding_disorder = $visitClinicalData['bleeding_disorder'] ?? null;
-            $pf_asa = $visitClinicalData['asa'] ?? null;
             $pf_pregnancy_status = $visitClinicalData['pregnancy_status'] ?? null;
             $pf_previous_dental_treatment = $visitClinicalData['previous_dental_treatment'] ?? null;
             $pf_dental_anxiety = $visitClinicalData['dental_anxiety'] ?? null;
@@ -251,8 +263,8 @@ try {
             $pf_emergency_phone = $visitClinicalData['emergency_phone'] ?? null;
             $pf_background_notes = $visitClinicalData['background_notes'] ?? null;
 
-            $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, asa_classification, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $pfStmt->bind_param('iisssssssiiiiissssssss',
+            $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $pfStmt->bind_param('iisssssssiiiiisssssss',
                 $patientId, $clinicalRecordId,
                 $pf_race, $pf_occupation,
                 $pf_medical_history, $pf_medications,
@@ -261,7 +273,7 @@ try {
                 $pf_hypertensive, $pf_diabetic,
                 $pf_asthmatic, $pf_heart_disease,
                 $pf_hiv_positive,
-                $pf_bleeding_disorder, $pf_asa,
+                $pf_bleeding_disorder,
                 $pf_pregnancy_status, $pf_previous_dental_treatment,
                 $pf_dental_anxiety, $pf_emergency_contact,
                 $pf_emergency_phone, $pf_background_notes
@@ -405,6 +417,34 @@ try {
 
     billing_create_invoice($conn, $billingId, $secretaryId);
 
+    $paymentRecorded = false;
+    if ($recordPayment === 1) {
+        if (!capabilities_can('billing.record')) {
+            throw new Exception('Not authorized to record payments.');
+        }
+        if ($paymentOrNumber === '') {
+            throw new Exception('OR number is required to record a payment.');
+        }
+        $amountApplied = round(min($paymentAmountApplied, $grandTotal), 2);
+        if ($amountApplied <= 0) {
+            throw new Exception('Enter an amount tendered to record a payment.');
+        }
+        if ($amountApplied < $grandTotal && $amountApplied < round($grandTotal * 0.5, 2)) {
+            throw new Exception('A partial payment must be at least 50% of the total due.');
+        }
+        $change = max(0, round($paymentAmountTendered - $amountApplied, 2));
+        $paymentNotesFull = trim($paymentNotes . sprintf(
+            ' (Tendered: ₱%s, Change: ₱%s)',
+            number_format($paymentAmountTendered, 2),
+            number_format($change, 2)
+        ));
+        $paymentOk = billing_record_payment($conn, $billingId, $amountApplied, $paymentMethod, $paymentOrNumber, $paymentNotesFull, $secretaryId);
+        if (!$paymentOk) {
+            throw new Exception('Failed to record payment.');
+        }
+        $paymentRecorded = true;
+    }
+
     $followUpAppointmentId = null;
     if ($followUpDateDb !== null) {
         try {
@@ -439,7 +479,8 @@ try {
     }
 
     $action = 'appointment.secretary_records_created';
-    $details = 'Secretary submitted clinical record. Record ID: ' . $clinicalRecordId . ', Billing ID: ' . $billingId . ', Total: ' . $grandTotal;
+    $details = 'Secretary submitted clinical record. Record ID: ' . $clinicalRecordId . ', Billing ID: ' . $billingId . ', Total: ' . $grandTotal
+        . ($paymentRecorded ? ', Payment recorded: ' . round(min($paymentAmountApplied, $grandTotal), 2) : '');
     $ipAddr = $_SERVER['REMOTE_ADDR'] ?? '';
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
     $logStmt = $conn->prepare('
@@ -466,6 +507,7 @@ try {
         'total_amount' => $grandTotal,
         'installment' => ($useInstallment === 1 && $installmentTerms > 0),
         'follow_up_appointment_id' => $followUpAppointmentId,
+        'payment_recorded' => $paymentRecorded,
     ];
     idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
     api_respond($response);

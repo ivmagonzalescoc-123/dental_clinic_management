@@ -9,7 +9,15 @@ if ($bookingId <= 0) {
     exit;
 }
 
-$stmt = $conn->prepare('SELECT booking_id, first_name, last_name, email, phone_number, preferred_date, preferred_time, reason, status, created_at FROM bookings WHERE booking_id = ?');
+$stmt = $conn->prepare(
+    'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_number, b.preferred_date, b.preferred_time,
+            b.reason, b.status, b.created_at, a.status AS appt_status
+     FROM bookings b
+     LEFT JOIN appointments a ON a.booking_id = b.booking_id
+     WHERE b.booking_id = ?
+     ORDER BY a.appointment_id DESC
+     LIMIT 1'
+);
 if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'Database error.']);
     exit;
@@ -43,10 +51,17 @@ if ($row['status'] === 'cancelled') {
 } else {
     // Step 2: approved or converted (both mean booking is confirmed)
     $step2 = in_array($row['status'], ['approved', 'converted'], true);
-    
-    // Step 3: converted (appointment exists)
-    $step3 = ($row['status'] === 'converted');
-    
+
+    // Step 3: converted, OR the linked appointment has already moved past creation
+    // (checked in, in session, or further). bookings.status can lag behind reality if
+    // the secretary's convert step didn't flip it, so the appointment's own status is
+    // the more reliable signal that the patient has actually been processed.
+    $appointmentProcessed = in_array($row['appt_status'] ?? '', [
+        'checked_in', 'in_progress', 'completed_by_doctor',
+        'awaiting_secretary_records', 'records_complete', 'completed',
+    ], true);
+    $step3 = ($row['status'] === 'converted') || $appointmentProcessed;
+
     // Error: verified but older than 1 day (pending approval too long)
     if ($row['status'] === 'verified') {
         $createdTime = strtotime($row['created_at']);

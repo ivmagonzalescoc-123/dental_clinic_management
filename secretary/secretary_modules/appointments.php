@@ -1027,6 +1027,7 @@ function toggleArchiveView() {
 
 // Process Booking Modal
 var convertBookingData = {};
+var convertIsEarlyWalkIn = false;
 var processSelectedServices = [];
 var processServicesCatalog = [];
 
@@ -1043,14 +1044,20 @@ function openConvertBookingModal(booking) {
         reasonField.value = booking.reason || '';
     }
 
-    // Processing always books the appointment for today (walk-in), regardless of the
-    // booking's preferred_date — that record is left untouched.
+    // Processing always books the appointment for today. If the patient's preferred date
+    // was today, this is just their scheduled online booking happening on time — no note,
+    // still counts as online. If their preferred date is any other day (they came in early
+    // for a later booking, or came in after a missed date), this is an unscheduled walk-in —
+    // show the note and mark it as non-online. bookings.preferred_date is left untouched either way.
     var todayStr = getTodayDateStringSecretary();
+    convertIsEarlyWalkIn = !!(booking.preferred_date && booking.preferred_date !== todayStr);
+    var noteEl = document.getElementById('convertWalkInNote');
     var noteText = document.getElementById('convertWalkInNoteText');
-    if (noteText) {
-        noteText.textContent = (booking.preferred_date && booking.preferred_date !== todayStr)
-            ? 'Walk-in Today — original preferred date was ' + booking.preferred_date
-            : 'Walk-in Today';
+    if (noteEl) {
+        noteEl.style.display = convertIsEarlyWalkIn ? '' : 'none';
+    }
+    if (noteText && convertIsEarlyWalkIn) {
+        noteText.textContent = 'Walk-in Today — original preferred date was ' + booking.preferred_date;
     }
 
     // Reset services table
@@ -1062,8 +1069,29 @@ function openConvertBookingModal(booking) {
     document.getElementById('convertTimeslotSelect').disabled = true;
     document.getElementById('convertServiceSelect').innerHTML = '<option value="">-- Select Service --</option>';
 
-    var modal = new bootstrap.Modal(document.getElementById('convertBookingModal'));
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('convertBookingModal'));
     modal.show();
+}
+
+// Closes the Process Booking modal safely. Guards against a Bootstrap quirk where
+// calling .hide() on a modal instance whose backdrop state got out of sync throws
+// "Cannot read properties of null/undefined (reading 'backdrop')" — if that happens,
+// fall back to removing the backdrop/body classes manually so the UI doesn't get stuck.
+function closeConvertBookingModal() {
+    var modalEl = document.getElementById('convertBookingModal');
+    if (!modalEl) return;
+    try {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    } catch (err) {
+        console.warn('Modal hide() failed, cleaning up manually:', err);
+        modalEl.classList.remove('show');
+        modalEl.style.display = 'none';
+        modalEl.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+        document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+    }
 }
 
 function getTodayDateStringSecretary() {
@@ -1310,12 +1338,13 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         // 2. Create appointment with services and arrived status
         var apptFd = new FormData();
         apptFd.append('patient_id', patientData.patient_id);
-        // Processing always books the appointment for today (walk-in) — bookings.preferred_date is left untouched.
+        // Processing always books the appointment for today — bookings.preferred_date is left untouched.
         apptFd.append('appointment_date', appointmentDate);
         apptFd.append('user_id', doctorId);
         var modalReason = document.getElementById('convertReason')?.value?.trim() || '';
         apptFd.append('reason', modalReason || convertBookingData.reason || '');
-        apptFd.append('is_online_appointment', '0');
+        // Preferred date matched today: on-schedule online booking. Any other date: unscheduled walk-in.
+        apptFd.append('is_online_appointment', convertIsEarlyWalkIn ? '0' : '1');
         apptFd.append('timeslot_id', timeslotId);
         apptFd.append('status', 'checked_in');
         apptFd.append('booking_id', bookingId);
@@ -1331,12 +1360,20 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         var apptData = await apptResp.json();
 
         if (apptData.success) {
-            // Mark booking as converted
-            await fetch('../assets/api/bookings/convert_booking.php?booking_id=' + bookingId, { method: 'POST' });
+            // Mark booking as converted (best-effort — the appointment itself is already
+            // created at this point, so a failure here shouldn't block the success flow,
+            // but it's worth logging since it means bookings.status won't reflect reality).
+            try {
+                var convertResp = await fetch('../assets/api/bookings/convert_booking.php?booking_id=' + bookingId, { method: 'POST' });
+                var convertData = await convertResp.json();
+                if (!convertData.success || !convertData.updated) {
+                    console.warn('Booking status was not marked converted:', convertData);
+                }
+            } catch (convertErr) {
+                console.warn('Failed to mark booking converted:', convertErr);
+            }
 
-            var modalEl = document.getElementById('convertBookingModal');
-            var modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            modalInstance.hide();
+            closeConvertBookingModal();
 
             notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
             DentalUI.btnRestore(submitBtn);
