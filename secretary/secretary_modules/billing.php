@@ -527,6 +527,13 @@ if (!$hasAnyData) {
                     <input type="number" step="0.01" min="0.01" class="form-control" id="paymentAmount">
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">Amount Tendered (PHP)</label>
+                    <input type="number" step="0.01" min="0" class="form-control" id="paymentAmountTendered" placeholder="Cash handed by patient">
+                </div>
+                <div class="mb-3">
+                    <p class="text-muted small mb-0">Change: <span id="paymentChangeDisplay">₱0.00</span></p>
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Payment Method</label>
                     <select class="form-select" id="paymentMethod">
                         <option value="cash">Cash</option>
@@ -555,6 +562,15 @@ if (!$hasAnyData) {
 <script>
     const BILLING_CSRF = '<?php echo htmlspecialchars($csrf_token); ?>';
 
+    function updatePaymentChangeDisplay() {
+        const amount = Number(document.getElementById('paymentAmount').value || 0);
+        const tendered = Number(document.getElementById('paymentAmountTendered').value || 0);
+        const change = Math.max(0, tendered - amount);
+        document.getElementById('paymentChangeDisplay').textContent = '₱' + change.toFixed(2);
+    }
+    document.getElementById('paymentAmount')?.addEventListener('input', updatePaymentChangeDisplay);
+    document.getElementById('paymentAmountTendered')?.addEventListener('input', updatePaymentChangeDisplay);
+
     function openPaymentModal(billingId, paymentAmount, remainingBalance, isInstallment) {
         document.getElementById('paymentBillingId').value = billingId;
         const amount = Number(paymentAmount || 0);
@@ -562,7 +578,9 @@ if (!$hasAnyData) {
         const amountInput = document.getElementById('paymentAmount');
         amountInput.value = amount.toFixed(2);
         amountInput.max = balance.toFixed(2);
+        document.getElementById('paymentAmountTendered').value = '';
         document.getElementById('paymentOrNumber').value = '';
+        updatePaymentChangeDisplay();
         if (isInstallment) {
             document.getElementById('paymentBalanceHint').textContent = 'Installment payment due: ₱' + amount.toFixed(2) + ' (Total remaining: ₱' + balance.toFixed(2) + ')';
         } else {
@@ -597,6 +615,19 @@ if (!$hasAnyData) {
             return;
         }
 
+        const amountVal = Number(document.getElementById('paymentAmount').value || 0);
+        const tenderedVal = Number(document.getElementById('paymentAmountTendered').value || 0);
+        if (tenderedVal <= 0) {
+            notifyBilling('Enter an amount tendered to record a payment.', 'danger');
+            document.getElementById('paymentAmountTendered').focus();
+            return;
+        }
+        if (tenderedVal < amountVal) {
+            notifyBilling('Amount tendered cannot be less than the payment amount.', 'danger');
+            document.getElementById('paymentAmountTendered').focus();
+            return;
+        }
+
         paymentSubmitting = true;
         const idempotencyKey = (window.Idempotency && Idempotency.newKey('pay')) || ('pay-' + Date.now() + '-' + Math.random().toString(36).slice(2));
 
@@ -605,6 +636,7 @@ if (!$hasAnyData) {
             fd.append('csrf_token', BILLING_CSRF);
             fd.append('billing_id', document.getElementById('paymentBillingId').value);
             fd.append('amount', document.getElementById('paymentAmount').value);
+            fd.append('payment_amount_tendered', document.getElementById('paymentAmountTendered').value);
             fd.append('payment_method', document.getElementById('paymentMethod').value);
             fd.append('or_number', orNumber);
             fd.append('notes', document.getElementById('paymentNotes').value);

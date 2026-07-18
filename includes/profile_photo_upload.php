@@ -29,8 +29,8 @@ $profile_avatar_markup = profile_render_avatar_markup($conn, '..', [
                         accept="image/jpeg,image/png,image/webp"
                     >
                     <p class="text-muted small mb-2 profile-photo-upload-guide"><?php echo htmlspecialchars(profile_photo_upload_guide_text(), ENT_QUOTES, 'UTF-8'); ?></p>
-                    <button type="submit" class="btn btn-outline-primary btn-sm mt-2" id="profilePhotoSaveBtn">
-                        Upload Photo
+                    <button type="submit" class="btn btn-primary btn-sm mt-2" id="profilePhotoSaveBtn">
+                        Save Photo
                     </button>
                 </form>
                 <div id="profilePhotoAlert" class="small mt-2"></div>
@@ -139,7 +139,7 @@ function initProfilePhotoUpload() {
             showPhotoAlert('Network error while uploading photo.', 'danger');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = 'Upload Photo';
+            saveBtn.textContent = 'Save Photo';
         }
     });
 }

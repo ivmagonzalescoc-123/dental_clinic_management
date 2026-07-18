@@ -117,16 +117,17 @@ function archRotationForTooth(nx, rawRotY) {
 function archTiltRadians(fdi, nx = 0) {
   const pos = parseInt(String(fdi).slice(-1), 10);
   const sideBlend = smoothstep(Math.abs(nx), 0.12, 0.5);
+  const side = Math.sign(nx) || 1;
 
   if (pos <= 2) return 0;
 
   if (pos === 3) {
-    return ((-10 * Math.PI) / 180) * sideBlend;
+    return ((-10 * Math.PI) / 180) * sideBlend * side;
   }
 
   const type = toothTypeFromFdi(fdi);
   const deg = type === "molar" || type === "premolar" ? -45 : -20;
-  return ((deg * Math.PI) / 180) * sideBlend;
+  return ((deg * Math.PI) / 180) * sideBlend * side;
 }
 
 /** Match DentProSave GLB placement: models are already jaw-oriented; only arch Y rotation. */

@@ -38,6 +38,7 @@ if (!security_validate_csrf_token($csrf)) {
 
 $billingId = (int)($_POST['billing_id'] ?? 0);
 $amount = (float)($_POST['amount'] ?? 0);
+$amountTendered = (float)($_POST['payment_amount_tendered'] ?? 0);
 $method = trim((string)($_POST['payment_method'] ?? 'cash'));
 $orNumber = trim((string)($_POST['or_number'] ?? ''));
 $notes = trim((string)($_POST['notes'] ?? ''));
@@ -48,6 +49,19 @@ if ($billingId <= 0 || $amount <= 0) {
     echo json_encode(['success' => false, 'message' => 'Valid billing ID and amount required']);
     exit;
 }
+
+if ($amountTendered <= 0) {
+    echo json_encode(['success' => false, 'message' => 'Enter an amount tendered to record a payment.']);
+    exit;
+}
+
+if ($amountTendered < $amount) {
+    echo json_encode(['success' => false, 'message' => 'Amount tendered cannot be less than the payment amount.']);
+    exit;
+}
+
+$changeDue = round($amountTendered - $amount, 2);
+$notes = trim($notes . sprintf(' (Tendered: ₱%s, Change: ₱%s)', number_format($amountTendered, 2), number_format($changeDue, 2)));
 
 if ($orNumber === '') {
     echo json_encode(['success' => false, 'message' => 'OR number is required']);
