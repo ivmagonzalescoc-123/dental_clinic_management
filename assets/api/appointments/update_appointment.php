@@ -220,7 +220,7 @@ try {
             throw new Exception('Prepare failed: ' . $conn->error);
         }
 
-        if (!$update_stmt->bind_param("issiisii", $user_id, $appointment_date, $reason, $is_online_appointment, $notes, $status, $timeslot_id, $appointment_id)) {
+        if (!$update_stmt->bind_param("ississii", $user_id, $appointment_date, $reason, $is_online_appointment, $notes, $status, $timeslot_id, $appointment_id)) {
             throw new Exception('Bind failed: ' . $update_stmt->error);
         }
 

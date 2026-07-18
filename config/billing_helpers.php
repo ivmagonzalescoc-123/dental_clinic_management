@@ -498,7 +498,7 @@ if (!function_exists('billing_create_or_update')) {
                 ');
                 if ($upd) {
                     $upd->bind_param(
-                        'didddddsdsi',
+                        'didddsdsi',
                         $totalAmount,
                         $patientId,
                         $paid,
@@ -529,7 +529,7 @@ if (!function_exists('billing_create_or_update')) {
             return 0;
         }
         $ins->bind_param(
-            'iiddddsdsd',
+            'iidddsdsds',
             $appointmentId,
             $patientId,
             $totalAmount,

@@ -180,7 +180,7 @@ try {
         $upd->close();
     } else {
         $ins = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, summary, doctor_notes, follow_up_date, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        $ins->bind_param('iiisssssi', $appointmentId, $doctorId, $patientId, $summary, $doctorNotes, $followUpDateDb, $recordStatus, $secretaryId, $submittedAt);
+        $ins->bind_param('iiissssis', $appointmentId, $doctorId, $patientId, $summary, $doctorNotes, $followUpDateDb, $recordStatus, $secretaryId, $submittedAt);
         $ins->execute();
         $clinicalRecordId = (int)$conn->insert_id;
         $ins->close();

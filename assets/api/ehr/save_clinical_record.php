@@ -150,13 +150,13 @@ try {
     if ($existing) {
         $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = ?, follow_up_date = ?, status = ?, submitted_by = ?, submitted_at = IF(?=1,NOW(),submitted_at), primary_image = IFNULL(?, primary_image) WHERE appointment_id = ?');
         $primary_image = !empty($uploaded_images) ? $uploaded_images[0] : null;
-        $stmt->bind_param('iisssii si', $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image, $appointment_id);
+        $stmt->bind_param('iisssiisi', $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image, $appointment_id);
         $stmt->execute();
         $stmt->close();
     } else {
         $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, follow_up_date, status, submitted_by, submitted_at, primary_image) VALUES (?, ?, ?, ?, ?, ?, ?, IF(?=1,NOW(),NULL), ?)');
         $primary_image = !empty($uploaded_images) ? $uploaded_images[0] : null;
-        $stmt->bind_param('iiisssi s', $appointment_id, $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image);
+        $stmt->bind_param('iiisssiis', $appointment_id, $doctor_id, $patient_id, $doctor_notes, $follow_up_date, $status, $doctor_id, $submitted_flag, $primary_image);
         $stmt->execute();
         $stmt->close();
     }
