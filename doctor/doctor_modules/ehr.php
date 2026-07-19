@@ -426,6 +426,40 @@ if ($sstmt) {
     font-size: 0.85rem;
     color: #1e293b;
 }
+
+/* ---- Dark mode ---- */
+[data-theme="dark"] #doctorPatientProfileModal .dpp-header-name {
+    color: #e2e8f0;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-chip {
+    background: #263449;
+    color: #cbd5e1;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-alert-box {
+    background: rgba(220, 38, 38, 0.14);
+    border-color: rgba(220, 38, 38, 0.35);
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-alert-box .dpp-alert-title {
+    color: #f87171;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-safe-box {
+    background: rgba(21, 128, 61, 0.16);
+    border-color: rgba(21, 128, 61, 0.4);
+    color: #4ade80;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-section {
+    background: #16223a;
+    border-color: #2f3d52;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-section-title {
+    color: #cbd5e1;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-field-label {
+    color: #94a3b8;
+}
+[data-theme="dark"] #doctorPatientProfileModal .dpp-field-value {
+    color: #e2e8f0;
+}
 </style>
 
 <script>

@@ -104,32 +104,32 @@ $csrf_token = security_generate_csrf_token();
                     <div class="tab-pane fade show active" id="tabNotes" role="tabpanel">
                         <div class="row g-3">
                             <div class="col-md-7">
-                                <label class="form-label fw-semibold small">Doctor's Notes</label>
-                                <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Doctor's Notes</label>
+                                    <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Clinical Summary</label>
+                                    <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small">Prescriptions</label>
+                                    <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary mt-1 py-0" id="addPrescriptionBtn" style="font-size: 0.78rem;"><i class="bi bi-plus"></i> Add</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-1 py-0" id="printPrescriptionsBtn" style="font-size: 0.78rem;" disabled><i class="bi bi-printer"></i> Print</button>
+                                </div>
+                                <div>
+                                    <label class="form-label fw-semibold small">Follow-up</label>
+                                    <div class="row g-1">
+                                        <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;"></div>
+                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;"></div>
+                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;"></div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label fw-semibold small">Doctor's Photos</label>
                                 <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1"></div>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <label class="form-label fw-semibold small">Clinical Summary</label>
-                            <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
-                        </div>
-                        <div class="row g-2 mt-2">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Prescriptions</label>
-                                <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
-                                <button type="button" class="btn btn-sm btn-outline-secondary mt-1 py-0" id="addPrescriptionBtn" style="font-size: 0.78rem;"><i class="bi bi-plus"></i> Add</button>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-1 py-0" id="printPrescriptionsBtn" style="font-size: 0.78rem;" disabled><i class="bi bi-printer"></i> Print</button>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold small">Follow-up</label>
-                                <div class="row g-1">
-                                    <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;"></div>
-                                    <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;"></div>
-                                    <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;"></div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -350,6 +350,11 @@ $csrf_token = security_generate_csrf_token();
     .secretary-odontogram-container {
         height: 440px;
     }
+}
+
+/* ---- Dark mode ---- */
+[data-theme="dark"] #recordTabs {
+    background: #16223a !important;
 }
 </style>
 

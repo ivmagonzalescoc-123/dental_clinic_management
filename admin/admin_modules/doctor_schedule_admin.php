@@ -344,6 +344,25 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
     .ds-day { min-height: 56px; padding: 5px 3px; }
     .ds-day-num { font-size: 0.8rem; }
 }
+
+/* ---- Dark mode ---- */
+[data-theme="dark"] .ds-calendar th { background: #1c2c47; color: #94a3b8; }
+[data-theme="dark"] .ds-day { background: #16223a; }
+[data-theme="dark"] .ds-day:hover { background: #1c2c47; }
+[data-theme="dark"] .ds-day-today { background: rgba(45, 212, 191, 0.14) !important; box-shadow: inset 0 0 0 2px #2dd4bf; }
+[data-theme="dark"] .ds-day-today:hover { background: rgba(45, 212, 191, 0.22) !important; }
+[data-theme="dark"] .ds-day-closed { background: #1a2436; }
+[data-theme="dark"] .ds-day-leave { background: rgba(220, 38, 38, 0.12); }
+[data-theme="dark"] .ds-day-empty { background: #16223a; }
+[data-theme="dark"] .ds-day-num { color: #e2e8f0; }
+[data-theme="dark"] .ds-day-count { color: #94a3b8; }
+[data-theme="dark"] .ds-detail-date { color: #cbd5e1; border-bottom-color: #2f3d52; }
+[data-theme="dark"] .ds-doctor-row:hover { background: #1c2c47; }
+[data-theme="dark"] .ds-doctor-name { color: #e2e8f0; }
+[data-theme="dark"] .ds-status-available { background: rgba(22, 163, 74, 0.2); color: #4ade80; }
+[data-theme="dark"] .ds-status-leave { background: rgba(220, 38, 38, 0.2); color: #f87171; }
+[data-theme="dark"] .ds-status-pending { background: rgba(217, 119, 6, 0.24); color: #fbbf24; }
+[data-theme="dark"] .ds-status-none { background: #263449; color: #94a3b8; }
 </style>
 
 <script>

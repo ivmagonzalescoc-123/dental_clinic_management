@@ -618,7 +618,7 @@ if ($stmt) {
                                 <div id="histWorkflowBanner" class="alert alert-info py-2 small mb-3" style="display:none;"></div>
 
                                 <!-- Patient Header: Avatar + Name + Details -->
-                                <div class="d-flex align-items-center gap-3 mb-3 p-2" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                                <div class="d-flex align-items-center gap-3 mb-3 p-2 hist-patient-header">
                                     <div id="histPatientAvatar" style="flex-shrink:0;"></div>
                                     <div class="min-w-0">
                                         <div id="histPatientName" style="font-size:1rem;font-weight:700;color:#1e293b;"></div>
@@ -927,6 +927,61 @@ if ($stmt) {
     z-index: 30;
 }
 
+.hist-patient-header {
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+/* ---- Dark mode ---- */
+[data-theme="dark"] .hist-field,
+[data-theme="dark"] .hist-section,
+[data-theme="dark"] .hist-patient-header {
+    background: #16223a;
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .hist-label {
+    color: #94a3b8;
+}
+[data-theme="dark"] .hist-value {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .hist-section-title {
+    color: #cbd5e1;
+}
+[data-theme="dark"] .hist-pre {
+    background: #1c2c47;
+    border-color: #2f3d52;
+    color: #e2e8f0;
+}
+[data-theme="dark"] #doctorCalendarLegend {
+    color: #94a3b8;
+}
+[data-theme="dark"] .doctor-booking-count {
+    background: #263449;
+    color: #cbd5e1;
+}
+[data-theme="dark"] .doctor-booking-count.type-appointment {
+    background: rgba(22, 163, 74, 0.22);
+    color: #4ade80;
+}
+[data-theme="dark"] .doctor-booking-count.type-followup {
+    background: rgba(29, 78, 216, 0.28);
+    color: #93c5fd;
+}
+[data-theme="dark"] .doctor-record-btn-disabled,
+[data-theme="dark"] .doctor-record-btn-disabled:hover,
+[data-theme="dark"] .doctor-record-btn-disabled:focus {
+    border-color: #475569;
+    color: #64748b;
+    background-color: #1a2436;
+}
+[data-theme="dark"] #histPatientName {
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] #histPatientDetails {
+    color: #94a3b8 !important;
+}
 </style>
 
 <script src="../assets/vendor/fullcalendar/index.global.min.js"></script>

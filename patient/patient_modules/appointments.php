@@ -351,6 +351,92 @@ if ($patient_id) {
         margin: 0;
     }
 }
+
+/* ---- Dark mode ---- */
+[data-theme="dark"] .patient-appt-card .calendar-panel {
+    border-color: #2f3d52;
+    background: #16223a;
+}
+[data-theme="dark"] .patient-appt-card .selected-date-chip {
+    background: rgba(45, 212, 191, 0.16);
+    color: #5eead4;
+}
+[data-theme="dark"] .patient-appt-card .calendar-legend {
+    color: #94a3b8;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-toolbar-title {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-open .fc-daygrid-day-frame {
+    background: rgba(22, 163, 74, 0.18);
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-busy .fc-daygrid-day-frame {
+    background: rgba(245, 158, 11, 0.18);
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-closed .fc-daygrid-day-frame,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-disabled .fc-daygrid-day-frame {
+    background: rgba(220, 38, 38, 0.18);
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-selected {
+    box-shadow: inset 0 0 0 2px #2dd4bf;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-open:hover,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-busy:hover {
+    box-shadow: inset 0 0 0 2px rgba(45, 212, 191, 0.45);
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .appt-day-badge.state-open {
+    color: #4ade80;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .appt-day-badge.state-busy {
+    color: #fbbf24;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .appt-day-badge.state-closed {
+    color: #f87171;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-button-primary,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-button-primary:hover,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-button-primary:focus,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-button-primary:active,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-button-primary.fc-button-active {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-daygrid-day-number {
+    color: #cbd5e1;
+}
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-scrollgrid,
+[data-theme="dark"] .patient-appt-card #appointmentCalendar .fc-scrollgrid-section > * {
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .patient-appt-card .appt-tab-nav .nav-link {
+    color: #cbd5e1;
+}
+[data-theme="dark"] .patient-appt-card .history-table-wrap {
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .patient-appt-card .history-table-wrap thead th {
+    background: rgba(45, 212, 191, 0.1);
+    color: #5eead4;
+    border-bottom-color: #2f3d52;
+}
+[data-theme="dark"] .patient-appt-step-title {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .patient-symptom-option {
+    border-color: #334155;
+    background: #16223a;
+}
+[data-theme="dark"] .patient-symptom-option:hover {
+    border-color: #2dd4bf;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+[data-theme="dark"] .patient-symptom-label {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .patient-calendar-placeholder {
+    border-color: #334155;
+    background: #16223a;
+    color: #94a3b8;
+}
 </style>
 
 <div class="card border-0 patient-appt-card">

@@ -546,7 +546,7 @@ if ($doc_stmt) {
 
 // Fetch patients for the patient dropdown (secretary selection)
 $patients = [];
-$pat_stmt = $conn->prepare('SELECT patient_id, first_name, middle_name, last_name, email FROM patients ORDER BY last_name, first_name');
+$pat_stmt = $conn->prepare('SELECT patient_id, first_name, middle_name, last_name, email, date_of_birth FROM patients ORDER BY last_name, first_name');
 if ($pat_stmt) {
     $pat_stmt->execute();
     $pat_res = $pat_stmt->get_result();
@@ -1511,6 +1511,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             <table class="table table-hover datatable" data-skip-table-search="1">
                 <thead>
                     <tr>
+                        <th>No.</th>
                         <th>Patient Name</th>
                         <th>Followup</th>
                         <th>Doctor</th>
@@ -1526,7 +1527,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 <tbody>
                     <?php if (empty($appointments)): ?>
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
+                            <td colspan="11" class="text-center text-muted py-4">
                                 No appointments found.
                             </td>
                         </tr>
@@ -1539,6 +1540,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                 }
                             ?>
                             <tr>
+                                <td><?php echo (int)$appointment['appointment_id']; ?></td>
                                 <td>
                                     <?php echo htmlspecialchars($appointment['first_name'] . ' ' . $appointment['last_name']); ?>
                                     <?php if (!empty($appointment['is_emergency']) && $appointment['is_emergency']): ?>
@@ -1722,6 +1724,17 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     background: #fff;
     z-index: 2;
 }
+[data-theme="dark"] #convertBookingModal .modal-body::-webkit-scrollbar-thumb {
+    background: #3a4a63;
+}
+[data-theme="dark"] #convertBookingModal .modal-footer {
+    background: #16223a;
+}
+[data-theme="dark"] #convertWalkInNote {
+    background: rgba(45, 212, 191, 0.14) !important;
+    border-color: rgba(45, 212, 191, 0.3) !important;
+    color: #5eead4 !important;
+}
 .secretary-booking-calendar {
     border: 1px solid #dbe7e4;
     border-radius: 14px;
@@ -1825,6 +1838,65 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     color: #991b1b;
 }
 
+/* Dark mode — the booking calendar, legend chip, and day tints above are hardcoded
+   light colors with no theme-aware variant, so they stay glaringly bright against
+   the dark sidebar/page otherwise. */
+[data-theme="dark"] .secretary-booking-calendar {
+    border-color: #2f3d52;
+    background: #16223a;
+}
+[data-theme="dark"] .secretary-booking-calendar .selected-date-chip {
+    background: rgba(45, 212, 191, 0.16);
+    color: #5eead4;
+}
+[data-theme="dark"] .secretary-booking-calendar .calendar-legend {
+    color: #94a3b8;
+}
+[data-theme="dark"] #bookCalendar .fc-toolbar-title {
+    color: #e2e8f0;
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day-number {
+    color: #cbd5e1;
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame {
+    background: rgba(22, 163, 74, 0.18);
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
+    background: rgba(245, 158, 11, 0.18);
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-closed .fc-daygrid-day-frame,
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-disabled .fc-daygrid-day-frame {
+    background: rgba(220, 38, 38, 0.18);
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-selected {
+    box-shadow: inset 0 0 0 2px #2dd4bf;
+}
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-open:hover,
+[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-busy:hover {
+    box-shadow: inset 0 0 0 2px rgba(45, 212, 191, 0.45);
+}
+[data-theme="dark"] #bookCalendar .book-day-badge.state-open {
+    color: #4ade80;
+}
+[data-theme="dark"] #bookCalendar .book-day-badge.state-busy {
+    color: #fbbf24;
+}
+[data-theme="dark"] #bookCalendar .book-day-badge.state-closed {
+    color: #f87171;
+}
+[data-theme="dark"] #bookCalendar .fc-scrollgrid,
+[data-theme="dark"] #bookCalendar table {
+    border-color: #2f3d52 !important;
+}
+[data-theme="dark"] #bookCalendar .fc-col-header-cell {
+    background: #1c2c47;
+    color: #94a3b8;
+}
+[data-theme="dark"] #bookCalendar td,
+[data-theme="dark"] #bookCalendar th {
+    border-color: #2f3d52 !important;
+}
+
 .appointments-actions-cell {
     width: 92px;
     min-width: 92px;
@@ -1877,7 +1949,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                 <option value="">-- Select Patient --</option>
                                 <?php foreach ($patients as $p): ?>
                                     <?php $fullname = trim($p['first_name'] . ' ' . ($p['middle_name'] ? $p['middle_name'] . ' ' : '') . $p['last_name']); ?>
-                                    <option value="<?php echo htmlspecialchars($p['patient_id']); ?>"><?php echo htmlspecialchars($fullname . ($p['email'] ? ' — ' . $p['email'] : '')); ?></option>
+                                    <?php $dob = $p['date_of_birth'] ? date('M j, Y', strtotime($p['date_of_birth'])) : ''; ?>
+                                    <option value="<?php echo htmlspecialchars($p['patient_id']); ?>"><?php echo htmlspecialchars($fullname . ($dob ? ' | ' . $dob : '')); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1927,7 +2000,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             <select id="bookTimeslotSelect" name="timeslot_id" class="form-select compact-control" required disabled>
                                 <option value="">-- Select a Time Slot --</option>
                             </select>
-                            <small class="text-muted">20-minute slots (8:00-12:00, 1:00-5:00). A slot is required.</small>
                         </div>
 
                         <div class="mb-3">
@@ -2399,12 +2471,32 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 }
             }
 
-            // Load dates when modal opens
+            // Reset to a clean state each time the modal is opened — don't carry over
+            // a doctor/services selection from a previous booking or a cancelled one.
             const bookModal = document.getElementById('bookAppointmentModal');
             if (bookModal) {
+                bookModal.addEventListener('show.bs.modal', function () {
+                    const doctorSelect = document.getElementById('bookDoctorSelect');
+                    if (doctorSelect) doctorSelect.value = '';
+
+                    secretaryServiceManager = null;
+                    window.secretarySelectedServiceDuration = 0;
+
+                    const timeslotSelect = document.getElementById('bookTimeslotSelect');
+                    const timeslotWrapper = document.getElementById('bookTimeslotWrapper');
+                    if (timeslotSelect) {
+                        timeslotSelect.innerHTML = '<option value="">-- Select a timeslot --</option>';
+                        timeslotSelect.disabled = true;
+                    }
+                    if (timeslotWrapper) timeslotWrapper.style.display = 'none';
+                });
+
                 bookModal.addEventListener('shown.bs.modal', function () {
                     renderBookCalendar();
                     loadAvailableDates(BOOK_DAYS_AHEAD);
+                    // Services aren't doctor-specific — load them right away so the
+                    // secretary can start picking services before choosing a doctor.
+                    initializeSecretaryServiceManager();
                     setTimeout(function() {
                         if (bookCalendarInstance) {
                             bookCalendarInstance.updateSize();
@@ -2432,9 +2524,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 bookDoctorSelect.addEventListener('change', function() {
                     loadAvailableDates(BOOK_DAYS_AHEAD);
                     loadTimeslots();
-                    // Reset service manager when doctor changes
-                    secretaryServiceManager = null;
-                    initializeSecretaryServiceManager();
+                    // Services are independent of doctor — keep whatever the secretary
+                    // already selected instead of wiping it out on doctor change.
+                    if (!secretaryServiceManager) {
+                        initializeSecretaryServiceManager();
+                    }
                 });
             }
 
@@ -2445,19 +2539,15 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             
             async function initializeSecretaryServiceManager() {
                 console.log('[Secretary Appointments] initializeSecretaryServiceManager called');
-                const doctorId = document.getElementById('bookDoctorSelect')?.value;
                 const serviceSelector = document.getElementById('secretaryServiceSelector');
-                
-                console.log('[Secretary Appointments] Doctor ID:', doctorId, 'ServiceSelector exists:', !!serviceSelector);
-                
-                if (!doctorId || !serviceSelector) {
-                    if (serviceSelector) {
-                        serviceSelector.innerHTML = '<small class="text-muted">Select a doctor first to load available services</small>';
-                    }
-                    console.log('[Secretary Appointments] Early return - missing doctorId or serviceSelector');
+
+                console.log('[Secretary Appointments] ServiceSelector exists:', !!serviceSelector);
+
+                if (!serviceSelector) {
+                    console.log('[Secretary Appointments] Early return - missing serviceSelector');
                     return;
                 }
-                
+
                 // Wait for AppointmentServiceManager to be defined
                 if (typeof AppointmentServiceManager === 'undefined') {
                     console.log('[Secretary Appointments] Waiting for AppointmentServiceManager to load...');
@@ -2708,10 +2798,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     return;
                 }
 
-                // Check if services are selected
-                const container = document.getElementById('secretaryServiceSelector');
-                const selectedCheckboxes = container ? Array.from(container.querySelectorAll('.service-checkbox:checked')) : [];
-                const selectedServiceIds = selectedCheckboxes.map(cb => parseInt(cb.value));
+                // Selected services live on the service manager instance (dropdown UI,
+                // not plain checkboxes) — read from there instead of querying the DOM.
+                const selectedServiceIds = secretaryServiceManager
+                    ? secretaryServiceManager.selectedServices.map(s => parseInt(s.service_id))
+                    : [];
 
                 try {
                     let allowDuplicateDay = false;

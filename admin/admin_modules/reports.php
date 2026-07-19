@@ -1640,8 +1640,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('salesDailyRevChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'area', height: 260, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'area', height: 260, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Revenue', data: dailyRevValues }],
                         xaxis: { categories: dailyRevLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
                         yaxis: { min: 0, labels: { formatter: function(v) { return '₱' + v.toLocaleString(); } } },
@@ -1650,8 +1651,8 @@ $reportNavQuery = array_merge(
                         stroke: { curve: 'smooth', width: 2 },
                         dataLabels: { enabled: false },
                         legend: { show: false },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
-                        tooltip: { theme: 'light', y: { formatter: function(v) { return '₱' + v.toLocaleString(); } } }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
+                        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v) { return '₱' + v.toLocaleString(); } } }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1702,8 +1703,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('demoPeakDaysChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakDayValues }],
                         xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
@@ -1711,7 +1713,7 @@ $reportNavQuery = array_merge(
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
                         legend: { show: false },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1728,8 +1730,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('demoPeakHoursChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakHourValues }],
                         xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
@@ -1737,7 +1740,7 @@ $reportNavQuery = array_merge(
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
                         legend: { show: false },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1756,8 +1759,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('trendMonthlyChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'line', height: 280, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'line', height: 280, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [
                             { name: 'Total Appointments', data: monthlyTrendAppts },
                             { name: 'Completed', data: monthlyTrendCompleted }
@@ -1769,7 +1773,7 @@ $reportNavQuery = array_merge(
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
                         markers: { size: 4, hover: { size: 6 } }
                     };
                     var chart = new ApexCharts(el, opts);
@@ -1791,7 +1795,7 @@ $reportNavQuery = array_merge(
                         return { name: s.name, data: s.data };
                     });
                     var opts = {
-                        chart: { type: 'line', height: 300, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'line', height: 300, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: seriesData,
                         xaxis: { categories: serviceTrendLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
@@ -1800,7 +1804,7 @@ $reportNavQuery = array_merge(
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 },
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
                         markers: { size: 3, hover: { size: 5 } }
                     };
                     var chart = new ApexCharts(el, opts);
@@ -1818,8 +1822,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('trendPeakDaysChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakDayValues }],
                         xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
@@ -1827,7 +1832,7 @@ $reportNavQuery = array_merge(
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
                         legend: { show: false },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1844,8 +1849,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('trendPeakHoursChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakHourValues }],
                         xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
@@ -1853,7 +1859,7 @@ $reportNavQuery = array_merge(
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
                         legend: { show: false },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1872,8 +1878,9 @@ $reportNavQuery = array_merge(
                 var el = document.getElementById('reportDailyChart');
                 if (el) {
                     el.innerHTML = '';
+                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: '#64748b' },
+                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [
                             { name: 'Booked', data: dailyBooked },
                             { name: 'Completed', data: dailyCompleted }
@@ -1884,7 +1891,7 @@ $reportNavQuery = array_merge(
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-                        grid: { borderColor: '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -2124,6 +2131,39 @@ $reportNavQuery = array_merge(
 [data-theme="dark"] .ai-chat-close {
     background: #1c2c47;
     color: #94a3b8;
+}
+[data-theme="dark"] .ai-chat-close:hover {
+    background: #263449;
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-chat-input:focus {
+    background: #1c2c47;
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-chat-msg.bot th {
+    background: #263449;
+    color: #cbd5e1;
+}
+[data-theme="dark"] .ai-chat-msg.error {
+    background: rgba(217, 119, 6, 0.14);
+    border-color: rgba(217, 119, 6, 0.3);
+    color: #fbbf24;
+}
+[data-theme="dark"] .ai-metric {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-kv-label {
+    color: #94a3b8;
+}
+[data-theme="dark"] .ai-kv-val {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ai-row-list li {
+    border-bottom-color: #2f3d52;
+    color: #cbd5e1;
+}
+[data-theme="dark"] .ai-answer-text {
+    color: #cbd5e1;
 }
 </style>
 

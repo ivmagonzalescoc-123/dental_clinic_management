@@ -27,13 +27,18 @@
         return out;
     }
 
+    function isDarkTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
     function baseConfig(height) {
+        var dark = isDarkTheme();
         return {
             chart: {
                 height: height,
                 toolbar: { show: false },
                 fontFamily: 'inherit',
-                foreColor: '#64748b',
+                foreColor: dark ? '#94a3b8' : '#64748b',
                 animations: {
                     enabled: true,
                     easing: 'easeinout',
@@ -41,18 +46,18 @@
                 }
             },
             grid: {
-                borderColor: '#e8eef5',
+                borderColor: dark ? '#2f3d52' : '#e8eef5',
                 strokeDashArray: 4,
                 padding: { left: 8, right: 12 }
             },
             tooltip: {
-                theme: 'light',
+                theme: dark ? 'dark' : 'light',
                 style: { fontSize: '12px' }
             },
             legend: {
                 fontSize: '12px',
                 fontWeight: 500,
-                labels: { colors: '#475569' }
+                labels: { colors: dark ? '#cbd5e1' : '#475569' }
             }
         };
     }
@@ -87,7 +92,7 @@
             series: [{ name: seriesName, data: values }],
             xaxis: {
                 categories: labels,
-                labels: { rotate: -45, style: { fontSize: '11px', colors: '#64748b' } },
+                labels: { rotate: -45, style: { fontSize: '11px' } },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
@@ -119,7 +124,7 @@
             ],
             xaxis: {
                 categories: labels,
-                labels: { rotate: -45, style: { fontSize: '11px', colors: '#64748b' } },
+                labels: { rotate: -45, style: { fontSize: '11px' } },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
@@ -150,7 +155,7 @@
             series: [{ name: seriesName, data: values }],
             xaxis: {
                 categories: labels,
-                labels: { style: { fontSize: '11px', colors: '#64748b' } }
+                labels: { style: { fontSize: '11px' } }
             },
             plotOptions: {
                 bar: {
@@ -191,7 +196,7 @@
                         labels: {
                             show: true,
                             name: { fontSize: '12px' },
-                            value: { fontSize: '18px', fontWeight: 700, color: '#1e293b' },
+                            value: { fontSize: '18px', fontWeight: 700, color: isDarkTheme() ? '#e2e8f0' : '#1e293b' },
                             total: {
                                 show: true,
                                 label: 'Total',
@@ -214,7 +219,7 @@
             series: [{ name: 'Amount (PHP)', data: [collected, outstanding] }],
             xaxis: {
                 categories: ['Collected', 'Outstanding'],
-                labels: { style: { fontSize: '12px', fontWeight: 600, colors: '#475569' } }
+                labels: { style: { fontSize: '12px', fontWeight: 600 } }
             },
             plotOptions: {
                 bar: {
@@ -227,7 +232,7 @@
             dataLabels: {
                 enabled: true,
                 offsetY: -6,
-                style: { fontSize: '11px', fontWeight: 700, colors: ['#1e293b'] },
+                style: { fontSize: '11px', fontWeight: 700, colors: [isDarkTheme() ? '#e2e8f0' : '#1e293b'] },
                 formatter: function (val) {
                     return '₱' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 }

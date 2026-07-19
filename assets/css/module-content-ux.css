@@ -304,10 +304,15 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   border: 1px solid var(--ux-border);
   border-radius: 10px;
   color: var(--ux-text);
-  background-color: #fff;
+  background-color: var(--ux-surface);
   box-shadow: none;
   padding: 0.55rem 0.7rem;
   min-height: calc(1.5em + 1rem + 2px);
+}
+
+#main .form-control.readonly-muted-field {
+  background-color: var(--ux-bg);
+  color: var(--ux-muted);
 }
 
 #main textarea.form-control {
@@ -701,6 +706,79 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   color: #b02f2f !important;
   border-color: #f3c2c2 !important;
 }
+
+/* ---- Dark mode: table status badges ----
+   All the rules above are !important + high specificity, so they force a pale
+   pastel background with dark text on every status badge in every table across
+   every portal in dark mode unless matched here. */
+[data-theme="dark"] #main table td .badge.table-badge-neutral,
+[data-theme="dark"] #main .table td .badge.table-badge-neutral,
+[data-theme="dark"] #main table td .badge.bg-light,
+[data-theme="dark"] #main .table td .badge.bg-light,
+[data-theme="dark"] #main table td .badge.text-bg-light,
+[data-theme="dark"] #main .table td .badge.text-bg-light,
+[data-theme="dark"] #main table td .badge.bg-secondary,
+[data-theme="dark"] #main .table td .badge.bg-secondary,
+[data-theme="dark"] #main table td .badge.text-bg-secondary,
+[data-theme="dark"] #main .table td .badge.text-bg-secondary {
+  background: #263449 !important;
+  color: #cbd5e1 !important;
+  border-color: #3a4a63 !important;
+}
+
+[data-theme="dark"] #main table td .badge.bg-primary,
+[data-theme="dark"] #main .table td .badge.bg-primary,
+[data-theme="dark"] #main table td .badge.text-bg-primary,
+[data-theme="dark"] #main .table td .badge.text-bg-primary,
+[data-theme="dark"] #main table td .badge.bg-info,
+[data-theme="dark"] #main .table td .badge.bg-info,
+[data-theme="dark"] #main table td .badge.text-bg-info,
+[data-theme="dark"] #main .table td .badge.text-bg-info {
+  background: rgba(45, 212, 191, 0.16) !important;
+  color: #5eead4 !important;
+  border-color: rgba(45, 212, 191, 0.3) !important;
+}
+
+[data-theme="dark"] #main table td .badge.bg-success,
+[data-theme="dark"] #main .table td .badge.bg-success,
+[data-theme="dark"] #main table td .badge.text-bg-success,
+[data-theme="dark"] #main .table td .badge.text-bg-success {
+  background: rgba(22, 163, 74, 0.18) !important;
+  color: #4ade80 !important;
+  border-color: rgba(22, 163, 74, 0.35) !important;
+}
+
+[data-theme="dark"] #main table td .badge.bg-warning,
+[data-theme="dark"] #main .table td .badge.bg-warning,
+[data-theme="dark"] #main table td .badge.text-bg-warning,
+[data-theme="dark"] #main .table td .badge.text-bg-warning {
+  background: rgba(217, 119, 6, 0.2) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+[data-theme="dark"] #main table td .badge.bg-danger,
+[data-theme="dark"] #main .table td .badge.bg-danger,
+[data-theme="dark"] #main table td .badge.text-bg-danger,
+[data-theme="dark"] #main .table td .badge.text-bg-danger {
+  background: rgba(220, 38, 38, 0.2) !important;
+  color: #f87171 !important;
+  border-color: rgba(220, 38, 38, 0.35) !important;
+}
+
+/* ---- Dark mode: generic Bootstrap bg-light / bg-white utility boxes ----
+   Used everywhere (info tiles, summary boxes, modal body sections) as a "light
+   card" pattern with no theme awareness — force them to the dark surface color. */
+[data-theme="dark"] #main .bg-light {
+  background-color: #16223a !important;
+  color: #e2e8f0;
+}
+[data-theme="dark"] #main .bg-white {
+  background-color: #16223a !important;
+}
+/* Note: .text-dark is intentionally left untouched — it's frequently paired with a
+   light semantic background (e.g. .bg-warning.text-dark) that stays light on purpose
+   in both themes, so forcing it light-on-dark here would break that contrast pairing. */
 
 @media (max-width: 991.98px) {
   #main .ux-form-grid {
@@ -1908,7 +1986,8 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 
 [data-theme="dark"] #main .dental-kpi-card,
 [data-theme="dark"] #main .dental-surface-card,
-[data-theme="dark"] #main .dental-chart-card {
+[data-theme="dark"] #main .dental-chart-card,
+[data-theme="dark"] #main .dental-chart-frame {
   background: #16223a;
   border-color: #2f3d52;
 }
@@ -1950,4 +2029,55 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 [data-theme="dark"] #main .module-section-nav .btn-group > .btn.active {
   background: #263449 !important;
   color: #2dd4bf !important;
+}
+
+/* Toolbar filter selects/dropdowns (Ref#/status filters, datatable-top selects, etc.) —
+   these use hardcoded light colors that beat the generic dark .form-select rule on
+   specificity, so they need their own dark-mode override. */
+[data-theme="dark"] #main .module-search-toolbar .form-select,
+[data-theme="dark"] #main .unified-table-search-toolbar .form-select,
+[data-theme="dark"] #main .appointments-view-filter,
+[data-theme="dark"] #main .datatable-top .form-select,
+[data-theme="dark"] #main .dataTable-top .form-select {
+  background: #1c2c47;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] #main .module-search-toolbar .form-select:focus,
+[data-theme="dark"] #main .unified-table-search-toolbar .form-select:focus,
+[data-theme="dark"] #main .appointments-view-filter:focus,
+[data-theme="dark"] #main .datatable-top .form-select:focus,
+[data-theme="dark"] #main .dataTable-top .form-select:focus {
+  border-color: #2dd4bf;
+  box-shadow: none;
+  outline: none;
+}
+
+[data-theme="dark"] #main .module-search-toolbar .dropdown-menu,
+[data-theme="dark"] #main .card-header .dropdown-menu {
+  background: #16223a;
+  border-color: #2f3d52;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] #main .card-header .btn-outline-primary,
+[data-theme="dark"] #main .module-search-toolbar .btn-outline-primary,
+[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-primary,
+[data-theme="dark"] #main .datatable-top .btn-outline-primary,
+[data-theme="dark"] #main .dataTable-top .btn-outline-primary {
+  background: transparent;
+  border-color: rgba(45, 212, 191, 0.4);
+  color: #2dd4bf;
+}
+
+[data-theme="dark"] #main .card-header .btn-outline-primary:hover,
+[data-theme="dark"] #main .module-search-toolbar .btn-outline-primary:hover,
+[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-primary:hover,
+[data-theme="dark"] #main .datatable-top .btn-outline-primary:hover,
+[data-theme="dark"] #main .dataTable-top .btn-outline-primary:hover {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: #2dd4bf;
+  color: #5eead4;
+  box-shadow: none;
 }

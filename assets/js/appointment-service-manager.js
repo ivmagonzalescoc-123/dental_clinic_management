@@ -424,6 +424,13 @@ class AppointmentServiceManager {
                 detail: { totalDuration: this.totalDuration, selectedServiceIds: this.selectedServices.map(s => s.service_id), selectedServices: this.selectedServices }
             }));
         }
+        if (this.onServicesChanged) {
+            this.onServicesChanged({
+                appointmentId: this.appointmentId,
+                serviceIds: this.selectedServices.map(s => s.service_id),
+                totalDuration: this.totalDuration
+            });
+        }
     }
 
     updateDropdownUI(containerId) {

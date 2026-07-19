@@ -605,7 +605,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         </div>
         <div class="col-md-5">
             <label class="form-label fw-semibold">Description</label>
-            <input type="text" name="setting_description" class="form-control" value="Default consultation fee for consultation-only appointments" readonly style="background:#f1f5f9;">
+            <input type="text" name="setting_description" class="form-control readonly-muted-field" value="Default consultation fee for consultation-only appointments" readonly>
         </div>
         <div class="col-md-3">
             <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-circle me-1"></i>Update</button>

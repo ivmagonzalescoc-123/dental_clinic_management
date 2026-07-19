@@ -87,7 +87,7 @@ if ($stmt) {
                     <div class="modal-body" style="max-height:75vh; overflow:auto;">
                         <div id="histContentRec">
                             <!-- Patient Header: Avatar + Name + Details -->
-                            <div class="d-flex align-items-center gap-3 mb-3 p-2" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                            <div class="d-flex align-items-center gap-3 mb-3 p-2 hist-patient-header">
                                 <div id="histPatientAvatarRec" style="flex-shrink:0;"></div>
                                 <div class="min-w-0">
                                     <div id="histPatientNameRec" style="font-size:1rem;font-weight:700;color:#1e293b;"></div>
@@ -232,6 +232,39 @@ if ($stmt) {
             top: 10px;
             right: 10px;
             z-index: 30;
+        }
+        .hist-patient-header {
+            background: #f8fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* ---- Dark mode ---- */
+        [data-theme="dark"] .hist-field,
+        [data-theme="dark"] .hist-section,
+        [data-theme="dark"] .hist-patient-header {
+            background: #16223a;
+            border-color: #2f3d52;
+        }
+        [data-theme="dark"] .hist-label {
+            color: #94a3b8;
+        }
+        [data-theme="dark"] .hist-value {
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .hist-section-title {
+            color: #cbd5e1;
+        }
+        [data-theme="dark"] .hist-pre {
+            background: #1c2c47;
+            border-color: #2f3d52;
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] #histPatientNameRec {
+            color: #e2e8f0 !important;
+        }
+        [data-theme="dark"] #histPatientDetailsRec {
+            color: #94a3b8 !important;
         }
         </style>
 

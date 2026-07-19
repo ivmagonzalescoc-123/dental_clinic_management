@@ -2731,6 +2731,14 @@ table a:hover {
     color: #94a3b8;
 }
 
+/* #header .text-muted/small force color:#666 !important with ID-level specificity,
+   which beats the generic [data-theme="dark"] .text-muted rule further down. */
+[data-theme="dark"] #header .text-muted,
+[data-theme="dark"] #header small,
+[data-theme="dark"] #header .header-nav small {
+    color: #94a3b8 !important;
+}
+
 [data-theme="dark"] #sidebar {
     border-right: 1px solid var(--border-color);
 }
@@ -2822,6 +2830,24 @@ table a:hover {
 
 [data-theme="dark"] .form-label,
 [data-theme="dark"] label {
+    color: #cbd5e1;
+}
+
+/* Checkboxes/radios keep Bootstrap's default white fill with no dark styling anywhere
+   in the app — they need an explicit dark background/border for the unchecked state. */
+[data-theme="dark"] .form-check-input {
+    background-color: #1c2c47;
+    border-color: #475569;
+}
+[data-theme="dark"] .form-check-input:checked {
+    background-color: #2dd4bf;
+    border-color: #2dd4bf;
+}
+[data-theme="dark"] .form-check-input:focus {
+    border-color: #2dd4bf;
+    box-shadow: 0 0 0 0.25rem rgba(45, 212, 191, 0.2);
+}
+[data-theme="dark"] .form-check-label {
     color: #cbd5e1;
 }
 
@@ -3041,4 +3067,89 @@ table a:hover {
     background-color: #0b1420 !important;
     border-top: 1px solid #2f3d52;
     color: #94a3b8;
+}
+
+/* FullCalendar (booking calendars, doctor schedule, patient appointments): the
+   prev/next/today toolbar buttons force color:#000 !important in light mode, which
+   is invisible against a dark background — needs a matching !important override. */
+[data-theme="dark"] .fc .fc-button-primary,
+[data-theme="dark"] .fc .fc-button-primary:hover,
+[data-theme="dark"] .fc .fc-button-primary:focus,
+[data-theme="dark"] .fc .fc-button-primary:active,
+[data-theme="dark"] .fc .fc-button-primary.fc-button-active {
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .fc .fc-toolbar-title {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .fc-theme-standard td,
+[data-theme="dark"] .fc-theme-standard th,
+[data-theme="dark"] .fc-theme-standard .fc-scrollgrid {
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .fc-col-header-cell {
+    background: #1c2c47;
+    color: #94a3b8;
+}
+[data-theme="dark"] .fc-daygrid-day-number {
+    color: #cbd5e1;
+}
+[data-theme="dark"] .fc-day-today {
+    background-color: rgba(45, 212, 191, 0.1) !important;
+}
+
+/* Flatpickr date picker popup (reschedule modals, etc.) — vendor CSS ships light-only. */
+[data-theme="dark"] .flatpickr-calendar {
+    background: #16223a;
+    border-color: #2f3d52;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .flatpickr-months,
+[data-theme="dark"] .flatpickr-weekdays {
+    background: #16223a;
+}
+[data-theme="dark"] .flatpickr-month,
+[data-theme="dark"] .flatpickr-weekday,
+[data-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+[data-theme="dark"] .numInputWrapper span.arrowUp:after,
+[data-theme="dark"] .numInputWrapper span.arrowDown:after {
+    color: #e2e8f0;
+    fill: #e2e8f0;
+}
+[data-theme="dark"] .flatpickr-current-month input.cur-year {
+    color: #e2e8f0;
+    background: transparent;
+}
+[data-theme="dark"] .flatpickr-day {
+    color: #cbd5e1;
+}
+[data-theme="dark"] .flatpickr-day.flatpickr-disabled,
+[data-theme="dark"] .flatpickr-day.flatpickr-disabled:hover {
+    color: #475569;
+}
+[data-theme="dark"] .flatpickr-day.prevMonthDay,
+[data-theme="dark"] .flatpickr-day.nextMonthDay {
+    color: #475569;
+}
+[data-theme="dark"] .flatpickr-day:hover {
+    background: rgba(45, 212, 191, 0.14);
+    border-color: transparent;
+}
+[data-theme="dark"] .flatpickr-day.selected,
+[data-theme="dark"] .flatpickr-day.selected:hover {
+    background: #2dd4bf;
+    border-color: #2dd4bf;
+    color: #0b1420;
+}
+[data-theme="dark"] .flatpickr-day.today {
+    border-color: #2dd4bf;
+}
+[data-theme="dark"] .flatpickr-prev-month svg,
+[data-theme="dark"] .flatpickr-next-month svg {
+    fill: #cbd5e1;
+}
+[data-theme="dark"] .flatpickr-innerContainer,
+[data-theme="dark"] .flatpickr-rContainer,
+[data-theme="dark"] .flatpickr-days {
+    border-color: #2f3d52;
 }
