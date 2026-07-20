@@ -4,14 +4,14 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 if (!function_exists('services_redirect')) {
     function services_redirect($tab = 'services')
     {
-        $safeTab = in_array($tab, ['services', 'timeslot', 'consultation'], true) ? $tab : 'services';
+        $safeTab = in_array($tab, ['services', 'archived', 'timeslot', 'consultation'], true) ? $tab : 'services';
         header('Location: admin.php?page=services&tab=' . rawurlencode($safeTab));
         exit;
     }
 }
 
 $tab = $_GET['tab'] ?? 'services';
-if (!in_array($tab, ['services', 'timeslot', 'consultation'], true)) {
+if (!in_array($tab, ['services', 'archived', 'timeslot', 'consultation'], true)) {
     $tab = 'services';
 }
 
@@ -137,6 +137,33 @@ if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     services_redirect('services');
+}
+
+// Handle RESTORE (un-archive) service
+if ($action === 'restore' && $_SERVER['REQUEST_METHOD'] === 'POST' && $hasIsActive) {
+    $serviceId = (int)($_POST['service_id'] ?? 0);
+    if ($serviceId <= 0) {
+        $_SESSION['message'] = 'Invalid service.';
+        $_SESSION['message_type'] = 'warning';
+    } else {
+        $stmt = $conn->prepare("UPDATE services SET is_active = 1 WHERE service_id = ?");
+        if ($stmt) {
+            $stmt->bind_param('i', $serviceId);
+            if ($stmt->execute()) {
+                $_SESSION['message'] = 'Service restored successfully.';
+                $_SESSION['message_type'] = 'success';
+            } else {
+                $_SESSION['message'] = 'Error restoring service: ' . $stmt->error;
+                $_SESSION['message_type'] = 'danger';
+            }
+            $stmt->close();
+        } else {
+            $_SESSION['message'] = 'Error preparing restore query.';
+            $_SESSION['message_type'] = 'danger';
+        }
+    }
+
+    services_redirect('archived');
 }
 
 // Handle EDIT service
@@ -268,6 +295,52 @@ if ($action === 'delete_time' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     services_redirect('timeslot');
 }
 
+// Read current consultation fee
+$consultationFee = '500.00';
+$consultationDesc = '';
+$cfeeRes = $conn->query("SELECT setting_value, description FROM clinic_settings WHERE setting_key = 'consultation_fee' LIMIT 1");
+if ($cfeeRes && $cfeeRow = $cfeeRes->fetch_assoc()) {
+    $consultationFee = $cfeeRow['setting_value'] ?? '500.00';
+    $consultationDesc = $cfeeRow['description'] ?? '';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_consultation_fee') {
+    $fee = (float)($_POST['consultation_fee'] ?? 0);
+    $fee = max(0, round($fee, 2));
+    $desc = trim((string)($_POST['setting_description'] ?? ''));
+    if ($desc === '') $desc = 'Default consultation fee for consultation-only appointments';
+
+    $check = $conn->query("SELECT setting_key FROM clinic_settings WHERE setting_key = 'consultation_fee'");
+    if ($check && $check->num_rows > 0) {
+        $stmt = $conn->prepare('UPDATE clinic_settings SET setting_value = ?, description = ? WHERE setting_key = ?');
+        $feeStr = number_format($fee, 2, '.', '');
+        $settingKey = 'consultation_fee';
+        $stmt->bind_param('sss', $feeStr, $desc, $settingKey);
+    } else {
+        $stmt = $conn->prepare('INSERT INTO clinic_settings (setting_key, setting_value, description) VALUES (?, ?, ?)');
+        $feeStr = number_format($fee, 2, '.', '');
+        $key = 'consultation_fee';
+        $stmt->bind_param('sss', $key, $feeStr, $desc);
+    }
+    $stmt->execute();
+    $stmt->close();
+
+    $_SESSION['message'] = 'Consultation fee updated to ₱' . number_format($fee, 2) . '.';
+    $_SESSION['message_type'] = 'success';
+    services_redirect('consultation');
+}
+
+// Fetch archived services list
+$archivedServices = [];
+if ($hasIsActive) {
+    $archResult = $conn->query("SELECT * FROM services WHERE is_active = 0 ORDER BY service_name ASC");
+    if ($archResult) {
+        while ($row = $archResult->fetch_assoc()) {
+            $archivedServices[] = $row;
+        }
+    }
+}
+
 // Fetch active services list
 $services = [];
 if ($hasIsActive) {
@@ -320,19 +393,36 @@ if ($tsRes) {
 <div class="module-page-header mb-3">
     <h4 class="mb-0">
         <span class="module-page-header__crumb">Services</span>
-        <?php if ($tab === 'timeslot'): ?>
+        <?php if ($tab === 'archived'): ?>
+            <span class="module-page-header__sep">&gt;</span> Archived
+        <?php elseif ($tab === 'timeslot'): ?>
             <span class="module-page-header__sep">&gt;</span> Service Time
         <?php elseif ($tab === 'consultation'): ?>
             <span class="module-page-header__sep">&gt;</span> Consultation Fee
         <?php endif; ?>
     </h4>
 </div>
-<?php if (isset($_SESSION['message'])): ?>
-    <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
-        <?php echo htmlspecialchars($_SESSION['message']); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-    <?php unset($_SESSION['message']); unset($_SESSION['message_type']); ?>
+<?php if (isset($_SESSION['message'])):
+    $flashMessage = $_SESSION['message'];
+    $flashType = $_SESSION['message_type'] ?? 'info';
+    unset($_SESSION['message'], $_SESSION['message_type']);
+?>
+    <script>
+        (function () {
+            var msg = <?php echo json_encode($flashMessage); ?>;
+            var type = <?php echo json_encode($flashType); ?>;
+            function fireToast() {
+                if (typeof window.showAppToast === 'function') {
+                    window.showAppToast(msg, type);
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', fireToast);
+            } else {
+                fireToast();
+            }
+        })();
+    </script>
 <?php endif; ?>
 
 <nav class="module-section-nav" aria-label="Services sections">
@@ -341,6 +431,11 @@ if ($tsRes) {
             <li class="nav-item">
                 <a class="nav-link <?php echo $tab === 'services' ? 'active' : ''; ?>" href="admin.php?page=services&tab=services">Services</a>
             </li>
+            <?php if ($hasIsActive): ?>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $tab === 'archived' ? 'active' : ''; ?>" href="admin.php?page=services&tab=archived">Archived</a>
+            </li>
+            <?php endif; ?>
             <li class="nav-item">
                 <a class="nav-link <?php echo $tab === 'timeslot' ? 'active' : ''; ?>" href="admin.php?page=services&tab=timeslot">Service Time</a>
             </li>
@@ -399,6 +494,45 @@ if ($tsRes) {
                 </tbody>
             </table>
         </div>
+<?php elseif ($tab === 'archived'): ?>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="card-title mb-0">Archived Services</h2>
+</div>
+<?php if (empty($archivedServices)): ?>
+    <p class="text-muted">No archived services.</p>
+<?php else: ?>
+<div class="table-responsive">
+            <table class="table table-hover datatable align-middle" data-skip-table-search="1">
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Initial Price</th>
+                        <th>Description</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($archivedServices as $svc): ?>
+                        <tr>
+                            <td class="fw-semibold text-muted"><?php echo htmlspecialchars($svc['service_name']); ?></td>
+                            <td><?php echo htmlspecialchars(number_format((float)$svc['initial_price'], 2)); ?></td>
+                            <td style="max-width: 420px;"><span class="text-muted"><?php echo htmlspecialchars($svc['description'] ?? ''); ?></span></td>
+                            <td><?php echo htmlspecialchars($svc['created_at'] ?? ''); ?></td>
+                            <td>
+                                <form method="POST" action="admin.php?page=services&tab=archived&action=restore" data-confirm="Restore this service? It will become selectable again." data-confirm-title="Restore Service" data-confirm-variant="success" data-confirm-ok="Restore" style="display:inline-block;">
+                                    <input type="hidden" name="service_id" value="<?php echo htmlspecialchars($svc['service_id']); ?>">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+<?php endif; ?>
 <?php elseif ($tab === 'timeslot'): ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="card-title mb-0">Service Averate Time</h2>
@@ -557,45 +691,8 @@ if ($tsRes) {
     </div>
 </div>
 
-<?php
-// Read current consultation fee
-$consultationFee = '500.00';
-$consultationDesc = '';
-$cfeeRes = $conn->query("SELECT setting_value, description FROM clinic_settings WHERE setting_key = 'consultation_fee' LIMIT 1");
-if ($cfeeRes && $cfeeRow = $cfeeRes->fetch_assoc()) {
-    $consultationFee = $cfeeRow['setting_value'] ?? '500.00';
-    $consultationDesc = $cfeeRow['description'] ?? '';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_consultation_fee') {
-    $fee = (float)($_POST['consultation_fee'] ?? 0);
-    $fee = max(0, round($fee, 2));
-    $desc = trim((string)($_POST['setting_description'] ?? ''));
-    if ($desc === '') $desc = 'Default consultation fee for consultation-only appointments';
-
-    $check = $conn->query("SELECT setting_key FROM clinic_settings WHERE setting_key = 'consultation_fee'");
-    if ($check && $check->num_rows > 0) {
-        $stmt = $conn->prepare('UPDATE clinic_settings SET setting_value = ?, description = ? WHERE setting_key = ?');
-        $feeStr = number_format($fee, 2, '.', '');
-        $stmt->bind_param('sss', $feeStr, $desc, $dummy = 'consultation_fee');
-    } else {
-        $stmt = $conn->prepare('INSERT INTO clinic_settings (setting_key, setting_value, description) VALUES (?, ?, ?)');
-        $feeStr = number_format($fee, 2, '.', '');
-        $key = 'consultation_fee';
-        $stmt->bind_param('sss', $key, $feeStr, $desc);
-    }
-    $stmt->execute();
-    $stmt->close();
-
-    $_SESSION['message'] = 'Consultation fee updated to ₱' . number_format($fee, 2) . '.';
-    $_SESSION['message_type'] = 'success';
-    services_redirect('consultation');
-}
-?>
-
 <?php if ($tab === 'consultation'): ?>
 <h2 class="card-title mb-3">Consultation Fee Configuration</h2>
-<p class="text-muted small mb-3">This fee is automatically added to billing when a doctor finishes a consultation with no services selected.</p>
 <form method="POST" action="admin.php?page=services&tab=consultation">
     <input type="hidden" name="action" value="update_consultation_fee">
     <div class="row g-3 align-items-end">

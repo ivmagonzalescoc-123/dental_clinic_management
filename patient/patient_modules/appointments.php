@@ -1259,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const r = await fetch(url);
                 data = await r.json();
             }
-            timeslotSelect.innerHTML = '<option value="">-- Select a 20-minute slot --</option>';
+            timeslotSelect.innerHTML = '<option value="">-- Select a 10-minute slot --</option>';
 
             if (!data.success || !Array.isArray(data.slots) || data.slots.length === 0) {
                 timeslotSelect.innerHTML = '<option value="">No available timeslots for this date</option>';

@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (($_SESSION['role'] ?? '') !== 'secretary') {
+if (!in_array($_SESSION['role'] ?? '', ['secretary', 'admin'], true)) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;

@@ -372,7 +372,7 @@ foreach ($roles as $roleRow) {
                 <button class="nav-link <?php echo $user_type === 'users' ? 'active' : ''; ?>" id="users-tab" 
                         data-bs-toggle="tab" data-bs-target="#users-content" type="button" 
                         onclick="ajaxNavigate('admin.php?page=manage_users&type=users')" role="tab">
-                    <i class="bi bi-people"></i> System Users (<?php echo count($users); ?>)
+                    <i class="bi bi-people"></i> Clinic Users (<?php echo count($users); ?>)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -391,7 +391,7 @@ foreach ($roles as $roleRow) {
     <div class="tab-pane fade <?php echo $user_type === 'users' ? 'show active' : ''; ?>" id="users-content" role="tabpanel">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">System Users</h5>
+                <h5 class="card-title mb-0">Clinic Users</h5>
                 <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
                     <i class="bi bi-plus-circle"></i> Add User
                 </button>

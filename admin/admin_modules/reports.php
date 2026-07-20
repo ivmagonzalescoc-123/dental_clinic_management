@@ -906,33 +906,17 @@ $reportNavQuery = array_merge(
             </div>
         </div>
         <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
+            <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Service Revenue Breakdown</h5>
-                    <?php if (empty($serviceRevenue)): ?>
-                        <p class="text-muted mb-0">No billing data for this period.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Service</th>
-                                        <th class="text-end">Bookings</th>
-                                        <th class="text-end">Revenue</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($serviceRevenue as $row): ?>
-                                        <tr>
-                                            <td class="fw-semibold"><?php echo htmlspecialchars($row['service_name']); ?></td>
-                                            <td class="text-end"><?php echo (int)$row['bookings']; ?></td>
-                                            <td class="text-end text-success">₱<?php echo number_format((float)$row['revenue'], 2); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Revenue Share by Service</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="salesSvcShareChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="salesSvcShareChart" class="clinic-simple-chart"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1255,76 +1239,6 @@ $reportNavQuery = array_merge(
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Appointment Outcomes</h5>
-                    <?php if (empty($statusBreakdown)): ?>
-                        <p class="text-muted mb-0">No appointments in this period.</p>
-                    <?php else: ?>
-                        <ul class="clinic-report-bar-list list-unstyled mb-0">
-                            <?php
-                            $statusMax = 1;
-                            foreach ($statusBreakdown as $row) {
-                                $statusMax = max($statusMax, (int)$row['total']);
-                            }
-                            foreach ($statusBreakdown as $row):
-                                $count = (int)$row['total'];
-                                $pct = (int)round(($count / $statusMax) * 100);
-                                $status = (string)$row['status'];
-                            ?>
-                                <li class="clinic-report-bar-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="badge bg-<?php echo dashboard_appt_status_badge_class($status); ?>">
-                                            <?php echo htmlspecialchars(reports_format_status($status)); ?>
-                                        </span>
-                                        <strong><?php echo $count; ?></strong>
-                                    </div>
-                                    <div class="clinic-report-bar-track">
-                                        <div class="clinic-report-bar-fill" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title mb-3">Top Services by Bookings</h5>
-                    <?php if (empty($topServices)): ?>
-                        <p class="text-muted mb-0">No service bookings in this period.</p>
-                    <?php else: ?>
-                        <ul class="clinic-report-bar-list list-unstyled mb-0">
-                            <?php
-                            $topServiceMax = 1;
-                            foreach ($topServices as $row) {
-                                $topServiceMax = max($topServiceMax, (int)$row['bookings']);
-                            }
-                            foreach ($topServices as $row):
-                                $count = (int)$row['bookings'];
-                                $pct = (int)round(($count / $topServiceMax) * 100);
-                            ?>
-                                <li class="clinic-report-bar-item">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="fw-semibold"><?php echo htmlspecialchars($row['service_name']); ?></span>
-                                        <strong><?php echo $count; ?></strong>
-                                    </div>
-                                    <div class="clinic-report-bar-track">
-                                        <div class="clinic-report-bar-fill is-service" style="width: <?php echo max(4, $pct); ?>%;"></div>
-                                    </div>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <?php elseif ($reportType === 'trend'): ?>
     <div class="row g-3 mb-3">
         <div class="col-md-4">
@@ -1423,39 +1337,6 @@ $reportNavQuery = array_merge(
                     </div>
                     <div class="dental-chart-frame">
                         <div id="trendSvcChart" class="clinic-simple-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-lg-6">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Peak Days Analysis</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendPeakDaysChart" aria-label="Enlarge chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="trendPeakDaysChart" class="clinic-simple-chart"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card dental-surface-card dental-chart-card h-100">
-                <div class="card-body">
-                    <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Peak Hours Analysis</h5>
-                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendPeakHoursChart" aria-label="Enlarge chart">
-                            <i class="bi bi-arrows-fullscreen"></i>
-                        </button>
-                    </div>
-                    <div class="dental-chart-frame">
-                        <div id="trendPeakHoursChart" class="clinic-simple-chart"></div>
                     </div>
                 </div>
             </div>
@@ -1674,11 +1555,19 @@ $reportNavQuery = array_merge(
 
         try {
             if (svcRevLabels.length) {
-                AdminCharts.mount('salesSvcRevChart', AdminCharts.buildHorizontalBarOptions(svcRevLabels, svcRevValues, 'Revenue'), 'Revenue by Service');
+                AdminCharts.mount('salesSvcRevChart', AdminCharts.buildHorizontalBarOptions(svcRevLabels, svcRevValues, 'Revenue', { money: true }), 'Revenue by Service');
             } else {
                 AdminCharts.renderNoData('salesSvcRevChart', 'service revenue');
             }
         } catch(e) { console.error('Svc rev chart:', e); }
+
+        try {
+            if (svcRevLabels.length) {
+                AdminCharts.mount('salesSvcShareChart', AdminCharts.buildDonutOptions(svcRevLabels, svcRevValues, { money: true }), 'Revenue Share by Service');
+            } else {
+                AdminCharts.renderNoData('salesSvcShareChart', 'service revenue');
+            }
+        } catch(e) { console.error('Svc share chart:', e); }
     }
 
     function renderDemographicCharts() {
@@ -1816,60 +1705,6 @@ $reportNavQuery = array_merge(
                 AdminCharts.renderNoData('trendSvcChart', 'service trend data');
             }
         } catch(e) { console.error('Service trend chart:', e); }
-
-        try {
-            if (peakDayLabels.length) {
-                var el = document.getElementById('trendPeakDaysChart');
-                if (el) {
-                    el.innerHTML = '';
-                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                    var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
-                        series: [{ name: 'Appointments', data: peakDayValues }],
-                        xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
-                        colors: ['#6366f1'],
-                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
-                        dataLabels: { enabled: false },
-                        legend: { show: false },
-                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
-                    };
-                    var chart = new ApexCharts(el, opts);
-                    chart.render();
-                    AdminCharts._registry = AdminCharts._registry || {};
-                    AdminCharts._registry['trendPeakDaysChart'] = { options: opts, title: 'Peak Days Analysis', chart: chart };
-                }
-            } else {
-                AdminCharts.renderNoData('trendPeakDaysChart', 'day data');
-            }
-        } catch(e) { console.error('Trend peak days:', e); }
-
-        try {
-            if (peakHourLabels.length) {
-                var el = document.getElementById('trendPeakHoursChart');
-                if (el) {
-                    el.innerHTML = '';
-                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                    var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
-                        series: [{ name: 'Appointments', data: peakHourValues }],
-                        xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
-                        colors: ['#f59e0b'],
-                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
-                        dataLabels: { enabled: false },
-                        legend: { show: false },
-                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
-                    };
-                    var chart = new ApexCharts(el, opts);
-                    chart.render();
-                    AdminCharts._registry = AdminCharts._registry || {};
-                    AdminCharts._registry['trendPeakHoursChart'] = { options: opts, title: 'Peak Hours Analysis', chart: chart };
-                }
-            } else {
-                AdminCharts.renderNoData('trendPeakHoursChart', 'hour data');
-            }
-        } catch(e) { console.error('Trend peak hours:', e); }
     }
 
     function renderCommonCharts() {
@@ -1880,18 +1715,21 @@ $reportNavQuery = array_merge(
                     el.innerHTML = '';
                     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
                     var opts = {
-                        chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
+                        chart: { type: 'area', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [
                             { name: 'Booked', data: dailyBooked },
                             { name: 'Completed', data: dailyCompleted }
                         ],
                         xaxis: { categories: dailyLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-                        yaxis: { min: 0, forceNiceScale: true },
+                        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
                         colors: ['#94a3b8', '#0d9488'],
-                        plotOptions: { bar: { borderRadius: 6, columnWidth: '55%' } },
+                        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05 } },
+                        stroke: { curve: 'smooth', width: 3 },
+                        markers: { size: 4, strokeWidth: 0, hover: { size: 6 } },
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
-                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 }
+                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
+                        tooltip: { y: { formatter: function (v) { return Math.round(v); } } }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -2086,6 +1924,25 @@ $reportNavQuery = array_merge(
 }
 [data-theme="dark"] .clinic-reports-filter .form-label {
     color: #94a3b8;
+}
+[data-theme="dark"] .clinic-reports-filter .form-select,
+[data-theme="dark"] .clinic-reports-filter .form-control {
+    background-color: #0f172a !important;
+    border-color: #2f3d52 !important;
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .clinic-reports-filter .form-select:focus,
+[data-theme="dark"] .clinic-reports-filter .form-control:focus {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+}
+[data-theme="dark"] .clinic-reports-filter .btn-outline-secondary {
+    color: #94a3b8;
+    border-color: #2f3d52;
+}
+[data-theme="dark"] .clinic-reports-filter .btn-outline-secondary:hover {
+    background-color: #1c2c47;
+    color: #e2e8f0;
 }
 [data-theme="dark"] .dental-kpi-label {
     color: #94a3b8;

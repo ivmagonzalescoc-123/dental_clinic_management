@@ -146,7 +146,13 @@
         }, 240);
     }
 
-    function buildHorizontalBarOptions(labels, values, seriesName) {
+    function formatMoney(val) {
+        return '₱' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function buildHorizontalBarOptions(labels, values, seriesName, opts) {
+        opts = opts || {};
+        var isMoney = !!opts.money;
         var colors = labels.map(function (_, i) {
             return palette.categorical[i % palette.categorical.length];
         });
@@ -168,8 +174,12 @@
             },
             dataLabels: {
                 enabled: true,
+                formatter: isMoney ? formatMoney : function (val) { return Math.round(val); },
                 style: { fontSize: '11px', fontWeight: 600, colors: ['#fff'] },
                 background: { enabled: false }
+            },
+            tooltip: {
+                y: { formatter: isMoney ? formatMoney : function (val) { return Math.round(val); } }
             },
             colors: colors,
             legend: { show: false },
@@ -177,17 +187,22 @@
         }, 240);
     }
 
-    function buildDonutOptions(labels, values) {
+    function buildDonutOptions(labels, values, opts) {
+        opts = opts || {};
+        var isMoney = !!opts.money;
         return enhanceOptions({
             chart: { type: 'donut' },
             series: values,
             labels: labels,
-            colors: palette.outcome,
+            colors: opts.colors || palette.outcome,
             legend: { position: 'bottom' },
             dataLabels: {
                 enabled: true,
                 formatter: function (val) { return Math.round(val) + '%'; },
                 style: { fontSize: '11px', fontWeight: 600 }
+            },
+            tooltip: {
+                y: { formatter: isMoney ? formatMoney : function (val) { return Math.round(val); } }
             },
             plotOptions: {
                 pie: {
@@ -196,13 +211,19 @@
                         labels: {
                             show: true,
                             name: { fontSize: '12px' },
-                            value: { fontSize: '18px', fontWeight: 700, color: isDarkTheme() ? '#e2e8f0' : '#1e293b' },
+                            value: {
+                                fontSize: '18px',
+                                fontWeight: 700,
+                                color: isDarkTheme() ? '#e2e8f0' : '#1e293b',
+                                formatter: function (val) { return isMoney ? formatMoney(val) : val; }
+                            },
                             total: {
                                 show: true,
                                 label: 'Total',
                                 fontSize: '12px',
                                 formatter: function (w) {
-                                    return w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
+                                    var sum = w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
+                                    return isMoney ? formatMoney(sum) : sum;
                                 }
                             }
                         }

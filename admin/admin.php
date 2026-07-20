@@ -31,6 +31,11 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
     exit;
 }
 
+if ($page === 'services' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['add', 'edit', 'archive', 'restore', 'save_time', 'delete_time', 'update_consultation_fee'], true)) {
+    include 'admin_modules/services.php';
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'ai_chat') {
     header('Content-Type: application/json');
     include 'admin_modules/ai_chat_handler.php';
@@ -198,6 +203,12 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=billing" data-tooltip="Billing" title="Billing">
+                    <i class="bi bi-receipt"></i>
+                    <span>Billing</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=doctor_management&tab=schedule" data-tooltip="Doctor Management" title="Doctor Management">
                     <i class="bi bi-calendar2-check"></i>
                     <span>Doctor Management</span>
@@ -256,6 +267,9 @@ switch ($role_key) {
                                     break;
                                 case "services":
                                     include "admin_modules/services.php";
+                                    break;
+                                case "billing":
+                                    include "admin_modules/billing.php";
                                     break;
                                 case "doctor_management":
                                     include "admin_modules/doctor_management.php";
@@ -319,7 +333,7 @@ switch ($role_key) {
     <!-- Template Main JS File -->
     <script src="../assets/js/app-toast.js?v=20260614-short"></script>
     <script src="../assets/js/dental-cache.js"></script>
-    <script src="../assets/js/dental-ui.js"></script>
+    <script src="../assets/js/dental-ui.js?v=20260718-fix1"></script>
     <script src="../assets/js/app-request.js?v=20260613"></script>
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
@@ -353,6 +367,7 @@ switch ($role_key) {
                 const pageKeywordMap = {
                     dashboard: ['home', 'overview', 'summary'],
                     reports: ['analytics', 'charts', 'insights'],
+                    billing: ['invoices', 'payments', 'payment history', 'balance'],
                     manage_users: ['users', 'accounts', 'staff', 'patients'],
                     doctor_management: ['doctor', 'dentist', 'providers'],
                     doctor_schedule_admin: ['schedule', 'calendar', 'availability'],
