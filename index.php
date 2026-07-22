@@ -1147,7 +1147,7 @@ $aboutPoints = [
 
                 <div id="otp-alert" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
 
-                <button type="button" id="verify-otp-btn" class="mt-4 block w-full rounded-lg bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                <button type="button" id="verify-otp-btn" class="mt-4 block w-full rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                     Confirm Appointment
                 </button>
 
@@ -1163,8 +1163,8 @@ $aboutPoints = [
                     <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 </div>
 
-                <h3 class="text-lg font-bold text-slate-900">Booking Confirmed!</h3>
-                <p class="mt-1.5 text-sm text-slate-500">A confirmation email has been sent to your inbox.</p>
+                <h3 class="text-lg font-bold text-slate-900">Booking Request Received!</h3>
+                <p class="mt-1.5 text-sm text-slate-500">A copy has been sent to your inbox. We'll notify you once the clinic reviews and approves your request.</p>
 
                 <!-- Tracking number card -->
                 <div class="mt-5 rounded-xl border border-green-200 bg-green-50/60 px-5 py-4">

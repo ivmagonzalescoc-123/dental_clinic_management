@@ -650,7 +650,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     <li class="nav-item">
         <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
             <i class="bi bi-person-plus"></i> New Patients
-            <span class="nav-dot" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
+            <span class="nav-dot<?php echo (int)$guestBookingsCount > 0 ? ' is-active' : ''; ?>" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
         </a>
     </li>
 </ul>
@@ -1533,13 +1533,39 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     DentalUI.btnLoading(submitBtn, 'Processing...');
 
     try {
-        // 1. Create patient account
+        // 1. Create patient account — profiling (allergies, hypertensive/diabetic/etc.) and
+        // gender are sent in this SAME request rather than as separate follow-up fetch calls,
+        // so they're saved atomically with the account instead of being a silent point of
+        // failure if a later step throws or the network hiccups. The server only applies them
+        // when it's actually creating a new patient (a matched existing patient keeps their
+        // existing profile).
+        var profiling = {
+            race: getConvertRadioValue('pf_race'),
+            medical_history: document.getElementById('pf_medical_history').value.trim(),
+            medications: document.getElementById('pf_medications').value.trim(),
+            allergies: document.getElementById('pf_allergies').value.trim(),
+            smoking: getConvertRadioValue('pf_smoking'),
+            alcohol: getConvertRadioValue('pf_alcohol'),
+            hypertensive: document.getElementById('pf_hypertensive').checked,
+            diabetic: document.getElementById('pf_diabetic').checked,
+            asthmatic: document.getElementById('pf_asthmatic').checked,
+            heart_disease: document.getElementById('pf_heart_disease').checked,
+            hiv_positive: document.getElementById('pf_hiv_positive').checked,
+            bleeding_disorder: getConvertRadioValue('pf_bleeding_disorder'),
+            pregnancy_status: getConvertRadioValue('pf_pregnancy_status'),
+            previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
+            dental_anxiety: getConvertRadioValue('pf_dental_anxiety'),
+            background_notes: document.getElementById('pf_background_notes').value.trim()
+        };
+
         var patientFd = new FormData();
         patientFd.append('first_name', convertBookingData.first_name || '');
         patientFd.append('last_name', convertBookingData.last_name || '');
         patientFd.append('email', convertBookingData.email || '');
         patientFd.append('phone_number', convertBookingData.phone_number || '');
         patientFd.append('date_of_birth', convertBookingData.date_of_birth || '');
+        patientFd.append('gender', getConvertRadioValue('pf_gender'));
+        patientFd.append('profiling', JSON.stringify(profiling));
         patientFd.append('csrf_token', window.secretaryCsrfToken || '');
 
         var patientResp = await fetch('../assets/api/patients/create_walkin.php', { method: 'POST', body: patientFd });
@@ -1591,50 +1617,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 console.warn('Failed to mark booking converted:', convertErr);
             }
 
-            // Save the step-2 profiling for genuinely new patients only — a matched
-            // existing patient (patientWasNew === false) already has a profile.
-            if (patientWasNew) {
-                try {
-                    var profiling = {
-                        race: getConvertRadioValue('pf_race'),
-                        medical_history: document.getElementById('pf_medical_history').value.trim(),
-                        medications: document.getElementById('pf_medications').value.trim(),
-                        allergies: document.getElementById('pf_allergies').value.trim(),
-                        smoking: getConvertRadioValue('pf_smoking'),
-                        alcohol: getConvertRadioValue('pf_alcohol'),
-                        hypertensive: document.getElementById('pf_hypertensive').checked,
-                        diabetic: document.getElementById('pf_diabetic').checked,
-                        asthmatic: document.getElementById('pf_asthmatic').checked,
-                        heart_disease: document.getElementById('pf_heart_disease').checked,
-                        hiv_positive: document.getElementById('pf_hiv_positive').checked,
-                        bleeding_disorder: getConvertRadioValue('pf_bleeding_disorder'),
-                        pregnancy_status: getConvertRadioValue('pf_pregnancy_status'),
-                        previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
-                        dental_anxiety: getConvertRadioValue('pf_dental_anxiety'),
-                        background_notes: document.getElementById('pf_background_notes').value.trim()
-                    };
-                    var profilingResp = await fetch('../assets/api/patients/save_profiling.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ patient_id: patientData.patient_id, profiling: profiling })
-                    });
-                    var profilingResult = await profilingResp.json();
-                    if (profilingResult.success) {
-                        var gender = getConvertRadioValue('pf_gender');
-                        if (gender) {
-                            var genderFd = new FormData();
-                            genderFd.append('patient_id', patientData.patient_id);
-                            genderFd.append('gender', gender);
-                            genderFd.append('csrf_token', window.secretaryCsrfToken || '');
-                            await fetch('../assets/api/patients/update_patient.php', { method: 'POST', body: genderFd });
-                        }
-                    } else {
-                        console.warn('Failed to save patient profiling:', profilingResult);
-                    }
-                } catch (profilingErr) {
-                    console.warn('Failed to save patient profiling:', profilingErr);
-                }
-            }
+            // Profiling and gender are now saved atomically inside create_walkin.php (step 1
+            // above) — no separate follow-up call here to silently fail.
 
             closeConvertBookingModal();
 
@@ -1669,7 +1653,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <a class="nav-link <?php echo $view === $filterKey ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=appointments&amp;view=<?php echo urlencode($filterKey); ?>" data-subnav="<?php echo htmlspecialchars($filterKey); ?>">
                         <?php echo htmlspecialchars($filterOpt['label']); ?>
                         <?php if ($filterKey === 'reschedule' && (int)$pendingReqCount > 0): ?>
-                            <span class="nav-dot" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
+                            <span class="nav-dot is-active" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -3520,7 +3504,7 @@ async function openViewProfilingModal(patientId, firstName, lastName) {
         }
 
         if (typeof renderBackgroundProfilingFields === 'function') {
-            contentDiv.innerHTML = renderBackgroundProfilingFields(j.profiling);
+            contentDiv.innerHTML = renderBackgroundProfilingFields(j.profiling, j.patient && j.patient.gender);
         } else {
             contentDiv.innerHTML = '<div class="alert alert-warning">Unable to render medical history view.</div>';
         }

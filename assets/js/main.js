@@ -63,9 +63,10 @@
     var now = new Date()
     var h = now.getHours()
     var m = now.getMinutes()
+    var s = now.getSeconds()
     var ampm = h >= 12 ? 'PM' : 'AM'
     var h12 = h % 12 || 12
-    display.textContent = h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm
+    display.textContent = h12 + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + ' ' + ampm
     if (icon) {
       var isNight = h < 6 || h >= 18
       icon.className = 'header-clock__icon bi ' + (isNight ? 'bi-moon-stars' : 'bi-sun')

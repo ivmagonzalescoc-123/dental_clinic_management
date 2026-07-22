@@ -110,11 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         (appt.line_items || []).forEach(function(item) {
-            haystack.push(item.description, item.tooth_no, item.remark, item.type);
-        });
-
-        (appt.odontogram_findings || []).forEach(function(finding) {
-            haystack.push(finding.tooth_no, finding.remark, 'tooth finding');
+            haystack.push(item.description, item.remark, item.type);
         });
 
         return haystack.some(function(part) {
@@ -161,20 +157,8 @@ document.addEventListener('DOMContentLoaded', function() {
             itemsHtml += `
                 <tr>
                     <td>${escapeHtml(item.description)}</td>
-                    <td>${escapeHtml(item.tooth_no)}</td>
                     <td>${escapeHtml(item.remark)}</td>
                     <td class="text-end">${formatCurrency(item.charge)}</td>
-                </tr>
-            `;
-        });
-
-        (appt.odontogram_findings || []).forEach(function(finding) {
-            itemsHtml += `
-                <tr>
-                    <td>Tooth Finding</td>
-                    <td>${escapeHtml(finding.tooth_no)}</td>
-                    <td>${escapeHtml(finding.remark)}</td>
-                    <td class="text-end">${formatCurrency(0)}</td>
                 </tr>
             `;
         });
@@ -202,25 +186,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <thead class="table-light">
                                 <tr>
                                     <th>Description</th>
-                                    <th>Tooth No.</th>
                                     <th>Remarks</th>
                                     <th class="text-end">Charge</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${itemsHtml.length > 0 ? itemsHtml : '<tr><td colspan="4">No specific items recorded.</td></tr>'}
+                                ${itemsHtml.length > 0 ? itemsHtml : '<tr><td colspan="3">No specific items recorded.</td></tr>'}
                             </tbody>
                             <tfoot>
                                 <tr class="table-group-divider">
-                                    <td colspan="3" class="text-end"><strong>Total Charge:</strong></td>
+                                    <td colspan="2" class="text-end"><strong>Total Charge:</strong></td>
                                     <td class="text-end">${formatCurrency(appt.billing.total_charge)}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="3" class="text-end"><strong>Total Paid (Credit):</strong></td>
+                                    <td colspan="2" class="text-end"><strong>Total Paid (Credit):</strong></td>
                                     <td class="text-end text-success">${formatCurrency(appt.billing.total_paid)}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="3" class="text-end"><strong>Balance:</strong></td>
+                                    <td colspan="2" class="text-end"><strong>Balance:</strong></td>
                                     <td class="text-end ${balanceClass}"><strong>${escapeHtml(balanceDisplay)}</strong></td>
                                 </tr>
                             </tfoot>

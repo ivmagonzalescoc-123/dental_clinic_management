@@ -71,20 +71,21 @@ try {
     // Clear session
     unset($_SESSION['pending_booking']);
 
-    // Send confirmation email
+    // Send booking-received email — this is only OTP verification, not secretary
+    // approval yet, so the wording must say "received/pending review", not "confirmed".
     $patientName = trim($pending['first_name'] . ' ' . $pending['last_name']);
 
     // Notify secretaries of the new patient booking
     wf_notify_new_patient_booking($conn, $bookingId, $patientName, $pending['preferred_date']);
 
-    $subject = 'Booking Confirmed - ' . email_clinic_name();
-    $textContent = 'Your booking has been confirmed. Booking #' . $bookingId . ' for ' . $pending['preferred_date'] . '.';
+    $subject = 'Booking Request Received - ' . email_clinic_name();
+    $textContent = 'We have received your booking request. Booking #' . $bookingId . ' for ' . $pending['preferred_date'] . '. Our staff will review it and confirm shortly.';
     $htmlContent = email_booking_confirmed_html($patientName, $bookingId, $pending['preferred_date'], $pending['preferred_time'], $pending['reason'] ?? '');
     reminder_send_email($pending['email'], $subject, $textContent, $htmlContent);
 
     echo json_encode([
         'success'    => true,
-        'message'    => 'Booking confirmed! A confirmation email has been sent.',
+        'message'    => 'Booking request received! A confirmation email has been sent.',
         'booking_id' => $bookingId,
     ]);
 

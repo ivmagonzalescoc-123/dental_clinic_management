@@ -161,25 +161,36 @@ if (!function_exists('dashboard_render_appt_chart_script')) {
         echo <<<HTML
 <script>
 (function () {
-    if (typeof ApexCharts === 'undefined') return;
-    var el = document.getElementById('{$safeId}');
-    if (!el) return;
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var textColor = isDark ? '#94a3b8' : '#6c757d';
-    var gridColor = isDark ? '#2f3d52' : '#e9ecef';
-    var opts = {
-        chart: { type: 'area', height: 260, toolbar: { show: false }, foreColor: textColor },
-        series: [{ name: 'Appointments', data: {$valuesJson} }],
-        legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: textColor } },
-        xaxis: { categories: {$labelsJson}, axisBorder: { show: true }, axisTicks: { show: true } },
-        stroke: { curve: 'smooth', width: 3 },
-        colors: [{$colorJson}],
-        fill: { type: 'solid', opacity: 0 },
-        dataLabels: { enabled: false },
-        yaxis: { min: 0, forceNiceScale: true, show: true },
-        grid: { show: true, strokeDashArray: 4, borderColor: gridColor }
-    };
-    new ApexCharts(el, opts).render();
+    function renderChart() {
+        if (typeof ApexCharts === 'undefined') return;
+        var el = document.getElementById('{$safeId}');
+        if (!el) return;
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var textColor = isDark ? '#94a3b8' : '#6c757d';
+        var gridColor = isDark ? '#2f3d52' : '#e9ecef';
+        var opts = {
+            chart: { type: 'area', height: 260, toolbar: { show: false }, foreColor: textColor },
+            series: [{ name: 'Appointments', data: {$valuesJson} }],
+            legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: textColor } },
+            xaxis: { categories: {$labelsJson}, axisBorder: { show: true }, axisTicks: { show: true } },
+            stroke: { curve: 'smooth', width: 3 },
+            colors: [{$colorJson}],
+            fill: { type: 'solid', opacity: 0 },
+            dataLabels: { enabled: false },
+            yaxis: { min: 0, forceNiceScale: true, show: true },
+            grid: { show: true, strokeDashArray: 4, borderColor: gridColor }
+        };
+        new ApexCharts(el, opts).render();
+    }
+    // This script tag is emitted inline wherever the caller's page includes it — often
+    // well before the apexcharts.min.js <script src> that loads near the footer, so
+    // ApexCharts isn't defined yet at parse time. Deferring to DOMContentLoaded lets the
+    // later, still-synchronous library script finish executing first.
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderChart);
+    } else {
+        renderChart();
+    }
 })();
 </script>
 HTML;

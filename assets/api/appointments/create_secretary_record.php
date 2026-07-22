@@ -241,46 +241,15 @@ try {
             $tpStmt->close();
         }
 
-        if (!empty($visitClinicalData)) {
-            $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patientId AND record_id = $clinicalRecordId");
-            $pf_race = $visitClinicalData['race'] ?? null;
-            $pf_occupation = $visitClinicalData['occupation'] ?? null;
-            $pf_medical_history = $visitClinicalData['medical_history'] ?? null;
-            $pf_medications = $visitClinicalData['medications'] ?? null;
-            $pf_allergies = $visitClinicalData['allergies'] ?? null;
-            $pf_smoking = $visitClinicalData['smoking'] ?? null;
-            $pf_alcohol = $visitClinicalData['alcohol'] ?? null;
-            $pf_hypertensive = (int)($visitClinicalData['hypertensive'] ?? 0);
-            $pf_diabetic = (int)($visitClinicalData['diabetic'] ?? 0);
-            $pf_asthmatic = (int)($visitClinicalData['asthmatic'] ?? 0);
-            $pf_heart_disease = (int)($visitClinicalData['heart_disease'] ?? 0);
-            $pf_hiv_positive = (int)($visitClinicalData['hiv_positive'] ?? 0);
-            $pf_bleeding_disorder = $visitClinicalData['bleeding_disorder'] ?? null;
-            $pf_pregnancy_status = $visitClinicalData['pregnancy_status'] ?? null;
-            $pf_previous_dental_treatment = $visitClinicalData['previous_dental_treatment'] ?? null;
-            $pf_dental_anxiety = $visitClinicalData['dental_anxiety'] ?? null;
-            $pf_emergency_contact = $visitClinicalData['emergency_contact'] ?? null;
-            $pf_emergency_phone = $visitClinicalData['emergency_phone'] ?? null;
-            $pf_background_notes = $visitClinicalData['background_notes'] ?? null;
-
-            $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-            $pfStmt->bind_param('iisssssssiiiiisssssss',
-                $patientId, $clinicalRecordId,
-                $pf_race, $pf_occupation,
-                $pf_medical_history, $pf_medications,
-                $pf_allergies, $pf_smoking,
-                $pf_alcohol,
-                $pf_hypertensive, $pf_diabetic,
-                $pf_asthmatic, $pf_heart_disease,
-                $pf_hiv_positive,
-                $pf_bleeding_disorder,
-                $pf_pregnancy_status, $pf_previous_dental_treatment,
-                $pf_dental_anxiety, $pf_emergency_contact,
-                $pf_emergency_phone, $pf_background_notes
-            );
-            $pfStmt->execute();
-            $pfStmt->close();
-        }
+        // NOTE: a per-record patient_profiling snapshot insert used to live here, but it
+        // read background-profiling fields (race, hypertensive, ...) out of
+        // $visitClinicalData — which only ever holds the "Visit Clinical Exam" fields
+        // (chief_complaint, case_history, occlusion, ...), none of which exist as
+        // patient_profiling columns. Every secretary "Create Record" therefore inserted a
+        // garbage all-null/zero patient_profiling row, which then shadowed the patient's
+        // real background data (get_records_by_appointment_detailed.php picked the most
+        // recent row by profiling_id). Removed; real background data lives in the
+        // record_id IS NULL row managed by assets/api/patients/save_profiling.php.
     }
 
     $delRx = $conn->prepare('DELETE FROM prescriptions WHERE appointment_id = ?');

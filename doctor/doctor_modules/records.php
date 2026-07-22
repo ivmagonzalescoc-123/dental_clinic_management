@@ -101,18 +101,12 @@ if ($stmt) {
                                     <div class="hist-field"><span class="hist-label">Submitted At</span><span id="histSubmittedAtRec" class="hist-value"></span></div>
                                 </div>
                             </div>
-                            <!-- Row 2: Background + Clinical Exam -->
+                            <!-- Row 2: Background -->
                             <div class="row g-2 mb-2">
-                                <div class="col-md-6" id="histBackgroundRecWrap">
+                                <div class="col-md-12" id="histBackgroundRecWrap">
                                     <div class="hist-section">
                                         <span class="hist-section-title">Patient Background (Profiling)</span>
                                         <div id="histBackgroundRecContent" class="small"></div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6" id="histVisitClinicalRecWrap">
-                                    <div class="hist-section">
-                                        <span class="hist-section-title">Visit Clinical Exam</span>
-                                        <div id="histVisitClinicalRecContent" class="small"></div>
                                     </div>
                                 </div>
                             <!-- Row 3: Clinical Notes (full width) -->
@@ -142,6 +136,18 @@ if ($stmt) {
                                         <pre id="histMaterialsRec" class="hist-pre"></pre>
                                     </div>
                                 </div>
+                            <!-- Row 4b: Prescriptions (full width) -->
+                            <div class="mb-2" id="histPrescriptionsRecWrap" style="display:none;">
+                                <div class="hist-section">
+                                    <span class="hist-section-title">Prescriptions</span>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0" id="histPrescriptionsRec">
+                                            <thead><tr><th>Medicine</th><th>Brand</th><th>Dosage</th><th>Duration</th><th>Notes</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                             <!-- Row 5: Images (full width) -->
                             <div class="mb-2">
                                 <div class="hist-section">
@@ -298,6 +304,18 @@ if ($stmt) {
         function formatTreatmentPlanDisplayRec(plan) {
             if (isClinicalFieldEmptyRec(plan)) return '';
             if (typeof plan === 'string') return plan.trim();
+            if (Array.isArray(plan)) {
+                return plan.map(function(item) {
+                    if (!item || typeof item !== 'object') return '- ' + String(item);
+                    const extras = [];
+                    if (item.tooth_number) extras.push('Tooth #' + item.tooth_number);
+                    if (item.status) extras.push(item.status);
+                    if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
+                        extras.push('Est. PHP ' + Number(item.estimated_cost).toFixed(2));
+                    }
+                    return '- ' + (item.description || '').trim() + (extras.length ? ' (' + extras.join(', ') + ')' : '');
+                }).join('\n');
+            }
             if (typeof plan === 'object' && plan !== null) {
                 const months = plan.follow_up_interval_months;
                 const visits = plan.follow_up_total_visits;
@@ -321,8 +339,13 @@ if ($stmt) {
                 if (!materials.length) return 'No materials recorded.';
                 return materials.map(function(item, index) {
                     if (item && typeof item === 'object') {
-                        const name = String(item.name || item.material || item.item || ('Material ' + (index + 1))).trim();
-                        return '- ' + name;
+                        const name = String(item.material_name || item.name || item.material || item.item || ('Material ' + (index + 1))).trim();
+                        const extras = [];
+                        if (item.quantity) extras.push(item.quantity + (item.unit ? ' ' + item.unit : ''));
+                        if (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0) extras.push('PHP ' + Number(item.cost).toFixed(2));
+                        let line = '- ' + name + (extras.length ? ' (' + extras.join(', ') + ')' : '');
+                        if (item.notes) line += ' — ' + item.notes;
+                        return line;
                     }
                     return '- ' + String(item);
                 }).join('\n');
@@ -481,12 +504,8 @@ if ($stmt) {
                 document.getElementById('histNotesRec').textContent = rec.doctor_notes || '';
 
                 const backgroundEl = document.getElementById('histBackgroundRecContent');
-                const visitClinicalEl = document.getElementById('histVisitClinicalRecContent');
                 if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
-                    backgroundEl.innerHTML = renderBackgroundProfilingFields(rec.patient_profiling || null);
-                }
-                if (visitClinicalEl && typeof renderVisitClinicalFields === 'function') {
-                    visitClinicalEl.innerHTML = renderVisitClinicalFields(rec.visit_clinical || rec.profiling || null);
+                    backgroundEl.innerHTML = renderBackgroundProfilingFields(rec.patient_profiling || null, patientInfo.gender);
                 }
 
                 populateServicesAvailedListRec(document.getElementById('histServicesRec'), j.services_availed || []);
@@ -511,6 +530,24 @@ if ($stmt) {
                 } else {
                     document.getElementById('histMaterialsRec').textContent = '';
                     materialsWrapRec.style.display = 'none';
+                }
+
+                const presWrapRec = document.getElementById('histPrescriptionsRecWrap');
+                const presBodyRec = document.querySelector('#histPrescriptionsRec tbody');
+                if (presBodyRec) presBodyRec.innerHTML = '';
+                if (Array.isArray(j.prescriptions) && j.prescriptions.length > 0) {
+                    j.prescriptions.forEach(function (p) {
+                        const tr = document.createElement('tr');
+                        [p.medicine_name, p.medicine_brand, p.dosage, p.duration, p.notes].forEach(function (val) {
+                            const td = document.createElement('td');
+                            td.textContent = val || '';
+                            tr.appendChild(td);
+                        });
+                        if (presBodyRec) presBodyRec.appendChild(tr);
+                    });
+                    if (presWrapRec) presWrapRec.style.display = '';
+                } else if (presWrapRec) {
+                    presWrapRec.style.display = 'none';
                 }
 
                 // images

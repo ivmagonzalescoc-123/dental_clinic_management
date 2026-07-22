@@ -150,7 +150,10 @@ if (isset($rec['record_id']) && $rec['record_id']) {
 $rec['odontogram'] = $odontogram;
 
 if (isset($rec['patient_id']) && $rec['patient_id']) {
-    $pstmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+    // record_id IS NULL = the patient's one master background-profiling row (managed by
+    // assets/api/patients/save_profiling.php). Don't let stray per-record snapshot rows
+    // shadow it.
+    $pstmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? AND record_id IS NULL ORDER BY profiling_id DESC LIMIT 1');
     if ($pstmt) {
         $pstmt->bind_param('i', $rec['patient_id']);
         $pstmt->execute();
@@ -162,11 +165,6 @@ if (isset($rec['patient_id']) && $rec['patient_id']) {
             $rec['profiling'] = $prow;
         }
     }
-}
-
-if (isset($rec['profiling']) && is_array($rec['profiling'])) {
-    $rec['visit_clinical'] = filter_visit_clinical_data($rec['profiling']);
-    $rec['profiling'] = $rec['visit_clinical'];
 }
 
 if (isset($rec['recommended_services']) && is_array($rec['recommended_services']) && count($rec['recommended_services']) > 0) {

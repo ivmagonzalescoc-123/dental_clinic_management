@@ -780,6 +780,41 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
    light semantic background (e.g. .bg-warning.text-dark) that stays light on purpose
    in both themes, so forcing it light-on-dark here would break that contrast pairing. */
 
+/* Standalone badges (outside table cells, e.g. "badge bg-light text-dark border"
+   summary chips) — the table-scoped badge dark rules above don't reach these, and
+   Bootstrap's own .text-dark !important would otherwise keep dark text sitting on
+   the now-dark .bg-light background, making it unreadable either way. */
+[data-theme="dark"] #main .badge.bg-light,
+[data-theme="dark"] #main .badge.text-bg-light {
+  background-color: #263449 !important;
+  color: #cbd5e1 !important;
+  border-color: #3a4a63 !important;
+}
+
+/* Selected/highlighted table row (Bootstrap .table-primary) stayed pale blue with
+   near-white text sitting on it, making the row unreadable when selected. */
+[data-theme="dark"] #main .table-primary,
+[data-theme="dark"] #main .table-primary > * {
+  --bs-table-bg: rgba(45, 212, 191, 0.14);
+  background-color: rgba(45, 212, 191, 0.14) !important;
+  color: #e2e8f0 !important;
+  border-color: var(--ux-border) !important;
+}
+
+/* Plain Bootstrap .list-group-item (e.g. patient appointment timeline entries)
+   keeps its default white background with no dark override anywhere. */
+[data-theme="dark"] #main .list-group-item {
+  background-color: var(--ux-surface);
+  color: var(--ux-text);
+  border-color: var(--ux-border-soft);
+}
+
+[data-theme="dark"] #main .alert-light {
+  background-color: #16223a;
+  border-color: var(--ux-border);
+  color: var(--ux-text);
+}
+
 @media (max-width: 991.98px) {
   #main .ux-form-grid {
     grid-template-columns: 1fr;
@@ -1968,6 +2003,25 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   background: rgba(45, 212, 191, 0.06);
 }
 
+/* Plain <table> markup without the .table-hover class (e.g. EHR "Services
+   Performed" table) still gets a row hover via the unthemed global rule in
+   main.css (`table tbody tr:hover`), which has no dark counterpart and always
+   paints rows near-white. */
+[data-theme="dark"] #main table tbody tr:hover {
+  background-color: rgba(45, 212, 191, 0.06);
+}
+
+/* Bootstrap's .table-light (used on plain-table <thead> rows, e.g. EHR services
+   table, secretary process-services table) sets its own --bs-table-bg via a
+   utility class with no dark-mode counterpart anywhere in the project. */
+[data-theme="dark"] #main .table-light {
+  --bs-table-bg: #1c2c47;
+  --bs-table-color: #e2e8f0;
+  background-color: #1c2c47;
+  color: #e2e8f0;
+  border-color: var(--ux-border);
+}
+
 [data-theme="dark"] #main .table-striped > tbody > tr:nth-of-type(odd) > * {
   background-color: #182437;
 }
@@ -2080,4 +2134,224 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   border-color: #2dd4bf;
   color: #5eead4;
   box-shadow: none;
+}
+
+/* Modal/popup backgrounds — #main .modal-content and friends above hardcode a
+   light background, which beats the generic dark override in main.css on both
+   specificity and load order. Re-assert dark backgrounds here so every modal
+   across all roles (admin/secretary/doctor/patient) follows the theme. */
+[data-theme="dark"] #main .modal-content {
+  background: var(--ux-surface);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--ux-border);
+}
+
+[data-theme="dark"] #main .modal-body {
+  color: var(--ux-text);
+}
+
+[data-theme="dark"] #main .modal-footer {
+  background: var(--ux-surface);
+  border-color: var(--ux-border-soft);
+}
+
+[data-theme="dark"] .dental-chart-modal .modal-body {
+  background: var(--ux-surface, #16223a);
+  color: var(--ux-text, #e2e8f0);
+}
+
+[data-theme="dark"] .app-confirm-modal .modal-body {
+  color: var(--ux-text, #e2e8f0);
+}
+
+[data-theme="dark"] .app-confirm-modal .modal-footer {
+  border-top-color: var(--ux-border-soft, #263449);
+}
+
+/* Top-level section tabs (e.g. "Appointments / New Patients" page-switch tabs) —
+   plain Bootstrap .nav-tabs, not wrapped in .module-section-nav, so it was never
+   covered by the dark overrides above and stayed white when active. */
+[data-theme="dark"] #main .nav-tabs {
+  border-bottom-color: var(--ux-border);
+}
+
+[data-theme="dark"] #main .nav-tabs .nav-link {
+  color: var(--ux-muted);
+}
+
+[data-theme="dark"] #main .nav-tabs .nav-link:hover {
+  color: var(--ux-accent);
+  background: rgba(45, 212, 191, 0.08);
+}
+
+[data-theme="dark"] #main .nav-tabs .nav-link.active {
+  background: var(--ux-surface);
+  color: var(--ux-accent);
+  border-color: var(--ux-border) var(--ux-border) var(--ux-surface);
+  box-shadow: inset 0 -2px 0 var(--ux-accent);
+}
+
+/* #main .clinic-reports-filter (reports page's period/doctor filter card) hardcodes
+   a white background at ID-level specificity, which beats the plain-class dark
+   override reports.php ships for it — the filter card stayed white in dark mode. */
+[data-theme="dark"] #main .clinic-reports-filter {
+  background: var(--ux-surface);
+  border-color: var(--ux-border);
+}
+
+/* #main .form-label (and its more specific variants for .ux-form-grid / patient
+   profile modal) hardcode a dark navy/slate color at ID-level specificity, which
+   beats the generic dark-mode .form-label override in main.css everywhere — every
+   form label in every modal across the app stayed dark-on-dark and unreadable. */
+[data-theme="dark"] #main .form-label,
+[data-theme="dark"] #main .ux-form-grid .form-label,
+[data-theme="dark"] #main .modal .ux-form-grid .form-label,
+[data-theme="dark"] #patientProfileModal .form-label {
+  color: var(--ux-muted, #cbd5e1);
+}
+
+/* Rich patient profile card (assets/js/doctor-patient-profile.js, renderDoctorPatientProfile()).
+   Un-scoped by modal ID so any modal using these classes (doctor's Session "Profile"
+   button, doctor's My Patients "Profile" button, secretary's View Profiling) renders
+   identically — previously this was duplicated/scoped to a single modal ID per page. */
+.dpp-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.dpp-avatar {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #0d9488;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.dpp-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.dpp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+.dpp-chip {
+  font-size: 0.75rem;
+  background: #f1f5f9;
+  color: #334155;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.dpp-alert-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.dpp-alert-box .dpp-alert-title {
+  font-weight: 700;
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dpp-alert-tag {
+  display: inline-block;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 3px 9px;
+  margin: 0 6px 6px 0;
+}
+.dpp-safe-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dpp-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.dpp-section-title {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+.dpp-field {
+  margin-bottom: 8px;
+}
+.dpp-field:last-child {
+  margin-bottom: 0;
+}
+.dpp-field-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.dpp-field-value {
+  font-size: 0.85rem;
+  color: #1e293b;
+}
+
+[data-theme="dark"] .dpp-name {
+  color: #e2e8f0;
+}
+[data-theme="dark"] .dpp-chip {
+  background: #263449;
+  color: #cbd5e1;
+}
+[data-theme="dark"] .dpp-alert-box {
+  background: rgba(220, 38, 38, 0.14);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+[data-theme="dark"] .dpp-alert-box .dpp-alert-title {
+  color: #f87171;
+}
+[data-theme="dark"] .dpp-safe-box {
+  background: rgba(21, 128, 61, 0.16);
+  border-color: rgba(21, 128, 61, 0.4);
+  color: #4ade80;
+}
+[data-theme="dark"] .dpp-section {
+  background: #16223a;
+  border-color: #2f3d52;
+}
+[data-theme="dark"] .dpp-section-title {
+  color: #cbd5e1;
+}
+[data-theme="dark"] .dpp-field-label {
+  color: #94a3b8;
+}
+[data-theme="dark"] .dpp-field-value {
+  color: #e2e8f0;
 }

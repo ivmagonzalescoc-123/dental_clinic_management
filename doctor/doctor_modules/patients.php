@@ -476,16 +476,15 @@ $basePatientParams = [
 <div class="modal fade" id="patientProfileModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Patient Profiling</h5>
+            <div class="modal-header py-2">
+                <h5 class="modal-title" style="font-size:1rem;"><i class="bi bi-person-badge"></i> Patient Profile</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="mb-2" id="profilePatientName">-</div>
-                <div id="profileBackgroundContent" class="small"></div>
+            <div class="modal-body" id="patientProfileModalBody">
+                <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -493,53 +492,29 @@ $basePatientParams = [
 <script>
 async function openPatientProfileModal(patientId, patientName) {
     const modalEl = document.getElementById('patientProfileModal');
-    if (!modalEl) return;
+    const bodyEl = document.getElementById('patientProfileModalBody');
+    if (!modalEl || !bodyEl) return;
     const modal = new bootstrap.Modal(modalEl);
 
-    document.getElementById('profilePatientName').innerHTML = '<strong>Patient:</strong> ' + (patientName || '-');
-    const contentEl = document.getElementById('profileBackgroundContent');
-    if (contentEl) {
-        contentEl.innerHTML = '<div class="text-muted">Loading...</div>';
-    }
+    bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
     modal.show();
 
     try {
         const res = await fetch('../assets/api/patients/get_profiling.php?patient_id=' + encodeURIComponent(patientId));
         const data = await res.json();
         if (!data || !data.success) {
-            if (contentEl) {
-                contentEl.innerHTML = '<div class="text-muted">Unable to load patient background.</div>';
-            }
+            bodyEl.innerHTML = '<div class="text-muted text-center py-4">Unable to load patient profile.</div>';
             return;
         }
 
-        if (data.patient) {
-            let ageText = 'N/A';
-            if (data.patient.date_of_birth) {
-                const dob = new Date(data.patient.date_of_birth);
-                if (!isNaN(dob.getTime())) {
-                    const ageDate = new Date(Date.now() - dob.getTime());
-                    ageText = Math.abs(ageDate.getUTCFullYear() - 1970);
-                }
-            }
-            document.getElementById('profilePatientName').innerHTML =
-                `<strong>Patient:</strong> ${data.patient.first_name} ${data.patient.middle_name ? data.patient.middle_name + ' ' : ''}${data.patient.last_name}<br>
-                 <small class="text-muted">
-                    <strong>DOB:</strong> ${data.patient.date_of_birth || 'N/A'} (Age: ${ageText}) &nbsp;|&nbsp;
-                    <strong>Gender:</strong> ${data.patient.gender || 'N/A'}<br>
-                    <strong>Phone:</strong> ${data.patient.phone_number || 'N/A'} &nbsp;|&nbsp;
-                    <strong>Address:</strong> ${data.patient.address || 'N/A'}
-                 </small>`;
-        }
-
-        if (contentEl && typeof renderBackgroundProfilingFields === 'function') {
-            contentEl.innerHTML = renderBackgroundProfilingFields(data.profiling || null);
+        if (typeof renderDoctorPatientProfile === 'function') {
+            bodyEl.innerHTML = renderDoctorPatientProfile(data.patient || {}, data.profiling || {}, patientName);
+        } else {
+            bodyEl.innerHTML = '<div class="text-muted text-center py-4">Unable to render patient profile.</div>';
         }
     } catch (err) {
         console.warn('Failed to load patient profiling', err);
-        if (contentEl) {
-            contentEl.innerHTML = '<div class="text-muted">Error loading patient background.</div>';
-        }
+        bodyEl.innerHTML = '<div class="text-muted text-center py-4">Error loading patient profile.</div>';
     }
 }
 </script>

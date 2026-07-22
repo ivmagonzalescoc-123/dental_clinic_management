@@ -13,6 +13,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/env.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
     security_ensure_auth_columns($conn);
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -86,6 +87,68 @@ try {
 
     $patient_id = (int)$conn->insert_id;
     $stmt->close();
+
+    // Save background profiling (allergies, medical history, hypertensive/diabetic/etc.)
+    // in the SAME request as patient creation, not a separate follow-up fetch — a later,
+    // independent call is a silent single point of failure: if it throws or the network
+    // hiccups, the patient account exists but the safety-relevant profiling data is lost
+    // with no error visible anywhere (confirmed happening in practice).
+    $profilingRaw = $_POST['profiling'] ?? '';
+    if ($profilingRaw !== '') {
+        $profilingData = json_decode($profilingRaw, true);
+        if (is_array($profilingData)) {
+            $profiling = filter_background_profiling_data($profilingData);
+            if (!empty($profiling)) {
+                $na = 'N/A';
+                $p_race = $profiling['race'] ?: $na;
+                $p_medical_history = $profiling['medical_history'] ?: $na;
+                $p_medications = $profiling['medications'] ?: $na;
+                $p_allergies = $profiling['allergies'] ?: $na;
+                $p_smoking = $profiling['smoking'] ?: $na;
+                $p_alcohol = $profiling['alcohol'] ?: $na;
+                $p_hypertensive = (int)($profiling['hypertensive'] ?? 0);
+                $p_diabetic = (int)($profiling['diabetic'] ?? 0);
+                $p_asthmatic = (int)($profiling['asthmatic'] ?? 0);
+                $p_heart_disease = (int)($profiling['heart_disease'] ?? 0);
+                $p_hiv_positive = (int)($profiling['hiv_positive'] ?? 0);
+                $p_bleeding_disorder = $profiling['bleeding_disorder'] ?: $na;
+                // Male patients never see the pregnancy field in the form — don't backfill
+                // it with a meaningless "N/A" default; leave it out of the record entirely.
+                $p_pregnancy_status = ($gender === 'Male') ? null : ($profiling['pregnancy_status'] ?: $na);
+                $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?: $na;
+                $p_dental_anxiety = $profiling['dental_anxiety'] ?: $na;
+                $p_background_notes = $profiling['background_notes'] ?: $na;
+
+                $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                if ($pfStmt) {
+                    $pfStmt->bind_param(
+                        'issssssiiiiisssss',
+                        $patient_id,
+                        $p_race,
+                        $p_medical_history,
+                        $p_medications,
+                        $p_allergies,
+                        $p_smoking,
+                        $p_alcohol,
+                        $p_hypertensive,
+                        $p_diabetic,
+                        $p_asthmatic,
+                        $p_heart_disease,
+                        $p_hiv_positive,
+                        $p_bleeding_disorder,
+                        $p_pregnancy_status,
+                        $p_previous_dental_treatment,
+                        $p_dental_anxiety,
+                        $p_background_notes
+                    );
+                    if (!$pfStmt->execute()) {
+                        error_log('create_walkin: failed to save profiling for patient ' . $patient_id . ': ' . $pfStmt->error);
+                    }
+                    $pfStmt->close();
+                }
+            }
+        }
+    }
 
     $patientName = trim($first_name . ' ' . ($middle_name !== '' ? $middle_name . ' ' : '') . $last_name);
     $subject = 'Patient Account - ' . email_clinic_name();

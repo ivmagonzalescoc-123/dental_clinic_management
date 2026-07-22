@@ -139,50 +139,8 @@ if ($patientId > 0) {
             <?php dashboard_render_kpi_card('Next Appointment', $nextAppt ? date('M d, Y', strtotime($nextAppt['appointment_date'])) : 'None', 'bi-calendar-event', 'violet'); ?>
         </div>
 
-        <div class="col-12 col-lg-7">
-            <div class="card dental-surface-card">
-                <div class="card-body">
-                    <h5 class="card-title mb-0">Upcoming Appointments</h5>
-                    <?php if (empty($upcomingList)): ?>
-                        <div class="text-muted mt-3">No upcoming appointments. <a href="patient.php?page=appointments">Book one now</a>.</div>
-                    <?php else: ?>
-                        <ul class="list-group list-group-flush mt-3">
-                            <?php foreach ($upcomingList as $appt): ?>
-                                <?php $status = (string)($appt['status'] ?? 'scheduled'); ?>
-                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                    <div>
-                                        <div class="fw-semibold"><?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?></div>
-                                        <div class="text-muted small">
-                                            <?php
-                                            $timeLabel = dashboard_format_time($appt['start_time'] ?? null);
-                                            echo $timeLabel !== '' ? htmlspecialchars($timeLabel) : 'Time to be confirmed';
-                                            ?>
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-<?php echo dashboard_appt_status_badge_class($status); ?>">
-                                        <?php echo htmlspecialchars(dashboard_format_status_label($status)); ?>
-                                    </span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-lg-5">
-            <div class="card dental-surface-card">
-                <div class="card-body">
-                    <h5 class="card-title mb-0">Your Visits | Last 7 days</h5>
-                    <div class="dental-chart-frame mt-3">
-                        <div id="patientAppt7Chart" style="min-height:220px;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <?php if ($nextAppt): ?>
-        <div class="col-12">
+        <div class="col-12 col-lg-6">
             <div class="card dental-surface-card">
                 <div class="card-body">
                     <h5 class="card-title mb-1">Next Appointment Progress</h5>
@@ -219,6 +177,48 @@ if ($patientId > 0) {
             </div>
         </div>
         <?php endif; ?>
+
+        <div class="col-12 col-lg-6">
+            <div class="card dental-surface-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-0">Your Visits | Last 7 days</h5>
+                    <div class="dental-chart-frame mt-3">
+                        <div id="patientAppt7Chart" style="min-height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card dental-surface-card">
+                <div class="card-body">
+                    <h5 class="card-title mb-0">Upcoming Appointments</h5>
+                    <?php if (empty($upcomingList)): ?>
+                        <div class="text-muted mt-3">No upcoming appointments. <a href="patient.php?page=appointments">Book one now</a>.</div>
+                    <?php else: ?>
+                        <ul class="list-group list-group-flush mt-3">
+                            <?php foreach ($upcomingList as $appt): ?>
+                                <?php $status = (string)($appt['status'] ?? 'scheduled'); ?>
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <div class="fw-semibold"><?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?></div>
+                                        <div class="text-muted small">
+                                            <?php
+                                            $timeLabel = dashboard_format_time($appt['start_time'] ?? null);
+                                            echo $timeLabel !== '' ? htmlspecialchars($timeLabel) : 'Time to be confirmed';
+                                            ?>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-<?php echo dashboard_appt_status_badge_class($status); ?>">
+                                        <?php echo htmlspecialchars(dashboard_format_status_label($status)); ?>
+                                    </span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

@@ -205,27 +205,53 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 return label;
             }) + '</div>' +
-            '<div class="mb-2"><div class="small text-muted fw-semibold">Treatment Plan</div>' + renderList(treatmentPlan, 'No treatment plan recorded.', function (item) { return escapeHtml(item.description || ''); }) + '</div>' +
-            '<div class="mb-2"><div class="small text-muted fw-semibold">Materials Used</div>' + renderList(materials, 'No materials recorded.', function (item) { return escapeHtml(item.material_name || ''); }) + '</div>' +
+            '<div class="mb-2"><div class="small text-muted fw-semibold">Treatment Plan</div>' + renderList(treatmentPlan, 'No treatment plan recorded.', function (item) {
+                let label = escapeHtml(item.description || '');
+                const extras = [];
+                if (item.tooth_number) extras.push('Tooth #' + escapeHtml(item.tooth_number));
+                if (item.status) extras.push(escapeHtml(statusLabel(item.status)));
+                if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
+                    extras.push('Est. ₱' + Number(item.estimated_cost).toFixed(2));
+                }
+                return label + (extras.length ? ' <span class="text-muted">(' + extras.join(' · ') + ')</span>' : '');
+            }) + '</div>' +
+            '<div class="mb-2"><div class="small text-muted fw-semibold">Materials Used</div>' + renderList(materials, 'No materials recorded.', function (item) {
+                let label = escapeHtml(item.material_name || '');
+                const extras = [];
+                if (item.quantity) extras.push(Number(item.quantity) + (item.unit ? ' ' + escapeHtml(item.unit) : ''));
+                if (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0) extras.push('₱' + Number(item.cost).toFixed(2));
+                if (extras.length) label += ' <span class="text-muted">(' + extras.join(', ') + ')</span>';
+                if (item.notes) label += '<div class="small text-muted">' + escapeHtml(item.notes) + '</div>';
+                return label;
+            }) + '</div>' +
             '</div>');
 
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Prescriptions</div>' +
-            (prescriptions.length ? '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Medicine</th><th>Dosage</th><th>Duration</th></tr></thead><tbody>' + prescriptions.map(function (item) { return '<tr><td>' + escapeHtml(item.medicine_name || '') + '</td><td>' + escapeHtml(item.dosage || '') + '</td><td>' + escapeHtml(item.duration || '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="text-muted small">No prescriptions recorded.</div>') +
+            (prescriptions.length ? '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Medicine</th><th>Brand</th><th>Dosage</th><th>Duration</th><th>Notes</th></tr></thead><tbody>' + prescriptions.map(function (item) { return '<tr><td>' + escapeHtml(item.medicine_name || '') + '</td><td>' + escapeHtml(item.medicine_brand || '') + '</td><td>' + escapeHtml(item.dosage || '') + '</td><td>' + escapeHtml(item.duration || '') + '</td><td>' + escapeHtml(item.notes || '') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<div class="text-muted small">No prescriptions recorded.</div>') +
             '</div>');
 
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Patient Background</div>' +
             '<div id="clinicRecordBackground"></div></div>');
 
-        sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Visit Clinical Exam</div>' +
-            '<div id="clinicRecordVisitClinical"></div></div>');
-
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Clinical Images</div>' +
             '<div id="clinicRecordImages" class="row g-2"></div></div>');
+
+        const toothComments = [];
+        if (record.odontogram && typeof record.odontogram === 'object') {
+            Object.keys(record.odontogram).forEach(function (toothNum) {
+                const entry = record.odontogram[toothNum];
+                if (entry && entry.comment) {
+                    toothComments.push({ tooth: toothNum, comment: entry.comment });
+                }
+            });
+        }
 
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Odontogram (read-only)</div>' +
             '<div style="border:1px solid #dee2e6;border-radius:8px;overflow:hidden;height:' + CLINIC_ODONTOGRAM_HEIGHT + 'px;">' +
             '<iframe id="clinicOdontogramFrame" src="' + escapeHtml(CLINIC_ODONTOGRAM_SRC) + '" style="width:100%;height:100%;border:0;"></iframe>' +
-            '</div></div>');
+            '</div>' +
+            (toothComments.length ? '<div class="mt-2"><div class="small text-muted fw-semibold mb-1">Tooth Notes</div><ul class="mb-0 ps-3 small">' + toothComments.map(function (t) { return '<li><strong>Tooth #' + escapeHtml(t.tooth) + ':</strong> ' + escapeHtml(t.comment) + '</li>'; }).join('') + '</ul></div>' : '') +
+            '</div>');
 
         if (followUps.length) {
             sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Follow-up Appointments</div>' +
@@ -250,12 +276,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const backgroundEl = document.getElementById('clinicRecordBackground');
         if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
-            backgroundEl.innerHTML = renderBackgroundProfilingFields(record.patient_profiling || null);
-        }
-
-        const visitClinicalEl = document.getElementById('clinicRecordVisitClinical');
-        if (visitClinicalEl && typeof renderVisitClinicalFields === 'function') {
-            visitClinicalEl.innerHTML = renderVisitClinicalFields(record.visit_clinical || record.profiling || null);
+            backgroundEl.innerHTML = renderBackgroundProfilingFields(record.patient_profiling || null, patientInfo.gender);
         }
 
         const odontoFrame = document.getElementById('clinicOdontogramFrame');

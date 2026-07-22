@@ -1661,7 +1661,7 @@ $reportNavQuery = array_merge(
                         stroke: { curve: 'smooth', width: 2 },
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
-                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
                         grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
                         markers: { size: 4, hover: { size: 6 } }
                     };
@@ -1692,7 +1692,7 @@ $reportNavQuery = array_merge(
                         stroke: { curve: 'smooth', width: 2 },
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
-                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
                         grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
                         markers: { size: 3, hover: { size: 5 } }
                     };
@@ -1727,7 +1727,7 @@ $reportNavQuery = array_merge(
                         stroke: { curve: 'smooth', width: 3 },
                         markers: { size: 4, strokeWidth: 0, hover: { size: 6 } },
                         dataLabels: { enabled: false },
-                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px' },
+                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
                         grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
                         tooltip: { y: { formatter: function (v) { return Math.round(v); } } }
                     };

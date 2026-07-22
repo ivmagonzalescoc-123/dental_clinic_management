@@ -4,7 +4,6 @@ header('Content-Type: application/json');
 require_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 require_once dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 require_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
-require_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 
 security_start_session();
 
@@ -18,34 +17,6 @@ billing_ensure_tables($conn);
 
 $patient_id = (int)$_SESSION['patient_id'];
 $response_data = [];
-
-if (!function_exists('transactions_format_scalar_list')) {
-    function transactions_format_scalar_list($values): string
-    {
-        if (!is_array($values)) {
-            return trim((string)$values);
-        }
-        $parts = [];
-        foreach ($values as $value) {
-            if (is_array($value) || is_object($value)) {
-                $encoded = json_encode($value, JSON_UNESCAPED_UNICODE);
-                if ($encoded !== false && $encoded !== 'null') {
-                    $parts[] = $encoded;
-                }
-            } elseif ($value !== null && $value !== '') {
-                $parts[] = (string)$value;
-            }
-        }
-        return trim(implode(', ', $parts));
-    }
-}
-
-if (!function_exists('transactions_parse_odontogram_findings')) {
-    function transactions_parse_odontogram_findings($raw): array
-    {
-        return odontogram_format_findings($raw);
-    }
-}
 
 try {
     $stmt = $conn->prepare("
@@ -127,7 +98,6 @@ try {
                 $line_items[] = [
                     'type' => (string)($li_row['item_type'] ?? 'service'),
                     'description' => (string)($li_row['description'] ?? 'Charge'),
-                    'tooth_no' => 'N/A',
                     'remark' => ucfirst((string)($li_row['item_type'] ?? 'service')),
                     'charge' => (float)($li_row['amount'] ?? 0),
                 ];
@@ -146,7 +116,6 @@ try {
                         $line_items[] = [
                             'type' => 'Service',
                             'description' => (string)$svcRow['service_name'],
-                            'tooth_no' => 'N/A',
                             'remark' => (string)($svcRow['description'] ?: 'Service Rendered'),
                             'charge' => (float)$svcRow['initial_price'],
                         ];
@@ -163,7 +132,6 @@ try {
                         $line_items[] = [
                             'type' => 'Material',
                             'description' => (string)$matRow['material_name'],
-                            'tooth_no' => 'N/A',
                             'remark' => 'Quantity: ' . (string)$matRow['quantity'],
                             'charge' => (float)$matRow['quantity'] * (float)$matRow['cost'],
                         ];
@@ -173,22 +141,10 @@ try {
             }
         }
 
-        $recordIdForOdonto = (int)($appt['record_id'] ?? 0);
-        $odontogram_findings = [];
-        if ($recordIdForOdonto > 0) {
-            $toothStmt = $conn->prepare('SELECT ts.tooth_selected, ts.status, tst.label, tst.code FROM tooth_status ts LEFT JOIN tooth_status_type tst ON tst.status_type_id = ts.status_type_id WHERE ts.record_id = ?');
-            $toothStmt->bind_param('i', $recordIdForOdonto);
-            $toothStmt->execute();
-            $toothRes = $toothStmt->get_result();
-            while ($trow = $toothRes->fetch_assoc()) $odontogram_findings[] = $trow;
-            $toothStmt->close();
-        }
-
         $response_data[] = [
             'appointment_id' => $appointment_id,
             'date' => $appt['appointment_date'],
             'line_items' => $line_items,
-            'odontogram_findings' => $odontogram_findings,
             'billing' => [
                 'total_charge' => $total_charge,
                 'total_paid' => $total_paid,

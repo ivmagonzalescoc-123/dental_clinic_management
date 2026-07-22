@@ -145,7 +145,10 @@ if (isset($record['record_id']) && $record['record_id']) {
 $record['odontogram'] = $odontogram;
 
 if ($record && isset($record['patient_id']) && $record['patient_id']) {
-    $pstmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+    // record_id IS NULL = the patient's one master background-profiling row (managed by
+    // assets/api/patients/save_profiling.php). Per-record snapshot rows (record_id set)
+    // can exist from other write paths and must not shadow the real background data.
+    $pstmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? AND record_id IS NULL ORDER BY profiling_id DESC LIMIT 1');
     if ($pstmt) {
         $pstmt->bind_param('i', $record['patient_id']);
         $pstmt->execute();
@@ -177,7 +180,7 @@ $patientName = '';
 $appointmentDate = '';
 $appointmentMeta = null;
 $patientInfo = null;
-$apptStmt = $conn->prepare('SELECT a.appointment_date, a.status, a.completed_by_doctor_at, a.secretary_records_completed_at, p.first_name, p.last_name, p.email, p.phone_number, p.address, p.profile_image FROM appointments a INNER JOIN patients p ON p.patient_id = a.patient_id WHERE a.appointment_id = ? LIMIT 1');
+$apptStmt = $conn->prepare('SELECT a.appointment_date, a.status, a.reason, a.completed_by_doctor_at, a.secretary_records_completed_at, p.first_name, p.last_name, p.email, p.phone_number, p.address, p.profile_image, p.gender FROM appointments a INNER JOIN patients p ON p.patient_id = a.patient_id WHERE a.appointment_id = ? LIMIT 1');
 if ($apptStmt) {
     $apptStmt->bind_param('i', $appointment_id);
     $apptStmt->execute();
@@ -188,6 +191,7 @@ if ($apptStmt) {
         $appointmentDate = (string)($apptRow['appointment_date'] ?? '');
         $appointmentMeta = [
             'status' => (string)($apptRow['status'] ?? ''),
+            'reason' => (string)($apptRow['reason'] ?? ''),
             'completed_by_doctor_at' => $apptRow['completed_by_doctor_at'] ?? null,
             'secretary_records_completed_at' => $apptRow['secretary_records_completed_at'] ?? null,
         ];
@@ -196,8 +200,14 @@ if ($apptStmt) {
             'email' => (string)($apptRow['email'] ?? ''),
             'phone' => (string)($apptRow['phone_number'] ?? ''),
             'address' => (string)($apptRow['address'] ?? ''),
+            'gender' => (string)($apptRow['gender'] ?? ''),
             'profile_image' => (string)($apptRow['profile_image'] ?? ''),
         ];
+        // clinical_records has no 'reason' column — the appointment's own reason ("Chief
+        // Complaint") is the only source, so surface it onto the record for display.
+        if ($record && !isset($record['reason'])) {
+            $record['reason'] = $apptRow['reason'] ?? '';
+        }
     }
 }
 

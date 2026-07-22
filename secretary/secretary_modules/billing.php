@@ -922,17 +922,20 @@ if (!$hasAnyData) {
     var labels = <?php echo json_encode(array_column($monthlyData, 'label')); ?>;
     var totals = <?php echo json_encode(array_map(fn($d) => round($d['total'], 2), $monthlyData)); ?>;
 
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    var textColor = isDark ? '#94a3b8' : '#6c757d';
+
     var opts = {
-        chart: { type: 'area', height: 260, toolbar: { show: false } },
+        chart: { type: 'area', height: 260, toolbar: { show: false }, foreColor: textColor },
         series: [{ name: 'Billings', data: totals }],
-        legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: '#6c757d' } },
+        legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: textColor } },
         xaxis: { categories: labels, axisBorder: { show: true }, axisTicks: { show: true } },
         stroke: { curve: 'smooth', width: 3 },
         colors: ['#0d9488'],
         fill: { type: 'solid', opacity: 0 },
         dataLabels: { enabled: false },
         yaxis: { min: 0, forceNiceScale: true, show: true },
-        grid: { show: true, strokeDashArray: 4, borderColor: '#e9ecef' },
+        grid: { show: true, strokeDashArray: 4, borderColor: isDark ? '#2f3d52' : '#e9ecef' },
         tooltip: {
             y: { formatter: function(val) { return '₱' + val.toLocaleString(undefined, {minimumFractionDigits:2}); } }
         }

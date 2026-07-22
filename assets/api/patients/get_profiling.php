@@ -40,7 +40,7 @@ try {
     }
 
     $profiling = null;
-    $pfStmt = $conn->prepare('SELECT race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
+    $pfStmt = $conn->prepare('SELECT race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes FROM patient_profiling WHERE patient_id = ? AND record_id IS NULL ORDER BY profiling_id DESC LIMIT 1');
     if ($pfStmt) {
         $pfStmt->bind_param('i', $patient_id);
         $pfStmt->execute();
@@ -48,6 +48,11 @@ try {
         $pfRow = $pfRes ? $pfRes->fetch_assoc() : null;
         $pfStmt->close();
         if ($pfRow) {
+            // Pass through raw patient_profiling column names (is_hypertensive, not
+            // "hypertensive") so this matches the shape returned by every other
+            // profiling endpoint (get_records_by_appointment_detailed.php,
+            // get_clinical_record.php) and the shared renderBackgroundProfilingFields()/
+            // renderDoctorPatientProfile() JS renderers that consume them.
             $profiling = [
                 'race' => $pfRow['race'] ?? null,
                 'medical_history' => $pfRow['medical_history'] ?? null,
@@ -55,11 +60,11 @@ try {
                 'allergies' => $pfRow['allergies'] ?? null,
                 'smoking' => $pfRow['smoking'] ?? null,
                 'alcohol' => $pfRow['alcohol'] ?? null,
-                'hypertensive' => (int)($pfRow['is_hypertensive'] ?? 0),
-                'diabetic' => (int)($pfRow['is_diabetic'] ?? 0),
-                'asthmatic' => (int)($pfRow['is_asthmatic'] ?? 0),
-                'heart_disease' => (int)($pfRow['has_heart_disease'] ?? 0),
-                'hiv_positive' => (int)($pfRow['is_hiv_positive'] ?? 0),
+                'is_hypertensive' => (int)($pfRow['is_hypertensive'] ?? 0),
+                'is_diabetic' => (int)($pfRow['is_diabetic'] ?? 0),
+                'is_asthmatic' => (int)($pfRow['is_asthmatic'] ?? 0),
+                'has_heart_disease' => (int)($pfRow['has_heart_disease'] ?? 0),
+                'is_hiv_positive' => (int)($pfRow['is_hiv_positive'] ?? 0),
                 'bleeding_disorder' => $pfRow['bleeding_disorder'] ?? null,
                 'pregnancy_status' => $pfRow['pregnancy_status'] ?? null,
                 'previous_dental_treatment' => $pfRow['previous_dental_treatment'] ?? null,
@@ -83,6 +88,7 @@ try {
             'phone_number' => $row['phone_number'],
             'email' => $row['email'],
             'address' => $row['address'],
+            'occupation' => $row['occupation'],
             'profile_image' => $row['profile_image'],
             'last_login_at' => $row['last_login_at'],
             'created_at' => $row['created_at'],

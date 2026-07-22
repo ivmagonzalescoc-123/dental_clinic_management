@@ -36,7 +36,10 @@ if (!$appointment_id) {
                         JOIN patients p ON a.patient_id = p.patient_id
                         WHERE COALESCE(a.user_id, t.doctor_id) = ?
                             AND COALESCE(t.slot_date, a.appointment_date) = ?
-                            AND (a.status IN ('arrived','checked_in','in_progress','confirmed') OR cr.record_id IS NOT NULL)
+                            AND (
+                                a.status IN ('arrived','checked_in','in_progress','confirmed')
+                                OR (cr.record_id IS NOT NULL AND a.status NOT IN ('completed','records_complete','cancelled','no_show'))
+                            )
                         ORDER BY a.is_emergency DESC, COALESCE(t.start_time, '00:00:00') ASC";
 
     $qstmt = $conn->prepare($sql);
@@ -266,6 +269,14 @@ if ($sstmt) {
 ?>
 
 <style>
+.ehr-services-total-row {
+    background: #f8f9fa;
+}
+[data-theme="dark"] .ehr-services-total-row {
+    background: #1c2c47;
+    color: #e2e8f0;
+}
+
 .odontogram-viewport {
     position: relative;
     width: 100%;
@@ -316,150 +327,8 @@ if ($sstmt) {
     }
 }
 
-/* Patient Profile modal */
-#doctorPatientProfileModal .dpp-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 16px;
-}
-#doctorPatientProfileModal .dpp-avatar {
-    flex-shrink: 0;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: #0d9488;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 1.2rem;
-}
-#doctorPatientProfileModal .dpp-name {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 0;
-}
-#doctorPatientProfileModal .dpp-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 4px;
-}
-#doctorPatientProfileModal .dpp-chip {
-    font-size: 0.75rem;
-    background: #f1f5f9;
-    color: #334155;
-    border-radius: 999px;
-    padding: 2px 10px;
-}
-#doctorPatientProfileModal .dpp-alert-box {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 16px;
-}
-#doctorPatientProfileModal .dpp-alert-box .dpp-alert-title {
-    font-weight: 700;
-    color: #b91c1c;
-    font-size: 0.85rem;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-#doctorPatientProfileModal .dpp-alert-tag {
-    display: inline-block;
-    background: #dc2626;
-    color: #fff;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border-radius: 6px;
-    padding: 3px 9px;
-    margin: 0 6px 6px 0;
-}
-#doctorPatientProfileModal .dpp-safe-box {
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #15803d;
-    border-radius: 10px;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-#doctorPatientProfileModal .dpp-section {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 12px;
-}
-#doctorPatientProfileModal .dpp-section-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: #0f172a;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    margin-bottom: 8px;
-}
-#doctorPatientProfileModal .dpp-field {
-    margin-bottom: 8px;
-}
-#doctorPatientProfileModal .dpp-field:last-child {
-    margin-bottom: 0;
-}
-#doctorPatientProfileModal .dpp-field-label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-#doctorPatientProfileModal .dpp-field-value {
-    font-size: 0.85rem;
-    color: #1e293b;
-}
-
-/* ---- Dark mode ---- */
-[data-theme="dark"] #doctorPatientProfileModal .dpp-header-name {
-    color: #e2e8f0;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-chip {
-    background: #263449;
-    color: #cbd5e1;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-alert-box {
-    background: rgba(220, 38, 38, 0.14);
-    border-color: rgba(220, 38, 38, 0.35);
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-alert-box .dpp-alert-title {
-    color: #f87171;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-safe-box {
-    background: rgba(21, 128, 61, 0.16);
-    border-color: rgba(21, 128, 61, 0.4);
-    color: #4ade80;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-section {
-    background: #16223a;
-    border-color: #2f3d52;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-section-title {
-    color: #cbd5e1;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-field-label {
-    color: #94a3b8;
-}
-[data-theme="dark"] #doctorPatientProfileModal .dpp-field-value {
-    color: #e2e8f0;
-}
+/* Patient Profile modal (.dpp-* classes) now styled globally in
+   assets/css/module-content-ux.css so it's shared with other "Profile" popups. */
 </style>
 
 <script>
@@ -750,7 +619,7 @@ if ($sstmt) {
                 tbody.appendChild(tr);
             });
             if (tfoot) {
-                tfoot.innerHTML = '<tr style="font-weight:700;background:#f8f9fa;"><td style="font-size:0.82rem;">Total</td><td style="font-size:0.82rem;text-align:right;">₱' + total.toLocaleString() + '</td><td></td></tr>';
+                tfoot.innerHTML = '<tr class="ehr-services-total-row" style="font-weight:700;"><td style="font-size:0.82rem;">Total</td><td style="font-size:0.82rem;text-align:right;">₱' + total.toLocaleString() + '</td><td></td></tr>';
             }
         }
 
@@ -995,107 +864,6 @@ function openDoctorPatientProfileModal() {
         });
 }
 
-function renderDoctorPatientProfile(patient, profiling, fallbackName) {
-    const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const val = (v) => (v === null || v === undefined || String(v).trim() === '') ? '' : String(v).trim();
-    const yes = (v) => v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'yes';
-
-    const fullName = [patient.first_name, patient.middle_name, patient.last_name].filter(Boolean).join(' ').trim() || fallbackName || 'Unknown Patient';
-    const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-
-    let ageText = 'N/A';
-    if (patient.date_of_birth) {
-        const dob = new Date(patient.date_of_birth);
-        if (!isNaN(dob.getTime())) {
-            ageText = Math.abs(new Date(Date.now() - dob.getTime()).getUTCFullYear() - 1970);
-        }
-    }
-
-    // --- Header ---
-    let html = '<div class="dpp-header">';
-    html += `<div class="dpp-avatar">${esc(initials)}</div>`;
-    html += '<div>';
-    html += `<p class="dpp-name">${esc(fullName)}</p>`;
-    html += '<div class="dpp-chips">';
-    html += `<span class="dpp-chip"><i class="bi bi-cake2"></i> Age ${esc(ageText)}</span>`;
-    if (val(patient.gender)) html += `<span class="dpp-chip"><i class="bi bi-gender-ambiguous"></i> ${esc(patient.gender)}</span>`;
-    if (val(patient.phone_number)) html += `<span class="dpp-chip"><i class="bi bi-telephone"></i> ${esc(patient.phone_number)}</span>`;
-    html += '</div></div></div>';
-
-    // --- Medical alerts (the part a doctor needs to see first) ---
-    const alerts = [];
-    if (val(profiling.allergies)) alerts.push('Allergies: ' + val(profiling.allergies));
-    if (yes(profiling.hypertensive)) alerts.push('Hypertensive');
-    if (yes(profiling.diabetic)) alerts.push('Diabetic');
-    if (yes(profiling.asthmatic)) alerts.push('Asthmatic');
-    if (yes(profiling.heart_disease)) alerts.push('Heart Disease');
-    if (yes(profiling.hiv_positive)) alerts.push('HIV Positive');
-    if (yes(profiling.bleeding_disorder)) alerts.push('Bleeding Disorder');
-    if (val(profiling.pregnancy_status) && val(profiling.pregnancy_status).toLowerCase() !== 'not applicable' && val(profiling.pregnancy_status).toLowerCase() !== 'no') {
-        alerts.push('Pregnancy: ' + val(profiling.pregnancy_status));
-    }
-
-    if (alerts.length > 0) {
-        html += '<div class="dpp-alert-box">';
-        html += '<div class="dpp-alert-title"><i class="bi bi-exclamation-triangle-fill"></i> Medical Alerts — Review Before Treatment</div>';
-        alerts.forEach(a => { html += `<span class="dpp-alert-tag">${esc(a)}</span>`; });
-        html += '</div>';
-    } else {
-        html += '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> No known allergies or flagged medical conditions on file.</div>';
-    }
-
-    // --- Contact & Emergency Contact ---
-    html += '<div class="row g-2 mb-1">';
-    html += '<div class="col-md-6"><div class="dpp-section">';
-    html += '<div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>';
-    html += `<div class="dpp-field"><div class="dpp-field-label">Email</div><div class="dpp-field-value">${esc(val(patient.email) || 'N/A')}</div></div>`;
-    html += `<div class="dpp-field"><div class="dpp-field-label">Phone</div><div class="dpp-field-value">${esc(val(patient.phone_number) || 'N/A')}</div></div>`;
-    html += `<div class="dpp-field"><div class="dpp-field-label">Address</div><div class="dpp-field-value">${esc(val(patient.address) || 'N/A')}</div></div>`;
-    html += '</div></div>';
-
-    html += '<div class="col-md-6"><div class="dpp-section">';
-    html += '<div class="dpp-section-title"><i class="bi bi-telephone-forward"></i> Emergency Contact</div>';
-    html += `<div class="dpp-field"><div class="dpp-field-label">Name</div><div class="dpp-field-value">${esc(val(profiling.emergency_contact) || 'Not provided')}</div></div>`;
-    html += `<div class="dpp-field"><div class="dpp-field-label">Phone</div><div class="dpp-field-value">${esc(val(profiling.emergency_phone) || 'Not provided')}</div></div>`;
-    html += '</div></div>';
-    html += '</div>';
-
-    // --- Background ---
-    const bgFields = [
-        ['Occupation', val(patient.occupation)],
-        ['Race', val(profiling.race)],
-        ['Smoking', val(profiling.smoking)],
-        ['Alcohol', val(profiling.alcohol)],
-        ['Previous Dental Treatment', val(profiling.previous_dental_treatment)],
-        ['Dental Anxiety', val(profiling.dental_anxiety)],
-    ].filter(([, v]) => v !== '');
-
-    if (bgFields.length > 0) {
-        html += '<div class="dpp-section">';
-        html += '<div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Background</div>';
-        html += '<div class="row">';
-        bgFields.forEach(([label, v]) => {
-            html += `<div class="col-md-6 dpp-field"><div class="dpp-field-label">${esc(label)}</div><div class="dpp-field-value">${esc(v)}</div></div>`;
-        });
-        html += '</div></div>';
-    }
-
-    // --- Free-text notes ---
-    const notes = [
-        ['Medical History', val(profiling.medical_history)],
-        ['Current Medications', val(profiling.medications)],
-        ['Additional Notes', val(profiling.background_notes)],
-    ].filter(([, v]) => v !== '');
-
-    if (notes.length > 0) {
-        html += '<div class="dpp-section">';
-        html += '<div class="dpp-section-title"><i class="bi bi-journal-medical"></i> Notes</div>';
-        notes.forEach(([label, v]) => {
-            html += `<div class="dpp-field"><div class="dpp-field-label">${esc(label)}</div><div class="dpp-field-value">${esc(v)}</div></div>`;
-        });
-        html += '</div>';
-    }
-
-    return html;
-}
+// renderDoctorPatientProfile() now lives in assets/js/doctor-patient-profile.js
+// (shared with doctor's My Patients "Profile" popup and secretary's View Profiling).
 </script>

@@ -1508,6 +1508,8 @@ table a:hover {
 }
 
 .unified-table-search-input {
+    -webkit-appearance: none;
+    appearance: none;
     border-radius: 999px !important;
     border: 1px solid #c9deef !important;
     padding: 8px 34px 8px 36px !important;
@@ -3152,4 +3154,42 @@ table a:hover {
 [data-theme="dark"] .flatpickr-rContainer,
 [data-theme="dark"] .flatpickr-days {
     border-color: #2f3d52;
+}
+
+/* ApexCharts hover tooltips (chart "hover labels") don't set their own text color
+   for every sub-element, so they inherit [data-theme="dark"] body's light text
+   color (#e2e8f0). Several charts never set tooltip.theme:'dark' in their JS
+   config, so the tooltip keeps ApexCharts' default white background — inherited
+   light text on that white background is invisible. Force explicit, theme-aware
+   colors here so hover tooltips stay readable regardless of each chart's config. */
+.apexcharts-tooltip,
+.apexcharts-tooltip-title,
+.apexcharts-xaxistooltip,
+.apexcharts-yaxistooltip {
+    color: #1e293b !important;
+}
+
+[data-theme="dark"] .apexcharts-tooltip,
+[data-theme="dark"] .apexcharts-xaxistooltip,
+[data-theme="dark"] .apexcharts-yaxistooltip {
+    background: #16223a !important;
+    border-color: #2f3d52 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .apexcharts-tooltip-title {
+    background: #1c2c47 !important;
+    border-color: #2f3d52 !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .apexcharts-tooltip-text-y-label,
+[data-theme="dark"] .apexcharts-tooltip-text-y-value,
+[data-theme="dark"] .apexcharts-tooltip-text-z-label,
+[data-theme="dark"] .apexcharts-tooltip-text-z-value,
+[data-theme="dark"] .apexcharts-tooltip-text-goals-label,
+[data-theme="dark"] .apexcharts-tooltip-text-goals-value,
+[data-theme="dark"] .apexcharts-xaxistooltip-text,
+[data-theme="dark"] .apexcharts-yaxistooltip-text {
+    color: #e2e8f0 !important;
 }

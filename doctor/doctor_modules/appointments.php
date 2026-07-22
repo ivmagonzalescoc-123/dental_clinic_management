@@ -634,18 +634,12 @@ if ($stmt) {
                                         <div class="hist-field"><span class="hist-label">Follow-up Date</span><span id="histFollowUpDate" class="hist-value badge bg-info text-dark"></span></div>
                                     </div>
                                 </div>
-                                <!-- Row 2: Background + Clinical Exam -->
+                                <!-- Row 2: Background -->
                                 <div class="row g-2 mb-2">
-                                    <div class="col-md-6" id="histBackgroundWrap">
+                                    <div class="col-md-12" id="histBackgroundWrap">
                                         <div class="hist-section">
                                             <span class="hist-section-title">Patient Background (Profiling)</span>
                                             <div id="histBackgroundContent" class="small"></div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6" id="histVisitClinicalWrap">
-                                        <div class="hist-section">
-                                            <span class="hist-section-title">Visit Clinical Exam</span>
-                                            <div id="histVisitClinicalContent" class="small"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1210,16 +1204,20 @@ function formatMaterialsDisplay(materials) {
 
         const lines = parsed.map(function(item, index) {
             if (item && typeof item === 'object') {
-                const name = formatPrimitive(item.name || item.material || item.item || ('Material ' + (index + 1)));
-                const qty = item.qty !== undefined ? item.qty : item.quantity;
-                const price = item.price !== undefined ? item.price : item.cost;
+                const name = formatPrimitive(item.material_name || item.name || item.material || item.item || ('Material ' + (index + 1)));
+                const qty = item.quantity !== undefined ? item.quantity : item.qty;
+                const unit = item.unit;
+                const price = item.cost !== undefined ? item.cost : item.price;
 
                 let line = name;
                 if (qty !== undefined && qty !== null && String(qty).trim() !== '') {
-                    line += ' x' + qty;
+                    line += ' x' + qty + (unit ? ' ' + unit : '');
                 }
-                if (price !== undefined && price !== null && String(price).trim() !== '') {
-                    line += ' (PHP ' + price + ')';
+                if (price !== undefined && price !== null && String(price).trim() !== '' && Number(price) > 0) {
+                    line += ' (PHP ' + Number(price).toFixed(2) + ')';
+                }
+                if (item.notes) {
+                    line += ' — ' + item.notes;
                 }
                 return '- ' + line;
             }
@@ -1262,6 +1260,18 @@ function isClinicalFieldEmpty(value) {
 function formatTreatmentPlanDisplay(plan) {
     if (isClinicalFieldEmpty(plan)) return '';
     if (typeof plan === 'string') return plan.trim();
+    if (Array.isArray(plan)) {
+        return plan.map(function(item) {
+            if (!item || typeof item !== 'object') return '- ' + formatPrimitive(item);
+            const extras = [];
+            if (item.tooth_number) extras.push('Tooth #' + item.tooth_number);
+            if (item.status) extras.push(item.status);
+            if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
+                extras.push('Est. PHP ' + Number(item.estimated_cost).toFixed(2));
+            }
+            return '- ' + formatPrimitive(item.description) + (extras.length ? ' (' + extras.join(', ') + ')' : '');
+        }).join('\n');
+    }
     if (typeof plan === 'object' && plan !== null) {
         const months = plan.follow_up_interval_months;
         const visits = plan.follow_up_total_visits;
@@ -1470,15 +1480,10 @@ async function openHistoryModal(appointmentId) {
         document.getElementById('histNotes').textContent = rec.doctor_notes || '';
 
         const backgroundEl = document.getElementById('histBackgroundContent');
-        const visitClinicalEl = document.getElementById('histVisitClinicalContent');
         const backgroundData = rec.patient_profiling || null;
-        const visitClinicalData = rec.visit_clinical || rec.profiling || null;
 
         if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
-            backgroundEl.innerHTML = renderBackgroundProfilingFields(backgroundData);
-        }
-        if (visitClinicalEl && typeof renderVisitClinicalFields === 'function') {
-            visitClinicalEl.innerHTML = renderVisitClinicalFields(visitClinicalData);
+            backgroundEl.innerHTML = renderBackgroundProfilingFields(backgroundData, patientInfo.gender);
         }
 
         // populate clinical summary
