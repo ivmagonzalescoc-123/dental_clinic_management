@@ -833,9 +833,6 @@ foreach ($roles as $roleRow) {
                         <button class="nav-link active py-1 px-2" id="patient-tab-profile" data-bs-toggle="tab" data-bs-target="#patientTabProfile" type="button" role="tab" style="font-size:0.82rem;">Profile</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link py-1 px-2" id="patient-tab-background" data-bs-toggle="tab" data-bs-target="#patientTabBackground" type="button" role="tab" style="font-size:0.82rem;">Profiling</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
                         <button class="nav-link py-1 px-2" id="patient-tab-account" data-bs-toggle="tab" data-bs-target="#patientTabAccount" type="button" role="tab" style="font-size:0.82rem;">Account</button>
                     </li>
                 </ul>
@@ -883,120 +880,6 @@ foreach ($roles as $roleRow) {
                             <div id="editPatientAlert" class="mt-1"></div>
                             <div class="d-flex justify-content-end mt-1">
                                 <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.8rem;">Save</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="tab-pane fade" id="patientTabBackground" role="tabpanel">
-                        <form id="profilingForm" class="ux-form-shell">
-                            <input type="hidden" id="profiling_patient_id" name="patient_id">
-
-                            <!-- Gender -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Gender</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_male" value="Male"><label class="form-check-label fw-semibold" for="pf_gender_male" style="font-size:0.82rem;">Male</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_female" value="Female"><label class="form-check-label fw-semibold" for="pf_gender_female" style="font-size:0.82rem;">Female</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_other" value="Other"><label class="form-check-label fw-semibold" for="pf_gender_other" style="font-size:0.82rem;">Other</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Race -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Race</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_asian" value="Asian"><label class="form-check-label fw-semibold" for="pf_race_asian" style="font-size:0.82rem;">Asian</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_caucasian" value="Caucasian"><label class="form-check-label fw-semibold" for="pf_race_caucasian" style="font-size:0.82rem;">Caucasian</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_black" value="Black/African American"><label class="form-check-label fw-semibold" for="pf_race_black" style="font-size:0.82rem;">Black</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_hispanic" value="Hispanic/Latino"><label class="form-check-label fw-semibold" for="pf_race_hispanic" style="font-size:0.82rem;">Hispanic</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_native" value="Native American"><label class="form-check-label fw-semibold" for="pf_race_native" style="font-size:0.82rem;">Native</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_pacific" value="Pacific Islander"><label class="form-check-label fw-semibold" for="pf_race_pacific" style="font-size:0.82rem;">Pacific</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_mixed" value="Mixed"><label class="form-check-label fw-semibold" for="pf_race_mixed" style="font-size:0.82rem;">Mixed</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_other" value="Other"><label class="form-check-label fw-semibold" for="pf_race_other" style="font-size:0.82rem;">Other</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Allergies (text) -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Allergies</label>
-                                <input type="text" id="pf_allergies" class="form-control" placeholder="e.g. Penicillin, Latex" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
-                            </div>
-
-                            <!-- Smoking -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Smoking</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_no" value="Non-smoker"><label class="form-check-label fw-semibold" for="pf_smoking_no" style="font-size:0.82rem;">Non-smoker</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_former" value="Former smoker"><label class="form-check-label fw-semibold" for="pf_smoking_former" style="font-size:0.82rem;">Former</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_current" value="Current smoker"><label class="form-check-label fw-semibold" for="pf_smoking_current" style="font-size:0.82rem;">Current</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Alcohol -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Alcohol</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_no" value="Non-drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_no" style="font-size:0.82rem;">Non-drinker</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_social" value="Social drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_social" style="font-size:0.82rem;">Social</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_regular" value="Regular drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_regular" style="font-size:0.82rem;">Regular</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Dental Anxiety -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Dental Anxiety</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_none" value="None"><label class="form-check-label fw-semibold" for="pf_anxiety_none" style="font-size:0.82rem;">None</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_mild" value="Mild"><label class="form-check-label fw-semibold" for="pf_anxiety_mild" style="font-size:0.82rem;">Mild</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_moderate" value="Moderate"><label class="form-check-label fw-semibold" for="pf_anxiety_moderate" style="font-size:0.82rem;">Moderate</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_severe" value="Severe"><label class="form-check-label fw-semibold" for="pf_anxiety_severe" style="font-size:0.82rem;">Severe</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Bleeding Disorder -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Bleeding Disorder</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_none" value="None"><label class="form-check-label fw-semibold" for="pf_bleed_none" style="font-size:0.82rem;">None</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_hemophilia" value="Hemophilia"><label class="form-check-label fw-semibold" for="pf_bleed_hemophilia" style="font-size:0.82rem;">Hemophilia</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_vonw" value="Von Willebrand"><label class="form-check-label fw-semibold" for="pf_bleed_vonw" style="font-size:0.82rem;">Von Willebrand</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_thrombo" value="Thrombocytopenia"><label class="form-check-label fw-semibold" for="pf_bleed_thrombo" style="font-size:0.82rem;">Thrombocytopenia</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_other" value="Other"><label class="form-check-label fw-semibold" for="pf_bleed_other" style="font-size:0.82rem;">Other</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Pregnancy (female only) -->
-                            <div id="pf_pregnancy_wrapper" class="mb-2" style="display:none;">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Pregnancy</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_not" value="Not pregnant"><label class="form-check-label fw-semibold" for="pf_preg_not" style="font-size:0.82rem;">Not pregnant</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_yes" value="Pregnant"><label class="form-check-label fw-semibold" for="pf_preg_yes" style="font-size:0.82rem;">Pregnant</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_post" value="Postpartum"><label class="form-check-label fw-semibold" for="pf_preg_post" style="font-size:0.82rem;">Postpartum</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_nursing" value="Nursing"><label class="form-check-label fw-semibold" for="pf_preg_nursing" style="font-size:0.82rem;">Nursing</label></div>
-                                </div>
-                            </div>
-
-                            <!-- Textareas -->
-                            <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medical History</label><textarea id="pf_medical_history" class="form-control" rows="1" placeholder="Previous surgeries, chronic conditions..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-                            <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medications</label><textarea id="pf_medications" class="form-control" rows="1" placeholder="Current medications and dosages..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-                            <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Previous Treatment</label><textarea id="pf_previous_dental_treatment" class="form-control" rows="1" placeholder="Previous dental procedures..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-
-                            <!-- Conditions (checkboxes) -->
-                            <div class="mb-2">
-                                <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Conditions</label>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hypertensive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hypertensive" style="font-size:0.82rem;">Hypertensive</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_diabetic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_diabetic" style="font-size:0.82rem;">Diabetic</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_asthmatic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_asthmatic" style="font-size:0.82rem;">Asthmatic</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_heart_disease" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_heart_disease" style="font-size:0.82rem;">Heart Disease</label></div>
-                                    <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hiv_positive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hiv_positive" style="font-size:0.82rem;">HIV+</label></div>
-                                </div>
-                            </div>
-
-                            <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Notes</label><textarea id="pf_background_notes" class="form-control" rows="1" placeholder="Additional notes..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-
-                            <div class="d-flex justify-content-end mt-1">
-                                <button type="submit" class="btn btn-primary btn-sm" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Save</button>
                             </div>
                         </form>
                     </div>
@@ -1242,48 +1125,6 @@ function renderPatientModalAvatar(patient) {
     wrap.innerHTML = '<span class="profile-avatar-icon patient-profile-modal__avatar-icon" role="img" aria-label="' + escapePatientHtml(name) + '"><i class="bi bi-person-fill" aria-hidden="true"></i></span>';
 }
 
-function setRadioValue(name, value) {
-    const radios = document.querySelectorAll('input[name="' + name + '"]');
-    radios.forEach(function(r) { r.checked = (r.value === value); });
-}
-
-function getRadioValue(name) {
-    const checked = document.querySelector('input[name="' + name + '"]:checked');
-    return checked ? checked.value : '';
-}
-
-function updatePregnancyVisibility(gender) {
-    const wrapper = document.getElementById('pf_pregnancy_wrapper');
-    if (!wrapper) return;
-    const isFemale = gender === 'Female';
-    wrapper.style.display = isFemale ? '' : 'none';
-    if (!isFemale) {
-        document.getElementById('pf_pregnancy_status').value = '';
-    }
-}
-
-function fillProfilingForm(profiling, patientGender) {
-    const pf = profiling || {};
-    setRadioValue('pf_gender', patientGender || '');
-    setRadioValue('pf_race', pf.race || '');
-    document.getElementById('pf_medical_history').value = pf.medical_history || '';
-    document.getElementById('pf_medications').value = pf.medications || '';
-    document.getElementById('pf_allergies').value = pf.allergies || '';
-    setRadioValue('pf_smoking', pf.smoking || '');
-    setRadioValue('pf_alcohol', pf.alcohol || '');
-    document.getElementById('pf_hypertensive').checked = !!pf.hypertensive;
-    document.getElementById('pf_diabetic').checked = !!pf.diabetic;
-    document.getElementById('pf_asthmatic').checked = !!pf.asthmatic;
-    document.getElementById('pf_heart_disease').checked = !!pf.heart_disease;
-    document.getElementById('pf_hiv_positive').checked = !!pf.hiv_positive;
-    setRadioValue('pf_bleeding_disorder', pf.bleeding_disorder || '');
-    setRadioValue('pf_pregnancy_status', pf.pregnancy_status || '');
-    document.getElementById('pf_previous_dental_treatment').value = pf.previous_dental_treatment || '';
-    setRadioValue('pf_dental_anxiety', pf.dental_anxiety || '');
-    document.getElementById('pf_background_notes').value = pf.background_notes || '';
-    updatePregnancyVisibility(patientGender);
-}
-
 function fillProfileForm(patient) {
     document.getElementById('edit_patient_id').value = patient.patient_id || '';
     document.getElementById('edit_patient_first_name').value = patient.first_name || '';
@@ -1295,7 +1136,6 @@ function fillProfileForm(patient) {
     document.getElementById('edit_patient_gender_sync').value = patient.gender || '';
     document.getElementById('edit_patient_address').value = patient.address || '';
     document.getElementById('edit_patient_occupation').value = patient.occupation || '';
-    document.getElementById('profiling_patient_id').value = patient.patient_id || '';
     document.getElementById('reset_patient_id').value = patient.patient_id || '';
     document.getElementById('account_patient_phone').textContent = patient.phone_number || '—';
     document.getElementById('account_patient_email').textContent = patient.email || '—';
@@ -1310,28 +1150,10 @@ function openPatientProfileModal(patient, activeTab) {
     renderPatientModalAvatar(patient);
     fillProfileForm(patient);
 
-    fetch('../assets/api/patients/get_profiling.php?patient_id=' + encodeURIComponent(patient.patient_id))
-        .then(function (response) { return response.json(); })
-        .then(function (data) {
-            if (data.success) {
-                if (data.patient) {
-                    activePatientRecord = Object.assign({}, activePatientRecord, data.patient);
-                    fillProfileForm(activePatientRecord);
-                    renderPatientModalAvatar(activePatientRecord);
-                    document.getElementById('patientProfileModalTitle').textContent = patientDisplayName(activePatientRecord);
-                }
-                fillProfilingForm(data.profiling || null, activePatientRecord.gender || '');
-            }
-        })
-        .catch(function (err) { console.warn('Failed to load patient profile details', err); })
-        .finally(function () {
-            const tabId = activeTab === 'background'
-                ? 'patient-tab-background'
-                : (activeTab === 'account' ? 'patient-tab-account' : 'patient-tab-profile');
-            const tabTrigger = document.getElementById(tabId);
-            if (tabTrigger) bootstrap.Tab.getOrCreateInstance(tabTrigger).show();
-            modal.show();
-        });
+    const tabId = activeTab === 'account' ? 'patient-tab-account' : 'patient-tab-profile';
+    const tabTrigger = document.getElementById(tabId);
+    if (tabTrigger) bootstrap.Tab.getOrCreateInstance(tabTrigger).show();
+    modal.show();
 }
 
 // Edit patient profile via AJAX
@@ -1371,66 +1193,6 @@ document.getElementById('editPatientForm').addEventListener('submit', function (
         .catch(function () {
             notifyAdminPatients('Unable to update patient.', 'danger');
         });
-});
-
-document.getElementById('profilingForm').addEventListener('submit', function (event) {
-    event.preventDefault();
-    const patientId = parseInt(document.getElementById('profiling_patient_id').value, 10);
-    const gender = getRadioValue('pf_gender');
-    const profiling = {
-        race: getRadioValue('pf_race'),
-        medical_history: document.getElementById('pf_medical_history').value.trim(),
-        medications: document.getElementById('pf_medications').value.trim(),
-        allergies: document.getElementById('pf_allergies').value.trim(),
-        smoking: getRadioValue('pf_smoking'),
-        alcohol: getRadioValue('pf_alcohol'),
-        hypertensive: document.getElementById('pf_hypertensive').checked,
-        diabetic: document.getElementById('pf_diabetic').checked,
-        asthmatic: document.getElementById('pf_asthmatic').checked,
-        heart_disease: document.getElementById('pf_heart_disease').checked,
-        hiv_positive: document.getElementById('pf_hiv_positive').checked,
-        bleeding_disorder: getRadioValue('pf_bleeding_disorder'),
-        pregnancy_status: getRadioValue('pf_pregnancy_status'),
-        previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
-        dental_anxiety: getRadioValue('pf_dental_anxiety'),
-        background_notes: document.getElementById('pf_background_notes').value.trim()
-    };
-
-    fetch('../assets/api/patients/save_profiling.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patient_id: patientId, profiling: profiling })
-    })
-        .then(function (response) { return response.json(); })
-        .then(function (result) {
-            if (result.success) {
-                const genderFd = new FormData();
-                genderFd.append('patient_id', patientId);
-                genderFd.append('gender', gender);
-                genderFd.append('csrf_token', window.adminPatientCsrf);
-                return fetch('../assets/api/patients/update_patient.php', { method: 'POST', body: genderFd });
-            } else {
-                throw new Error(result.message || 'Unable to save patient profiling.');
-            }
-        })
-        .then(function (response) { return response ? response.json() : null; })
-        .then(function (genderResult) {
-            if (genderResult && genderResult.success) {
-                notifyAdminPatients('Patient profiling saved successfully.', 'success');
-            } else {
-                notifyAdminPatients('Profiling saved but gender update failed.', 'warning');
-            }
-        })
-        .catch(function (err) {
-            notifyAdminPatients(err.message || 'Unable to save patient profiling.', 'danger');
-        });
-});
-
-// Gender change handler - show/hide pregnancy field
-document.querySelectorAll('input[name="pf_gender"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        updatePregnancyVisibility(this.value);
-    });
 });
 
 document.getElementById('setPatientPasswordForm').addEventListener('submit', function (event) {

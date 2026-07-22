@@ -91,19 +91,49 @@ $csrf_token = security_generate_csrf_token();
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <!-- Tab Navigation -->
-                <ul class="nav nav-tabs nav-tabs-sm" id="recordTabs" role="tablist" style="padding: 0 16px; background: #f8f9fa;">
-                    <li class="nav-item"><a class="nav-link active py-2 px-3" data-bs-toggle="tab" href="#tabNotes" role="tab"><i class="bi bi-journal-text"></i> Session Notes</a></li>
-                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabClinical" role="tab"><i class="bi bi-clipboard2-pulse"></i> Clinical Findings</a></li>
-                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabOdontogram" role="tab"><i class="bi bi-tooth"></i> Charting</a></li>
-                    <li class="nav-item"><a class="nav-link py-2 px-3" data-bs-toggle="tab" href="#tabBilling" role="tab"><i class="bi bi-receipt"></i> Billing</a></li>
+                <!-- Step Indicator / Tab Navigation -->
+                <ul class="nav ehr-stepper" id="recordTabs" role="tablist">
+                    <li class="ehr-stepper__item">
+                        <a class="ehr-stepper__link is-active" data-bs-toggle="tab" href="#tabClinical" role="tab" data-step-index="1">
+                            <span class="ehr-stepper__circle"><i class="bi bi-clipboard2-pulse"></i></span>
+                            <span class="ehr-stepper__label">Clinical Findings</span>
+                        </a>
+                    </li>
+                    <li class="ehr-stepper__track"><span class="ehr-stepper__track-fill"></span></li>
+                    <li class="ehr-stepper__item">
+                        <a class="ehr-stepper__link" data-bs-toggle="tab" href="#tabOdontogram" role="tab" data-step-index="2">
+                            <span class="ehr-stepper__circle"><i class="bi bi-grid-3x3-gap"></i></span>
+                            <span class="ehr-stepper__label">Charting</span>
+                        </a>
+                    </li>
+                    <li class="ehr-stepper__track"><span class="ehr-stepper__track-fill"></span></li>
+                    <li class="ehr-stepper__item">
+                        <a class="ehr-stepper__link" data-bs-toggle="tab" href="#tabNotes" role="tab" data-step-index="3">
+                            <span class="ehr-stepper__circle"><i class="bi bi-journal-text"></i></span>
+                            <span class="ehr-stepper__label">Visit Summary</span>
+                        </a>
+                    </li>
+                    <li class="ehr-stepper__track"><span class="ehr-stepper__track-fill"></span></li>
+                    <li class="ehr-stepper__item">
+                        <a class="ehr-stepper__link" data-bs-toggle="tab" href="#tabBilling" role="tab" data-step-index="4">
+                            <span class="ehr-stepper__circle"><i class="bi bi-receipt"></i></span>
+                            <span class="ehr-stepper__label">Billing</span>
+                        </a>
+                    </li>
                 </ul>
 
                 <div class="tab-content p-3" style="max-height: calc(80vh - 120px); overflow-y: auto;">
-                    <!-- TAB 1: Notes & Photos -->
-                    <div class="tab-pane fade show active" id="tabNotes" role="tabpanel">
+                    <!-- Visit Summary -->
+                    <div class="tab-pane fade" id="tabNotes" role="tabpanel">
                         <div class="row g-3">
                             <div class="col-md-7">
+                                <h6 class="small text-uppercase text-muted mb-1" style="font-size:0.72rem;">Reason for Visit</h6>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6"><label class="form-label fw-semibold small">Chief Complaint</label><textarea class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit, in the patient's words" style="font-size:0.85rem;"></textarea></div>
+                                    <div class="col-md-6"><label class="form-label fw-semibold small">Case History</label><textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history" style="font-size:0.85rem;"></textarea></div>
+                                </div>
+
+                                <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Visit Wrap-up</h6>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold small">Doctor's Notes</label>
                                     <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
@@ -112,6 +142,11 @@ $csrf_token = security_generate_csrf_token();
                                     <label class="form-label fw-semibold small">Clinical Summary</label>
                                     <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
                                 </div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold small">Doctor's Photos</label>
+                                <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1 mb-3"></div>
+
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold small">Prescriptions</label>
                                     <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
@@ -127,21 +162,12 @@ $csrf_token = security_generate_csrf_token();
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-5">
-                                <label class="form-label fw-semibold small">Doctor's Photos</label>
-                                <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1"></div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- TAB 2: Clinical Assessment -->
-                    <div class="tab-pane fade" id="tabClinical" role="tabpanel">
-                        <form id="secretaryProfilingForm">
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-6"><label class="form-label fw-semibold small">Case History</label><textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Patient case history" style="font-size:0.85rem;"></textarea></div>
-                                <div class="col-md-6"><label class="form-label fw-semibold small">Chief Complaint</label><textarea class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit" style="font-size:0.85rem;"></textarea></div>
-                            </div>
-
+                    <!-- Clinical Assessment -->
+                    <div class="tab-pane fade show active" id="tabClinical" role="tabpanel">
+                        <div>
                             <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Clinical Assessment</h6>
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4"><label class="form-label small mb-1">Gingiva Consistency</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Firm" id="gf"><label class="form-check-label small" for="gf">Firm</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Hyper plastic" id="gh"><label class="form-check-label small" for="gh">Hyper</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Smooth" id="gs"><label class="form-check-label small" for="gs">Smooth</label></div></div></div>
@@ -171,10 +197,10 @@ $csrf_token = security_generate_csrf_token();
                                 <div class="col-md-6"><label class="form-label small mb-1">Radiographic Interpretation</label><textarea class="form-control form-control-sm visit-clinical-field" name="radiographic_interpretation" rows="2" style="font-size:0.82rem;"></textarea></div>
                                 <div class="col-md-3"><label class="form-label small mb-1">Fainting</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="fainting" style="font-size:0.82rem;"></div>
                             </div>
-                        </form>
+                        </div>
                     </div>
 
-                    <!-- TAB 3: Odontogram -->
+                    <!-- Odontogram / Charting -->
                     <div class="tab-pane fade" id="tabOdontogram" role="tabpanel">
                         <div class="d-flex align-items-center mb-2 gap-2">
                             <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark"><i class="bi bi-fullscreen"></i> Full Screen</button>
@@ -188,7 +214,7 @@ $csrf_token = security_generate_csrf_token();
                         </div>
                     </div>
 
-                    <!-- TAB 4: Billing -->
+                    <!-- Billing -->
                     <div class="tab-pane fade" id="tabBilling" role="tabpanel">
                         <div class="row g-3">
                             <div class="col-md-7">
@@ -227,8 +253,14 @@ $csrf_token = security_generate_csrf_token();
                                     <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
                                 </div>
 
-                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
-                                <div id="installmentOptions" style="display:none;"><input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Monthly terms" style="max-width:140px; font-size:0.82rem;"></div>
+                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                    <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
+                                    <div id="installmentOptions" class="d-flex align-items-center gap-1" style="display:none;">
+                                        <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Terms" style="max-width:80px; font-size:0.82rem;">
+                                        <span class="small text-muted">monthly terms</span>
+                                    </div>
+                                </div>
+                                <div class="small text-muted mb-2" id="installmentDownPaymentNotice" style="display:none;">Patient pays today: ₱0.00</div>
 
                                 <hr class="my-2">
                                 <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="recordPaymentNow"><label class="form-check-label small fw-bold" for="recordPaymentNow">Record a payment now</label></div>
@@ -266,8 +298,10 @@ $csrf_token = security_generate_csrf_token();
                 </div>
             </div>
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-success btn-sm" id="submitSecretaryRecordBtn"><i class="bi bi-check-lg"></i> Create Record</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="recordCancelBtn">Cancel</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="recordBackBtn" style="display:none;"><i class="bi bi-arrow-left"></i> Back</button>
+                <button type="button" class="btn btn-success btn-sm" id="recordNextBtn">Next <i class="bi bi-arrow-right"></i></button>
+                <button type="button" class="btn btn-success btn-sm" id="submitSecretaryRecordBtn" style="display:none;"><i class="bi bi-check-lg"></i> Create Record</button>
             </div>
         </div>
     </div>
@@ -281,22 +315,83 @@ $csrf_token = security_generate_csrf_token();
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-.nav-tabs-sm .nav-link {
-    font-size: 0.82rem;
-    font-weight: 500;
-    color: #64748b;
+/* EHR create-record step indicator */
+#recordTabs.ehr-stepper {
+    display: flex;
+    align-items: flex-start;
+    list-style: none;
+    margin: 0;
+    padding: 14px 20px 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e5e9f0;
+}
+.ehr-stepper__item {
+    flex: 0 0 auto;
+}
+.ehr-stepper__link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 96px;
+    text-decoration: none;
+    cursor: pointer;
+    background: transparent;
     border: none;
-    border-bottom: 2px solid transparent;
-    padding: 8px 14px;
 }
-.nav-tabs-sm .nav-link.active {
-    color: #16a34a;
-    border-bottom-color: #16a34a;
-    background: transparent;
+.ehr-stepper__circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #eef1f6;
+    color: #94a3b8;
+    border: 2px solid #dde3ee;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
-.nav-tabs-sm .nav-link:hover {
+.ehr-stepper__label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.2;
+    transition: color 0.2s ease;
+}
+.ehr-stepper__link.is-active .ehr-stepper__circle {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15);
+}
+.ehr-stepper__link.is-active .ehr-stepper__label {
     color: #16a34a;
-    background: transparent;
+}
+.ehr-stepper__link.is-done .ehr-stepper__circle {
+    background: #d1f3e0;
+    border-color: #16a34a;
+    color: #16a34a;
+}
+.ehr-stepper__link.is-done .ehr-stepper__label {
+    color: #16a34a;
+}
+.ehr-stepper__track {
+    flex: 1 1 auto;
+    height: 2px;
+    background: #dde3ee;
+    margin: 17px 2px 0;
+    border-radius: 2px;
+    overflow: hidden;
+    list-style: none;
+}
+.ehr-stepper__track-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: #16a34a;
+    transition: width 0.25s ease;
 }
 #secretaryRecordModal .form-label { margin-bottom: 2px; font-size: 0.82rem; }
 #secretaryRecordModal .form-check-sm .form-check-input { width: 16px; height: 16px; }
@@ -353,8 +448,26 @@ $csrf_token = security_generate_csrf_token();
 }
 
 /* ---- Dark mode ---- */
-[data-theme="dark"] #recordTabs {
+[data-theme="dark"] #recordTabs.ehr-stepper {
     background: #16223a !important;
+    border-bottom-color: #26344d;
+}
+[data-theme="dark"] .ehr-stepper__circle {
+    background: #1c2a3f;
+    border-color: #2c3d57;
+    color: #7d8ba3;
+}
+[data-theme="dark"] .ehr-stepper__label {
+    color: #7d8ba3;
+}
+[data-theme="dark"] .ehr-stepper__track {
+    background: #2c3d57;
+}
+[data-theme="dark"] .ehr-stepper__link.is-active .ehr-stepper__circle {
+    box-shadow: 0 0 0 4px rgba(45, 212, 145, 0.18);
+}
+[data-theme="dark"] .ehr-stepper__link.is-done .ehr-stepper__circle {
+    background: rgba(22, 163, 74, 0.25);
 }
 </style>
 
@@ -375,9 +488,80 @@ window.addEventListener('message', function(ev) {
     }
 });
 
+// EHR step indicator: mark steps before the active one as "done", the active one as "active"
+(function() {
+    var stepLinks = document.querySelectorAll('#recordTabs .ehr-stepper__link');
+    var stepTracks = document.querySelectorAll('#recordTabs .ehr-stepper__track-fill');
+    if (!stepLinks.length) return;
+
+    var totalSteps = stepLinks.length;
+    var cancelBtn = document.getElementById('recordCancelBtn');
+    var backBtn = document.getElementById('recordBackBtn');
+    var nextBtn = document.getElementById('recordNextBtn');
+    var createBtn = document.getElementById('submitSecretaryRecordBtn');
+
+    function getLinkForStep(step) {
+        return document.querySelector('#recordTabs .ehr-stepper__link[data-step-index="' + step + '"]');
+    }
+
+    function updateFooterButtons(activeIndex) {
+        var isFirst = activeIndex === 1;
+        var isLast = activeIndex === totalSteps;
+        cancelBtn.style.display = isFirst ? '' : 'none';
+        backBtn.style.display = isFirst ? 'none' : '';
+        nextBtn.style.display = isLast ? 'none' : '';
+        createBtn.style.display = isLast ? '' : 'none';
+    }
+
+    function updateStepper(activeIndex) {
+        stepLinks.forEach(function(link) {
+            var idx = parseInt(link.getAttribute('data-step-index'), 10);
+            link.classList.remove('is-active', 'is-done');
+            if (idx < activeIndex) link.classList.add('is-done');
+            else if (idx === activeIndex) link.classList.add('is-active');
+        });
+        stepTracks.forEach(function(fill, i) {
+            fill.style.width = (i + 1 < activeIndex) ? '100%' : ((i + 1 === activeIndex) ? '50%' : '0%');
+        });
+        updateFooterButtons(activeIndex);
+    }
+
+    stepLinks.forEach(function(link) {
+        link.addEventListener('shown.bs.tab', function() {
+            updateStepper(parseInt(link.getAttribute('data-step-index'), 10));
+        });
+    });
+
+    nextBtn.addEventListener('click', function() {
+        var current = document.querySelector('#recordTabs .ehr-stepper__link.is-active');
+        var currentIndex = current ? parseInt(current.getAttribute('data-step-index'), 10) : 1;
+        var target = getLinkForStep(Math.min(currentIndex + 1, totalSteps));
+        if (target) bootstrap.Tab.getOrCreateInstance(target).show();
+    });
+
+    backBtn.addEventListener('click', function() {
+        var current = document.querySelector('#recordTabs .ehr-stepper__link.is-active');
+        var currentIndex = current ? parseInt(current.getAttribute('data-step-index'), 10) : 1;
+        var target = getLinkForStep(Math.max(currentIndex - 1, 1));
+        if (target) bootstrap.Tab.getOrCreateInstance(target).show();
+    });
+
+    // Exposed so openSecretaryRecordModal can reset the wizard to step 1 each time it opens.
+    window.resetEhrRecordStepper = function() {
+        var firstLink = getLinkForStep(1);
+        if (firstLink) bootstrap.Tab.getOrCreateInstance(firstLink).show();
+        updateStepper(1);
+    };
+
+    updateStepper(1);
+})();
+
 document.getElementById('useInstallment')?.addEventListener('change', function() {
     const opts = document.getElementById('installmentOptions');
-    if (opts) opts.style.display = this.checked ? 'block' : 'none';
+    const notice = document.getElementById('installmentDownPaymentNotice');
+    if (opts) opts.style.display = this.checked ? 'flex' : 'none';
+    if (notice) notice.style.display = this.checked ? '' : 'none';
+    if (typeof updateInstallmentNotice === 'function') updateInstallmentNotice();
 });
 
 function addPrescriptionRow(rx = {}) {
@@ -448,32 +632,40 @@ function printPrescriptions() {
     let rxRowsHtml = '';
     rows.forEach((rx, i) => {
         rxRowsHtml += `
-            <div style="margin-bottom:10px;">
+            <div style="margin-bottom:16px;">
                 <div style="font-weight:700;">${i + 1}. ${esc(rx.medicine_name)}${rx.medicine_brand ? ' (' + esc(rx.medicine_brand) + ')' : ''}</div>
-                <div style="margin-left:14px;font-size:0.85em;color:#333;">
+                <div style="margin-left:16px;font-size:0.85em;color:#333;font-style:italic;">
                     ${rx.dosage ? esc(rx.dosage) : ''}${rx.dosage && rx.duration ? ' &mdash; ' : ''}${rx.duration ? esc(rx.duration) : ''}
-                    ${rx.notes ? '<div>' + esc(rx.notes) + '</div>' : ''}
+                    ${rx.notes ? '<div style="font-style:normal;color:#555;">' + esc(rx.notes) + '</div>' : ''}
                 </div>
             </div>`;
     });
 
     const html = `
-        <div style="text-align:center;border-bottom:2px solid #16a34a;padding-bottom:8px;margin-bottom:12px;">
+        <div style="text-align:center;border-bottom:2px solid #16a34a;padding-bottom:10px;margin-bottom:14px;">
             <img src="../assets/img/clinic-logo.png" style="height:48px;" onerror="this.style.display='none'">
-            <div style="font-size:1.15em;font-weight:700;margin-top:4px;">Azucena's Dental Clinic</div>
+            <div style="font-size:1.15em;font-weight:700;margin-top:4px;letter-spacing:0.02em;">Azucena's Dental Clinic</div>
             <div style="font-size:0.75em;color:#555;">Metz Arcade, Cagayan de Oro City, Philippines</div>
             <div style="font-size:0.75em;color:#555;">Tel: (088) 123 4567</div>
         </div>
-        <div style="display:flex;justify-content:space-between;font-size:0.85em;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.85em;margin-bottom:6px;">
             <div><strong>Patient:</strong> ${esc(currentRecordPatientName || '')}${age !== '' ? ' (' + age + ' y/o)' : ''}</div>
             <div><strong>Date:</strong> ${esc(today)}</div>
         </div>
-        <div style="font-size:2em;font-weight:700;margin-bottom:8px;">&#8478;</div>
-        ${rxRowsHtml}
-        <div style="margin-top:40px;font-size:0.85em;">
-            <div>Prescribed by: Dr. ${esc(currentRecordDoctorName || '_________________________')}</div>
-            <div style="margin-top:6px;">PRC/PTR No.: ___________________________</div>
-            <div style="margin-top:26px;border-top:1px solid #333;width:220px;text-align:center;padding-top:2px;">Signature</div>
+        <div style="border-bottom:1px solid #ccc;margin-bottom:14px;"></div>
+        <div style="font-size:2.1em;font-weight:700;font-family:Georgia,'Times New Roman',serif;margin-bottom:10px;line-height:1;">&#8478;</div>
+        <div style="min-height:180px;">${rxRowsHtml}</div>
+        <div style="margin-top:50px;font-size:0.85em;">
+            <div style="display:flex;justify-content:flex-end;">
+                <div style="text-align:center;width:230px;">
+                    <div style="border-top:1px solid #111;padding-top:4px;font-weight:600;">Dr. ${esc(currentRecordDoctorName || '_________________________')}</div>
+                    <div style="font-size:0.82em;color:#666;">Signature over Printed Name</div>
+                </div>
+            </div>
+            <div style="margin-top:18px;line-height:1.9;">
+                <div>Lic. No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+                <div>PTR No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+            </div>
         </div>
     `;
 
@@ -594,6 +786,10 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
 
+    if (typeof window.resetEhrRecordStepper === 'function') {
+        window.resetEhrRecordStepper();
+    }
+
     const patientNameEl = document.getElementById('secretaryRecordPatientName');
     const patientDetailsEl = document.getElementById('secretaryRecordPatientDetails');
     const patientAvatarEl = document.getElementById('recordPatientAvatar');
@@ -698,6 +894,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
 
         document.getElementById('useInstallment').checked = false;
         document.getElementById('installmentOptions').style.display = 'none';
+        document.getElementById('installmentDownPaymentNotice').style.display = 'none';
         document.getElementById('installmentTerms').value = '6';
         document.getElementById('recordPaymentNow').checked = false;
         document.getElementById('paymentFields').style.display = 'none';
@@ -711,7 +908,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Pre-fill visit clinical exam from this appointment's clinical record
         const visitClinical = data.existing_visit_clinical || data.existing_profiling || {};
         Object.keys(visitClinical).forEach(key => {
-            const fields = document.querySelectorAll('#secretaryProfilingForm [name="' + key + '"]');
+            const fields = document.querySelectorAll('#secretaryRecordModal [name="' + key + '"]');
             if (!fields.length) return;
             const field = fields[0];
             if (field.type === 'radio') {
@@ -726,7 +923,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         });
 
         if (typeof initToggleableClinicalRadios === 'function') {
-            initToggleableClinicalRadios(document.getElementById('secretaryProfilingForm'));
+            initToggleableClinicalRadios(document.getElementById('secretaryRecordModal'));
         }
         
         const modal = new bootstrap.Modal(document.getElementById('secretaryRecordModal'));
@@ -810,6 +1007,15 @@ function updateBillingTotals() {
         }
     }
     updatePaymentCalculation();
+    updateInstallmentNotice();
+}
+
+function updateInstallmentNotice() {
+    const notice = document.getElementById('installmentDownPaymentNotice');
+    if (!notice) return;
+    const total = getBillingTotalDue();
+    const downPayment = Math.round(total * 0.5 * 100) / 100;
+    notice.textContent = 'Patient pays today: ₱' + formatBillingAmount(downPayment) + ' (50% down payment)';
 }
 
 function getBillingTotalDue() {
@@ -954,10 +1160,10 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
     try {
         // Collect visit clinical exam data for this appointment record
         const visitClinicalData = typeof collectVisitClinicalData === 'function'
-            ? collectVisitClinicalData('#secretaryProfilingForm')
+            ? collectVisitClinicalData('#secretaryRecordModal')
             : {};
         if (typeof collectVisitClinicalData !== 'function') {
-            document.querySelectorAll('#secretaryProfilingForm .visit-clinical-field').forEach(field => {
+            document.querySelectorAll('#secretaryRecordModal .visit-clinical-field').forEach(field => {
                 if (field.type === 'checkbox') {
                     visitClinicalData[field.name] = field.checked;
                 } else if (field.type === 'radio') {

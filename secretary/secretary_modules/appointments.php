@@ -865,88 +865,218 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
             <form id="convertBookingForm">
                 <input type="hidden" id="convertBookingId" name="booking_id">
                 <div class="modal-body py-2 px-3">
-                    <div class="alert alert-info mb-2 py-2 px-3" style="font-size:0.82rem;">
-                        <strong>Patient:</strong> <span id="convertBookingPatientInfo"></span>
+                    <div class="convert-stepper mb-3" id="convertStepper">
+                        <div class="convert-stepper__step is-active" id="convertStepBadge1" data-step="1">
+                            <span class="convert-stepper__circle"><i class="bi bi-calendar2-check"></i></span>
+                            <span class="convert-stepper__label">Appointment</span>
+                        </div>
+                        <div class="convert-stepper__track"><span class="convert-stepper__track-fill"></span></div>
+                        <div class="convert-stepper__step" id="convertStepBadge2" data-step="2">
+                            <span class="convert-stepper__circle"><i class="bi bi-clipboard2-pulse"></i></span>
+                            <span class="convert-stepper__label">Profiling</span>
+                        </div>
                     </div>
 
-                    <!-- Static walk-in note: processing always books the appointment for today -->
-                    <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;font-size:0.78rem;color:#0f766e;font-weight:600;">
-                        <i class="bi bi-person-walking"></i> <span id="convertWalkInNoteText">Walk-in Today</span>
-                    </div>
+                    <div id="convertStep1">
+                        <div class="alert alert-info mb-2 py-2 px-3" style="font-size:0.82rem;">
+                            <strong>Patient:</strong> <span id="convertBookingPatientInfo"></span>
+                        </div>
 
-                    <!-- Doctor -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold" style="font-size:0.8rem;">Select Doctor *</label>
-                        <select id="convertDoctorSelect" name="user_id" class="form-select form-select-sm" required style="font-size:0.82rem;">
-                            <option value="">-- Select Doctor --</option>
-                            <?php foreach ($doctors as $d): ?>
-                                <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                        <!-- Static walk-in note: processing always books the appointment for today -->
+                        <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;font-size:0.78rem;color:#0f766e;font-weight:600;">
+                            <i class="bi bi-person-walking"></i> <span id="convertWalkInNoteText">Walk-in Today</span>
+                        </div>
 
-                    <!-- Services -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
-                        <div class="input-group input-group-sm">
-                            <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
-                                <option value="">-- Select Service --</option>
+                        <!-- Doctor -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Select Doctor *</label>
+                            <select id="convertDoctorSelect" name="user_id" class="form-select form-select-sm" required style="font-size:0.82rem;">
+                                <option value="">-- Select Doctor --</option>
+                                <?php foreach ($doctors as $d): ?>
+                                    <option value="<?php echo htmlspecialchars($d['user_id']); ?>"><?php echo htmlspecialchars($d['first_name'] . ' ' . $d['last_name']); ?></option>
+                                <?php endforeach; ?>
                             </select>
-                            <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()">
-                                <i class="bi bi-plus"></i> Add
-                            </button>
+                        </div>
+
+                        <!-- Services -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
+                            <div class="input-group input-group-sm">
+                                <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
+                                    <option value="">-- Select Service --</option>
+                                </select>
+                                <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()">
+                                    <i class="bi bi-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Selected Services Table -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Services</label>
+                            <div class="table-responsive" style="max-height:150px;overflow-y:auto;">
+                                <table class="table table-sm table-bordered mb-0" id="processServicesTable">
+                                    <thead class="table-light" style="position:sticky;top:0;">
+                                        <tr style="font-size:0.75rem;">
+                                            <th>Service Name</th>
+                                            <th style="width:70px;">Time</th>
+                                            <th style="width:80px;">Price</th>
+                                            <th style="width:35px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="processServicesBody">
+                                        <tr id="processNoServicesRow">
+                                            <td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">
+                                                Consultation Only — No additional services
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot id="processServicesFooter" style="display:none;">
+                                        <tr style="font-size:0.8rem;">
+                                            <td colspan="2" class="text-end fw-bold">Total:</td>
+                                            <td class="fw-bold" id="processTotalPrice">₱0</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                            <small class="text-muted" style="font-size:0.7rem;" id="processTotalTime">Estimated: 0 minutes</small>
+                        </div>
+
+                        <!-- Start Time -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Available Start Time *</label>
+                            <select id="convertTimeslotSelect" name="timeslot_id" class="form-select form-select-sm" required disabled style="font-size:0.82rem;">
+                                <option value="">-- Select Doctor first --</option>
+                            </select>
+                        </div>
+
+                        <!-- Reason (optional) -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.8rem;">Reason for Visit <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea id="convertReason" class="form-control form-control-sm" rows="2" style="font-size:0.82rem;" placeholder="Optional reason or notes..."></textarea>
                         </div>
                     </div>
 
-                    <!-- Selected Services Table -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Services</label>
-                        <div class="table-responsive" style="max-height:150px;overflow-y:auto;">
-                            <table class="table table-sm table-bordered mb-0" id="processServicesTable">
-                                <thead class="table-light" style="position:sticky;top:0;">
-                                    <tr style="font-size:0.75rem;">
-                                        <th>Service Name</th>
-                                        <th style="width:70px;">Time</th>
-                                        <th style="width:80px;">Price</th>
-                                        <th style="width:35px;"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="processServicesBody">
-                                    <tr id="processNoServicesRow">
-                                        <td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">
-                                            Consultation Only — No additional services
-                                        </td>
-                                    </tr>
-                                </tbody>
-                                <tfoot id="processServicesFooter" style="display:none;">
-                                    <tr style="font-size:0.8rem;">
-                                        <td colspan="2" class="text-end fw-bold">Total:</td>
-                                        <td class="fw-bold" id="processTotalPrice">₱0</td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+                    <div id="convertStep2" style="display:none;">
+                        <div class="alert alert-secondary mb-2 py-2 px-3" style="font-size:0.78rem;">
+                            New patient background/profiling — used by the doctor during the visit.
                         </div>
-                        <small class="text-muted" style="font-size:0.7rem;" id="processTotalTime">Estimated: 0 minutes</small>
-                    </div>
 
-                    <!-- Start Time -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold" style="font-size:0.8rem;">Available Start Time *</label>
-                        <select id="convertTimeslotSelect" name="timeslot_id" class="form-select form-select-sm" required disabled style="font-size:0.82rem;">
-                            <option value="">-- Select Doctor first --</option>
-                        </select>
-                    </div>
+                        <!-- Gender -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Gender</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_male" value="Male"><label class="form-check-label fw-semibold" for="pf_gender_male" style="font-size:0.82rem;color:#334155;">Male</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_female" value="Female"><label class="form-check-label fw-semibold" for="pf_gender_female" style="font-size:0.82rem;color:#334155;">Female</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_other" value="Other"><label class="form-check-label fw-semibold" for="pf_gender_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
+                            </div>
+                        </div>
 
-                    <!-- Reason (optional) -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold" style="font-size:0.8rem;">Reason for Visit <span class="text-muted fw-normal">(optional)</span></label>
-                        <textarea id="convertReason" class="form-control form-control-sm" rows="2" style="font-size:0.82rem;" placeholder="Optional reason or notes..."></textarea>
+                        <!-- Race -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Race</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_asian" value="Asian"><label class="form-check-label fw-semibold" for="pf_race_asian" style="font-size:0.82rem;color:#334155;">Asian</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_caucasian" value="Caucasian"><label class="form-check-label fw-semibold" for="pf_race_caucasian" style="font-size:0.82rem;color:#334155;">Caucasian</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_black" value="Black/African American"><label class="form-check-label fw-semibold" for="pf_race_black" style="font-size:0.82rem;color:#334155;">Black</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_hispanic" value="Hispanic/Latino"><label class="form-check-label fw-semibold" for="pf_race_hispanic" style="font-size:0.82rem;color:#334155;">Hispanic</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_native" value="Native American"><label class="form-check-label fw-semibold" for="pf_race_native" style="font-size:0.82rem;color:#334155;">Native</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_pacific" value="Pacific Islander"><label class="form-check-label fw-semibold" for="pf_race_pacific" style="font-size:0.82rem;color:#334155;">Pacific</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_mixed" value="Mixed"><label class="form-check-label fw-semibold" for="pf_race_mixed" style="font-size:0.82rem;color:#334155;">Mixed</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_other" value="Other"><label class="form-check-label fw-semibold" for="pf_race_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Allergies (text) -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Allergies</label>
+                            <input type="text" id="pf_allergies" class="form-control" placeholder="e.g. Penicillin, Latex" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
+                        </div>
+
+                        <!-- Smoking -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Smoking</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_no" value="Non-smoker"><label class="form-check-label fw-semibold" for="pf_smoking_no" style="font-size:0.82rem;color:#334155;">Non-smoker</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_former" value="Former smoker"><label class="form-check-label fw-semibold" for="pf_smoking_former" style="font-size:0.82rem;color:#334155;">Former</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_current" value="Current smoker"><label class="form-check-label fw-semibold" for="pf_smoking_current" style="font-size:0.82rem;color:#334155;">Current</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Alcohol -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Alcohol</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_no" value="Non-drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_no" style="font-size:0.82rem;color:#334155;">Non-drinker</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_social" value="Social drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_social" style="font-size:0.82rem;color:#334155;">Social</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_regular" value="Regular drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_regular" style="font-size:0.82rem;color:#334155;">Regular</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Dental Anxiety -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Dental Anxiety</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_none" value="None"><label class="form-check-label fw-semibold" for="pf_anxiety_none" style="font-size:0.82rem;color:#334155;">None</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_mild" value="Mild"><label class="form-check-label fw-semibold" for="pf_anxiety_mild" style="font-size:0.82rem;color:#334155;">Mild</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_moderate" value="Moderate"><label class="form-check-label fw-semibold" for="pf_anxiety_moderate" style="font-size:0.82rem;color:#334155;">Moderate</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_severe" value="Severe"><label class="form-check-label fw-semibold" for="pf_anxiety_severe" style="font-size:0.82rem;color:#334155;">Severe</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Bleeding Disorder -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Bleeding Disorder</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_none" value="None"><label class="form-check-label fw-semibold" for="pf_bleed_none" style="font-size:0.82rem;color:#334155;">None</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_hemophilia" value="Hemophilia"><label class="form-check-label fw-semibold" for="pf_bleed_hemophilia" style="font-size:0.82rem;color:#334155;">Hemophilia</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_vonw" value="Von Willebrand"><label class="form-check-label fw-semibold" for="pf_bleed_vonw" style="font-size:0.82rem;color:#334155;">Von Willebrand</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_thrombo" value="Thrombocytopenia"><label class="form-check-label fw-semibold" for="pf_bleed_thrombo" style="font-size:0.82rem;color:#334155;">Thrombocytopenia</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_other" value="Other"><label class="form-check-label fw-semibold" for="pf_bleed_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Pregnancy (female only) -->
+                        <div id="pf_pregnancy_wrapper" class="mb-2" style="display:none;">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Pregnancy</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_not" value="Not pregnant"><label class="form-check-label fw-semibold" for="pf_preg_not" style="font-size:0.82rem;color:#334155;">Not pregnant</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_yes" value="Pregnant"><label class="form-check-label fw-semibold" for="pf_preg_yes" style="font-size:0.82rem;color:#334155;">Pregnant</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_post" value="Postpartum"><label class="form-check-label fw-semibold" for="pf_preg_post" style="font-size:0.82rem;color:#334155;">Postpartum</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_nursing" value="Nursing"><label class="form-check-label fw-semibold" for="pf_preg_nursing" style="font-size:0.82rem;color:#334155;">Nursing</label></div>
+                            </div>
+                        </div>
+
+                        <!-- Textareas -->
+                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medical History</label><textarea id="pf_medical_history" class="form-control" rows="1" placeholder="Previous surgeries, chronic conditions..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medications</label><textarea id="pf_medications" class="form-control" rows="1" placeholder="Current medications and dosages..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Previous Treatment</label><textarea id="pf_previous_dental_treatment" class="form-control" rows="1" placeholder="Previous dental procedures..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
+
+                        <!-- Conditions (checkboxes) -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Conditions</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hypertensive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hypertensive" style="font-size:0.82rem;color:#334155;">Hypertensive</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_diabetic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_diabetic" style="font-size:0.82rem;color:#334155;">Diabetic</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_asthmatic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_asthmatic" style="font-size:0.82rem;color:#334155;">Asthmatic</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_heart_disease" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_heart_disease" style="font-size:0.82rem;color:#334155;">Heart Disease</label></div>
+                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hiv_positive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hiv_positive" style="font-size:0.82rem;color:#334155;">HIV+</label></div>
+                            </div>
+                        </div>
+
+                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Notes</label><textarea id="pf_background_notes" class="form-control" rows="1" placeholder="Additional notes..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" id="convertSubmitBtn" class="btn btn-success btn-sm">
+                    <button type="button" id="convertBackBtn" class="btn btn-outline-secondary btn-sm" style="display:none;">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
+                    <button type="button" id="convertNextBtn" class="btn btn-success btn-sm">
+                        Next <i class="bi bi-arrow-right"></i>
+                    </button>
+                    <button type="submit" id="convertSubmitBtn" class="btn btn-success btn-sm" style="display:none;">
                         <i class="bi bi-check-circle"></i> Process Booking
                     </button>
                 </div>
@@ -1079,9 +1209,87 @@ function openConvertBookingModal(booking) {
     document.getElementById('convertTimeslotSelect').disabled = true;
     document.getElementById('convertServiceSelect').innerHTML = '<option value="">-- Select Service --</option>';
 
+    resetConvertProfilingForm();
+    showConvertStep(1);
+
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('convertBookingModal'));
     modal.show();
 }
+
+// --- 2-step wizard: step 1 (appointment) / step 2 (new-patient profiling) ---
+function showConvertStep(step) {
+    var step1 = document.getElementById('convertStep1');
+    var step2 = document.getElementById('convertStep2');
+    var backBtn = document.getElementById('convertBackBtn');
+    var nextBtn = document.getElementById('convertNextBtn');
+    var submitBtn = document.getElementById('convertSubmitBtn');
+    var badge1 = document.getElementById('convertStepBadge1');
+    var badge2 = document.getElementById('convertStepBadge2');
+    var trackFill = document.querySelector('#convertStepper .convert-stepper__track-fill');
+
+    if (step === 2) {
+        step1.style.display = 'none';
+        step2.style.display = '';
+        backBtn.style.display = '';
+        nextBtn.style.display = 'none';
+        submitBtn.style.display = '';
+        badge1.className = 'convert-stepper__step is-done';
+        badge2.className = 'convert-stepper__step is-active';
+        if (trackFill) trackFill.style.width = '100%';
+    } else {
+        step1.style.display = '';
+        step2.style.display = 'none';
+        backBtn.style.display = 'none';
+        nextBtn.style.display = '';
+        submitBtn.style.display = 'none';
+        badge1.className = 'convert-stepper__step is-active';
+        badge2.className = 'convert-stepper__step';
+        if (trackFill) trackFill.style.width = '0%';
+    }
+}
+
+function resetConvertProfilingForm() {
+    document.querySelectorAll('#convertStep2 input[type="radio"]').forEach(function(r) { r.checked = false; });
+    document.querySelectorAll('#convertStep2 input[type="checkbox"]').forEach(function(c) { c.checked = false; });
+    document.querySelectorAll('#convertStep2 textarea, #convertStep2 input[type="text"]').forEach(function(t) { t.value = ''; });
+    updateConvertPregnancyVisibility('');
+}
+
+function getConvertRadioValue(name) {
+    var checked = document.querySelector('#convertStep2 input[name="' + name + '"]:checked');
+    return checked ? checked.value : '';
+}
+
+function updateConvertPregnancyVisibility(gender) {
+    var wrapper = document.getElementById('pf_pregnancy_wrapper');
+    if (!wrapper) return;
+    var isFemale = gender === 'Female';
+    wrapper.style.display = isFemale ? '' : 'none';
+    if (!isFemale) {
+        document.querySelectorAll('input[name="pf_pregnancy_status"]').forEach(function(r) { r.checked = false; });
+    }
+}
+
+document.querySelectorAll('input[name="pf_gender"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        updateConvertPregnancyVisibility(this.value);
+    });
+});
+
+document.getElementById('convertNextBtn')?.addEventListener('click', function() {
+    var form = document.getElementById('convertBookingForm');
+    var doctorField = document.getElementById('convertDoctorSelect');
+    var timeslotField = document.getElementById('convertTimeslotSelect');
+    if (!doctorField.value || !timeslotField.value) {
+        form.reportValidity();
+        return;
+    }
+    showConvertStep(2);
+});
+
+document.getElementById('convertBackBtn')?.addEventListener('click', function() {
+    showConvertStep(1);
+});
 
 // Closes the Process Booking modal safely. Guards against a Bootstrap quirk where
 // calling .hide() on a modal instance whose backdrop state got out of sync throws
@@ -1381,6 +1589,51 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 }
             } catch (convertErr) {
                 console.warn('Failed to mark booking converted:', convertErr);
+            }
+
+            // Save the step-2 profiling for genuinely new patients only — a matched
+            // existing patient (patientWasNew === false) already has a profile.
+            if (patientWasNew) {
+                try {
+                    var profiling = {
+                        race: getConvertRadioValue('pf_race'),
+                        medical_history: document.getElementById('pf_medical_history').value.trim(),
+                        medications: document.getElementById('pf_medications').value.trim(),
+                        allergies: document.getElementById('pf_allergies').value.trim(),
+                        smoking: getConvertRadioValue('pf_smoking'),
+                        alcohol: getConvertRadioValue('pf_alcohol'),
+                        hypertensive: document.getElementById('pf_hypertensive').checked,
+                        diabetic: document.getElementById('pf_diabetic').checked,
+                        asthmatic: document.getElementById('pf_asthmatic').checked,
+                        heart_disease: document.getElementById('pf_heart_disease').checked,
+                        hiv_positive: document.getElementById('pf_hiv_positive').checked,
+                        bleeding_disorder: getConvertRadioValue('pf_bleeding_disorder'),
+                        pregnancy_status: getConvertRadioValue('pf_pregnancy_status'),
+                        previous_dental_treatment: document.getElementById('pf_previous_dental_treatment').value.trim(),
+                        dental_anxiety: getConvertRadioValue('pf_dental_anxiety'),
+                        background_notes: document.getElementById('pf_background_notes').value.trim()
+                    };
+                    var profilingResp = await fetch('../assets/api/patients/save_profiling.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ patient_id: patientData.patient_id, profiling: profiling })
+                    });
+                    var profilingResult = await profilingResp.json();
+                    if (profilingResult.success) {
+                        var gender = getConvertRadioValue('pf_gender');
+                        if (gender) {
+                            var genderFd = new FormData();
+                            genderFd.append('patient_id', patientData.patient_id);
+                            genderFd.append('gender', gender);
+                            genderFd.append('csrf_token', window.secretaryCsrfToken || '');
+                            await fetch('../assets/api/patients/update_patient.php', { method: 'POST', body: genderFd });
+                        }
+                    } else {
+                        console.warn('Failed to save patient profiling:', profilingResult);
+                    }
+                } catch (profilingErr) {
+                    console.warn('Failed to save patient profiling:', profilingErr);
+                }
             }
 
             closeConvertBookingModal();
@@ -1734,6 +1987,89 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     background: rgba(45, 212, 191, 0.14) !important;
     border-color: rgba(45, 212, 191, 0.3) !important;
     color: #5eead4 !important;
+}
+
+/* Process Booking wizard stepper */
+.convert-stepper {
+    display: flex;
+    align-items: center;
+}
+.convert-stepper__step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    width: 84px;
+}
+.convert-stepper__circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #eef1f6;
+    color: #94a3b8;
+    border: 2px solid #dde3ee;
+    font-size: 0.85rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.convert-stepper__label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #94a3b8;
+    letter-spacing: 0.01em;
+    transition: color 0.2s ease;
+}
+.convert-stepper__track {
+    flex: 1 1 auto;
+    height: 2px;
+    background: #dde3ee;
+    margin: 0 4px 18px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.convert-stepper__track-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: #198754;
+    transition: width 0.25s ease;
+}
+.convert-stepper__step.is-active .convert-stepper__circle {
+    background: #198754;
+    border-color: #198754;
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.15);
+}
+.convert-stepper__step.is-active .convert-stepper__label {
+    color: #198754;
+}
+.convert-stepper__step.is-done .convert-stepper__circle {
+    background: #d1f3e0;
+    border-color: #198754;
+    color: #198754;
+}
+.convert-stepper__step.is-done .convert-stepper__label {
+    color: #198754;
+}
+[data-theme="dark"] .convert-stepper__circle {
+    background: #1c2a3f;
+    border-color: #2c3d57;
+    color: #7d8ba3;
+}
+[data-theme="dark"] .convert-stepper__label {
+    color: #7d8ba3;
+}
+[data-theme="dark"] .convert-stepper__track {
+    background: #2c3d57;
+}
+[data-theme="dark"] .convert-stepper__step.is-active .convert-stepper__circle {
+    box-shadow: 0 0 0 4px rgba(45, 212, 145, 0.18);
+}
+[data-theme="dark"] .convert-stepper__step.is-done .convert-stepper__circle {
+    background: rgba(25, 135, 84, 0.25);
 }
 .secretary-booking-calendar {
     border: 1px solid #dbe7e4;

@@ -17,6 +17,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 
     security_start_session();
 
@@ -72,6 +73,10 @@ try {
 
     // Send confirmation email
     $patientName = trim($pending['first_name'] . ' ' . $pending['last_name']);
+
+    // Notify secretaries of the new patient booking
+    wf_notify_new_patient_booking($conn, $bookingId, $patientName, $pending['preferred_date']);
+
     $subject = 'Booking Confirmed - ' . email_clinic_name();
     $textContent = 'Your booking has been confirmed. Booking #' . $bookingId . ' for ' . $pending['preferred_date'] . '.';
     $htmlContent = email_booking_confirmed_html($patientName, $bookingId, $pending['preferred_date'], $pending['preferred_time'], $pending['reason'] ?? '');

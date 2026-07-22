@@ -815,7 +815,7 @@ $aboutPoints = [
                     <div class="reveal reveal-delay-1">
                         <form id="contact-form" class="rounded-3xl border border-border bg-card p-6 shadow-lg sm:p-8" novalidate>
                             <h3 class="text-lg font-bold text-card-foreground">Send us a message</h3>
-                            <p class="mt-1 text-sm text-muted-foreground">Fill out the form below and we'll get back to you within 24 hours.</p>
+                            <p class="mt-1 text-sm text-muted-foreground">Fill out the form below and we'll get back to you within 24 hours.<br>Note: Sundays are excluded.</p>
                             <div id="contact-form-alert" class="mt-4 hidden rounded-xl border px-4 py-3 text-sm" role="alert"></div>
                             <div class="mt-5 space-y-4">
                                 <div class="grid gap-4 sm:grid-cols-2">
@@ -1447,6 +1447,15 @@ $aboutPoints = [
                             return;
                         }
 
+                        if (data.no_show) {
+                            statusEl.textContent = 'No Show';
+                            statusEl.style.backgroundColor = '#fee2e2';
+                            statusEl.style.color = '#dc2626';
+                            resetSteps();
+                            resultCard.classList.remove('hidden');
+                            return;
+                        }
+
                         resetSteps();
                         
                         resetSteps();
@@ -1454,20 +1463,16 @@ $aboutPoints = [
                         if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
                         if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
                         
-                        if (data.status === 'converted') {
-                            statusEl.textContent = 'Appointment Ready';
+                        if (data.step3) {
+                            statusEl.textContent = 'Successfully visited the clinic';
                             statusEl.style.backgroundColor = '#dcfce7';
                             statusEl.style.color = '#166534';
-                        } else if (data.status === 'approved') {
-                            statusEl.textContent = 'Booking Confirmed';
+                        } else if (data.step2) {
+                            statusEl.textContent = 'Booking confirmed, visit the clinic on the scheduled date';
                             statusEl.style.backgroundColor = '#ccfbf1';
                             statusEl.style.color = '#0d9488';
-                        } else if (data.hasError) {
-                            statusEl.textContent = 'Pending Approval';
-                            statusEl.style.backgroundColor = '#fef3c7';
-                            statusEl.style.color = '#92400e';
                         } else {
-                            statusEl.textContent = 'Awaiting Approval';
+                            statusEl.textContent = 'Booking created, waiting for secretary approval';
                             statusEl.style.backgroundColor = '#fef3c7';
                             statusEl.style.color = '#92400e';
                         }

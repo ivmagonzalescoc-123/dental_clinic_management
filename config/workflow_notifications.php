@@ -59,6 +59,16 @@ if (!function_exists('wf_notify_appointment_created')) {
     }
 }
 
+if (!function_exists('wf_notify_new_patient_booking')) {
+    function wf_notify_new_patient_booking($conn, $bookingId, $patientName, $preferredDate)
+    {
+        $title = 'New patient booking';
+        $body = $patientName . ' requested a new-patient booking for ' . $preferredDate . '.';
+        $link = 'secretary.php?page=appointments&section=new_customers';
+        wf_notify_secretaries($conn, $title, $body, $link);
+    }
+}
+
 if (!function_exists('wf_notify_appointment_approved')) {
     function wf_notify_appointment_approved($conn, $appointmentId, $patientId, $doctorId, $appointmentDate)
     {

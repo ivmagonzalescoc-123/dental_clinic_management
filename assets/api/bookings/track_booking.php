@@ -39,13 +39,23 @@ if (!$row) {
 // Step 3: Visit Clinic (secretary processed -> appointment created)
 
 $cancelled = false;
+$noShow = false;
 $hasError = false;
 $step1 = true;
 $step2 = false;
 $step3 = false;
 
-if ($row['status'] === 'cancelled') {
+$apptStatus = $row['appt_status'] ?? '';
+
+// A booking can be cancelled directly (bookings.status), or after being processed into
+// an appointment the secretary can cancel/decline it or mark the patient a no-show —
+// both of those live on the appointment's own status, not the booking's.
+if ($row['status'] === 'cancelled' || $apptStatus === 'cancelled') {
     $cancelled = true;
+    $hasError = true;
+    $step1 = false;
+} elseif ($apptStatus === 'no_show') {
+    $noShow = true;
     $hasError = true;
     $step1 = false;
 } else {
@@ -56,7 +66,7 @@ if ($row['status'] === 'cancelled') {
     // (checked in, in session, or further). bookings.status can lag behind reality if
     // the secretary's convert step didn't flip it, so the appointment's own status is
     // the more reliable signal that the patient has actually been processed.
-    $appointmentProcessed = in_array($row['appt_status'] ?? '', [
+    $appointmentProcessed = in_array($apptStatus, [
         'checked_in', 'in_progress', 'completed_by_doctor',
         'awaiting_secretary_records', 'records_complete', 'completed',
     ], true);
@@ -79,6 +89,7 @@ echo json_encode([
     'step2' => $step2,
     'step3' => $step3,
     'cancelled' => $cancelled,
+    'no_show' => $noShow,
     'hasError' => $hasError,
 ]);
 ?>

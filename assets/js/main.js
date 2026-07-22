@@ -301,6 +301,7 @@
         })
         window.__fcInstances = []
       }
+      destroyAllFlatpickrs()
 
       if (window.bootstrap) {
         document.querySelectorAll('.modal.show').forEach(function(el) {
@@ -328,6 +329,23 @@
       })
     }
 
+    function destroyAllFlatpickrs() {
+      // flatpickr appends its calendar popup to document.body by default, not inside
+      // #main, so swapping #main's innerHTML alone leaves orphaned, unstyled calendar
+      // popups behind (the module's own <link>/<script> for flatpickr gets destroyed
+      // along with the old #main content, but the popup element on body survives).
+      // Destroy every tracked instance still bound to an input inside #main first...
+      document.querySelectorAll('#main input, #main select').forEach(function(el) {
+        if (el._flatpickr) {
+          try { el._flatpickr.destroy() } catch(e) {}
+        }
+      })
+      // ...then sweep for any stray popup nodes left on body regardless of source.
+      document.querySelectorAll('body > .flatpickr-calendar').forEach(function(el) {
+        try { el.remove() } catch(e) {}
+      })
+    }
+
     function ajaxNavigate(url) {
       if (currentAbort) {
         currentAbort.abort()
@@ -349,8 +367,9 @@
           setPageLoading(false)
           currentAbort = null
 
-          // Destroy all FullCalendar instances BEFORE swapping DOM
+          // Destroy all FullCalendar/flatpickr instances BEFORE swapping DOM
           destroyAllFullCalendars()
+          destroyAllFlatpickrs()
 
           var parser = new DOMParser()
           var doc = parser.parseFromString(html, 'text/html')
@@ -377,6 +396,7 @@
           if (myToken !== navToken) return
           setPageLoading(false)
           destroyAllFullCalendars()
+          destroyAllFlatpickrs()
           cleanupModalState()
           window.location.href = url
           isNavigating = false
@@ -1125,6 +1145,7 @@
 
       function getNotifIcon(title, body) {
         const text = ((title || '') + ' ' + (body || '')).toLowerCase();
+        if (text.includes('new patient')) return '<i class="bi bi-person-plus"></i>';
         if (text.includes('appointment') || text.includes('scheduled') || text.includes('confirmed')) return '<i class="bi bi-calendar-check"></i>';
         if (text.includes('arrived') || text.includes('checked in') || text.includes('patient arrived')) return '<i class="bi bi-person-check"></i>';
         if (text.includes('reschedule')) return '<i class="bi bi-calendar2-week"></i>';

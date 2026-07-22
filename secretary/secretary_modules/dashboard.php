@@ -33,6 +33,10 @@ $unpaidBills = dashboard_scalar_int(
     $conn,
     "SELECT COUNT(*) FROM billing WHERE balance > 0"
 );
+$newPatientBookings = dashboard_scalar_int(
+    $conn,
+    "SELECT COUNT(*) FROM bookings WHERE status = 'verified'"
+);
 
 [, $seriesValues, $chartLabels] = dashboard_last7_series($conn);
 
@@ -85,6 +89,11 @@ if ($stmt) {
         </div>
         <div class="col-md-6 col-xl-4 col-xxl-2">
             <?php dashboard_render_kpi_card('Appointments Today', (string)(int)$appointmentsToday, 'bi-calendar-day', 'violet'); ?>
+        </div>
+        <div class="col-md-6 col-xl-4 col-xxl-2">
+            <a href="secretary.php?page=appointments&section=new_customers" class="text-decoration-none">
+                <?php dashboard_render_kpi_card('New Patient Bookings', (string)(int)$newPatientBookings, 'bi-person-plus'); ?>
+            </a>
         </div>
 
         <div class="col-12 col-xxl-7">
