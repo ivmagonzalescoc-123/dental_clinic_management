@@ -713,19 +713,15 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <tr>
                         <th>Ref. No.</th>
                         <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
                         <th>Preferred Date</th>
-                        <th>Time</th>
                         <th>Status</th>
-                        <th>Requested</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($guestBookings)): ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="5" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No guest bookings yet.
                             </td>
@@ -743,13 +739,10 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 ], true);
                                 $isConverted = ($gb['status'] === 'converted') || $alreadyProcessedAppt;
                             ?>
-                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'morning' : 'afternoon'; ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'morning' : 'afternoon'; ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
-                                <td><?php echo htmlspecialchars($gb['email']); ?></td>
-                                <td><?php echo htmlspecialchars($gb['phone_number'] ?? '—'); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
-                                <td><span class="badge bg-<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'warning' : 'info'; ?>"><?php echo htmlspecialchars($gb['preferred_time']); ?></span></td>
                                 <td>
                                     <?php if ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
@@ -759,35 +752,46 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                         <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?php echo date('M j, g:i A', strtotime($gb['created_at'])); ?></td>
                                 <td>
-                                    <?php if ($isConverted): ?>
-                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
-                                    <?php else: ?>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                        <?php if ($gb['status'] !== 'approved'): ?>
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
-                                                <i class="bi bi-check2-square"></i> Approve
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="badge bg-info"><i class="bi bi-check"></i> Approved</span>
-                                        <?php endif; ?>
-                                        <button type="button" class="btn btn-sm btn-success"
-                                            onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#bookingDetailsModal"
+                                            onclick='openBookingDetailsModal(<?php echo htmlspecialchars(json_encode([
                                                 'booking_id' => (int)$gb['booking_id'],
-                                                'first_name' => $gb['first_name'],
-                                                'last_name' => $gb['last_name'],
-                                                'email' => $gb['email'],
-                                                'phone_number' => $gb['phone_number'] ?? '',
-                                                'date_of_birth' => $gb['date_of_birth'] ?? '',
-                                                'preferred_date' => $gb['preferred_date'],
-                                                'preferred_time' => $gb['preferred_time'],
-                                                'reason' => $gb['reason'] ?? '',
-                                            ]), ENT_QUOTES, 'UTF-8'); ?>)'>
-                                            <i class="bi bi-arrow-right-circle"></i> Process
+                                                'name' => trim((string)$gb['first_name'] . ' ' . (string)$gb['last_name']),
+                                                'email' => (string)($gb['email'] ?? ''),
+                                                'phone_number' => (string)($gb['phone_number'] ?? ''),
+                                                'preferred_date' => date('M j, Y', strtotime($gb['preferred_date'])),
+                                                'preferred_time' => (string)($gb['preferred_time'] ?? ''),
+                                                'created_at' => date('M j, g:i A', strtotime($gb['created_at'])),
+                                                'status' => $isConverted ? 'Processed' : (($gb['status'] === 'approved') ? 'Approved' : 'Pending'),
+                                                'reason' => (string)($gb['reason'] ?? ''),
+                                            ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
+                                            <i class="bi bi-eye"></i>
                                         </button>
-                                        </div>
-                                    <?php endif; ?>
+                                        <?php if (!$isConverted): ?>
+                                            <?php if ($gb['status'] !== 'approved'): ?>
+                                                <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
+                                                    <i class="bi bi-check2-square"></i> Approve
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="badge bg-info align-self-center"><i class="bi bi-check"></i> Approved</span>
+                                            <?php endif; ?>
+                                            <button type="button" class="btn btn-sm btn-success"
+                                                onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
+                                                    'booking_id' => (int)$gb['booking_id'],
+                                                    'first_name' => $gb['first_name'],
+                                                    'last_name' => $gb['last_name'],
+                                                    'email' => $gb['email'],
+                                                    'phone_number' => $gb['phone_number'] ?? '',
+                                                    'date_of_birth' => $gb['date_of_birth'] ?? '',
+                                                    'preferred_date' => $gb['preferred_date'],
+                                                    'preferred_time' => $gb['preferred_time'],
+                                                    'reason' => $gb['reason'] ?? '',
+                                                ]), ENT_QUOTES, 'UTF-8'); ?>)'>
+                                                <i class="bi bi-arrow-right-circle"></i> Process
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -848,6 +852,60 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Booking Details Modal -->
+<div class="modal fade" id="bookingDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Booking Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="bookingDetailsName" class="alert alert-light mb-3"></div>
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <th style="width:40%;" class="text-muted">Ref. No.</th>
+                            <td id="bookingDetailsRef"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Preferred Date</th>
+                            <td id="bookingDetailsDate"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Time</th>
+                            <td id="bookingDetailsTime"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Status</th>
+                            <td id="bookingDetailsStatus"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Email</th>
+                            <td id="bookingDetailsEmail"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Phone</th>
+                            <td id="bookingDetailsPhone"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Reason</th>
+                            <td id="bookingDetailsReason"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Requested</th>
+                            <td id="bookingDetailsRequested"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1086,6 +1144,22 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 </div>
 
 <script>
+function openBookingDetailsModal(booking) {
+    var setText = function(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
+    };
+    document.getElementById('bookingDetailsName').textContent = booking.name || '—';
+    setText('bookingDetailsRef', booking.booking_id ? ('#' + booking.booking_id) : '');
+    setText('bookingDetailsDate', booking.preferred_date);
+    setText('bookingDetailsTime', booking.preferred_time);
+    setText('bookingDetailsStatus', booking.status);
+    setText('bookingDetailsEmail', booking.email);
+    setText('bookingDetailsPhone', booking.phone_number);
+    setText('bookingDetailsReason', booking.reason);
+    setText('bookingDetailsRequested', booking.created_at);
+}
+
 // New Customer Search & Filters
 var activeStatusFilter = 'all';
 var activeTimeFilter = 'all';
@@ -1099,7 +1173,7 @@ function filterNewCustomerTable() {
     var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
     var visibleCount = 0;
     for (var i = 0; i < rows.length; i++) {
-        var text = rows[i].textContent.toLowerCase();
+        var text = rows[i].textContent.toLowerCase() + ' ' + (rows[i].getAttribute('data-search') || '');
         var rowStatus = rows[i].getAttribute('data-status') || '';
         var rowTime = rows[i].getAttribute('data-time') || '';
         var matchSearch = !filter || text.indexOf(filter) > -1;
@@ -1750,12 +1824,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <tr>
                         <th>No.</th>
                         <th>Patient Name</th>
-                        <th>Followup</th>
                         <th>Doctor</th>
-                        <th>Email</th>
-                        <th>Phone</th>
                         <th>Date</th>
-                        <th>Reason</th>
                         <th>Type</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -1764,7 +1834,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 <tbody>
                     <?php if (empty($appointments)): ?>
                         <tr>
-                            <td colspan="11" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 No appointments found.
                             </td>
                         </tr>
@@ -1784,35 +1854,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         <span class="badge bg-danger ms-1">EMERGENCY</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <?php
-                                        $recordFollowUpDate = trim((string)($appointment['record_follow_up_date'] ?? ''));
-                                        $isFollowUpAppointment = !empty($appointment['rescheduled_from']);
-                                    ?>
-                                    <?php if ($isFollowUpAppointment && !empty($appointment['schedule_status'])): ?>
-                                        <div>
-                                            <span class="badge bg-<?php echo ($appointment['schedule_status'] === 'scheduled' ? 'primary' : ($appointment['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>">
-                                                <?php echo htmlspecialchars(ucfirst((string)$appointment['schedule_status'])); ?>
-                                            </span>
-                                            <div class="small text-muted">
-                                                <?php echo htmlspecialchars($appointment['schedule_start'] ?? ''); ?>
-                                                <?php echo !empty($appointment['schedule_end']) ? '&ndash; ' . htmlspecialchars($appointment['schedule_end']) : ''; ?>
-                                            </div>
-                                        </div>
-                                    <?php elseif ($recordFollowUpDate !== ''): ?>
-                                        <div class="small">
-                                            <span class="badge bg-info">Follow-up</span>
-                                            <div class="text-muted mt-1"><?php echo htmlspecialchars($recordFollowUpDate); ?></div>
-                                        </div>
-                                    <?php else: ?>
-                                        <span class="text-muted small">&mdash;</span>
-                                    <?php endif; ?>
-                                </td>
                                 <td><?php echo htmlspecialchars(($appointment['doctor_first_name'] ?? 'N/A') . ' ' . ($appointment['doctor_last_name'] ?? '')); ?></td>
-                                <td><?php echo htmlspecialchars($appointment['email']); ?></td>
-                                <td><?php echo htmlspecialchars($appointment['phone_number']); ?></td>
                                 <td><?php echo htmlspecialchars($appointment['appointment_date']); ?></td>
-                                <td><?php echo htmlspecialchars($appointment['reason']); ?></td>
                                 <td>
                                     <?php if ($appointment['is_online_appointment']): ?>
                                         <span class="badge bg-info">Online</span>
@@ -1904,6 +1947,24 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         
                                         <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View medical history">
                                             <i class="bi bi-file-medical"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#appointmentDetailsModal" onclick='openAppointmentDetailsModal(<?php echo htmlspecialchars(json_encode([
+                                            "appointment_id" => (int)$appointment["appointment_id"],
+                                            "patient_name" => trim((string)$appointment["first_name"] . " " . (string)$appointment["last_name"]),
+                                            "email" => (string)($appointment["email"] ?? ""),
+                                            "phone_number" => (string)($appointment["phone_number"] ?? ""),
+                                            "reason" => (string)($appointment["reason"] ?? ""),
+                                            "doctor_name" => trim((string)($appointment["doctor_first_name"] ?? "N/A") . " " . (string)($appointment["doctor_last_name"] ?? "")),
+                                            "appointment_date" => (string)($appointment["appointment_date"] ?? ""),
+                                            "is_online_appointment" => (bool)$appointment["is_online_appointment"],
+                                            "status" => (string)($appointment["status"] ?? ""),
+                                            "is_followup" => (bool)$isFollowUpAppointment,
+                                            "schedule_status" => (string)($appointment["schedule_status"] ?? ""),
+                                            "schedule_start" => (string)($appointment["schedule_start"] ?? ""),
+                                            "schedule_end" => (string)($appointment["schedule_end"] ?? ""),
+                                            "record_follow_up_date" => $recordFollowUpDate,
+                                        ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
+                                            <i class="bi bi-eye"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -2218,19 +2279,16 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 }
 
 .appointments-actions-cell {
-    width: 92px;
-    min-width: 92px;
+    width: auto;
+    min-width: 160px;
 }
 
 .appointments-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 36px);
-    grid-auto-rows: 32px;
+    display: flex;
+    flex-flow: row nowrap;
     gap: 0.25rem;
-    width: calc(72px + 0.25rem);
-    margin: 0 auto;
-    justify-content: center;
-    align-content: start;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .appointments-actions-grid > .btn {
@@ -2432,11 +2490,112 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     </div>
 </div>
 
+<!-- Appointment Details Modal -->
+<div class="modal fade" id="appointmentDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Appointment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="apptDetailsPatientName" class="alert alert-light mb-3"></div>
+                <table class="table table-sm table-borderless mb-0">
+                    <tbody>
+                        <tr>
+                            <th style="width:40%;" class="text-muted">Appointment ID</th>
+                            <td id="apptDetailsId"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Doctor</th>
+                            <td id="apptDetailsDoctor"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Date</th>
+                            <td id="apptDetailsDate"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Type</th>
+                            <td id="apptDetailsType"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Status</th>
+                            <td id="apptDetailsStatus"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Email</th>
+                            <td id="apptDetailsEmail"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Phone</th>
+                            <td id="apptDetailsPhone"></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Reason</th>
+                            <td id="apptDetailsReason"></td>
+                        </tr>
+                        <tr id="apptDetailsFollowupRow" style="display:none;">
+                            <th class="text-muted">Follow-up</th>
+                            <td id="apptDetailsFollowup"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Initialize DataTable -->
 <script>
     window.secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
     function setDeclineAppointment(appointmentId) {
         document.getElementById('declineAppointmentId').value = appointmentId;
+    }
+
+    function openAppointmentDetailsModal(appt) {
+        const statusLabels = {
+            scheduled: 'Pending',
+            confirmed: 'Confirmed',
+            arrived: 'Arrived',
+            checked_in: 'Checked-In',
+            completed: 'Completed',
+            cancelled: 'Cancelled',
+            in_progress: 'In Progress',
+            awaiting_secretary_records: 'Awaiting Records',
+            records_complete: 'Records Complete'
+        };
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
+        };
+
+        document.getElementById('apptDetailsPatientName').textContent = appt.patient_name || '—';
+        setText('apptDetailsId', appt.appointment_id ? ('#' + appt.appointment_id) : '');
+        setText('apptDetailsDoctor', appt.doctor_name);
+        setText('apptDetailsDate', appt.appointment_date);
+        setText('apptDetailsType', appt.is_online_appointment ? 'Online' : 'Walk-In');
+        setText('apptDetailsStatus', statusLabels[appt.status] || appt.status);
+        setText('apptDetailsEmail', appt.email);
+        setText('apptDetailsPhone', appt.phone_number);
+        setText('apptDetailsReason', appt.reason);
+
+        const followupRow = document.getElementById('apptDetailsFollowupRow');
+        if (appt.is_followup && appt.schedule_status) {
+            let followupText = appt.schedule_status;
+            if (appt.schedule_start) {
+                followupText += ' — ' + appt.schedule_start + (appt.schedule_end ? ' – ' + appt.schedule_end : '');
+            }
+            setText('apptDetailsFollowup', followupText);
+            followupRow.style.display = '';
+        } else if (appt.record_follow_up_date) {
+            setText('apptDetailsFollowup', appt.record_follow_up_date);
+            followupRow.style.display = '';
+        } else {
+            followupRow.style.display = 'none';
+        }
     }
     
     function initSecretaryAppointments() {
