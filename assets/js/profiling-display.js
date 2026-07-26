@@ -103,7 +103,7 @@
         }
 
         const isMale = String(gender || '').trim().toLowerCase() === 'male';
-        let html = '<div class="row">';
+        let html = '<div class="row gy-2 gx-3 profiling-fields-grid">';
         let hasData = false;
 
         Object.keys(labels).forEach((key) => {
@@ -114,10 +114,11 @@
                 return;
             }
             hasData = true;
-            const col = (key === 'case_history' || key === 'chief_complaint' || key === 'medical_history' || key === 'medications' || key === 'previous_dental_treatment' || key === 'background_notes' || key === 'radiographic_interpretation') ? 12 : 6;
-            html += `<div class="col-md-${col} mb-2">
-                <strong>${escapeHtml(labels[key])}:</strong>
-                <div class="small text-muted">${escapeHtml(formatProfilingValue(data[key], key))}</div>
+            const isLongField = (key === 'case_history' || key === 'chief_complaint' || key === 'medical_history' || key === 'medications' || key === 'previous_dental_treatment' || key === 'background_notes' || key === 'radiographic_interpretation');
+            const col = isLongField ? 12 : 4;
+            html += `<div class="col-6 col-md-${col} mb-0">
+                <div class="profiling-field-label">${escapeHtml(labels[key])}</div>
+                <div class="profiling-field-value">${escapeHtml(formatProfilingValue(data[key], key))}</div>
             </div>`;
         });
 

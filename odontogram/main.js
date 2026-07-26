@@ -115,6 +115,12 @@ function setView(view) {
 viewTabChart?.addEventListener("click", () => setView("chart"));
 viewTab3d?.addEventListener("click", () => setView("3d"));
 
+const printChartBtn = document.getElementById("printChartBtn");
+printChartBtn?.addEventListener("click", () => {
+  setView("chart");
+  window.print();
+});
+
 function buildLegendUI() {
   if (!legendGridEl) return;
   legendGridEl.innerHTML = "";

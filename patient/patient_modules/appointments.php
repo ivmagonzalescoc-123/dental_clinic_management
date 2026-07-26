@@ -1,7 +1,9 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 security_ensure_work_type_column($conn);
+appt_ensure_cancellation_reason_column($conn);
 
 // Fetch doctors for dropdown
 $doctors_list = [];
@@ -38,6 +40,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
 $appointment_history = [];
 if ($patient_id) {
         $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+                                                    a.cancellation_reason,
                                                     a.user_id,
                                                     a.timeslot_id,
                           u.first_name AS doctor_first_name, u.last_name AS doctor_last_name,
@@ -673,7 +676,12 @@ if ($patient_id) {
                                     <td data-label="Doctor"><?php echo htmlspecialchars($doctorName); ?></td>
                                     <td data-label="Time Slot"><?php echo htmlspecialchars($slotLabel); ?></td>
                                     <td data-label="Reason"><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
-                                    <td data-label="Status"><span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
+                                    <td data-label="Status">
+                                        <span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span>
+                                        <?php if ($statusKey === 'cancelled' && !empty($history['cancellation_reason'])): ?>
+                                            <div class="small text-danger mt-1" style="max-width:220px;"><?php echo htmlspecialchars((string)$history['cancellation_reason']); ?></div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td data-label="Actions">
                                         <?php if ($canRequestReschedule): ?>
                                             <button

@@ -408,6 +408,7 @@ switch ($role_key) {
     <script src="../assets/js/theme-toggle.js?v=20260718-dark1"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
+    <script src="../assets/js/doctor-patient-profile.js?v=20260722-1"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
     <script src="../assets/js/appointment-service-manager.js"></script>

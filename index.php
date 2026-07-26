@@ -1065,7 +1065,7 @@ $aboutPoints = [
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-600">Initial Complaint</label>
+                    <label class="mb-1 block text-xs font-semibold text-slate-600">Chief Complaint</label>
                     <div class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
                         
                         <label class="flex items-center gap-2 cursor-pointer group">
@@ -1119,6 +1119,17 @@ $aboutPoints = [
                     <label for="book-reason" class="mb-1 block text-xs font-semibold text-slate-600">Additional Details <span class="font-normal text-slate-400">(optional)</span></label>
                     <textarea id="book-reason" name="reason" rows="2" placeholder="Any other details about your condition..."
                         class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" id="reg-terms" required class="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/40">
+                        <span class="text-xs text-slate-600">
+                            I have read and agree to the
+                            <button type="button" id="openTermsModal" class="font-semibold text-primary hover:text-primary/80 underline">Terms and Conditions</button>.
+                        </span>
+                    </label>
+                    <p class="auth-field-msg" id="reg-terms-error"></p>
                 </div>
 
                 <div id="booking-alert" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
@@ -1995,6 +2006,14 @@ $aboutPoints = [
                 return;
             }
 
+            const termsErrorEl = document.getElementById('reg-terms-error');
+            if (regTermsCheckbox && !regTermsCheckbox.checked) {
+                if (termsErrorEl) termsErrorEl.textContent = 'You must agree to the Terms and Conditions to book an appointment.';
+                regTermsCheckbox.focus();
+                return;
+            }
+            if (termsErrorEl) termsErrorEl.textContent = '';
+
             submitBtn.disabled = true;
             submitBtn.textContent = 'Sending...';
 
@@ -2008,6 +2027,7 @@ $aboutPoints = [
                 fd.append('preferred_date', prefDate);
                 fd.append('preferred_time', prefTime);
                 fd.append('reason', reason);
+                fd.append('terms_accepted', regTermsCheckbox && regTermsCheckbox.checked ? '1' : '0');
                 fd.append('csrf_token', csrfToken);
 
                 const response = await fetch('assets/api/bookings/create_booking.php', {

@@ -114,7 +114,12 @@ if ($patient_id > 0) {
                     <h5 class="modal-title mb-1" id="clinicRecordModalTitle">Clinic Record</h5>
                     <div class="text-muted small" id="clinicRecordModalMeta"></div>
                 </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="clinicRecordPrintBtn">
+                        <i class="bi bi-printer"></i> Print
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
             </div>
             <div class="modal-body">
                 <div id="clinicRecordModalBody" class="vstack gap-3">
@@ -283,6 +288,34 @@ document.addEventListener('DOMContentLoaded', function () {
         if (odontoFrame) {
             odontoFrame.addEventListener('load', function () { postOdontogramToClinicFrame(record.odontogram || null); }, { once: true });
         }
+    }
+
+    const printBtn = document.getElementById('clinicRecordPrintBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (!printWindow) return;
+            printWindow.document.write(
+                '<!doctype html><html><head><title>' + escapeHtml(modalTitle.textContent) + '</title>' +
+                '<style>' +
+                'body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#212529;}' +
+                'h1{font-size:18px;margin:0 0 4px;}' +
+                '.meta{color:#6c757d;font-size:13px;margin-bottom:20px;}' +
+                '.border{border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;}' +
+                '.small{font-size:12px;} .fw-semibold{font-weight:600;} .text-muted{color:#6c757d;}' +
+                'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:6px;text-align:left;font-size:13px;}' +
+                'ul{margin:0;padding-left:18px;} iframe{display:none;}' +
+                '.row,.g-2{display:none;}' +
+                '</style></head><body>' +
+                '<h1>' + escapeHtml(modalTitle.textContent) + '</h1>' +
+                '<div class="meta">' + escapeHtml(modalMeta.textContent) + '</div>' +
+                modalBody.innerHTML +
+                '</body></html>'
+            );
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(function () { printWindow.print(); }, 300);
+        });
     }
 
     viewButtons.forEach(function (button) {

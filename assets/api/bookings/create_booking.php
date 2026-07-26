@@ -38,8 +38,12 @@ try {
     $prefDate   = trim($_POST['preferred_date'] ?? '');
     $prefTime   = trim($_POST['preferred_time'] ?? '8:00 AM');
     $reason     = trim($_POST['reason'] ?? '');
+    $termsAccepted = ($_POST['terms_accepted'] ?? '') === '1';
 
     // Validation
+    if (!$termsAccepted) {
+        throw new Exception('You must agree to the Terms and Conditions to book an appointment.');
+    }
     if ($firstName === '' || $lastName === '') {
         throw new Exception('First name and last name are required.');
     }

@@ -1126,3 +1126,74 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
     font-size: 12px;
   }
 }
+
+/* ============================================
+   Print button (in the view-tabs bar)
+   ============================================ */
+.view-tab--print {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ============================================
+   Print: chart only — hide the side panel, tabs,
+   3D viewport and any overlay/loading chrome, and
+   let the 2D odontogram flow onto the printed page
+   instead of staying clipped inside its scroll box.
+   ============================================ */
+@media print {
+  .panel,
+  .panel-toggle,
+  .panel-backdrop,
+  .view-tabs,
+  .viewport-3d,
+  #chartToothDetail,
+  #loadOverlay,
+  #modelStatus,
+  #isolationStatus {
+    display: none !important;
+  }
+
+  html, body {
+    height: auto;
+    background: #fff;
+    color: #000;
+  }
+
+  .app {
+    display: block;
+    height: auto;
+  }
+
+  .workspace {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .workspace__body {
+    position: static;
+    height: auto;
+  }
+
+  .chart-pane {
+    position: static;
+    inset: auto;
+    height: auto;
+    overflow: visible;
+    background: #fff;
+    padding: 0;
+  }
+
+  .chart-pane__stack {
+    width: 100%;
+    height: auto;
+    max-height: none;
+  }
+
+  .odontogram--arch {
+    max-height: none;
+    overflow: visible;
+  }
+}

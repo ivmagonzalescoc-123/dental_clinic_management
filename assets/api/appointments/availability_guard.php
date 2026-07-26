@@ -26,6 +26,20 @@ function appt_ensure_work_type_column(mysqli $conn)
     );
 }
 
+function appt_ensure_cancellation_reason_column(mysqli $conn)
+{
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+
+    $conn->query(
+        "ALTER TABLE appointments
+         ADD COLUMN IF NOT EXISTS cancellation_reason VARCHAR(500) NULL DEFAULT NULL"
+    );
+}
+
 function appt_get_doctor_work_type(mysqli $conn, $doctorId)
 {
     static $cache = [];

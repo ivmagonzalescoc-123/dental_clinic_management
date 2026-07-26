@@ -85,8 +85,12 @@ if ($action === 'decline') {
     if (!in_array($currentStatus, ['scheduled', 'confirmed'], true)) {
         send_json(['success' => false, 'message' => 'Cannot decline appointment from status: ' . $currentStatus], 409);
     }
-    $reason = 'declined by ' . ($_SESSION['user_id'] ?? 'system');
-    $upd = $conn->prepare("UPDATE appointments SET status = 'cancelled', notes = CONCAT(IFNULL(notes,''), '\n', ?) WHERE appointment_id = ?");
+    $reason = trim($_POST['decline_reason'] ?? '');
+    if ($reason === '') {
+        $reason = 'Declined by ' . ($role === 'doctor' ? 'doctor' : 'secretary');
+    }
+    appt_ensure_cancellation_reason_column($conn);
+    $upd = $conn->prepare("UPDATE appointments SET status = 'cancelled', cancellation_reason = ? WHERE appointment_id = ?");
     $upd->bind_param('si', $reason, $appointment_id);
     $upd->execute();
     $upd->close();

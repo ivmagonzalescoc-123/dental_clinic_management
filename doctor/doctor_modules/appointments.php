@@ -252,6 +252,7 @@ $followupSql = "
     WHERE s.user_id = ?
       AND s.status IN ('scheduled', 'rescheduled', 'arrived', 'completed')
       AND s.scheduled_start IS NOT NULL
+      AND a.rescheduled_from IS NOT NULL
     ORDER BY s.scheduled_start DESC
     LIMIT 500
 ";

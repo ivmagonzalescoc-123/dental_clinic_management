@@ -43,7 +43,8 @@ $params = [];
 $types = '';
 $where = [
     "DATE(s.scheduled_start) BETWEEN ? AND ?",
-    "a.appointment_id IS NOT NULL"
+    "a.appointment_id IS NOT NULL",
+    "a.rescheduled_from IS NOT NULL"
 ];
 $params[] = $rangeStart;
 $params[] = $rangeEnd;

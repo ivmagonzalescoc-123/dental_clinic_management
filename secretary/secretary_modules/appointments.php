@@ -8,6 +8,7 @@ include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
 include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
 security_ensure_work_type_column($conn);
+appt_ensure_cancellation_reason_column($conn);
 $csrf_token = security_generate_csrf_token();
 
 $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
@@ -291,7 +292,9 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('Invalid status transition: ' . $currentStatus . ' -> ' . $status . '.');
         }
 
-        $stmt = $conn->prepare('UPDATE appointments SET status = ?, notes = ? WHERE appointment_id = ?');
+        appt_ensure_cancellation_reason_column($conn);
+
+        $stmt = $conn->prepare('UPDATE appointments SET status = ?, cancellation_reason = ? WHERE appointment_id = ?');
         if ($stmt) {
             $stmt->bind_param('ssi', $status, $reason, $appointmentId);
             $stmt->execute();
@@ -661,47 +664,49 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 <div class="card border-0">
     
     <div class="card-body">
-        <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-            <div class="unified-table-search-wrap">
+        <nav class="module-section-nav module-section-nav--compact mb-3" aria-label="New patient status">
+            <div class="module-section-nav__track">
+                <ul class="nav nav-pills mb-0" id="newCustomerStatusTabs">
+                    <li class="nav-item"><button type="button" class="nav-link active new-cust-status-filter" data-filter="all">All</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="pending">Pending</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="approved">Approved</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="processed">Processed</button></li>
+                </ul>
+            </div>
+        </nav>
+        <div class="unified-table-search-toolbar mb-3">
+            <div class="unified-table-search-wrap module-search-inline">
                 <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                 <input id="newCustomerSearch" type="search" class="form-control unified-table-search-input"
                     placeholder="Search by name, email, or phone..." aria-label="Search new customers">
                 <button type="button" class="unified-table-search-clear" id="newCustomerSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
             </div>
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="statusFilterBtn">Status: All</button>
-                <ul class="dropdown-menu dropdown-menu-sm">
-                    <li><a class="dropdown-item new-cust-status-filter active" href="#" data-filter="all">All</a></li>
-                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="pending">Pending</a></li>
-                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="approved">Approved</a></li>
-                    <li><a class="dropdown-item new-cust-status-filter" href="#" data-filter="processed">Processed</a></li>
-                </ul>
+            <div class="module-search-inline d-flex align-items-center gap-2">
+                <label for="newCustomerDateFilter" class="form-label small text-muted mb-0">Preferred date</label>
+                <input type="date" id="newCustomerDateFilter" class="form-control form-control-sm" style="width:auto;" aria-label="Filter by preferred date">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="newCustomerDateFilterClear" title="Clear date filter">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="timeFilterBtn">Time: All</button>
-                <ul class="dropdown-menu dropdown-menu-sm">
-                    <li><a class="dropdown-item new-cust-time-filter active" href="#" data-filter="all">All Times</a></li>
-                    <li><a class="dropdown-item new-cust-time-filter" href="#" data-filter="morning">Morning</a></li>
-                    <li><a class="dropdown-item new-cust-time-filter" href="#" data-filter="afternoon">Afternoon</a></li>
-                </ul>
-            </div>
-            <?php
-                    $guestBookings = [];
-                    $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id, a.status AS converted_appt_status FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
-                    if ($gbRes) {
-                        while ($gbRow = $gbRes->fetch_assoc()) {
-                            $guestBookings[] = $gbRow;
-                        }
+        </div>
+        <?php
+                $guestBookings = [];
+                $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id, a.status AS converted_appt_status FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
+                if ($gbRes) {
+                    while ($gbRow = $gbRes->fetch_assoc()) {
+                        $guestBookings[] = $gbRow;
                     }
+                }
 
-                    $archivedBookings = [];
-                    $abRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY b.preferred_date DESC");
-                    if ($abRes) {
-                        while ($abRow = $abRes->fetch_assoc()) {
-                            $archivedBookings[] = $abRow;
-                        }
+                $archivedBookings = [];
+                $abRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY) ORDER BY b.preferred_date DESC");
+                if ($abRes) {
+                    while ($abRow = $abRes->fetch_assoc()) {
+                        $archivedBookings[] = $abRow;
                     }
-                    ?>
+                }
+                ?>
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
             <small class="text-muted">Showing <span id="newCustomerCount"><?php echo count($guestBookings); ?></span> records</small>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="toggleArchiveBtn" onclick="toggleArchiveView()">
                 <i class="bi bi-archive"></i> Archive<?php if (count($archivedBookings) > 0): ?> (<?php echo count($archivedBookings); ?>)<?php endif; ?>
@@ -739,7 +744,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 ], true);
                                 $isConverted = ($gb['status'] === 'converted') || $alreadyProcessedAppt;
                             ?>
-                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-time="<?php echo stripos($gb['preferred_time'], 'AM') !== false ? 'morning' : 'afternoon'; ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-date="<?php echo htmlspecialchars(date('Y-m-d', strtotime($gb['preferred_date']))); ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
@@ -1162,12 +1167,13 @@ function openBookingDetailsModal(booking) {
 
 // New Customer Search & Filters
 var activeStatusFilter = 'all';
-var activeTimeFilter = 'all';
 
 function filterNewCustomerTable() {
     var input = document.getElementById('newCustomerSearch');
     var clearBtn = document.getElementById('newCustomerSearchClear');
+    var dateInput = document.getElementById('newCustomerDateFilter');
     var filter = input ? input.value.toLowerCase() : '';
+    var activeDate = dateInput ? dateInput.value : '';
     var table = document.getElementById('newCustomerTable');
     if (!table) return;
     var rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
@@ -1175,11 +1181,11 @@ function filterNewCustomerTable() {
     for (var i = 0; i < rows.length; i++) {
         var text = rows[i].textContent.toLowerCase() + ' ' + (rows[i].getAttribute('data-search') || '');
         var rowStatus = rows[i].getAttribute('data-status') || '';
-        var rowTime = rows[i].getAttribute('data-time') || '';
+        var rowDate = rows[i].getAttribute('data-date') || '';
         var matchSearch = !filter || text.indexOf(filter) > -1;
         var matchStatus = activeStatusFilter === 'all' || rowStatus === activeStatusFilter;
-        var matchTime = activeTimeFilter === 'all' || rowTime === activeTimeFilter;
-        var show = matchSearch && matchStatus && matchTime;
+        var matchDate = !activeDate || rowDate === activeDate;
+        var show = matchSearch && matchStatus && matchDate;
         rows[i].style.display = show ? '' : 'none';
         if (show) visibleCount++;
     }
@@ -1194,30 +1200,22 @@ document.getElementById('newCustomerSearchClear')?.addEventListener('click', fun
     if (input) { input.value = ''; filterNewCustomerTable(); }
 });
 
-// Status filter dropdown
+// Status filter tabs
 document.querySelectorAll('.new-cust-status-filter').forEach(function(item) {
     item.addEventListener('click', function(e) {
         e.preventDefault();
         document.querySelectorAll('.new-cust-status-filter').forEach(function(i) { i.classList.remove('active'); });
         item.classList.add('active');
         activeStatusFilter = item.getAttribute('data-filter');
-        var label = activeStatusFilter === 'all' ? 'All' : activeStatusFilter.charAt(0).toUpperCase() + activeStatusFilter.slice(1);
-        document.getElementById('statusFilterBtn').textContent = 'Status: ' + label;
         filterNewCustomerTable();
     });
 });
 
-// Time filter dropdown
-document.querySelectorAll('.new-cust-time-filter').forEach(function(item) {
-    item.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('.new-cust-time-filter').forEach(function(i) { i.classList.remove('active'); });
-        item.classList.add('active');
-        activeTimeFilter = item.getAttribute('data-filter');
-        var label = activeTimeFilter === 'all' ? 'All' : activeTimeFilter.charAt(0).toUpperCase() + activeTimeFilter.slice(1);
-        document.getElementById('timeFilterBtn').textContent = 'Time: ' + label;
-        filterNewCustomerTable();
-    });
+// Preferred date filter
+document.getElementById('newCustomerDateFilter')?.addEventListener('change', filterNewCustomerTable);
+document.getElementById('newCustomerDateFilterClear')?.addEventListener('click', function() {
+    var dateInput = document.getElementById('newCustomerDateFilter');
+    if (dateInput) { dateInput.value = ''; filterNewCustomerTable(); }
 });
 
 // Archive toggle
@@ -1954,6 +1952,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                             "email" => (string)($appointment["email"] ?? ""),
                                             "phone_number" => (string)($appointment["phone_number"] ?? ""),
                                             "reason" => (string)($appointment["reason"] ?? ""),
+                                            "cancellation_reason" => (string)($appointment["cancellation_reason"] ?? ""),
                                             "doctor_name" => trim((string)($appointment["doctor_first_name"] ?? "N/A") . " " . (string)($appointment["doctor_last_name"] ?? "")),
                                             "appointment_date" => (string)($appointment["appointment_date"] ?? ""),
                                             "is_online_appointment" => (bool)$appointment["is_online_appointment"],
@@ -2472,15 +2471,12 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Medical History</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div id="profilingPatientName" class="alert alert-light mb-3"></div>
-                <div id="profilingContent">
-                    <div class="text-center text-muted">
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        Loading medical history...
+            <div class="modal-body" id="profilingContent">
+                <div class="text-center text-muted py-5">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
                     </div>
+                    Loading medical history...
                 </div>
             </div>
             <div class="modal-footer">
@@ -2531,8 +2527,12 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             <td id="apptDetailsPhone"></td>
                         </tr>
                         <tr>
-                            <th class="text-muted">Reason</th>
+                            <th class="text-muted">Chief Complaint</th>
                             <td id="apptDetailsReason"></td>
+                        </tr>
+                        <tr id="apptDetailsCancelReasonRow" style="display:none;">
+                            <th class="text-muted text-danger">Cancellation Reason</th>
+                            <td id="apptDetailsCancelReason" class="text-danger"></td>
                         </tr>
                         <tr id="apptDetailsFollowupRow" style="display:none;">
                             <th class="text-muted">Follow-up</th>
@@ -2581,6 +2581,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         setText('apptDetailsEmail', appt.email);
         setText('apptDetailsPhone', appt.phone_number);
         setText('apptDetailsReason', appt.reason);
+
+        const cancelReasonRow = document.getElementById('apptDetailsCancelReasonRow');
+        if (appt.status === 'cancelled' && appt.cancellation_reason && String(appt.cancellation_reason).trim() !== '') {
+            setText('apptDetailsCancelReason', appt.cancellation_reason);
+            cancelReasonRow.style.display = '';
+        } else {
+            cancelReasonRow.style.display = 'none';
+        }
 
         const followupRow = document.getElementById('apptDetailsFollowupRow');
         if (appt.is_followup && appt.schedule_status) {
@@ -3621,14 +3629,12 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     }
 });
 
-// View patient profiling
+// View patient profiling — same rich card renderer the doctor portal uses
 async function openViewProfilingModal(patientId, firstName, lastName) {
-    const modal = document.getElementById('viewProfilingModal');
-    const nameDiv = document.getElementById('profilingPatientName');
     const contentDiv = document.getElementById('profilingContent');
+    const fallbackName = `${firstName} ${lastName}`;
 
-    nameDiv.innerHTML = `<strong>Patient:</strong> ${firstName} ${lastName}`;
-    contentDiv.innerHTML = '<div class="text-center text-muted"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div> Loading medical history...</div>';
+    contentDiv.innerHTML = '<div class="text-center text-muted py-5"><div class="spinner-border spinner-border-sm" role="status"><span class="visually-hidden">Loading...</span></div> Loading medical history...</div>';
 
     try {
         const res = await fetch(`../assets/api/patients/get_profiling.php?patient_id=${encodeURIComponent(patientId)}`);
@@ -3639,31 +3645,8 @@ async function openViewProfilingModal(patientId, firstName, lastName) {
             return;
         }
 
-        if (j.patient) {
-            let ageText = 'N/A';
-            if (j.patient.date_of_birth) {
-                const dob = new Date(j.patient.date_of_birth);
-                if (!isNaN(dob.getTime())) {
-                    const ageDate = new Date(Date.now() - dob.getTime());
-                    ageText = Math.abs(ageDate.getUTCFullYear() - 1970);
-                }
-            }
-            nameDiv.innerHTML = `<strong>Patient:</strong> ${j.patient.first_name} ${j.patient.middle_name ? j.patient.middle_name + ' ' : ''}${j.patient.last_name}<br>
-             <small class="text-muted">
-                <strong>DOB:</strong> ${j.patient.date_of_birth || 'N/A'} (Age: ${ageText}) &nbsp;|&nbsp; 
-                <strong>Gender:</strong> ${j.patient.gender || 'N/A'} <br>
-                <strong>Phone:</strong> ${j.patient.phone_number || 'N/A'} &nbsp;|&nbsp; 
-                <strong>Address:</strong> ${j.patient.address || 'N/A'}
-             </small>`;
-        }
-
-        if (!j.profiling) {
-            contentDiv.innerHTML = '<div class="alert alert-info">Patient medical history has not been filled out yet. Use Manage Patients to add background info.</div>';
-            return;
-        }
-
-        if (typeof renderBackgroundProfilingFields === 'function') {
-            contentDiv.innerHTML = renderBackgroundProfilingFields(j.profiling, j.patient && j.patient.gender);
+        if (typeof renderDoctorPatientProfile === 'function') {
+            contentDiv.innerHTML = renderDoctorPatientProfile(j.patient || {}, j.profiling || {}, fallbackName);
         } else {
             contentDiv.innerHTML = '<div class="alert alert-warning">Unable to render medical history view.</div>';
         }
