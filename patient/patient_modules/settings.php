@@ -14,6 +14,8 @@ if ($_settingsPatientId > 0 && isset($conn)) {
     }
 }
 ?>
+<div class="row g-3">
+<div class="col-lg-7">
 <div class="card border-0 shadow-sm">
     <div class="card-header">
         <h5 class="card-title mb-0">Account Settings</h5>
@@ -55,6 +57,17 @@ if ($_settingsPatientId > 0 && isset($conn)) {
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
     </div>
+</div>
+</div>
+
+<div class="col-lg-5">
+<?php
+$loginActivityTable = 'patient_logs';
+$loginActivityIdColumn = 'patient_id';
+$loginActivityIdValue = $_settingsPatientId;
+include dirname(dirname(__DIR__)) . '/includes/login_activity_panel.php';
+?>
+</div>
 </div>
 
 <script>

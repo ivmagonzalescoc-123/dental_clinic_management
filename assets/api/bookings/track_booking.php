@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json');
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
+bookings_ensure_decline_reason_column($conn);
 
 $bookingId = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : 0;
 
@@ -11,7 +13,7 @@ if ($bookingId <= 0) {
 
 $stmt = $conn->prepare(
     'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_number, b.preferred_date, b.preferred_time,
-            b.reason, b.status, b.created_at, a.status AS appt_status
+            b.reason, b.status, b.created_at, b.decline_reason, a.status AS appt_status
      FROM bookings b
      LEFT JOIN appointments a ON a.booking_id = b.booking_id
      WHERE b.booking_id = ?
@@ -91,5 +93,6 @@ echo json_encode([
     'cancelled' => $cancelled,
     'no_show' => $noShow,
     'hasError' => $hasError,
+    'decline_reason' => (string)($row['decline_reason'] ?? ''),
 ]);
 ?>

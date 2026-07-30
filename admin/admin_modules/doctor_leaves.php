@@ -1,6 +1,8 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
+include_once dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 
 security_start_session();
 $csrf_token = security_generate_csrf_token();
@@ -30,6 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Invalid leave request.';
             $messageType = 'danger';
         } elseif ($action === 'approve') {
+            $leaveStmt = $conn->prepare('SELECT user_id, leave_start_date, leave_end_date FROM doctor_leaves WHERE leave_id = ? AND status = ? LIMIT 1');
+            $leaveRow = null;
+            if ($leaveStmt) {
+                $pendingStatus = 'pending';
+                $leaveStmt->bind_param('is', $leaveId, $pendingStatus);
+                $leaveStmt->execute();
+                $leaveRow = $leaveStmt->get_result()->fetch_assoc();
+                $leaveStmt->close();
+            }
+
             $upd = $conn->prepare("UPDATE doctor_leaves SET status = 'approved' WHERE leave_id = ? AND status = 'pending'");
             if ($upd) {
                 $upd->bind_param('i', $leaveId);
@@ -37,6 +49,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($upd->affected_rows > 0) {
                     $message = 'Leave request approved.';
                     $messageType = 'success';
+
+                    if ($leaveRow) {
+                        $doctorId = (int)$leaveRow['user_id'];
+                        $leaveStart = (string)$leaveRow['leave_start_date'];
+                        $leaveEnd = (string)$leaveRow['leave_end_date'];
+
+                        $conflicts = [];
+                        $confStmt = $conn->prepare(
+                            "SELECT appointment_id, patient_id, appointment_date
+                             FROM appointments
+                             WHERE user_id = ? AND appointment_date BETWEEN ? AND ? AND status IN ('scheduled','confirmed')"
+                        );
+                        if ($confStmt) {
+                            $confStmt->bind_param('iss', $doctorId, $leaveStart, $leaveEnd);
+                            $confStmt->execute();
+                            $confRes = $confStmt->get_result();
+                            while ($row = $confRes->fetch_assoc()) {
+                                $conflicts[] = $row;
+                            }
+                            $confStmt->close();
+                        }
+
+                        if (!empty($conflicts) && function_exists('appt_ensure_needs_reassignment_column')) {
+                            appt_ensure_needs_reassignment_column($conn);
+                            $conflictIds = array_map(function ($c) {
+                                return (int)$c['appointment_id'];
+                            }, $conflicts);
+                            $placeholders = implode(',', array_fill(0, count($conflictIds), '?'));
+                            $types = str_repeat('i', count($conflictIds));
+                            $flagStmt = $conn->prepare("UPDATE appointments SET needs_reassignment = 1 WHERE appointment_id IN ($placeholders)");
+                            if ($flagStmt) {
+                                $flagStmt->bind_param($types, ...$conflictIds);
+                                $flagStmt->execute();
+                                $flagStmt->close();
+                            }
+                        }
+
+                        if (!empty($conflicts) && function_exists('wf_notify_doctor_leave_conflicts')) {
+                            $docStmt = $conn->prepare('SELECT first_name, last_name FROM users WHERE user_id = ? LIMIT 1');
+                            $doctorName = 'the assigned doctor';
+                            if ($docStmt) {
+                                $docStmt->bind_param('i', $doctorId);
+                                $docStmt->execute();
+                                $docRow = $docStmt->get_result()->fetch_assoc();
+                                $docStmt->close();
+                                if ($docRow) {
+                                    $doctorName = trim(($docRow['first_name'] ?? '') . ' ' . ($docRow['last_name'] ?? '')) ?: $doctorName;
+                                }
+                            }
+                            wf_notify_doctor_leave_conflicts($conn, $doctorId, $doctorName, $leaveStart, $leaveEnd, $conflicts);
+                            $conflictCount = count($conflicts);
+                            $message .= ' ' . $conflictCount . ' existing appointment' . ($conflictCount === 1 ? '' : 's')
+                                . ' conflict' . ($conflictCount === 1 ? 's' : '') . ' with this leave — affected patients and secretaries have been notified.';
+                        }
+                    }
                 } else {
                     $message = 'Leave request is not pending or no longer exists.';
                     $messageType = 'warning';

@@ -579,6 +579,7 @@ $aboutPoints = [
                                 <h3 class="text-sm font-bold text-slate-900">Appointment No. :<span id="trackBookingId"></span></h3>
                                 <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
                             </div>
+                            <p id="trackBookingReason" class="mt-1 text-xs text-red-600 hidden"></p>
 
                             <!-- Steps -->
                             <div class="flex items-start mt-5">
@@ -1152,8 +1153,15 @@ $aboutPoints = [
                 <p class="mt-1 text-sm text-slate-500">Code sent to <strong id="otp-email-display"></strong></p>
 
                 <div class="mt-4">
-                    <input type="text" id="booking-otp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" placeholder="Enter 6-digit code"
-                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3 text-center text-xl tracking-widest text-slate-900 placeholder:text-slate-400 font-mono">
+                    <input type="hidden" id="booking-otp">
+                    <div class="otp-boxes flex justify-center gap-2" id="booking-otp-boxes" data-otp-target="booking-otp">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    </div>
                 </div>
 
                 <div id="otp-alert" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
@@ -1234,8 +1242,15 @@ $aboutPoints = [
                 </button>
 
                 <div id="reset-section" class="space-y-3 hidden">
-                    <input type="text" id="reset-otp" required placeholder="OTP Code"
-                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+                    <input type="hidden" id="reset-otp">
+                    <div class="otp-boxes flex justify-center gap-2" id="reset-otp-boxes" data-otp-target="reset-otp">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    </div>
                     <div class="relative">
                         <input type="password" id="reset-password" required placeholder="New Password"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-10 text-sm placeholder:text-slate-400">
@@ -1269,12 +1284,13 @@ $aboutPoints = [
             </div>
 
             <div class="terms-content sm:px-8">
-                <p class="text-sm text-slate-600">Last updated: <?php echo date('F j, Y'); ?>. By creating an account and using this system, you agree to the following terms.</p>
+                <p class="text-sm text-slate-600">Last updated: <?php echo date('F j, Y'); ?>. By booking an appointment and using this system, you agree to the following terms.</p>
 
                 <h3>1. Acceptance of Terms</h3>
-                <p>These Terms and Conditions govern your use of the Azucena's Dental Clinic online patient portal. Registration constitutes your acceptance of these terms, our privacy practices, and applicable Philippine laws including the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+                <p>These Terms and Conditions govern your use of the Azucena's Dental Clinic online patient portal. Booking an appointment through this system constitutes your acceptance of these terms, our privacy practices, and applicable Philippine laws including the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
 
                 <h3>2. Account Registration</h3>
+                <p>Booking an appointment through this system automatically creates your patient portal account, used to track and manage your appointments.</p>
                 <ul>
                     <li>You must provide accurate, complete, and current personal, contact, and health-related information.</li>
                     <li>You are responsible for maintaining the confidentiality of your login credentials.</li>
@@ -1282,12 +1298,14 @@ $aboutPoints = [
                     <li>The clinic may suspend or deactivate accounts that contain false information or are used improperly.</li>
                 </ul>
 
-                <h3>3. Appointments and Clinic Services</h3>
+                <h3>3. Appointments, Rescheduling, and Emergency Priority</h3>
                 <ul>
                     <li>Online appointment requests are subject to clinic approval, dentist availability, and scheduling policies.</li>
+                    <li>The clinic reserves the right to reschedule, reassign to another available dentist, or otherwise adjust a scheduled or confirmed appointment whenever necessary due to dentist availability — including sudden doctor leave, illness, or other unforeseen circumstances. Affected patients will be notified and assisted in arranging a new schedule.</li>
+                    <li>Emergency and urgent cases are given scheduling priority. If a dentist must attend to an emergency while already treating another patient, the dentist will bring the ongoing procedure to a safe stopping point before attending to the emergency case; any resulting delay will be communicated to the affected patient.</li>
                     <li>Missed appointments, late arrivals, or repeated no-shows may affect future booking privileges.</li>
                     <li>Treatment plans, fees, and clinical decisions remain at the discretion of licensed dental professionals.</li>
-                    <li>Emergency or urgent cases should be addressed in person or through direct clinic contact.</li>
+                    <li>Walk-in emergency cases should be addressed in person or through direct clinic contact for the fastest response.</li>
                 </ul>
 
                 <h3>4. Medical and Dental Records</h3>
@@ -1323,8 +1341,15 @@ $aboutPoints = [
                 <h3>10. Communications and Notifications</h3>
                 <p>By using this system, you consent to receive appointment updates, billing notices, password recovery messages, and clinic-related notifications through the contact details you provide, including email and phone when applicable.</p>
 
-                <h3>11. Billing and Payment Information</h3>
-                <p>Payment records, OR numbers, installment terms, and billing history may be stored in the system. You agree that financial information submitted through the portal is accurate and used solely for clinic billing and accounting purposes.</p>
+                <h3>11. Billing, Payment, and Installment Plans</h3>
+                <ul>
+                    <li>Fees are based on the clinic's current service rates and the treatment plan recommended by your dentist.</li>
+                    <li>Payment records, OR numbers, installment terms, and billing history may be stored in the system. You agree that financial information submitted through the portal is accurate and used solely for clinic billing and accounting purposes.</li>
+                    <li>For qualifying treatments, the clinic may offer an installment payment plan requiring an initial down payment (a percentage of the total cost) with the remaining balance divided into scheduled installment terms, each with its own due date.</li>
+                    <li>Applicable senior citizen, PWD, or other authorized discounts will be applied in accordance with clinic policy and upon presentation of the required supporting documentation.</li>
+                    <li>Patients will receive reminders for upcoming and overdue installment due dates. Failure to settle an installment on or before its due date may result in late fees, suspension of further treatment, or referral for collection, at the clinic's discretion.</li>
+                    <li>All payments are recorded and an official receipt is issued through the clinic's billing system.</li>
+                </ul>
 
                 <h3>12. Disclosure to Third Parties</h3>
                 <p>Your information is not sold to third parties. Disclosure may occur only when required by law, necessary for treatment coordination, needed for secure system hosting or payment processing, or authorized by you in writing.</p>
@@ -1448,12 +1473,24 @@ $aboutPoints = [
                         }
                         document.getElementById('trackBookingId').textContent = data.booking_id;
                         var statusEl = document.getElementById('trackBookingStatus');
+                        var reasonEl = document.getElementById('trackBookingReason');
+                        reasonEl.textContent = '';
+                        reasonEl.classList.add('hidden');
 
                         if (data.cancelled) {
                             statusEl.textContent = 'Cancelled';
                             statusEl.style.backgroundColor = '#fee2e2';
                             statusEl.style.color = '#dc2626';
+                            if (data.decline_reason) {
+                                reasonEl.textContent = 'Reason: ' + data.decline_reason;
+                                reasonEl.classList.remove('hidden');
+                            }
                             resetSteps();
+                            // Booking Created still happened — keep it green — then mark the
+                            // next step (where it was rejected/cancelled) red with a cross.
+                            setStep('step1Circle', 'step1Label', true);
+                            setStep('step2Circle', 'step2Label', false, true);
+                            setLineActive('line1', true);
                             resultCard.classList.remove('hidden');
                             return;
                         }
@@ -1468,7 +1505,7 @@ $aboutPoints = [
                         }
 
                         resetSteps();
-                        
+
                         resetSteps();
                         if (data.step1) setStep('step1Circle', 'step1Label', true);
                         if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
@@ -2042,7 +2079,7 @@ $aboutPoints = [
                     document.getElementById('booking-form').classList.add('hidden');
                     document.getElementById('booking-otp-section').classList.remove('hidden');
                     document.getElementById('otp-email-display').textContent = email;
-                    document.getElementById('booking-otp').focus();
+                    document.querySelector('#booking-otp-boxes .otp-box')?.focus();
                 } else {
                     if (data.code === 'account_exists') {
                         setBookingAlert(data.message, 'warning');
@@ -2196,6 +2233,7 @@ $aboutPoints = [
                 if (response.ok && data && data.success) {
                     setAlert('OTP sent. Check your email.', 'success');
                     resetSection?.classList.remove('hidden');
+                    this.textContent = 'Resend OTP';
                 } else if (data && data.message) {
                     setAlert(data.message, 'error');
                 } else {
@@ -2480,6 +2518,54 @@ $aboutPoints = [
                 }
             });
         }
+    </script>
+
+    <script>
+        // Per-digit OTP boxes: keeps the underlying hidden input (read by the
+        // existing verify/reset logic) in sync with each visible 1-char box.
+        (function() {
+            document.querySelectorAll('.otp-boxes').forEach(function(group) {
+                const hiddenInput = document.getElementById(group.getAttribute('data-otp-target'));
+                const boxes = Array.from(group.querySelectorAll('.otp-box'));
+                if (!hiddenInput || boxes.length === 0) return;
+
+                function syncHidden() {
+                    hiddenInput.value = boxes.map(function(b) { return b.value; }).join('');
+                }
+
+                boxes.forEach(function(box, idx) {
+                    box.addEventListener('input', function() {
+                        box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+                        syncHidden();
+                        if (box.value && idx < boxes.length - 1) {
+                            boxes[idx + 1].focus();
+                        }
+                    });
+
+                    box.addEventListener('keydown', function(e) {
+                        if (e.key === 'Backspace' && !box.value && idx > 0) {
+                            boxes[idx - 1].focus();
+                        } else if (e.key === 'ArrowLeft' && idx > 0) {
+                            boxes[idx - 1].focus();
+                        } else if (e.key === 'ArrowRight' && idx < boxes.length - 1) {
+                            boxes[idx + 1].focus();
+                        }
+                    });
+
+                    box.addEventListener('paste', function(e) {
+                        e.preventDefault();
+                        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+                        if (!pasted) return;
+                        pasted.split('').slice(0, boxes.length).forEach(function(ch, i) {
+                            boxes[i].value = ch;
+                        });
+                        syncHidden();
+                        const nextEmpty = boxes.findIndex(function(b) { return !b.value; });
+                        boxes[nextEmpty === -1 ? boxes.length - 1 : nextEmpty].focus();
+                    });
+                });
+            });
+        })();
     </script>
 
 </body>

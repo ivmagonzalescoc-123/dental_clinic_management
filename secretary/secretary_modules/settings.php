@@ -2,6 +2,8 @@
 $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 ?>
 
+<div class="row g-3">
+<div class="col-lg-7">
 <h5 class="card-title mb-0">Account Settings</h5>
     <?php if ($forceChange): ?>
             <div class="alert alert-warning">For security, you must change your default password before using other pages.</div>
@@ -34,6 +36,18 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
             ?>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
+</div>
+
+<div class="col-lg-5">
+<?php
+$loginActivityTable = 'user_logs';
+$loginActivityIdColumn = 'user_id';
+$loginActivityIdValue = (int)($_SESSION['user_id'] ?? 0);
+include dirname(dirname(__DIR__)) . '/includes/login_activity_panel.php';
+?>
+</div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;

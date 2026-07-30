@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 require_once '../../../config/database.php';
 require_once '../../../config/security.php';
 require_once '../../../config/system_logs.php';
+require_once '../../../config/login_activity_helpers.php';
 
 security_start_session();
 
@@ -69,13 +70,18 @@ function google_record_patient_login(mysqli $conn, int $patientId): ?int
     $check->close();
     if ((int)($row['c'] ?? 0) === 0) return null;
 
-    $ip   = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    if (function_exists('login_activity_ensure_columns')) {
+        login_activity_ensure_columns($conn);
+    }
+
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    $userAgent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
     $stmt = $conn->prepare(
-        'INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address)
-         VALUES (?, NOW(), NOW(), ?)'
+        'INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address, user_agent)
+         VALUES (?, NOW(), NOW(), ?, ?)'
     );
     if (!$stmt) return null;
-    $stmt->bind_param('is', $patientId, $ip);
+    $stmt->bind_param('iss', $patientId, $ip, $userAgent);
     $ok       = $stmt->execute();
     $insertId = $ok ? (int)$conn->insert_id : 0;
     $stmt->close();

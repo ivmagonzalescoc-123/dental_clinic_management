@@ -104,6 +104,16 @@ if ($action === 'decline') {
             isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
         );
     }
+    if (function_exists('wf_notify_appointment_cancelled')) {
+        wf_notify_appointment_cancelled(
+            $conn,
+            $appointment_id,
+            (int)$appointment['patient_id'],
+            (int)$appointment['user_id'],
+            (string)$appointment['appointment_date'],
+            $reason
+        );
+    }
     send_json(['success' => true, 'message' => 'Appointment declined']);
 }
 

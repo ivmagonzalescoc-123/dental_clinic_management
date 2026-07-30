@@ -20,6 +20,7 @@ try {
     include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
     include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
     include __DIR__ . '/availability_guard.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 
     if (!in_array($_SESSION['role'] ?? '', ['admin', 'secretary', 'doctor'], true)) {
         http_response_code(403);
@@ -57,7 +58,7 @@ try {
         exit;
     }
 
-    $curStmt = $conn->prepare('SELECT appointment_id, user_id, appointment_date, reason, is_online_appointment, notes, status, timeslot_id FROM appointments WHERE appointment_id = ? LIMIT 1');
+    $curStmt = $conn->prepare('SELECT appointment_id, patient_id, user_id, appointment_date, reason, is_online_appointment, notes, status, timeslot_id FROM appointments WHERE appointment_id = ? LIMIT 1');
     if (!$curStmt) {
         throw new Exception('Prepare failed: ' . $conn->error);
     }
@@ -229,7 +230,16 @@ try {
         }
         $update_stmt->close();
 
+        if (function_exists('appt_ensure_needs_reassignment_column')) {
+            appt_ensure_needs_reassignment_column($conn);
+            $conn->query('UPDATE appointments SET needs_reassignment = 0 WHERE appointment_id = ' . (int)$appointment_id);
+        }
+
         $conn->commit();
+
+        if (($doctorChanged || $dateChanged) && function_exists('wf_notify_reschedule_decision')) {
+            wf_notify_reschedule_decision($conn, $appointment_id, (int)$current['patient_id'], $user_id, true, $appointment_date);
+        }
 
         if (function_exists('log_system_event')) {
             log_system_event(

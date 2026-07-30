@@ -26,6 +26,20 @@ function appt_ensure_work_type_column(mysqli $conn)
     );
 }
 
+function appt_ensure_needs_reassignment_column(mysqli $conn)
+{
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+
+    $conn->query(
+        "ALTER TABLE appointments
+         ADD COLUMN IF NOT EXISTS needs_reassignment TINYINT(1) NOT NULL DEFAULT 0"
+    );
+}
+
 function appt_ensure_cancellation_reason_column(mysqli $conn)
 {
     static $checked = false;

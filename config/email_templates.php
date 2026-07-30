@@ -112,6 +112,64 @@ HTML;
     }
 }
 
+if (!function_exists('email_booking_declined_html')) {
+    function email_booking_declined_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = ''): string
+    {
+        $clinic = email_clinic_name();
+        $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
+        $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
+        $timeLabel = $preferredTime === 'morning' ? 'Morning (8:00 AM - 12:00 PM)' : ($preferredTime === 'afternoon' ? 'Afternoon (1:00 PM - 4:30 PM)' : htmlspecialchars($preferredTime, ENT_QUOTES, 'UTF-8'));
+        $dateFormatted = date('l, F j, Y', strtotime($preferredDate));
+        $reasonSafe = htmlspecialchars(trim($reason), ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
+        $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        $reasonBlock = $reasonSafe !== ''
+            ? '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:12px;"><tr><td style="padding:14px 18px;font-size:13px;line-height:1.6;color:#991b1b;"><strong>Reason:</strong> ' . $reasonSafe . '</td></tr></table>'
+            : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Booking Request Declined</title></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#334155;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+<tr><td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#fef2f2 0%,#ffffff 100%);"><div style="display:inline-block;padding:4px 14px;border-radius:20px;background-color:#dc2626;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Booking Declined</div><h1 style="margin:14px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1><p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientNameSafe}</p></td></tr>
+<tr><td style="padding:8px 32px 24px;text-align:center;"><p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">We're sorry — your booking request for <strong>{$dateFormatted}</strong>, <strong>{$timeLabel}</strong> could not be accommodated.</p><p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#0f172a;">Booking Ref# <strong style="color:#dc2626;">{$bookingId}</strong></p></td></tr>
+<tr><td style="padding:0 32px 24px;">{$reasonBlock}</td></tr>
+<tr><td style="padding:0 32px 24px;text-align:center;"><p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">You're welcome to submit a new booking request with a different date/time on our <a href="{$appUrl}" style="color:#1d6fd8;font-weight:600;text-decoration:none;">website</a>, or contact the clinic directly.</p></td></tr>
+<tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
+</table></td></tr></table></body></html>
+HTML;
+    }
+}
+
+if (!function_exists('email_booking_rescheduled_html')) {
+    function email_booking_rescheduled_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime): string
+    {
+        $clinic = email_clinic_name();
+        $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
+        $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
+        $timeSafe = htmlspecialchars($preferredTime, ENT_QUOTES, 'UTF-8');
+        $dateFormatted = htmlspecialchars(date('l, F j, Y', strtotime($preferredDate)), ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
+        $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Booking Rescheduled</title></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#334155;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+<tr><td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#fffbeb 0%,#ffffff 100%);"><div style="display:inline-block;padding:4px 14px;border-radius:20px;background-color:#d97706;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Booking Rescheduled</div><h1 style="margin:14px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1><p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientNameSafe}</p></td></tr>
+<tr><td style="padding:8px 32px 24px;text-align:center;"><p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">Your booking request has been rescheduled by our clinic staff to <strong>{$dateFormatted}</strong>, <strong>{$timeSafe}</strong>.</p><p style="margin:12px 0 0;font-size:14px;line-height:1.5;color:#0f172a;">Booking Ref# <strong style="color:#d97706;">{$bookingId}</strong></p></td></tr>
+<tr><td style="padding:0 32px 24px;text-align:center;"><p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">You can track your booking status anytime on our <a href="{$appUrl}#track-booking" style="color:#1d6fd8;font-weight:600;text-decoration:none;">Track Booking</a> page using your Booking Ref#.</p></td></tr>
+<tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
+</table></td></tr></table></body></html>
+HTML;
+    }
+}
+
 if (!function_exists('email_patient_account_created_html')) {
     function email_patient_account_created_html(string $patientName, string $loginEmail, string $temporaryPassword): string
     {
@@ -131,6 +189,63 @@ if (!function_exists('email_patient_account_created_html')) {
 <tr><td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#f0f9ff 0%,#ffffff 100%);"><div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#0ea5e9;">Patient Portal</div><h1 style="margin:10px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1><p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientNameSafe}, your account has been created.</p></td></tr>
 <tr><td style="padding:8px 32px 24px;text-align:center;"><p style="margin:0 0 12px;font-size:13px;font-weight:600;color:#475569;">Your temporary password</p><div style="display:inline-block;padding:18px 28px;border:1px solid #bae6fd;border-radius:14px;background-color:#f0f9ff;"><span style="font-size:32px;line-height:1.2;font-weight:800;letter-spacing:0.08em;color:#0369a1;font-family:Consolas,Monaco,Courier New,monospace;user-select:all;-webkit-user-select:all;">{$passwordSafe}</span></div><p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#94a3b8;">Tap and hold the password to copy, then paste it on the login page.</p></td></tr>
 <tr><td style="padding:0 32px 28px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;"><tr><td style="padding:16px 18px;font-size:13px;line-height:1.6;color:#475569;"><strong style="color:#0f172a;">Login email:</strong> {$loginEmailSafe}<br><br>Please sign in and change your password after your first visit. If you did not expect this email, contact the clinic.</td></tr></table></td></tr>
+<tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
+</table></td></tr></table></body></html>
+HTML;
+    }
+}
+
+if (!function_exists('email_appointment_cancelled_html')) {
+    function email_appointment_cancelled_html(string $patientName, string $appointmentDate, string $reason = ''): string
+    {
+        $clinic = email_clinic_name();
+        $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
+        $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
+        $dateFormatted = htmlspecialchars(date('l, F j, Y', strtotime($appointmentDate)), ENT_QUOTES, 'UTF-8');
+        $reasonSafe = htmlspecialchars(trim($reason), ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
+        $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        $reasonBlock = $reasonSafe !== ''
+            ? '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:12px;"><tr><td style="padding:14px 18px;font-size:13px;line-height:1.6;color:#991b1b;"><strong>Reason:</strong> ' . $reasonSafe . '</td></tr></table>'
+            : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Appointment Cancelled</title></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#334155;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+<tr><td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#fef2f2 0%,#ffffff 100%);"><div style="display:inline-block;padding:4px 14px;border-radius:20px;background-color:#dc2626;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Appointment Cancelled</div><h1 style="margin:14px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1><p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientNameSafe}</p></td></tr>
+<tr><td style="padding:8px 32px 24px;text-align:center;"><p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">Your appointment on <strong>{$dateFormatted}</strong> has been cancelled.</p></td></tr>
+<tr><td style="padding:0 32px 24px;">{$reasonBlock}</td></tr>
+<tr><td style="padding:0 32px 24px;text-align:center;"><p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">To book a new appointment, please visit our <a href="{$appUrl}" style="color:#1d6fd8;font-weight:600;text-decoration:none;">patient portal</a> or contact the clinic directly.</p></td></tr>
+<tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
+</table></td></tr></table></body></html>
+HTML;
+    }
+}
+
+if (!function_exists('email_appointment_leave_conflict_html')) {
+    function email_appointment_leave_conflict_html(string $patientName, string $appointmentDate, string $doctorName): string
+    {
+        $clinic = email_clinic_name();
+        $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
+        $clinicSafe = htmlspecialchars($clinic, ENT_QUOTES, 'UTF-8');
+        $doctorSafe = htmlspecialchars(trim($doctorName), ENT_QUOTES, 'UTF-8');
+        $dateFormatted = htmlspecialchars(date('l, F j, Y', strtotime($appointmentDate)), ENT_QUOTES, 'UTF-8');
+        $year = date('Y');
+        $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Appointment Needs Rescheduling</title></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#334155;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f1f5f9;padding:32px 16px;"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:520px;background-color:#ffffff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
+<tr><td style="padding:28px 32px 12px;text-align:center;background:linear-gradient(180deg,#fffbeb 0%,#ffffff 100%);"><div style="display:inline-block;padding:4px 14px;border-radius:20px;background-color:#d97706;color:#ffffff;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">Action Needed</div><h1 style="margin:14px 0 6px;font-size:22px;line-height:1.3;font-weight:700;color:#0f172a;">{$clinicSafe}</h1><p style="margin:0;font-size:14px;line-height:1.5;color:#64748b;">Hello {$patientNameSafe}</p></td></tr>
+<tr><td style="padding:8px 32px 24px;text-align:center;"><p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">Dr. {$doctorSafe} is unexpectedly unavailable on <strong>{$dateFormatted}</strong>, the date of your appointment. Our staff will contact you shortly to reschedule at your convenience, or to arrange another available doctor.</p></td></tr>
+<tr><td style="padding:0 32px 24px;text-align:center;"><p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">If you'd like to reschedule sooner, you may also request a new date through the <a href="{$appUrl}" style="color:#1d6fd8;font-weight:600;text-decoration:none;">patient portal</a> or by contacting the clinic directly.</p></td></tr>
 <tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
 </table></td></tr></table></body></html>
 HTML;

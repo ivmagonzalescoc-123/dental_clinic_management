@@ -1,6 +1,7 @@
 <?php
 
 include_once __DIR__ . '/reminders.php';
+include_once __DIR__ . '/email_templates.php';
 
 if (!function_exists('wf_get_secretary_user_ids')) {
     function wf_get_secretary_user_ids($conn)
@@ -78,6 +79,108 @@ if (!function_exists('wf_notify_appointment_approved')) {
         $bodyStaff = $ref . ' on ' . $appointmentDate . ' has been approved.';
         wf_notify_patient($conn, $patientId, $title, $bodyPatient, 'patient.php?page=appointments');
         wf_notify_user($conn, $doctorId, $title, $bodyStaff, 'doctor.php?page=appointments');
+    }
+}
+
+if (!function_exists('wf_notify_appointment_cancelled')) {
+    function wf_notify_appointment_cancelled($conn, $appointmentId, $patientId, $doctorId, $appointmentDate, $reason = '')
+    {
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
+        $reasonSuffix = trim((string)$reason) !== '' ? (' Reason: ' . trim((string)$reason)) : '';
+        $title = 'Appointment cancelled';
+        $bodyPatient = 'Your appointment on ' . $appointmentDate . ' has been cancelled.' . $reasonSuffix;
+        $bodyStaff = $ref . ' on ' . $appointmentDate . ' has been cancelled.' . $reasonSuffix;
+
+        wf_notify_patient($conn, $patientId, $title, $bodyPatient, 'patient.php?page=appointments');
+        if ($doctorId) {
+            wf_notify_user($conn, $doctorId, $title, $bodyStaff, 'doctor.php?page=appointments');
+        }
+
+        if (function_exists('reminder_send_email') && function_exists('email_appointment_cancelled_html')) {
+            $patientName = 'Patient';
+            $patientEmail = '';
+            $stmt = $conn->prepare('SELECT first_name, last_name, email FROM patients WHERE patient_id = ? LIMIT 1');
+            if ($stmt) {
+                $stmt->bind_param('i', $patientId);
+                $stmt->execute();
+                $row = $stmt->get_result()->fetch_assoc();
+                $stmt->close();
+                if ($row) {
+                    $patientName = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')) ?: 'Patient';
+                    $patientEmail = trim((string)($row['email'] ?? ''));
+                }
+            }
+            if ($patientEmail !== '') {
+                $plainText = 'Your appointment on ' . $appointmentDate . ' has been cancelled.' . $reasonSuffix;
+                $html = email_appointment_cancelled_html($patientName, $appointmentDate, (string)$reason);
+                reminder_send_email($patientEmail, 'Appointment Cancelled', $plainText, $html);
+            }
+        }
+    }
+}
+
+if (!function_exists('wf_notify_doctor_leave_conflicts')) {
+    function wf_notify_doctor_leave_conflicts($conn, $doctorId, $doctorName, $leaveStart, $leaveEnd, array $conflicts)
+    {
+        if (empty($conflicts)) {
+            return;
+        }
+
+        $count = count($conflicts);
+        $title = 'Doctor leave conflicts with existing appointments';
+        $body = 'Dr. ' . $doctorName . ' was approved for leave (' . $leaveStart . ' to ' . $leaveEnd . '), which conflicts with '
+            . $count . ' existing appointment' . ($count === 1 ? '' : 's') . '. Please reschedule or reassign affected patients.';
+        wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=appointments&view=all');
+
+        foreach ($conflicts as $c) {
+            $appointmentId = (int)($c['appointment_id'] ?? 0);
+            $patientId = (int)($c['patient_id'] ?? 0);
+            $appointmentDate = (string)($c['appointment_date'] ?? '');
+            if ($patientId <= 0) {
+                continue;
+            }
+
+            $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
+            wf_notify_patient(
+                $conn,
+                $patientId,
+                'Your appointment needs rescheduling',
+                'Dr. ' . $doctorName . ' is unavailable on ' . $appointmentDate . '. Our staff will contact you to reschedule.',
+                'patient.php?page=appointments'
+            );
+
+            if (function_exists('reminder_send_email') && function_exists('email_appointment_leave_conflict_html')) {
+                $patientName = 'Patient';
+                $patientEmail = '';
+                $pStmt = $conn->prepare('SELECT first_name, last_name, email FROM patients WHERE patient_id = ? LIMIT 1');
+                if ($pStmt) {
+                    $pStmt->bind_param('i', $patientId);
+                    $pStmt->execute();
+                    $pRow = $pStmt->get_result()->fetch_assoc();
+                    $pStmt->close();
+                    if ($pRow) {
+                        $patientName = trim(($pRow['first_name'] ?? '') . ' ' . ($pRow['last_name'] ?? '')) ?: 'Patient';
+                        $patientEmail = trim((string)($pRow['email'] ?? ''));
+                    }
+                }
+                if ($patientEmail !== '') {
+                    $plainText = 'Dr. ' . $doctorName . ' is unavailable on ' . $appointmentDate . '. Our staff will contact you to reschedule.';
+                    $html = email_appointment_leave_conflict_html($patientName, $appointmentDate, $doctorName);
+                    reminder_send_email($patientEmail, 'Your Appointment Needs Rescheduling', $plainText, $html);
+                }
+            }
+
+            if (function_exists('log_system_event')) {
+                log_system_event(
+                    $conn,
+                    'appointment.leave_conflict',
+                    'appointments',
+                    $appointmentId,
+                    $ref . ' conflicts with approved doctor leave (' . $leaveStart . ' to ' . $leaveEnd . ').',
+                    null
+                );
+            }
+        }
     }
 }
 

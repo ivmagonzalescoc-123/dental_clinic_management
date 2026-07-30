@@ -678,9 +678,6 @@ if ($patient_id) {
                                     <td data-label="Reason"><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
                                     <td data-label="Status">
                                         <span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span>
-                                        <?php if ($statusKey === 'cancelled' && !empty($history['cancellation_reason'])): ?>
-                                            <div class="small text-danger mt-1" style="max-width:220px;"><?php echo htmlspecialchars((string)$history['cancellation_reason']); ?></div>
-                                        <?php endif; ?>
                                     </td>
                                     <td data-label="Actions">
                                         <?php if ($canRequestReschedule): ?>

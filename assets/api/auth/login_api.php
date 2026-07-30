@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/system_logs.php';
+include_once '../../../config/login_activity_helpers.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -121,13 +122,18 @@ function auth_record_user_login(mysqli $conn, int $userId): ?int
         return null;
     }
 
+    if (function_exists('login_activity_ensure_columns')) {
+        login_activity_ensure_columns($conn);
+    }
+
     $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    $stmt = $conn->prepare('INSERT INTO user_logs (user_id, login_time, last_activity, ip_address) VALUES (?, NOW(), NOW(), ?)');
+    $userAgent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+    $stmt = $conn->prepare('INSERT INTO user_logs (user_id, login_time, last_activity, ip_address, user_agent) VALUES (?, NOW(), NOW(), ?, ?)');
     if (!$stmt) {
         return null;
     }
 
-    $stmt->bind_param('is', $userId, $ipAddress);
+    $stmt->bind_param('iss', $userId, $ipAddress, $userAgent);
     $ok = $stmt->execute();
     $insertId = $ok ? (int)$conn->insert_id : 0;
     $stmt->close();
@@ -141,13 +147,18 @@ function auth_record_patient_login(mysqli $conn, int $patientId): ?int
         return null;
     }
 
+    if (function_exists('login_activity_ensure_columns')) {
+        login_activity_ensure_columns($conn);
+    }
+
     $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    $stmt = $conn->prepare('INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address) VALUES (?, NOW(), NOW(), ?)');
+    $userAgent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+    $stmt = $conn->prepare('INSERT INTO patient_logs (patient_id, login_time, last_activity, ip_address, user_agent) VALUES (?, NOW(), NOW(), ?, ?)');
     if (!$stmt) {
         return null;
     }
 
-    $stmt->bind_param('is', $patientId, $ipAddress);
+    $stmt->bind_param('iss', $patientId, $ipAddress, $userAgent);
     $ok = $stmt->execute();
     $insertId = $ok ? (int)$conn->insert_id : 0;
     $stmt->close();

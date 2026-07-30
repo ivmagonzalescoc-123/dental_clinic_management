@@ -9,6 +9,7 @@ include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
 security_ensure_work_type_column($conn);
 appt_ensure_cancellation_reason_column($conn);
+appt_ensure_needs_reassignment_column($conn);
 $csrf_token = security_generate_csrf_token();
 
 $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
@@ -273,7 +274,7 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     try {
-        $curStmt = $conn->prepare('SELECT status FROM appointments WHERE appointment_id = ? LIMIT 1');
+        $curStmt = $conn->prepare('SELECT status, patient_id, user_id, appointment_date FROM appointments WHERE appointment_id = ? LIMIT 1');
         if (!$curStmt) {
             throw new Exception('Unable to validate appointment status.');
         }
@@ -311,7 +312,18 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
             );
         }
-        
+
+        if (function_exists('wf_notify_appointment_cancelled')) {
+            wf_notify_appointment_cancelled(
+                $conn,
+                $appointmentId,
+                (int)$cur['patient_id'],
+                (int)$cur['user_id'],
+                (string)$cur['appointment_date'],
+                $reason
+            );
+        }
+
         $_SESSION['message'] = 'Appointment declined and cancelled.';
         $_SESSION['message_type'] = 'success';
     } catch (Exception $e) {
@@ -671,6 +683,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="pending">Pending</button></li>
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="approved">Approved</button></li>
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="processed">Processed</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="declined">Declined</button></li>
                 </ul>
             </div>
         </nav>
@@ -691,7 +704,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
         </div>
         <?php
                 $guestBookings = [];
-                $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id, a.status AS converted_appt_status FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted') AND NOT (b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
+                $gbRes = $conn->query("SELECT b.*, a.appointment_id AS converted_appt_id, a.status AS converted_appt_status FROM bookings b LEFT JOIN appointments a ON a.booking_id = b.booking_id WHERE b.status IN ('verified','approved','converted','cancelled') AND NOT (b.status IN ('verified','approved') AND b.preferred_date < DATE_SUB(CURDATE(), INTERVAL 1 DAY)) ORDER BY b.created_at DESC");
                 if ($gbRes) {
                     while ($gbRow = $gbRes->fetch_assoc()) {
                         $guestBookings[] = $gbRow;
@@ -743,13 +756,17 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                     'awaiting_secretary_records', 'records_complete', 'completed',
                                 ], true);
                                 $isConverted = ($gb['status'] === 'converted') || $alreadyProcessedAppt;
+                                $isDeclined = ($gb['status'] === 'cancelled');
+                                $rowStatus = $isDeclined ? 'declined' : ($isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'));
                             ?>
-                            <tr data-status="<?php echo $isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'); ?>" data-date="<?php echo htmlspecialchars(date('Y-m-d', strtotime($gb['preferred_date']))); ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo $isConverted ? 'opacity:0.7;' : ''; ?>">
+                            <tr data-status="<?php echo $rowStatus; ?>" data-date="<?php echo htmlspecialchars(date('Y-m-d', strtotime($gb['preferred_date']))); ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo ($isConverted || $isDeclined) ? 'opacity:0.7;' : ''; ?>">
                                 <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
                                 <td>
-                                    <?php if ($isConverted): ?>
+                                    <?php if ($isDeclined): ?>
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Declined</span>
+                                    <?php elseif ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
                                     <?php elseif ($gb['status'] === 'approved'): ?>
                                         <span class="badge bg-info"><i class="bi bi-check-circle"></i> Approved</span>
@@ -768,12 +785,13 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 'preferred_date' => date('M j, Y', strtotime($gb['preferred_date'])),
                                                 'preferred_time' => (string)($gb['preferred_time'] ?? ''),
                                                 'created_at' => date('M j, g:i A', strtotime($gb['created_at'])),
-                                                'status' => $isConverted ? 'Processed' : (($gb['status'] === 'approved') ? 'Approved' : 'Pending'),
+                                                'status' => $isDeclined ? 'Declined' : ($isConverted ? 'Processed' : (($gb['status'] === 'approved') ? 'Approved' : 'Pending')),
                                                 'reason' => (string)($gb['reason'] ?? ''),
+                                                'decline_reason' => (string)($gb['decline_reason'] ?? ''),
                                             ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <?php if (!$isConverted): ?>
+                                        <?php if (!$isConverted && !$isDeclined): ?>
                                             <?php if ($gb['status'] !== 'approved'): ?>
                                                 <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
                                                     <i class="bi bi-check2-square"></i> Approve
@@ -795,6 +813,19 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 ]), ENT_QUOTES, 'UTF-8'); ?>)'>
                                                 <i class="bi bi-arrow-right-circle"></i> Process
                                             </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                onclick='openRescheduleBookingModal(<?php echo htmlspecialchars(json_encode([
+                                                    'booking_id' => (int)$gb['booking_id'],
+                                                    'name' => trim((string)$gb['first_name'] . ' ' . (string)$gb['last_name']),
+                                                    'preferred_date' => date('Y-m-d', strtotime($gb['preferred_date'])),
+                                                    'preferred_time' => (string)($gb['preferred_time'] ?? ''),
+                                                ]), ENT_QUOTES, 'UTF-8'); ?>)'>
+                                                <i class="bi bi-calendar3"></i> Reschedule
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger"
+                                                onclick="openDeclineBookingModal(<?php echo (int)$gb['booking_id']; ?>, '<?php echo htmlspecialchars(addslashes(trim($gb['first_name'] . ' ' . $gb['last_name'])), ENT_QUOTES, 'UTF-8'); ?>')">
+                                                <i class="bi bi-x-circle"></i> Decline
+                                            </button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -803,6 +834,64 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Decline Booking Modal -->
+<div class="modal fade" id="declineBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-x-circle"></i> Decline Booking</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Declining booking for <strong id="declineBookingPatientName"></strong>. This will notify the guest by email.</p>
+                <input type="hidden" id="declineBookingId">
+                <label for="declineBookingReason" class="form-label"><strong>Reason for Declining</strong></label>
+                <textarea class="form-control" id="declineBookingReason" rows="3" placeholder="Enter reason for declining this booking" required></textarea>
+                <div id="declineBookingAlert" class="alert alert-danger mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="declineBookingConfirmBtn">
+                    <i class="bi bi-x-circle"></i> Decline Booking
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reschedule Booking Modal -->
+<div class="modal fade" id="rescheduleBookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar3"></i> Reschedule Booking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">Rescheduling booking for <strong id="rescheduleBookingPatientName"></strong>. This will notify the guest by email.</p>
+                <input type="hidden" id="rescheduleBookingId">
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label for="rescheduleBookingDate" class="form-label"><strong>New Date</strong></label>
+                        <input type="date" class="form-control" id="rescheduleBookingDate" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="rescheduleBookingTime" class="form-label"><strong>New Time</strong></label>
+                        <input type="time" class="form-control" id="rescheduleBookingTime" required>
+                    </div>
+                </div>
+                <div id="rescheduleBookingAlert" class="alert alert-danger mt-2" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="rescheduleBookingConfirmBtn">
+                    <i class="bi bi-calendar3"></i> Reschedule Booking
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -865,48 +954,48 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 <div class="modal fade" id="bookingDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Booking Details</h5>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-lines-fill"></i> Booking Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="bookingDetailsName" class="alert alert-light mb-3"></div>
-                <table class="table table-sm table-borderless mb-0">
-                    <tbody>
-                        <tr>
-                            <th style="width:40%;" class="text-muted">Ref. No.</th>
-                            <td id="bookingDetailsRef"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Preferred Date</th>
-                            <td id="bookingDetailsDate"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Time</th>
-                            <td id="bookingDetailsTime"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Status</th>
-                            <td id="bookingDetailsStatus"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Email</th>
-                            <td id="bookingDetailsEmail"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Phone</th>
-                            <td id="bookingDetailsPhone"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Reason</th>
-                            <td id="bookingDetailsReason"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Requested</th>
-                            <td id="bookingDetailsRequested"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="dpp-header">
+                    <div class="dpp-avatar" id="bookingDetailsAvatar">?</div>
+                    <div>
+                        <p class="dpp-name" id="bookingDetailsName"></p>
+                        <div class="dpp-chips">
+                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="bookingDetailsRef"></span></span>
+                            <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="bookingDetailsDate"></span></span>
+                            <span class="dpp-chip"><i class="bi bi-clock"></i> <span id="bookingDetailsTime"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bookingDetailsStatusBox"></div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Booking Request</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Reason for Visit</div>
+                        <div class="dpp-field-value" id="bookingDetailsReason"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Requested On</div>
+                        <div class="dpp-field-value" id="bookingDetailsRequested"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Email</div>
+                        <div class="dpp-field-value" id="bookingDetailsEmail"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Phone</div>
+                        <div class="dpp-field-value" id="bookingDetailsPhone"></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1154,15 +1243,30 @@ function openBookingDetailsModal(booking) {
         var el = document.getElementById(id);
         if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
     };
-    document.getElementById('bookingDetailsName').textContent = booking.name || '—';
+    var name = booking.name || 'Unknown';
+    document.getElementById('bookingDetailsName').textContent = name;
+    var initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(function(w){ return w[0].toUpperCase(); }).join('') || '?';
+    document.getElementById('bookingDetailsAvatar').textContent = initials;
     setText('bookingDetailsRef', booking.booking_id ? ('#' + booking.booking_id) : '');
     setText('bookingDetailsDate', booking.preferred_date);
     setText('bookingDetailsTime', booking.preferred_time);
-    setText('bookingDetailsStatus', booking.status);
     setText('bookingDetailsEmail', booking.email);
     setText('bookingDetailsPhone', booking.phone_number);
     setText('bookingDetailsReason', booking.reason);
     setText('bookingDetailsRequested', booking.created_at);
+
+    var statusBox = document.getElementById('bookingDetailsStatusBox');
+    var status = String(booking.status || '').toLowerCase();
+    if (status === 'declined') {
+        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Booking Declined</div>'
+            + (booking.decline_reason ? '<span class="dpp-alert-tag">' + escapeHtml(booking.decline_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
+    } else if (status === 'processed') {
+        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> Processed — converted to an appointment.</div>';
+    } else if (status === 'approved') {
+        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> Approved — awaiting clinic visit.</div>';
+    } else {
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> Pending secretary approval.</div>';
+    }
 }
 
 // New Customer Search & Filters
@@ -1430,6 +1534,126 @@ async function approveBooking(bookingId) {
         }
     }
 }
+
+function openDeclineBookingModal(bookingId, patientName) {
+    document.getElementById('declineBookingId').value = bookingId;
+    document.getElementById('declineBookingPatientName').textContent = patientName || '';
+    document.getElementById('declineBookingReason').value = '';
+    var alertEl = document.getElementById('declineBookingAlert');
+    alertEl.style.display = 'none';
+    alertEl.textContent = '';
+    var modalEl = document.getElementById('declineBookingModal');
+    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+}
+
+function time12To24(t) {
+    var m = String(t || '').match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return '';
+    var h = parseInt(m[1], 10);
+    var min = m[2];
+    var mer = m[3].toUpperCase();
+    if (mer === 'AM') { if (h === 12) h = 0; } else { if (h !== 12) h += 12; }
+    return String(h).padStart(2, '0') + ':' + min;
+}
+
+function time24To12(t) {
+    var m = String(t || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!m) return '';
+    var h = parseInt(m[1], 10);
+    var min = m[2];
+    var mer = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return h12 + ':' + min + ' ' + mer;
+}
+
+function openRescheduleBookingModal(booking) {
+    document.getElementById('rescheduleBookingId').value = booking.booking_id;
+    document.getElementById('rescheduleBookingPatientName').textContent = booking.name || '';
+    document.getElementById('rescheduleBookingDate').value = booking.preferred_date || '';
+    document.getElementById('rescheduleBookingTime').value = time12To24(booking.preferred_time || '');
+    var alertEl = document.getElementById('rescheduleBookingAlert');
+    alertEl.style.display = 'none';
+    alertEl.textContent = '';
+    var modalEl = document.getElementById('rescheduleBookingModal');
+    (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+}
+
+document.getElementById('rescheduleBookingConfirmBtn')?.addEventListener('click', async function() {
+    var bookingId = document.getElementById('rescheduleBookingId').value;
+    var newDate = document.getElementById('rescheduleBookingDate').value;
+    var newTime24 = document.getElementById('rescheduleBookingTime').value;
+    var alertEl = document.getElementById('rescheduleBookingAlert');
+    if (!newDate || !newTime24) {
+        alertEl.textContent = 'Please select a new date and time.';
+        alertEl.style.display = '';
+        return;
+    }
+    this.disabled = true;
+    try {
+        const fd = new FormData();
+        fd.append('booking_id', bookingId);
+        fd.append('preferred_date', newDate);
+        fd.append('preferred_time', time24To12(newTime24));
+        fd.append('csrf_token', window.secretaryCsrfToken || '');
+        const resp = await fetch('../assets/api/bookings/reschedule_booking.php', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('rescheduleBookingModal'))?.hide();
+            if (typeof showArrToast === 'function') {
+                showArrToast('Booking rescheduled.', 'success');
+            } else if (typeof showToast === 'function') {
+                showToast('Booking rescheduled.', 'success');
+            }
+            location.reload();
+        } else {
+            alertEl.textContent = data.message || 'Failed to reschedule booking.';
+            alertEl.style.display = '';
+        }
+    } catch (e) {
+        alertEl.textContent = 'Error: ' + e.message;
+        alertEl.style.display = '';
+    } finally {
+        this.disabled = false;
+    }
+});
+
+document.getElementById('declineBookingConfirmBtn')?.addEventListener('click', async function() {
+    var bookingId = document.getElementById('declineBookingId').value;
+    var reason = document.getElementById('declineBookingReason').value.trim();
+    var alertEl = document.getElementById('declineBookingAlert');
+    if (!reason) {
+        alertEl.textContent = 'Please enter a reason for declining this booking.';
+        alertEl.style.display = '';
+        return;
+    }
+    this.disabled = true;
+    try {
+        const fd = new FormData();
+        fd.append('booking_id', bookingId);
+        fd.append('decline_reason', reason);
+        fd.append('csrf_token', window.secretaryCsrfToken || '');
+        const resp = await fetch('../assets/api/bookings/decline_booking.php', { method: 'POST', body: fd });
+        const data = await resp.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('declineBookingModal'))?.hide();
+            if (typeof showArrToast === 'function') {
+                showArrToast('Booking declined.', 'success');
+            } else if (typeof showToast === 'function') {
+                showToast('Booking declined.', 'success');
+            }
+            location.reload();
+        } else {
+            alertEl.textContent = data.message || 'Failed to decline booking.';
+            alertEl.style.display = '';
+        }
+    } catch (e) {
+        alertEl.textContent = 'Error: ' + e.message;
+        alertEl.style.display = '';
+    } finally {
+        this.disabled = false;
+    }
+});
 
 // Load services when doctor changes
 document.getElementById('convertDoctorSelect')?.addEventListener('change', async function() {
@@ -1889,8 +2113,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                     <?php else: ?>
                                         <span class="badge bg-secondary"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?></span>
                                     <?php endif; ?>
+                                    <?php if (!empty($appointment['needs_reassignment']) && !in_array($status, ['completed', 'cancelled', 'no_show'], true)): ?>
+                                        <br><span class="badge bg-danger mt-1"><i class="bi bi-exclamation-triangle"></i> Doctor on Leave — Needs Reassignment</span>
+                                    <?php endif; ?>
                                 </td>
-                                
+
                                 <td class="appointments-actions-cell">
                                     <?php 
                                         $isDisabled = $isCompleted || $isCancelled;
@@ -1913,6 +2140,9 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
                                                 <i class="bi bi-x-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openRescheduleForAppointmentSec(<?php echo htmlspecialchars(json_encode($appointment), ENT_QUOTES, 'UTF-8'); ?>)' title="Reschedule appointment">
+                                                <i class="bi bi-calendar3"></i>
                                             </button>
                                         <?php elseif ($status === 'awaiting_secretary_records'): ?>
                                             <button type="button" class="btn btn-sm btn-success" onclick="openSecretaryRecordModal(<?php echo (int)$appointment['appointment_id']; ?>, <?php echo (int)$appointment['patient_id']; ?>)" title="Create clinical record and billing">
@@ -2490,56 +2720,52 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 <div class="modal fade" id="appointmentDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="bi bi-info-circle"></i> Appointment Details</h5>
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar2-check"></i> Appointment Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div id="apptDetailsPatientName" class="alert alert-light mb-3"></div>
-                <table class="table table-sm table-borderless mb-0">
-                    <tbody>
-                        <tr>
-                            <th style="width:40%;" class="text-muted">Appointment ID</th>
-                            <td id="apptDetailsId"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Doctor</th>
-                            <td id="apptDetailsDoctor"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Date</th>
-                            <td id="apptDetailsDate"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Type</th>
-                            <td id="apptDetailsType"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Status</th>
-                            <td id="apptDetailsStatus"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Email</th>
-                            <td id="apptDetailsEmail"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Phone</th>
-                            <td id="apptDetailsPhone"></td>
-                        </tr>
-                        <tr>
-                            <th class="text-muted">Chief Complaint</th>
-                            <td id="apptDetailsReason"></td>
-                        </tr>
-                        <tr id="apptDetailsCancelReasonRow" style="display:none;">
-                            <th class="text-muted text-danger">Cancellation Reason</th>
-                            <td id="apptDetailsCancelReason" class="text-danger"></td>
-                        </tr>
-                        <tr id="apptDetailsFollowupRow" style="display:none;">
-                            <th class="text-muted">Follow-up</th>
-                            <td id="apptDetailsFollowup"></td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="dpp-header">
+                    <div class="dpp-avatar" id="apptDetailsAvatar">?</div>
+                    <div>
+                        <p class="dpp-name" id="apptDetailsPatientName"></p>
+                        <div class="dpp-chips">
+                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="apptDetailsId"></span></span>
+                            <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="apptDetailsDate"></span></span>
+                            <span class="dpp-chip" id="apptDetailsTypeChip"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="apptDetailsStatusBox"></div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Appointment Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Doctor</div>
+                        <div class="dpp-field-value" id="apptDetailsDoctor"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Chief Complaint</div>
+                        <div class="dpp-field-value" id="apptDetailsReason"></div>
+                    </div>
+                    <div class="dpp-field" id="apptDetailsFollowupRow" style="display:none;">
+                        <div class="dpp-field-label">Follow-up</div>
+                        <div class="dpp-field-value" id="apptDetailsFollowup"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Email</div>
+                        <div class="dpp-field-value" id="apptDetailsEmail"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Phone</div>
+                        <div class="dpp-field-value" id="apptDetailsPhone"></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -2572,22 +2798,33 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
         };
 
-        document.getElementById('apptDetailsPatientName').textContent = appt.patient_name || '—';
+        const patientName = appt.patient_name || 'Unknown';
+        document.getElementById('apptDetailsPatientName').textContent = patientName;
+        const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+        document.getElementById('apptDetailsAvatar').textContent = initials;
         setText('apptDetailsId', appt.appointment_id ? ('#' + appt.appointment_id) : '');
         setText('apptDetailsDoctor', appt.doctor_name);
         setText('apptDetailsDate', appt.appointment_date);
-        setText('apptDetailsType', appt.is_online_appointment ? 'Online' : 'Walk-In');
-        setText('apptDetailsStatus', statusLabels[appt.status] || appt.status);
         setText('apptDetailsEmail', appt.email);
         setText('apptDetailsPhone', appt.phone_number);
         setText('apptDetailsReason', appt.reason);
 
-        const cancelReasonRow = document.getElementById('apptDetailsCancelReasonRow');
-        if (appt.status === 'cancelled' && appt.cancellation_reason && String(appt.cancellation_reason).trim() !== '') {
-            setText('apptDetailsCancelReason', appt.cancellation_reason);
-            cancelReasonRow.style.display = '';
+        const typeChip = document.getElementById('apptDetailsTypeChip');
+        typeChip.innerHTML = appt.is_online_appointment
+            ? '<i class="bi bi-laptop"></i> Online'
+            : '<i class="bi bi-building"></i> Walk-In';
+
+        const statusBox = document.getElementById('apptDetailsStatusBox');
+        const statusLabel = statusLabels[appt.status] || appt.status;
+        if (appt.status === 'cancelled') {
+            statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Appointment Cancelled</div>'
+                + (appt.cancellation_reason ? '<span class="dpp-alert-tag">' + escapeHtml(appt.cancellation_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
+        } else if (['completed', 'records_complete'].includes(appt.status)) {
+            statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+        } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(appt.status)) {
+            statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
         } else {
-            cancelReasonRow.style.display = 'none';
+            statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '</div>';
         }
 
         const followupRow = document.getElementById('apptDetailsFollowupRow');
@@ -3365,6 +3602,15 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 <input type="hidden" id="rescheduleScheduleIdSec" />
                 <input type="hidden" id="rescheduleAppointmentIdSec" />
                 <input type="hidden" id="rescheduleDoctorIdSec" />
+                <div class="mb-2" id="rescheduleDoctorWrapSec" style="display:none;">
+                    <label class="form-label">Doctor</label>
+                    <select id="rescheduleDoctorSelectSec" class="form-select">
+                        <?php foreach ($doctors as $doc): ?>
+                            <option value="<?php echo (int)$doc['user_id']; ?>"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="text-muted">Change the doctor here to reassign this appointment.</small>
+                </div>
                 <div class="mb-2"><label id="rescheduleStartLabelSec" class="form-label">Start</label><input id="rescheduleStartSec" class="form-control" type="datetime-local"/></div>
                 <div class="mb-2" id="rescheduleEndWrapSec"><label class="form-label">End (optional)</label><input id="rescheduleEndSec" class="form-control" type="datetime-local"/></div>
                 <div class="mb-2" id="rescheduleTimeslotWrapSec" style="display:none;">
@@ -3470,6 +3716,7 @@ function openRescheduleModalSec(schedule) {
     document.getElementById('rescheduleScheduleIdSec').value = schedule.schedule_id || '';
     document.getElementById('rescheduleAppointmentIdSec').value = '';
     document.getElementById('rescheduleDoctorIdSec').value = schedule.user_id || '';
+    document.getElementById('rescheduleDoctorWrapSec').style.display = 'none';
     // restore labels and fields for schedule reschedule
     try { document.getElementById('rescheduleStartLabelSec').textContent = 'Start'; } catch(e){}
     try { document.getElementById('rescheduleStartSec').type = 'datetime-local'; } catch(e){}
@@ -3500,6 +3747,10 @@ function openRescheduleForAppointmentSec(appointment) {
     document.getElementById('rescheduleAppointmentIdSec').value = appointment.appointment_id || '';
     document.getElementById('rescheduleScheduleIdSec').value = '';
     document.getElementById('rescheduleDoctorIdSec').value = appointment.user_id || '';
+    const doctorWrap = document.getElementById('rescheduleDoctorWrapSec');
+    const doctorSelect = document.getElementById('rescheduleDoctorSelectSec');
+    if (doctorWrap) doctorWrap.style.display = '';
+    if (doctorSelect) doctorSelect.value = String(appointment.user_id || '');
     // use date + timeslot for appointment reschedule
     try { document.getElementById('rescheduleStartLabelSec').textContent = 'Date'; } catch(e){}
     try { document.getElementById('rescheduleStartSec').type = 'date'; } catch(e){}
@@ -3527,6 +3778,11 @@ document.getElementById('rescheduleStartSec').addEventListener('change', functio
     if (apptId) {
         loadRescheduleTimeslotsSec();
     }
+});
+
+document.getElementById('rescheduleDoctorSelectSec')?.addEventListener('change', function() {
+    document.getElementById('rescheduleDoctorIdSec').value = this.value;
+    loadRescheduleTimeslotsSec();
 });
 
 document.getElementById('rescheduleSuggestSec').addEventListener('click', function(){
