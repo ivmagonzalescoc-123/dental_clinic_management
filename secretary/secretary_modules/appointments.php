@@ -796,8 +796,6 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
                                                     <i class="bi bi-check2-square"></i> Approve
                                                 </button>
-                                            <?php else: ?>
-                                                <span class="badge bg-info align-self-center"><i class="bi bi-check"></i> Approved</span>
                                             <?php endif; ?>
                                             <button type="button" class="btn btn-sm btn-success"
                                                 onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
@@ -824,7 +822,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                             </button>
                                             <button type="button" class="btn btn-sm btn-danger"
                                                 onclick="openDeclineBookingModal(<?php echo (int)$gb['booking_id']; ?>, '<?php echo htmlspecialchars(addslashes(trim($gb['first_name'] . ' ' . $gb['last_name'])), ENT_QUOTES, 'UTF-8'); ?>')">
-                                                <i class="bi bi-x-circle"></i> Decline
+                                                <i class="bi bi-x-circle"></i> Cancel
                                             </button>
                                         <?php endif; ?>
                                     </div>
@@ -843,20 +841,20 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="bi bi-x-circle"></i> Decline Booking</h5>
+                <h5 class="modal-title"><i class="bi bi-x-circle"></i> Cancel Booking</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-2">Declining booking for <strong id="declineBookingPatientName"></strong>. This will notify the guest by email.</p>
+                <p class="mb-2">Cancelling booking for <strong id="declineBookingPatientName"></strong>. This will notify the guest by email.</p>
                 <input type="hidden" id="declineBookingId">
-                <label for="declineBookingReason" class="form-label"><strong>Reason for Declining</strong></label>
-                <textarea class="form-control" id="declineBookingReason" rows="3" placeholder="Enter reason for declining this booking" required></textarea>
+                <label for="declineBookingReason" class="form-label"><strong>Reason for Cancelling</strong></label>
+                <textarea class="form-control" id="declineBookingReason" rows="3" placeholder="Enter reason for cancelling this booking" required></textarea>
                 <div id="declineBookingAlert" class="alert alert-danger mt-2" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-danger" id="declineBookingConfirmBtn">
-                    <i class="bi bi-x-circle"></i> Decline Booking
+                    <i class="bi bi-x-circle"></i> Cancel Booking
                 </button>
             </div>
         </div>
@@ -2698,7 +2696,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-info text-white">
-                <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Medical History</h5>
+                <h5 class="modal-title"><i class="bi bi-file-medical"></i> Patient Profiling</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="profilingContent">

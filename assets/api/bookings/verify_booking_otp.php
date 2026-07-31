@@ -18,6 +18,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
 
     security_start_session();
 
@@ -48,12 +49,14 @@ try {
     }
 
     // OTP verified — now insert into DB with 'verified' status
-    $sql = "INSERT INTO bookings (first_name, last_name, email, phone_number, date_of_birth, preferred_date, preferred_time, reason, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?)";
+    $trackingCode = bookings_generate_tracking_code($conn);
+
+    $sql = "INSERT INTO bookings (first_name, last_name, email, phone_number, date_of_birth, preferred_date, preferred_time, reason, status, created_at, tracking_code)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) throw new Exception('Database error: ' . $conn->error);
 
-    $stmt->bind_param('sssssssss',
+    $stmt->bind_param('ssssssssss',
         $pending['first_name'],
         $pending['last_name'],
         $pending['email'],
@@ -62,7 +65,8 @@ try {
         $pending['preferred_date'],
         $pending['preferred_time'],
         $pending['reason'],
-        $pending['created_at']
+        $pending['created_at'],
+        $trackingCode
     );
     if (!$stmt->execute()) throw new Exception('Failed to save booking: ' . $stmt->error);
     $bookingId = (int)$conn->insert_id;
@@ -79,14 +83,15 @@ try {
     wf_notify_new_patient_booking($conn, $bookingId, $patientName, $pending['preferred_date']);
 
     $subject = 'Booking Request Received - ' . email_clinic_name();
-    $textContent = 'We have received your booking request. Booking #' . $bookingId . ' for ' . $pending['preferred_date'] . '. Our staff will review it and confirm shortly.';
-    $htmlContent = email_booking_confirmed_html($patientName, $bookingId, $pending['preferred_date'], $pending['preferred_time'], $pending['reason'] ?? '');
+    $textContent = 'We have received your booking request. Booking Ref# ' . $trackingCode . ' for ' . $pending['preferred_date'] . '. Our staff will review it and confirm shortly.';
+    $htmlContent = email_booking_confirmed_html($patientName, $bookingId, $pending['preferred_date'], $pending['preferred_time'], $pending['reason'] ?? '', $trackingCode);
     reminder_send_email($pending['email'], $subject, $textContent, $htmlContent);
 
     echo json_encode([
-        'success'    => true,
-        'message'    => 'Booking request received! A confirmation email has been sent.',
-        'booking_id' => $bookingId,
+        'success'       => true,
+        'message'       => 'Booking request received! A confirmation email has been sent.',
+        'booking_id'    => $bookingId,
+        'tracking_code' => $trackingCode,
     ]);
 
 } catch (Exception $e) {

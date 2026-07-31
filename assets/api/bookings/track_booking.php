@@ -3,28 +3,41 @@ header('Content-Type: application/json');
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
 bookings_ensure_decline_reason_column($conn);
+bookings_ensure_tracking_code_column($conn);
 
+// Public tracking now prefers the random tracking_code (unguessable) over the
+// sequential booking_id, which stays supported below for anything already using it.
+$trackingCode = isset($_GET['tracking_code']) ? trim((string)$_GET['tracking_code']) : '';
 $bookingId = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : 0;
 
-if ($bookingId <= 0) {
+if ($trackingCode === '' && $bookingId <= 0) {
     echo json_encode(['success' => false, 'message' => 'Please enter a valid booking number.']);
     exit;
 }
 
-$stmt = $conn->prepare(
-    'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_number, b.preferred_date, b.preferred_time,
-            b.reason, b.status, b.created_at, b.decline_reason, a.status AS appt_status
+$baseSql = 'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_number, b.preferred_date, b.preferred_time,
+            b.reason, b.status, b.created_at, b.decline_reason, b.tracking_code, a.status AS appt_status
      FROM bookings b
      LEFT JOIN appointments a ON a.booking_id = b.booking_id
-     WHERE b.booking_id = ?
+     WHERE %s
      ORDER BY a.appointment_id DESC
-     LIMIT 1'
-);
-if (!$stmt) {
-    echo json_encode(['success' => false, 'message' => 'Database error.']);
-    exit;
+     LIMIT 1';
+
+if ($trackingCode !== '') {
+    $stmt = $conn->prepare(sprintf($baseSql, 'b.tracking_code = ?'));
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'message' => 'Database error.']);
+        exit;
+    }
+    $stmt->bind_param('s', $trackingCode);
+} else {
+    $stmt = $conn->prepare(sprintf($baseSql, 'b.booking_id = ?'));
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'message' => 'Database error.']);
+        exit;
+    }
+    $stmt->bind_param('i', $bookingId);
 }
-$stmt->bind_param('i', $bookingId);
 $stmt->execute();
 $result = $stmt->get_result();
 $row = $result ? $result->fetch_assoc() : null;
@@ -86,6 +99,7 @@ if ($row['status'] === 'cancelled' || $apptStatus === 'cancelled') {
 echo json_encode([
     'success' => true,
     'booking_id' => (int)$row['booking_id'],
+    'tracking_code' => (string)($row['tracking_code'] ?? ''),
     'status' => $row['status'],
     'step1' => $step1,
     'step2' => $step2,

@@ -137,23 +137,23 @@ A web-based dental clinic management system built with PHP 8.3, MySQL, and Boots
 ## Email & Notifications
 
 ### Email Delivery
-| Mode | Method | Use Case |
-|------|--------|----------|
-| `smtp` | Gmail SMTP via raw sockets | Production (InfinityFree) |
-| `brevo` | Brevo API (HTTPS) | SMS reminders |
-| `mail` | PHP native `mail()` | Fallback (blocked on InfinityFree) |
-| `log` | Error log only | Development |
+| Mode      | Method                        | Use Case |
+|-----------|-------------------------------|---------------------------|
+| `smtp`    | Gmail SMTP via raw sockets    | Production (InfinityFree) |
+| `brevo`   | Brevo API (HTTPS)             | SMS reminders             |
+| `mail`    | PHP native `mail()`           | Fallback (blocked on InfinityFree) |
+| `log`     | Error log only                | Development               |
 
 ### Notification Types
-| Event | Patient | Doctor | Secretary |
-|-------|---------|--------|-----------|
-| Appointment created | ✓ | ✓ | ✓ |
-| Appointment approved | ✓ | ✓ | — |
-| Reschedule requested | ✓ | ✓ | ✓ |
-| Reschedule approved/rejected | ✓ | ✓ | — |
-| Patient arrived | ✓ | ✓ | — |
-| Doctor finished | — | — | ✓ |
-| Record submitted | ✓ | ✓ | ✓ |
+| Event                         | Patient | Doctor | Secretary |
+|-------------------------------|---------|--------|-----------|
+| Appointment created           | ✓ | ✓ | ✓ |
+| Appointment approved          | ✓ | ✓ | — |
+| Reschedule requested          | ✓ | ✓ | ✓ |
+| Reschedule approved/rejected  | ✓ | ✓ | — |
+| Patient arrived               | ✓ | ✓ | — |
+| Doctor finished               | — | — | ✓ |
+| Record submitted              | ✓ | ✓ | ✓ |
 
 ### External Cron (InfinityFree)
 - **Endpoint:** `scripts/cron_reminders.php?key=<secret>`

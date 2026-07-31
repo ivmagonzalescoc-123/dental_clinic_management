@@ -13,6 +13,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -90,7 +91,11 @@ try {
         throw new Exception('Booking not found or already processed.');
     }
 
-    $bookingStmt = $conn->prepare('SELECT first_name, last_name, email FROM bookings WHERE booking_id = ?');
+    if (function_exists('bookings_ensure_tracking_code_column')) {
+        bookings_ensure_tracking_code_column($conn);
+    }
+
+    $bookingStmt = $conn->prepare('SELECT first_name, last_name, email, tracking_code FROM bookings WHERE booking_id = ?');
     if ($bookingStmt) {
         $bookingStmt->bind_param('i', $bookingId);
         $bookingStmt->execute();
@@ -99,9 +104,11 @@ try {
 
         if ($booking && !empty($booking['email']) && function_exists('reminder_send_email') && function_exists('email_booking_rescheduled_html')) {
             $patientName = trim($booking['first_name'] . ' ' . $booking['last_name']);
+            $trackingCode = (string)($booking['tracking_code'] ?? '');
+            $refLabel = $trackingCode !== '' ? $trackingCode : $bookingId;
             $subject = 'Booking Rescheduled - ' . (function_exists('email_clinic_name') ? email_clinic_name() : 'Dental Clinic');
-            $textContent = 'Your booking #' . $bookingId . ' has been rescheduled to ' . $newDate . ', ' . $newTime . '.';
-            $htmlContent = email_booking_rescheduled_html($patientName, $bookingId, $newDate, $newTime);
+            $textContent = 'Your booking Ref# ' . $refLabel . ' has been rescheduled to ' . $newDate . ', ' . $newTime . '.';
+            $htmlContent = email_booking_rescheduled_html($patientName, $bookingId, $newDate, $newTime, $trackingCode);
             reminder_send_email($booking['email'], $subject, $textContent, $htmlContent);
         }
     }

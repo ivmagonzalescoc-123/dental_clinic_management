@@ -576,7 +576,7 @@ $aboutPoints = [
                     <div id="bookingTrackResult" class="mt-6 hidden">
                         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                             <div class="flex items-center justify-between mb-1">
-                                <h3 class="text-sm font-bold text-slate-900">Appointment No. :<span id="trackBookingId"></span></h3>
+                                <h3 class="text-sm font-bold text-slate-900">Appointment Tracking Code <span id="trackBookingId"></span></h3>
                                 <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
                             </div>
                             <p id="trackBookingReason" class="mt-1 text-xs text-red-600 hidden"></p>
@@ -1449,9 +1449,14 @@ $aboutPoints = [
             }
 
             function doTrack() {
-                var id = (input.value || '').trim().replace(/[^0-9]/g, '');
+                var raw = (input.value || '').trim();
+                // Old-style plain numeric booking numbers (from links/emails sent before
+                // the tracking code existed) still work via booking_id; anything else is
+                // treated as the newer, unguessable alphanumeric tracking code.
+                var isNumeric = /^[0-9]+$/.test(raw);
+                var id = isNumeric ? raw : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
                 if (!id) {
-                    errorEl.textContent = 'Please enter a appointment number.';
+                    errorEl.textContent = 'Please enter a valid booking reference number.';
                     errorEl.classList.remove('hidden');
                     resultCard.classList.add('hidden');
                     return;
@@ -1461,7 +1466,8 @@ $aboutPoints = [
                 btn.textContent = 'Searching...';
                 btn.disabled = true;
 
-                fetch('assets/api/bookings/track_booking.php?booking_id=' + id)
+                var trackParam = isNumeric ? ('booking_id=' + encodeURIComponent(id)) : ('tracking_code=' + encodeURIComponent(id));
+                fetch('assets/api/bookings/track_booking.php?' + trackParam)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         btn.textContent = 'Track';
@@ -1471,7 +1477,7 @@ $aboutPoints = [
                             errorEl.classList.remove('hidden');
                             return;
                         }
-                        document.getElementById('trackBookingId').textContent = data.booking_id;
+                        document.getElementById('trackBookingId').textContent = data.tracking_code || data.booking_id;
                         var statusEl = document.getElementById('trackBookingStatus');
                         var reasonEl = document.getElementById('trackBookingReason');
                         reasonEl.textContent = '';
@@ -1819,6 +1825,11 @@ $aboutPoints = [
                     } else {
                         await refreshLoginCaptcha();
                     }
+                    const passwordEl = document.getElementById('login-password');
+                    if (passwordEl) {
+                        passwordEl.value = '';
+                        passwordEl.focus();
+                    }
                     setAlert(data.message || 'Login failed', 'error');
                 }
             } catch (error) {
@@ -2043,13 +2054,15 @@ $aboutPoints = [
                 return;
             }
 
-            const termsErrorEl = document.getElementById('reg-terms-error');
             if (regTermsCheckbox && !regTermsCheckbox.checked) {
-                if (termsErrorEl) termsErrorEl.textContent = 'You must agree to the Terms and Conditions to book an appointment.';
+                showFieldError('reg-terms', 'reg-terms-error', 'You must agree to the Terms and Conditions to book an appointment.');
+                if (typeof showToast === 'function') {
+                    showToast('Please agree to the Terms and Conditions to book an appointment.', 'warning');
+                }
                 regTermsCheckbox.focus();
                 return;
             }
-            if (termsErrorEl) termsErrorEl.textContent = '';
+            clearFieldError('reg-terms', 'reg-terms-error');
 
             submitBtn.disabled = true;
             submitBtn.textContent = 'Sending...';
@@ -2129,11 +2142,11 @@ $aboutPoints = [
                     // Show success
                     document.getElementById('booking-otp-section').classList.add('hidden');
                     document.getElementById('booking-success-section').classList.remove('hidden');
-                    document.getElementById('booking-ref-display').textContent = '#' + (data.booking_id || '');
+                    document.getElementById('booking-ref-display').textContent = data.tracking_code || ('#' + (data.booking_id || ''));
 
                     // Copy button
                     document.getElementById('copyBookingRefBtn')?.addEventListener('click', function() {
-                        const ref = '#' + (data.booking_id || '');
+                        const ref = data.tracking_code || ('#' + (data.booking_id || ''));
                         if (navigator.clipboard && navigator.clipboard.writeText) {
                             navigator.clipboard.writeText(ref);
                         } else {

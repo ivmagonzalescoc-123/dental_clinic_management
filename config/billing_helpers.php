@@ -225,6 +225,46 @@ if (!function_exists('billing_migrate_billing_columns')) {
     }
 }
 
+if (!function_exists('billing_is_overdue')) {
+    /**
+     * A billing record is only "overdue" when it has an actual defined due date that has
+     * passed — i.e. an installment plan with a pending term whose due_date < today.
+     * A bill with no installment plan has no due date at all, so it is never overdue
+     * regardless of how long it has been unpaid (that's just "pending"/"unpaid").
+     */
+    function billing_is_overdue(mysqli $conn, int $billingId, string $status, float $balance): bool
+    {
+        if (strtolower($status) === 'paid' || $balance <= 0) {
+            return false;
+        }
+
+        $instChk = $conn->prepare('SELECT installment_id FROM billing_installments WHERE billing_id = ? LIMIT 1');
+        if (!$instChk) {
+            return false;
+        }
+        $instChk->bind_param('i', $billingId);
+        $instChk->execute();
+        $instRow = $instChk->get_result()->fetch_assoc();
+        $instChk->close();
+
+        if (!$instRow) {
+            return false;
+        }
+
+        $installmentId = (int)$instRow['installment_id'];
+        $termChk = $conn->prepare("SELECT term_id FROM billing_installment_terms WHERE installment_id = ? AND status = 'pending' AND due_date < CURDATE() LIMIT 1");
+        if (!$termChk) {
+            return false;
+        }
+        $termChk->bind_param('i', $installmentId);
+        $termChk->execute();
+        $termRow = $termChk->get_result()->fetch_assoc();
+        $termChk->close();
+
+        return (bool)$termRow;
+    }
+}
+
 if (!function_exists('billing_normalize_discount_type')) {
     function billing_normalize_discount_type($type): string
     {

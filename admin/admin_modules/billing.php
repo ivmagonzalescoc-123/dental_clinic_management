@@ -132,13 +132,12 @@ $collectThisMonth = 0.0;
 foreach ($billings as $b) {
     $status = strtolower((string)($b['status'] ?? 'unpaid'));
     $balance = (float)($b['balance'] ?? ((float)($b['total_amount'] ?? 0) - (float)($b['amount_paid'] ?? 0)));
-    $apptDate = (string)($b['appointment_date'] ?? '');
 
     if ($status !== 'paid' && $balance > 0) {
         $pendingCount++;
         $collectThisMonth += $balance;
     }
-    if ($status !== 'paid' && $apptDate !== '' && $apptDate < $today && $balance > 0) {
+    if (billing_is_overdue($conn, (int)($b['billing_id'] ?? 0), $status, $balance)) {
         $overdueCount++;
     }
 }
@@ -312,36 +311,8 @@ if (!$hasAnyData) {
                                 data-overdue="<?php
                                     $bStatus = strtolower($billing['status'] ?? 'unpaid');
                                     $bBalance = (float)($billing['balance'] ?? 0);
-                                    $bCreatedAt = (string)($billing['created_at'] ?? '');
                                     $bBillingId = (int)($billing['billing_id'] ?? 0);
-                                    $isOverdue = 0;
-                                    if ($bStatus !== 'paid' && $bBalance > 0) {
-                                        // Check if billing has installment terms
-                                        $instChk = $conn->prepare('SELECT installment_id FROM billing_installments WHERE billing_id = ? LIMIT 1');
-                                        if ($instChk) {
-                                            $instChk->bind_param('i', $bBillingId);
-                                            $instChk->execute();
-                                            $instRow = $instChk->get_result()->fetch_assoc();
-                                            $instChk->close();
-                                            if ($instRow) {
-                                                // Installment: check if any term's due_date has passed
-                                                $termChk = $conn->prepare('SELECT term_id FROM billing_installment_terms WHERE installment_id = ? AND status = "pending" AND due_date < CURDATE() LIMIT 1');
-                                                if ($termChk) {
-                                                    $termChk->bind_param('i', $instRow['installment_id']);
-                                                    $termChk->execute();
-                                                    $termRow = $termChk->get_result()->fetch_assoc();
-                                                    $termChk->close();
-                                                    if ($termRow) $isOverdue = 1;
-                                                }
-                                            } else {
-                                                // Non-installment: overdue if no payment after 1 day of creation
-                                                if ($bCreatedAt !== '' && (time() - strtotime($bCreatedAt)) > 86400) {
-                                                    $isOverdue = 1;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    echo $isOverdue;
+                                    echo billing_is_overdue($conn, $bBillingId, $bStatus, $bBalance) ? 1 : 0;
                                 ?>"
                                 data-patient="<?php echo htmlspecialchars(strtolower($billing['first_name'] . ' ' . $billing['last_name'])); ?>"
                                 data-doctor="<?php echo htmlspecialchars(strtolower(trim(($billing['doctor_first_name'] ?? '') . ' ' . ($billing['doctor_last_name'] ?? '')))); ?>"
@@ -504,6 +475,9 @@ if (!$hasAnyData) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary" id="invoiceExportPdfBtn" onclick="exportInvoicePdf()">
+                    <i class="bi bi-file-earmark-pdf"></i> Export to PDF
+                </button>
                 <button type="button" class="btn btn-primary" onclick="printInvoice()">
                     <i class="bi bi-printer"></i> Print
                 </button>
@@ -667,7 +641,13 @@ if (!$hasAnyData) {
 </script>
 
 <script>
+    function exportInvoicePdf() {
+        if (!window.currentInvoiceBillingId) return;
+        window.open('../assets/api/billing/export_invoice_pdf.php?billing_id=' + encodeURIComponent(window.currentInvoiceBillingId), '_blank');
+    }
+
     function viewInvoice(billing) {
+        window.currentInvoiceBillingId = billing.billing_id;
         document.getElementById('invoiceContent').innerHTML = '<div class="text-center text-muted py-4"><div class="spinner-border spinner-border-sm me-2"></div> Loading invoice...</div>';
         fetch('../assets/api/billing/get_billing_details.php?billing_id=' + encodeURIComponent(billing.billing_id))
             .then(r => r.json()).then(details => {

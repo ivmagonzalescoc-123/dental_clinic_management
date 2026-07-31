@@ -61,7 +61,7 @@ if (!function_exists('email_booking_confirmed_html')) {
     // point, NOT secretary-approved yet (see email_booking_approved_html() for that stage).
     // Wording here must stay "received/pending review", not "confirmed", to avoid implying
     // the appointment is already approved.
-    function email_booking_confirmed_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = ''): string
+    function email_booking_confirmed_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = '', string $trackingCode = ''): string
     {
         $clinic = email_clinic_name();
         $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
@@ -70,6 +70,7 @@ if (!function_exists('email_booking_confirmed_html')) {
         $dateFormatted = date('l, F j, Y', strtotime($preferredDate));
         $year = date('Y');
         $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $bookingId = $trackingCode !== '' ? htmlspecialchars($trackingCode, ENT_QUOTES, 'UTF-8') : $bookingId;
 
         return <<<HTML
 <!DOCTYPE html>
@@ -87,7 +88,7 @@ HTML;
 }
 
 if (!function_exists('email_booking_approved_html')) {
-    function email_booking_approved_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = ''): string
+    function email_booking_approved_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = '', string $trackingCode = ''): string
     {
         $clinic = email_clinic_name();
         $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
@@ -96,6 +97,7 @@ if (!function_exists('email_booking_approved_html')) {
         $dateFormatted = date('l, F j, Y', strtotime($preferredDate));
         $year = date('Y');
         $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $bookingId = $trackingCode !== '' ? htmlspecialchars($trackingCode, ENT_QUOTES, 'UTF-8') : $bookingId;
 
         return <<<HTML
 <!DOCTYPE html>
@@ -113,7 +115,7 @@ HTML;
 }
 
 if (!function_exists('email_booking_declined_html')) {
-    function email_booking_declined_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = ''): string
+    function email_booking_declined_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $reason = '', string $trackingCode = ''): string
     {
         $clinic = email_clinic_name();
         $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
@@ -123,6 +125,7 @@ if (!function_exists('email_booking_declined_html')) {
         $reasonSafe = htmlspecialchars(trim($reason), ENT_QUOTES, 'UTF-8');
         $year = date('Y');
         $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $bookingId = $trackingCode !== '' ? htmlspecialchars($trackingCode, ENT_QUOTES, 'UTF-8') : $bookingId;
 
         $reasonBlock = $reasonSafe !== ''
             ? '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fef2f2;border:1px solid #fecaca;border-radius:12px;"><tr><td style="padding:14px 18px;font-size:13px;line-height:1.6;color:#991b1b;"><strong>Reason:</strong> ' . $reasonSafe . '</td></tr></table>'
@@ -145,7 +148,7 @@ HTML;
 }
 
 if (!function_exists('email_booking_rescheduled_html')) {
-    function email_booking_rescheduled_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime): string
+    function email_booking_rescheduled_html(string $patientName, int $bookingId, string $preferredDate, string $preferredTime, string $trackingCode = ''): string
     {
         $clinic = email_clinic_name();
         $patientNameSafe = htmlspecialchars(trim($patientName), ENT_QUOTES, 'UTF-8');
@@ -154,6 +157,7 @@ if (!function_exists('email_booking_rescheduled_html')) {
         $dateFormatted = htmlspecialchars(date('l, F j, Y', strtotime($preferredDate)), ENT_QUOTES, 'UTF-8');
         $year = date('Y');
         $appUrl = function_exists('app_base_url') ? app_base_url() : (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $bookingId = $trackingCode !== '' ? htmlspecialchars($trackingCode, ENT_QUOTES, 'UTF-8') : $bookingId;
 
         return <<<HTML
 <!DOCTYPE html>
