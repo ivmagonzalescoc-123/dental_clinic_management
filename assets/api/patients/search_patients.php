@@ -21,12 +21,15 @@ if ($q === '') {
 
 try {
     $like = '%' . $q . '%';
-    $sql = "SELECT patient_id, first_name, middle_name, last_name, email, phone_number FROM patients WHERE (first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone_number LIKE ?) ORDER BY first_name ASC LIMIT 20";
+    $sql = "SELECT patient_id, first_name, middle_name, last_name, email, phone_number, date_of_birth, gender, address, profile_image, created_at, last_login_at
+            FROM patients
+            WHERE (first_name LIKE ? OR middle_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone_number LIKE ?)
+            ORDER BY first_name ASC LIMIT 20";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         throw new Exception('Prepare failed');
     }
-    $stmt->bind_param('ssss', $like, $like, $like, $like);
+    $stmt->bind_param('sssss', $like, $like, $like, $like, $like);
     $stmt->execute();
     $res = $stmt->get_result();
     $patients = [];

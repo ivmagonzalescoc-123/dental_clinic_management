@@ -77,6 +77,17 @@ function admin_patient_format_datetime(?string $value): string
     </button>
 </div>
 
+<div class="unified-table-search-toolbar mb-3">
+    <div class="unified-table-search-wrap">
+        <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+        <input type="search" id="patientLiveSearch" class="form-control unified-table-search-input"
+            placeholder="Search patients by name, email, or phone..." aria-label="Search patients" autocomplete="off">
+        <button type="button" class="unified-table-search-clear" id="patientLiveSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+    </div>
+    <small class="text-muted" id="patientLiveSearchStatus"></small>
+</div>
+
+<div id="patientDefaultTableView">
 <div class="table-responsive history-table-wrap">
     <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
                 <thead>
@@ -121,6 +132,26 @@ function admin_patient_format_datetime(?string $value): string
                 </tbody>
             </table>
         </div>
+</div>
+
+<div id="patientSearchResultsView" style="display:none;">
+    <div class="table-responsive history-table-wrap">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>DOB</th>
+                    <th>Gender</th>
+                    <th>Registered</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="patientSearchResultsBody"></tbody>
+        </table>
+    </div>
+</div>
 
 <!-- Add Patient Modal -->
 <div class="modal fade" id="addPatientModal" tabindex="-1" aria-hidden="true">
@@ -448,6 +479,102 @@ function fillProfileForm(patient) {
     document.getElementById('account_patient_email').textContent = patient.email || '—';
     document.getElementById('account_patient_last_login').textContent = formatDateTime(patient.last_login_at);
 }
+
+// ----- Live patient search (debounced, hits assets/api/patients/search_patients.php) -----
+// Renders into a separate plain table instead of the #patientsTable above, which is
+// owned/paginated by simpleDatatables — mutating its DOM directly would not work
+// (it manages rows internally) and the app also auto-removes any search toolbar it
+// finds sitting next to a datatable to avoid duplicate search UIs.
+(function () {
+    const input = document.getElementById('patientLiveSearch');
+    const clearBtn = document.getElementById('patientLiveSearchClear');
+    const statusEl = document.getElementById('patientLiveSearchStatus');
+    const defaultView = document.getElementById('patientDefaultTableView');
+    const resultsView = document.getElementById('patientSearchResultsView');
+    const resultsBody = document.getElementById('patientSearchResultsBody');
+    if (!input || !defaultView || !resultsView || !resultsBody) return;
+
+    let currentResults = [];
+
+    function renderPatientRow(p, index) {
+        const fullName = patientDisplayName(p) || '—';
+        return '<tr>'
+            + '<td>' + (parseInt(p.patient_id, 10) || 0) + '</td>'
+            + '<td><div class="fw-semibold">' + escapeHtml(fullName) + '</div><div class="small text-muted">' + escapeHtml(p.email || '') + '</div></td>'
+            + '<td>' + escapeHtml(p.phone_number || '—') + '</td>'
+            + '<td>' + escapeHtml(p.date_of_birth || '—') + '</td>'
+            + '<td>' + escapeHtml(p.gender || '—') + '</td>'
+            + '<td>' + escapeHtml(formatDateTime(p.created_at)) + '</td>'
+            + '<td class="text-end"><button type="button" class="btn btn-sm btn-primary patient-live-search-manage-btn" title="View and manage patient" data-index="' + index + '"><i class="bi bi-person-lines-fill"></i> Manage</button></td>'
+            + '</tr>';
+    }
+
+    resultsBody.addEventListener('click', function (event) {
+        const btn = event.target.closest('.patient-live-search-manage-btn');
+        if (!btn) return;
+        const idx = parseInt(btn.getAttribute('data-index'), 10);
+        const patient = currentResults[idx];
+        if (patient) openPatientProfileModal(patient, 'profile');
+    });
+
+    function showResultsView() {
+        defaultView.style.display = 'none';
+        resultsView.style.display = '';
+    }
+
+    function showDefaultView() {
+        resultsView.style.display = 'none';
+        defaultView.style.display = '';
+    }
+
+    function runSearch(query) {
+        statusEl.textContent = 'Searching...';
+        fetch('../assets/api/patients/search_patients.php?q=' + encodeURIComponent(query))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    statusEl.textContent = '';
+                    return;
+                }
+                currentResults = data.patients || [];
+                showResultsView();
+                if (currentResults.length === 0) {
+                    resultsBody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No patients match your search.</td></tr>';
+                } else {
+                    resultsBody.innerHTML = currentResults.map(renderPatientRow).join('');
+                }
+                statusEl.textContent = currentResults.length + ' result' + (currentResults.length === 1 ? '' : 's');
+            })
+            .catch(function () {
+                statusEl.textContent = 'Search failed. Please try again.';
+            });
+    }
+
+    const debouncedSearch = (typeof DentalUI !== 'undefined' && DentalUI.debounce)
+        ? DentalUI.debounce(runSearch, 300)
+        : function (q) { runSearch(q); };
+
+    input.addEventListener('input', function () {
+        const q = input.value.trim();
+        clearBtn.style.display = q ? '' : 'none';
+        if (!q) {
+            currentResults = [];
+            showDefaultView();
+            statusEl.textContent = '';
+            return;
+        }
+        debouncedSearch(q);
+    });
+
+    clearBtn.addEventListener('click', function () {
+        input.value = '';
+        clearBtn.style.display = 'none';
+        currentResults = [];
+        showDefaultView();
+        statusEl.textContent = '';
+        input.focus();
+    });
+})();
 
 function openPatientProfileModal(patient, activeTab) {
     activePatientRecord = Object.assign({}, patient);
