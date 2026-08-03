@@ -170,11 +170,21 @@ $all_sql = "
         a.appointment_date,
         a.reason,
         a.status,
+        a.cancellation_reason,
+        a.is_online_appointment,
+        a.completed_by_doctor_at,
+        a.secretary_records_completed_at,
         p.first_name,
         p.last_name,
+        p.email,
+        p.phone_number,
         NULL as appointment_time,
         (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_clinical_record,
-        (SELECT cr.status FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_status
+        (SELECT cr.status FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_status,
+        (SELECT cr.record_id FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_id,
+        (SELECT b.total_amount FROM billing b WHERE b.appointment_id = a.appointment_id ORDER BY b.billing_id DESC LIMIT 1) AS billing_total,
+        (SELECT b.billing_id FROM billing b WHERE b.appointment_id = a.appointment_id ORDER BY b.billing_id DESC LIMIT 1) AS invoice_id,
+        (SELECT GROUP_CONCAT(s.service_name SEPARATOR '||') FROM selected_services ss INNER JOIN services s ON s.service_id = ss.service_id WHERE ss.appointment_id = a.appointment_id) AS services_rendered
     FROM appointments a
     INNER JOIN patients p ON a.patient_id = p.patient_id
     -- timeslot removed; appointment_time not available
@@ -399,7 +409,7 @@ if ($stmt) {
                                     <th>Date</th>
                                     <th>Status</th>
                                     <th>Workflow</th>
-                                    <th>History</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -430,16 +440,24 @@ if ($stmt) {
                                             <?php endif; ?>
                                         </td>
                                         <td class="record-col-cell">
-                                            <?php if (!empty($appt['has_clinical_record'])): ?>
-                                                <?php $historyLabel = ($recordStatus === 'finalized') ? 'Record' : 'Session'; ?>
-                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-clickable" onclick="openHistoryModal(<?php echo (int)$appt['appointment_id']; ?>)">
-                                                    <i class="bi bi-file-earmark-text"></i> View <?php echo htmlspecialchars($historyLabel); ?>
-                                                </button>
-                                            <?php else: ?>
-                                                <button class="btn btn-sm doctor-record-btn doctor-record-btn-disabled" type="button" disabled aria-disabled="true" title="No session or record available yet">
-                                                    <i class="bi bi-file-earmark-text"></i> View
-                                                </button>
-                                            <?php endif; ?>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openDoctorAppointmentDetailsModal(<?php echo htmlspecialchars(json_encode([
+                                                "appointment_id"      => (int)$appt["appointment_id"],
+                                                "patient_name"        => trim((string)$appt["first_name"] . " " . (string)$appt["last_name"]),
+                                                "email"                => (string)($appt["email"] ?? ""),
+                                                "phone_number"         => (string)($appt["phone_number"] ?? ""),
+                                                "reason"               => (string)($appt["reason"] ?? ""),
+                                                "cancellation_reason"  => (string)($appt["cancellation_reason"] ?? ""),
+                                                "appointment_date"     => (string)($appt["appointment_date"] ?? ""),
+                                                "is_online_appointment" => (bool)($appt["is_online_appointment"] ?? false),
+                                                "status"               => $apptStatus,
+                                                "completed_at"         => (string)($appt["secretary_records_completed_at"] ?? $appt["completed_by_doctor_at"] ?? ""),
+                                                "billing_total"        => isset($appt["billing_total"]) ? (float)$appt["billing_total"] : null,
+                                                "invoice_id"           => isset($appt["invoice_id"]) ? (int)$appt["invoice_id"] : null,
+                                                "record_id"            => isset($appt["record_id"]) ? (int)$appt["record_id"] : null,
+                                                "services_rendered"    => !empty($appt["services_rendered"]) ? explode('||', (string)$appt["services_rendered"]) : [],
+                                            ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View appointment details">
+                                                <i class="bi bi-eye"></i> View
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -726,6 +744,67 @@ if ($stmt) {
                     </div>
                 </div>
             </div>
+
+<!-- Appointment Details Modal (recent appointments "View" button) -->
+<div class="modal fade" id="doctorAppointmentDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar2-check"></i> Appointment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="dpp-header">
+                    <div class="dpp-avatar" id="docApptDetailsAvatar">?</div>
+                    <div>
+                        <p class="dpp-name" id="docApptDetailsPatientName"></p>
+                        <div class="dpp-chips">
+                            <span class="dpp-chip" id="docApptDetailsTypeChip"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="docApptDetailsStatusBox"></div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Appointment Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Appointment No.</div>
+                        <div class="dpp-field-value" id="docApptDetailsId"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Appointment Date</div>
+                        <div class="dpp-field-value" id="docApptDetailsDate"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Chief Complaint</div>
+                        <div class="dpp-field-value" id="docApptDetailsReason"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Email</div>
+                        <div class="dpp-field-value" id="docApptDetailsEmail"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Phone</div>
+                        <div class="dpp-field-value" id="docApptDetailsPhone"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section" id="docApptDetailsServicesSection" style="display:none;">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
+                    <div id="docApptDetailsServicesList"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 <style>
 /* Compact history modal */
 .hist-field {
@@ -1401,6 +1480,96 @@ document.addEventListener('DOMContentLoaded', function(){
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function openDoctorAppointmentDetailsModal(appt) {
+    const statusLabels = {
+        scheduled: 'Pending',
+        confirmed: 'Confirmed',
+        arrived: 'Arrived',
+        checked_in: 'Checked-In',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+        in_progress: 'In Progress',
+        awaiting_secretary_records: 'Awaiting Records',
+        records_complete: 'Records Complete'
+    };
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
+    };
+
+    const patientName = appt.patient_name || 'Unknown';
+    document.getElementById('docApptDetailsPatientName').textContent = patientName;
+    const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    document.getElementById('docApptDetailsAvatar').textContent = initials;
+    setText('docApptDetailsId', appt.appointment_id ? String(appt.appointment_id) : '');
+    let formattedDate = appt.appointment_date;
+    if (formattedDate) {
+        const d = new Date(String(formattedDate).replace(' ', 'T'));
+        if (!Number.isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+    }
+    setText('docApptDetailsDate', formattedDate);
+    setText('docApptDetailsEmail', appt.email);
+    setText('docApptDetailsPhone', appt.phone_number);
+    setText('docApptDetailsReason', appt.reason);
+
+    const typeChip = document.getElementById('docApptDetailsTypeChip');
+    typeChip.innerHTML = appt.is_online_appointment
+        ? '<i class="bi bi-laptop"></i> Online'
+        : '<i class="bi bi-building"></i> Walk-In';
+
+    const statusBox = document.getElementById('docApptDetailsStatusBox');
+    const statusLabel = statusLabels[appt.status] || appt.status;
+    if (appt.status === 'cancelled') {
+        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Appointment Cancelled</div>'
+            + (appt.cancellation_reason ? '<span class="dpp-alert-tag">' + escapeHtml(appt.cancellation_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
+    } else if (['completed', 'records_complete'].includes(appt.status)) {
+        let completedExtra = '';
+        if (appt.completed_at) {
+            const cd = new Date(String(appt.completed_at).replace(' ', 'T'));
+            if (!Number.isNaN(cd.getTime())) {
+                const completedLabel = cd.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+                    + ', ' + cd.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                completedExtra += '<div class="d-flex align-items-center gap-1 mt-1"><i class="bi bi-clock-history"></i> Completed at ' + escapeHtml(completedLabel) + '</div>';
+            }
+        }
+        if (appt.billing_total !== null && appt.billing_total !== undefined) {
+            const amount = Number(appt.billing_total).toLocaleString(undefined, { style: 'currency', currency: 'PHP' });
+            const invoiceLabel = (appt.invoice_id !== null && appt.invoice_id !== undefined)
+                ? '<span class="small">Invoice No. ' + escapeHtml(String(appt.invoice_id)) + '</span>' : '';
+            completedExtra += '<div class="mt-2"><div class="d-flex align-items-center justify-content-between gap-1">'
+                + '<span><i class="bi bi-cash-coin"></i> Total Billing:</span>' + invoiceLabel + '</div>'
+                + '<div class="fw-bold" style="font-size:1.05rem;">' + escapeHtml(amount) + '</div></div>';
+        }
+        const recordLabel = (appt.record_id !== null && appt.record_id !== undefined)
+            ? '<span class="small">Record No. ' + escapeHtml(String(appt.record_id)) + '</span>' : '';
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="display:block;">'
+            + '<div class="d-flex align-items-center justify-content-between gap-1">'
+            + '<span><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</span>' + recordLabel + '</div>'
+            + (completedExtra ? '<div class="small mt-1 pt-1" style="border-top:1px dashed rgba(0,0,0,0.1);">' + completedExtra + '</div>' : '') + '</div>';
+    } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(appt.status)) {
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+    } else {
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '</div>';
+    }
+
+    const servicesSection = document.getElementById('docApptDetailsServicesSection');
+    const servicesList = document.getElementById('docApptDetailsServicesList');
+    const services = Array.isArray(appt.services_rendered) ? appt.services_rendered.filter(Boolean) : [];
+    if (services.length > 0) {
+        servicesList.innerHTML = services.map(function (s) {
+            return '<span class="dpp-chip">' + escapeHtml(s) + '</span>';
+        }).join(' ');
+        servicesSection.style.display = '';
+    } else {
+        servicesList.innerHTML = '';
+        servicesSection.style.display = 'none';
+    }
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('doctorAppointmentDetailsModal')).show();
 }
 async function openHistoryModal(appointmentId) {
     const modalEl = document.getElementById('historyModal');

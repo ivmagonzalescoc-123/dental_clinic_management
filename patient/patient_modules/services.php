@@ -54,7 +54,6 @@ if ($svcRes) {
 					<thead>
 						<tr>
 							<th>Service</th>
-							<th>Starting Price</th>
 							<th>Est. Duration</th>
 							<th>Description</th>
 						</tr>
@@ -65,13 +64,11 @@ if ($svcRes) {
 							$duration = (int)($s['service_duration_minutes'] ?? 0);
 							$searchBlob = strtolower(trim(
 								($s['service_name'] ?? '') . ' ' .
-								($s['description'] ?? '') . ' ' .
-								number_format((float)($s['initial_price'] ?? 0), 2)
+								($s['description'] ?? '')
 							));
 							?>
 							<tr data-search="<?php echo htmlspecialchars($searchBlob, ENT_QUOTES, 'UTF-8'); ?>">
 								<td class="fw-semibold"><?php echo htmlspecialchars($s['service_name']); ?></td>
-								<td class="text-primary fw-semibold">₱<?php echo number_format((float)$s['initial_price'], 2); ?></td>
 								<td>
 									<?php if ($duration > 0): ?>
 										<span class="badge bg-light text-dark border"><?php echo $duration; ?> min</span>

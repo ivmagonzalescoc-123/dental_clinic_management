@@ -2,6 +2,13 @@
 require_once 'config/security.php';
 security_start_session();
 
+// Google Identity Services' OAuth popup flow polls window.closed on the popup it opens;
+// without this header the browser's default Cross-Origin-Opener-Policy silently blocks
+// that check and spams "Cross-Origin-Opener-Policy policy would block the window.closed
+// call" in the console. same-origin-allow-popups keeps our own origin isolated while still
+// letting window.closed work for popups we open ourselves (Google's official fix for this).
+header('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+
 if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
     $role = $_SESSION['role'] ?? '';
 

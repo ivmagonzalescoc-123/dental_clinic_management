@@ -518,7 +518,11 @@ $appointments_sql = "
         (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
         (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_end,
         (SELECT cr.follow_up_date FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_follow_up_date,
-        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history
+        (SELECT COUNT(*) FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id) AS has_history,
+        (SELECT cr.record_id FROM clinical_records cr WHERE cr.appointment_id = a.appointment_id ORDER BY cr.record_id DESC LIMIT 1) AS record_id,
+        (SELECT b.total_amount FROM billing b WHERE b.appointment_id = a.appointment_id ORDER BY b.billing_id DESC LIMIT 1) AS billing_total,
+        (SELECT b.billing_id FROM billing b WHERE b.appointment_id = a.appointment_id ORDER BY b.billing_id DESC LIMIT 1) AS invoice_id,
+        (SELECT GROUP_CONCAT(s.service_name SEPARATOR '||') FROM selected_services ss INNER JOIN services s ON s.service_id = ss.service_id WHERE ss.appointment_id = a.appointment_id) AS services_rendered
     FROM appointments a
     LEFT JOIN patients p ON a.patient_id = p.patient_id
     LEFT JOIN users u ON a.user_id = u.user_id
@@ -683,7 +687,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="pending">Pending</button></li>
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="approved">Approved</button></li>
                     <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="processed">Processed</button></li>
-                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="declined">Declined</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link new-cust-status-filter" data-filter="declined">Cancelled</button></li>
                 </ul>
             </div>
         </nav>
@@ -765,7 +769,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
                                 <td>
                                     <?php if ($isDeclined): ?>
-                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Declined</span>
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelled</span>
                                     <?php elseif ($isConverted): ?>
                                         <span class="badge bg-success"><i class="bi bi-check-circle"></i> Processed</span>
                                     <?php elseif ($gb['status'] === 'approved'): ?>
@@ -785,7 +789,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 'preferred_date' => date('M j, Y', strtotime($gb['preferred_date'])),
                                                 'preferred_time' => (string)($gb['preferred_time'] ?? ''),
                                                 'created_at' => date('M j, g:i A', strtotime($gb['created_at'])),
-                                                'status' => $isDeclined ? 'Declined' : ($isConverted ? 'Processed' : (($gb['status'] === 'approved') ? 'Approved' : 'Pending')),
+                                                'status' => $isDeclined ? 'Cancelled' : ($isConverted ? 'Processed' : (($gb['status'] === 'approved') ? 'Approved' : 'Pending')),
                                                 'reason' => (string)($gb['reason'] ?? ''),
                                                 'decline_reason' => (string)($gb['decline_reason'] ?? ''),
                                             ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
@@ -1255,11 +1259,11 @@ function openBookingDetailsModal(booking) {
 
     var statusBox = document.getElementById('bookingDetailsStatusBox');
     var status = String(booking.status || '').toLowerCase();
-    if (status === 'declined') {
-        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Booking Declined</div>'
+    if (status === 'cancelled') {
+        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Booking Cancelled</div>'
             + (booking.decline_reason ? '<span class="dpp-alert-tag">' + escapeHtml(booking.decline_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
     } else if (status === 'processed') {
-        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> Processed — converted to an appointment.</div>';
+        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> Processed</div>';
     } else if (status === 'approved') {
         statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> Approved — awaiting clinic visit.</div>';
     } else {
@@ -1621,7 +1625,7 @@ document.getElementById('declineBookingConfirmBtn')?.addEventListener('click', a
     var reason = document.getElementById('declineBookingReason').value.trim();
     var alertEl = document.getElementById('declineBookingAlert');
     if (!reason) {
-        alertEl.textContent = 'Please enter a reason for declining this booking.';
+        alertEl.textContent = 'Please enter a reason for cancelling this booking.';
         alertEl.style.display = '';
         return;
     }
@@ -1635,14 +1639,14 @@ document.getElementById('declineBookingConfirmBtn')?.addEventListener('click', a
         const data = await resp.json();
         if (data.success) {
             if (typeof showArrToast === 'function') {
-                showArrToast('Booking declined.', 'success');
+                showArrToast('Booking cancelled.', 'success');
             } else if (typeof showToast === 'function') {
-                showToast('Booking declined.', 'success');
+                showToast('Booking cancelled.', 'success');
             }
             bootstrap.Modal.getInstance(document.getElementById('declineBookingModal'))?.hide();
             location.reload();
         } else {
-            alertEl.textContent = data.message || 'Failed to decline booking.';
+            alertEl.textContent = data.message || 'Failed to cancel booking.';
             alertEl.style.display = '';
         }
     } catch (e) {
@@ -2192,6 +2196,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                             "schedule_start" => (string)($appointment["schedule_start"] ?? ""),
                                             "schedule_end" => (string)($appointment["schedule_end"] ?? ""),
                                             "record_follow_up_date" => $recordFollowUpDate,
+                                            "completed_at" => (string)($appointment["secretary_records_completed_at"] ?? $appointment["completed_by_doctor_at"] ?? ""),
+                                            "billing_total" => isset($appointment["billing_total"]) ? (float)$appointment["billing_total"] : null,
+                                            "invoice_id" => isset($appointment["invoice_id"]) ? (int)$appointment["invoice_id"] : null,
+                                            "record_id" => isset($appointment["record_id"]) ? (int)$appointment["record_id"] : null,
+                                            "services_rendered" => !empty($appointment["services_rendered"]) ? explode('||', (string)$appointment["services_rendered"]) : [],
                                         ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
                                             <i class="bi bi-eye"></i>
                                         </button>
@@ -2730,8 +2739,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <div>
                         <p class="dpp-name" id="apptDetailsPatientName"></p>
                         <div class="dpp-chips">
-                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="apptDetailsId"></span></span>
-                            <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="apptDetailsDate"></span></span>
                             <span class="dpp-chip" id="apptDetailsTypeChip"></span>
                         </div>
                     </div>
@@ -2741,6 +2748,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 
                 <div class="dpp-section">
                     <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Appointment Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Appointment No.</div>
+                        <div class="dpp-field-value" id="apptDetailsId"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Appointment Date</div>
+                        <div class="dpp-field-value" id="apptDetailsDate"></div>
+                    </div>
                     <div class="dpp-field">
                         <div class="dpp-field-label">Doctor</div>
                         <div class="dpp-field-value" id="apptDetailsDoctor"></div>
@@ -2765,6 +2780,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         <div class="dpp-field-label">Phone</div>
                         <div class="dpp-field-value" id="apptDetailsPhone"></div>
                     </div>
+                </div>
+
+                <div class="dpp-section" id="apptDetailsServicesSection" style="display:none;">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
+                    <div id="apptDetailsServicesList"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -2802,9 +2822,16 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         document.getElementById('apptDetailsPatientName').textContent = patientName;
         const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
         document.getElementById('apptDetailsAvatar').textContent = initials;
-        setText('apptDetailsId', appt.appointment_id ? ('#' + appt.appointment_id) : '');
+        setText('apptDetailsId', appt.appointment_id ? String(appt.appointment_id) : '');
         setText('apptDetailsDoctor', appt.doctor_name);
-        setText('apptDetailsDate', appt.appointment_date);
+        let formattedApptDate = appt.appointment_date;
+        if (formattedApptDate) {
+            const fd = new Date(String(formattedApptDate).replace(' ', 'T'));
+            if (!Number.isNaN(fd.getTime())) {
+                formattedApptDate = fd.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+        }
+        setText('apptDetailsDate', formattedApptDate);
         setText('apptDetailsEmail', appt.email);
         setText('apptDetailsPhone', appt.phone_number);
         setText('apptDetailsReason', appt.reason);
@@ -2820,11 +2847,46 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Appointment Cancelled</div>'
                 + (appt.cancellation_reason ? '<span class="dpp-alert-tag">' + escapeHtml(appt.cancellation_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
         } else if (['completed', 'records_complete'].includes(appt.status)) {
-            statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+            let completedExtra = '';
+            if (appt.completed_at) {
+                const cd = new Date(String(appt.completed_at).replace(' ', 'T'));
+                if (!Number.isNaN(cd.getTime())) {
+                    const completedLabel = cd.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+                        + ', ' + cd.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+                    completedExtra += '<div class="d-flex align-items-center gap-1 mt-1"><i class="bi bi-clock-history"></i> Completed at ' + escapeHtml(completedLabel) + '</div>';
+                }
+            }
+            if (appt.billing_total !== null && appt.billing_total !== undefined) {
+                const amount = Number(appt.billing_total).toLocaleString(undefined, { style: 'currency', currency: 'PHP' });
+                const invoiceLabel = (appt.invoice_id !== null && appt.invoice_id !== undefined)
+                    ? '<span class="small">Invoice No. ' + escapeHtml(String(appt.invoice_id)) + '</span>' : '';
+                completedExtra += '<div class="mt-2"><div class="d-flex align-items-center justify-content-between gap-1">'
+                    + '<span><i class="bi bi-cash-coin"></i> Total Billing:</span>' + invoiceLabel + '</div>'
+                    + '<div class="fw-bold" style="font-size:1.05rem;">' + escapeHtml(amount) + '</div></div>';
+            }
+            const recordLabel = (appt.record_id !== null && appt.record_id !== undefined)
+                ? '<span class="small">Record No. ' + escapeHtml(String(appt.record_id)) + '</span>' : '';
+            statusBox.innerHTML = '<div class="dpp-safe-box" style="display:block;">'
+                + '<div class="d-flex align-items-center justify-content-between gap-1">'
+                + '<span><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</span>' + recordLabel + '</div>'
+                + (completedExtra ? '<div class="small mt-1 pt-1" style="border-top:1px dashed rgba(0,0,0,0.1);">' + completedExtra + '</div>' : '') + '</div>';
         } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(appt.status)) {
             statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
         } else {
             statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '</div>';
+        }
+
+        const servicesSection = document.getElementById('apptDetailsServicesSection');
+        const servicesList = document.getElementById('apptDetailsServicesList');
+        const services = Array.isArray(appt.services_rendered) ? appt.services_rendered.filter(Boolean) : [];
+        if (services.length > 0) {
+            servicesList.innerHTML = services.map(function (s) {
+                return '<span class="dpp-chip">' + escapeHtml(s) + '</span>';
+            }).join(' ');
+            servicesSection.style.display = '';
+        } else {
+            servicesList.innerHTML = '';
+            servicesSection.style.display = 'none';
         }
 
         const followupRow = document.getElementById('apptDetailsFollowupRow');

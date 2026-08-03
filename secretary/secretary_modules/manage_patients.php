@@ -306,17 +306,22 @@ function secretary_patient_format_datetime(?string $value): string
                         <div class="card border">
                             <div class="card-body py-2 px-3">
                                 <h6 class="mb-1" style="font-size:0.82rem;font-weight:600;">Set Password</h6>
-                                <form id="setPatientPasswordForm">
+                                <form id="setPatientPasswordForm" novalidate action="javascript:void(0);" onsubmit="return false;">
                                     <?php
+                                    $passwordPolicyPattern = '(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}';
+                                    $passwordPolicyTitle = 'At least 8 characters, including an uppercase letter, a lowercase letter, a number, and a special character.';
                                     $password_field_id = 'set_patient_password';
                                     $password_field_label = 'New';
-                                    $password_field_attrs = 'required minlength="8" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
+                                    $password_field_attrs = 'required minlength="8" pattern="' . $passwordPolicyPattern . '" title="' . $passwordPolicyTitle . '" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
+                                    $password_field_after = '<div class="form-text" style="font-size:0.7rem;">' . htmlspecialchars($passwordPolicyTitle, ENT_QUOTES, 'UTF-8') . '</div>';
                                     include dirname(dirname(__DIR__)) . '/includes/password_field.php';
                                     $password_field_id = 'set_patient_password_confirm';
                                     $password_field_label = 'Confirm';
                                     $password_field_attrs = 'required minlength="8" autocomplete="new-password" style="padding:0.3rem 0.5rem;font-size:0.85rem;"';
+                                    $password_field_after = '';
                                     include dirname(dirname(__DIR__)) . '/includes/password_field.php';
                                     ?>
+                                    <div id="setPatientPasswordAlert" class="mt-1"></div>
                                     <button type="submit" class="btn btn-primary btn-sm mt-1" style="font-size:0.82rem;padding:0.3rem 0.7rem;">Update</button>
                                 </form>
                             </div>
@@ -636,13 +641,28 @@ document.getElementById('editPatientForm').addEventListener('submit', function (
 
 document.getElementById('setPatientPasswordForm').addEventListener('submit', function (event) {
     event.preventDefault();
+    const form = event.target;
+    const alertEl = document.getElementById('setPatientPasswordAlert');
+    if (alertEl) alertEl.innerHTML = '';
+
     if (!activePatientRecord || !activePatientRecord.patient_id) {
         notifySecretaryPatients('Select a patient first.', 'warning');
         return;
     }
 
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
     const newPassword = document.getElementById('set_patient_password').value;
     const confirmPassword = document.getElementById('set_patient_password_confirm').value;
+
+    if (newPassword !== confirmPassword) {
+        if (alertEl) alertEl.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0 small">Passwords do not match.</div>';
+        notifySecretaryPatients('Passwords do not match.', 'danger');
+        return;
+    }
 
     fetch('../assets/api/patients/set_patient_password.php', {
         method: 'POST',
@@ -660,10 +680,12 @@ document.getElementById('setPatientPasswordForm').addEventListener('submit', fun
                 notifySecretaryPatients(result.message || 'Password updated.', 'success');
                 document.getElementById('setPatientPasswordForm').reset();
             } else {
+                if (alertEl) alertEl.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0 small">' + (result.message || 'Unable to update password.') + '</div>';
                 notifySecretaryPatients(result.message || 'Unable to update password.', 'danger');
             }
         })
         .catch(function () {
+            if (alertEl) alertEl.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0 small">Unable to update password.</div>';
             notifySecretaryPatients('Unable to update password.', 'danger');
         });
 });

@@ -28,12 +28,19 @@ if ($stmt) {
 }
 ?>
 
-<div class="card">
-    <div class="card-body">
-        <h4>Clinical Records</h4>
+<h4>Clinical Records</h4>
+
+<div class="unified-table-search-toolbar mb-3">
+    <div class="unified-table-search-wrap">
+        <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+        <input type="search" id="doctorRecordsSearch" class="form-control unified-table-search-input"
+            placeholder="Search records by patient, appointment, or status..." aria-label="Search clinical records" autocomplete="off">
+        <button type="button" class="unified-table-search-clear" id="doctorRecordsSearchClear" aria-label="Clear search" style="display:none;">&times;</button>
+    </div>
+</div>
 
         <div class="table-responsive">
-            <table class="table table-hover datatable" data-skip-table-search="1">
+            <table class="table table-hover datatable" id="doctorRecordsTable" data-skip-datatable="1">
                 <thead>
                     <tr>
                         <th>Record #</th>
@@ -74,8 +81,6 @@ if ($stmt) {
                 </tbody>
             </table>
         </div>
-    </div>
-</div>
         <!-- History Modal (read-only) for Records page -->
         <div class="modal fade" id="historyModalRecords" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl">
@@ -278,6 +283,44 @@ if ($stmt) {
         function notifyDoctorRecord(message, type) {
             window.showToast(String(message || ''), type || 'info');
         }
+
+        // Clinical records table search — the table opts out of automatic simpleDatatables
+        // init (data-skip-datatable) so we can wire the search box straight to the
+        // DataTable's own .search() API with a debounce, instead of depending on
+        // main.js's generic native-input debounce hook finding the right element.
+        (function () {
+            const tableEl = document.getElementById('doctorRecordsTable');
+            const searchInput = document.getElementById('doctorRecordsSearch');
+            const clearBtn = document.getElementById('doctorRecordsSearchClear');
+            if (!tableEl || typeof simpleDatatables === 'undefined') return;
+
+            const recordsDataTable = new simpleDatatables.DataTable(tableEl, {
+                perPageSelect: [5, 10, 15, ["All", -1]],
+                labels: { placeholder: 'Search records...' }
+            });
+
+            let searchTimer = null;
+            function runSearch() {
+                const q = searchInput.value.trim();
+                clearBtn.style.display = q ? '' : 'none';
+                recordsDataTable.search(q);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(runSearch, 300);
+                });
+            }
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function () {
+                    clearTimeout(searchTimer);
+                    searchInput.value = '';
+                    runSearch();
+                    searchInput.focus();
+                });
+            }
+        })();
         // Service map lookup (load names)
         const serviceMapRec = {
             <?php

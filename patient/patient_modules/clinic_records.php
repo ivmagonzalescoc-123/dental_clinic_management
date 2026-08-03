@@ -162,6 +162,44 @@ document.addEventListener('DOMContentLoaded', function () {
         return '<ul class="mb-0 ps-3">' + items.map(function (item) { return '<li>' + formatter(item) + '</li>'; }).join('') + '</ul>';
     }
 
+    var currentRecordData = null;
+
+    // Mirrors odontogram/chart-constants.js CHART_LEGEND — the print window can't load the
+    // odontogram iframe (it's a live editor app, not a static image, and has no tooth data
+    // of its own once opened in a fresh window), so we render the findings as a plain table
+    // from the same JSON the iframe would have been fed via postMessage.
+    var ODONTOGRAM_LEGEND = {
+        C: 'Dental Caries', C1: 'Caries — Vital Pulp Expose', C2: 'Caries — Non-vital Pulp Expose',
+        X: 'Indicated for Extraction', RF: 'Retained Root Fragment', Am: 'Amalgam Filling',
+        S: 'Silicate Filling', GC: 'Gold Crown', Ab1: 'Bridge Abutment', P: 'Pontic',
+        GCI: 'Gold Clasp', GI: 'Gold Inlays', M: 'Missing (Extraction)', Un: 'Unerupted'
+    };
+    var ODONTOGRAM_SURFACE_LABELS = { O: 'Occlusal', M: 'Mesial', D: 'Distal', B: 'Buccal', L: 'Lingual', root: 'Root', whole: 'Whole Tooth' };
+
+    function formatOdontogramFindingsHtml(odontogramData) {
+        if (!odontogramData || typeof odontogramData !== 'object') return '';
+        var teeth = Object.keys(odontogramData).sort();
+        var rows = [];
+        teeth.forEach(function (fdi) {
+            var entry = odontogramData[fdi];
+            if (!entry || typeof entry !== 'object') return;
+            var parts = [];
+            if (entry.surfaces && typeof entry.surfaces === 'object') {
+                Object.keys(entry.surfaces).forEach(function (surface) {
+                    var labels = entry.surfaces[surface];
+                    if (!Array.isArray(labels) || !labels.length) return;
+                    var names = labels.map(function (code) { return ODONTOGRAM_LEGEND[code] || code; }).join(', ');
+                    parts.push((ODONTOGRAM_SURFACE_LABELS[surface] || surface) + ': ' + names);
+                });
+            }
+            var comment = String(entry.comment || '').trim();
+            if (!parts.length && !comment) return;
+            rows.push('<tr><td>#' + escapeHtml(fdi) + '</td><td>' + escapeHtml(parts.join('; ')) + '</td><td>' + escapeHtml(comment) + '</td></tr>');
+        });
+        if (!rows.length) return '<div class="text-muted small">No findings recorded on the dental chart.</div>';
+        return '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Tooth</th><th>Findings</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+    }
+
     function postOdontogramToClinicFrame(odontogramData) {
         const frame = document.getElementById('clinicOdontogramFrame');
         if (!frame || !frame.contentWindow) return;
@@ -169,6 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function renderModal(data, fallbackMeta) {
+        currentRecordData = data;
         const record = data && data.record ? data.record : {};
         const appointment = data && data.appointment ? data.appointment : {};
         const patientInfo = data && data.patient_info ? data.patient_info : {};
@@ -295,6 +334,19 @@ document.addEventListener('DOMContentLoaded', function () {
         printBtn.addEventListener('click', function () {
             const printWindow = window.open('', '_blank', 'width=900,height=700');
             if (!printWindow) return;
+
+            // The odontogram is a live editor app running in an iframe — a fresh print
+            // window has no way to load its tooth-state data into a brand new iframe, so
+            // swap it for a plain findings table built from the same JSON instead of
+            // trying (and failing) to print the iframe itself.
+            const printBody = document.createElement('div');
+            printBody.innerHTML = modalBody.innerHTML;
+            const odontoFrameEl = printBody.querySelector('#clinicOdontogramFrame');
+            if (odontoFrameEl && odontoFrameEl.parentElement) {
+                const odontogramData = currentRecordData && currentRecordData.record ? currentRecordData.record.odontogram : null;
+                odontoFrameEl.parentElement.outerHTML = formatOdontogramFindingsHtml(odontogramData);
+            }
+
             printWindow.document.write(
                 '<!doctype html><html><head><title>' + escapeHtml(modalTitle.textContent) + '</title>' +
                 '<style>' +
@@ -304,12 +356,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 '.border{border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;}' +
                 '.small{font-size:12px;} .fw-semibold{font-weight:600;} .text-muted{color:#6c757d;}' +
                 'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:6px;text-align:left;font-size:13px;}' +
-                'ul{margin:0;padding-left:18px;} iframe{display:none;}' +
+                'ul{margin:0;padding-left:18px;}' +
                 '.row,.g-2{display:none;}' +
                 '</style></head><body>' +
                 '<h1>' + escapeHtml(modalTitle.textContent) + '</h1>' +
                 '<div class="meta">' + escapeHtml(modalMeta.textContent) + '</div>' +
-                modalBody.innerHTML +
+                printBody.innerHTML +
                 '</body></html>'
             );
             printWindow.document.close();
