@@ -1597,12 +1597,12 @@ document.getElementById('rescheduleBookingConfirmBtn')?.addEventListener('click'
         const resp = await fetch('../assets/api/bookings/reschedule_booking.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('rescheduleBookingModal'))?.hide();
             if (typeof showArrToast === 'function') {
                 showArrToast('Booking rescheduled.', 'success');
             } else if (typeof showToast === 'function') {
                 showToast('Booking rescheduled.', 'success');
             }
+            bootstrap.Modal.getInstance(document.getElementById('rescheduleBookingModal'))?.hide();
             location.reload();
         } else {
             alertEl.textContent = data.message || 'Failed to reschedule booking.';
@@ -1634,12 +1634,12 @@ document.getElementById('declineBookingConfirmBtn')?.addEventListener('click', a
         const resp = await fetch('../assets/api/bookings/decline_booking.php', { method: 'POST', body: fd });
         const data = await resp.json();
         if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('declineBookingModal'))?.hide();
             if (typeof showArrToast === 'function') {
                 showArrToast('Booking declined.', 'success');
             } else if (typeof showToast === 'function') {
                 showToast('Booking declined.', 'success');
             }
+            bootstrap.Modal.getInstance(document.getElementById('declineBookingModal'))?.hide();
             location.reload();
         } else {
             alertEl.textContent = data.message || 'Failed to decline booking.';
@@ -1914,10 +1914,12 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             // Profiling and gender are now saved atomically inside create_walkin.php (step 1
             // above) — no separate follow-up call here to silently fail.
 
-            closeConvertBookingModal();
-
+            // Show the success toast first (all processing is genuinely done at this point),
+            // then close the modal — not the other way around, so the secretary sees clear
+            // confirmation before the popup disappears from under them.
             notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
             DentalUI.btnRestore(submitBtn);
+            closeConvertBookingModal();
             return;
         } else {
             // Appointment failed — clean up orphaned patient if we just created them
