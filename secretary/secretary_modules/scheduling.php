@@ -289,10 +289,6 @@ foreach ($schedules as $row) {
                     <label class="form-label">End</label>
                     <input type="datetime-local" class="form-control" id="scEnd">
                 </div>
-                <div class="mb-2">
-                    <button class="btn btn-sm btn-outline-primary" type="button" id="scSuggestBtn">Suggest Slots</button>
-                </div>
-                <div class="list-group" id="scSuggestions"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -317,11 +313,6 @@ foreach ($schedules as $row) {
         if (saveBtn) {
             saveBtn.addEventListener('click', saveScheduleReschedule);
         }
-
-        const suggestBtn = document.getElementById('scSuggestBtn');
-        if (suggestBtn) {
-            suggestBtn.addEventListener('click', suggestSlots);
-        }
     });
 
     function toLocal(dt) {
@@ -341,52 +332,10 @@ foreach ($schedules as $row) {
         document.getElementById('scDoctorId').value = schedule.doctor_id || '';
         document.getElementById('scStart').value = toLocal(schedule.scheduled_start || '');
         document.getElementById('scEnd').value = toLocal(schedule.scheduled_end || '');
-        document.getElementById('scSuggestions').innerHTML = '';
         if (modal) {
             modal.show();
         }
     };
-
-    async function suggestSlots() {
-        const doctorId = document.getElementById('scDoctorId').value;
-        const appointmentId = document.getElementById('scAppointmentId').value;
-        const wrap = document.getElementById('scSuggestions');
-        wrap.innerHTML = '';
-        if (!doctorId) {
-            window.showToast('Missing doctor reference.', 'warning');
-            return;
-        }
-
-        const fd = new FormData();
-        fd.append('user_id', doctorId);
-        if (appointmentId) {
-            fd.append('appointment_id', appointmentId);
-        }
-
-        try {
-            const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
-            const j = await res.json();
-            if (!j.success || !Array.isArray(j.slots) || j.slots.length === 0) {
-                wrap.innerHTML = '<div class="text-muted small">No suggested slots found.</div>';
-                window.showToast('No suggested slots found for the selected doctor.', 'warning');
-                return;
-            }
-            j.slots.slice(0, 10).forEach(function(slot) {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'list-group-item list-group-item-action';
-                item.textContent = slot.start + (slot.end ? (' - ' + slot.end) : '');
-                item.addEventListener('click', function() {
-                    document.getElementById('scStart').value = toLocal(slot.start || '');
-                    document.getElementById('scEnd').value = toLocal(slot.end || '');
-                });
-                wrap.appendChild(item);
-            });
-        } catch (err) {
-            wrap.innerHTML = '<div class="text-danger small">Error loading suggestions.</div>';
-            window.showToast('Error loading suggested slots.', 'danger');
-        }
-    }
 
     async function saveScheduleReschedule() {
         const scheduleId = document.getElementById('scScheduleId').value;

@@ -141,43 +141,84 @@ try {
     $start_date = date('Y-m-d');
     $end_date   = date('Y-m-d', strtotime("+{$days_ahead} days"));
 
-    $params = [$user_id, $start_date, $end_date];
-    $types  = 'iss';
-    $extra  = '';
-
-    if ($duration > 0) {
-        $extra    = ' AND TIMESTAMPDIFF(MINUTE, CONCAT(slot_date,\' \',start_time), CONCAT(slot_date,\' \',end_time)) >= ?';
-        $params[] = $duration;
-        $types   .= 'i';
+    // Timeslots are generated lazily/on-demand elsewhere in the app (e.g. when a
+    // date is opened in the booking calendar) — without this, most future dates
+    // simply have zero rows in `timeslot` yet, so the query below silently
+    // returns nothing and "Suggest slots" looks broken even though it isn't.
+    $cursorDate = new DateTime($start_date);
+    $endDateObj = new DateTime($end_date);
+    while ($cursorDate <= $endDateObj) {
+        appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $cursorDate->format('Y-m-d'));
+        $cursorDate->modify('+1 day');
     }
 
+    // Individual `timeslot` rows are fine-grained (e.g. 10-minute increments), so a
+    // single row's own span is almost never >= the requested appointment duration.
+    // Instead of filtering rows by their own span, walk each day's available rows in
+    // order and accumulate consecutive (back-to-back) slots until they cover the
+    // requested duration — mirrors the merging logic already used in get_timeslots.php.
     $slotStmt = $conn->prepare(
-        "SELECT timeslot_id, slot_date, start_time, end_time
+        "SELECT timeslot_id, slot_date, start_time, end_time,
+                TIMESTAMPDIFF(MINUTE, start_time, end_time) AS slot_minutes
          FROM timeslot
          WHERE doctor_id = ? AND slot_date BETWEEN ? AND ? AND status = 'available'
-         {$extra}
-         ORDER BY slot_date ASC, start_time ASC
-         LIMIT 20"
+         ORDER BY slot_date ASC, start_time ASC"
     );
-    $slotStmt->bind_param($types, ...$params);
+    $slotStmt->bind_param('iss', $user_id, $start_date, $end_date);
     $slotStmt->execute();
-    $res   = $slotStmt->get_result();
-    $slots = [];
+    $res = $slotStmt->get_result();
+    $byDate = [];
     while ($row = $res->fetch_assoc()) {
-        [$bookable] = appt_assert_doctor_bookable($conn, $user_id, $row['slot_date']);
+        $byDate[$row['slot_date']][] = $row;
+    }
+    $slotStmt->close();
+
+    $slots = [];
+    foreach ($byDate as $slotDate => $rawSlots) {
+        [$bookable] = appt_assert_doctor_bookable($conn, $user_id, $slotDate);
         if (!$bookable) {
             continue;
         }
-        $slots[] = [
-            'timeslot_id' => (int)$row['timeslot_id'],
-            'start'       => $row['slot_date'] . ' ' . $row['start_time'],
-            'end'         => $row['slot_date'] . ' ' . $row['end_time'],
-            'slot_date'   => $row['slot_date'],
-            'start_time'  => $row['start_time'],
-            'end_time'    => $row['end_time'],
-        ];
+
+        $count = count($rawSlots);
+        for ($i = 0; $i < $count; $i++) {
+            $accMinutes = (int)$rawSlots[$i]['slot_minutes'];
+            $startTime  = $rawSlots[$i]['start_time'];
+            $endTime    = $rawSlots[$i]['end_time'];
+            $prevEnd    = $rawSlots[$i]['end_time'];
+
+            if ($duration > 0 && $accMinutes < $duration) {
+                for ($j = $i + 1; $j < $count; $j++) {
+                    if ($rawSlots[$j]['start_time'] !== $prevEnd) {
+                        break;
+                    }
+                    $accMinutes += (int)$rawSlots[$j]['slot_minutes'];
+                    $prevEnd = $rawSlots[$j]['end_time'];
+                    $endTime = $rawSlots[$j]['end_time'];
+                    if ($accMinutes >= $duration) {
+                        break;
+                    }
+                }
+            }
+
+            if ($duration > 0 && $accMinutes < $duration) {
+                continue;
+            }
+
+            $slots[] = [
+                'timeslot_id' => (int)$rawSlots[$i]['timeslot_id'],
+                'start'       => $slotDate . ' ' . $startTime,
+                'end'         => $slotDate . ' ' . $endTime,
+                'slot_date'   => $slotDate,
+                'start_time'  => $startTime,
+                'end_time'    => $endTime,
+            ];
+
+            if (count($slots) >= 20) {
+                break 2;
+            }
+        }
     }
-    $slotStmt->close();
 
     echo json_encode(['success' => true, 'slots' => $slots, 'duration' => $duration]);
 

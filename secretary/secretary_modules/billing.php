@@ -882,13 +882,21 @@ if (!$hasAnyData) {
         if (countEl) countEl.textContent = visible;
     }
 
-    document.getElementById('paymentSearch')?.addEventListener('input', filterPaymentTable);
+    (function () {
+        const paymentSearchEl = document.getElementById('paymentSearch');
+        if (paymentSearchEl) {
+            paymentSearchEl.addEventListener('input', function () {
+                clearTimeout(paymentSearchEl._timer);
+                paymentSearchEl._timer = setTimeout(filterPaymentTable, 300);
+            });
+        }
+    })();
     document.getElementById('paymentFilterMethod')?.addEventListener('change', filterPaymentTable);
     document.getElementById('paymentFilterDateFrom')?.addEventListener('change', filterPaymentTable);
     document.getElementById('paymentFilterDateTo')?.addEventListener('change', filterPaymentTable);
     document.getElementById('paymentSearchClear')?.addEventListener('click', function() {
         var el = document.getElementById('paymentSearch');
-        if (el) el.value = '';
+        if (el) { clearTimeout(el._timer); el.value = ''; }
         filterPaymentTable();
     });
 </script>

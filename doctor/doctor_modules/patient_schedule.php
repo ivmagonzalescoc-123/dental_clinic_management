@@ -102,9 +102,7 @@ if ($aStmt) {
         </div>
         <div class="mb-2"><label class="form-label">Start</label><input id="createScheduleStart" class="form-control" type="datetime-local"/></div>
         <div class="mb-2"><label class="form-label">End (optional)</label><input id="createScheduleEnd" class="form-control" type="datetime-local"/></div>
-        <div class="mb-2"><button id="btnSuggestSlots" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
-        <div id="suggestionsWrap" class="list-group mt-2"></div>
-        <div class="mt-2 text-muted small">You can also use <strong>Auto-schedule</strong> to create a schedule based on profiling suggestions.</div>
+        <div class="mt-2 text-muted small">You can use <strong>Auto-schedule</strong> to create a schedule based on profiling suggestions.</div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button id="btnAutoSchedule" type="button" class="btn btn-warning">Auto-schedule</button>
@@ -123,23 +121,6 @@ document.addEventListener('DOMContentLoaded', function(){
         window.showToast(String(message || ''), type || 'info');
     }
     document.getElementById('btnOpenCreateSchedule').addEventListener('click', ()=>bsModal.show());
-
-    document.getElementById('btnSuggestSlots').addEventListener('click', async function(){
-        const appt = document.getElementById('createScheduleAppointment').value || '';
-        const fd = new FormData();
-        fd.append('user_id', <?php echo (int)$doctor_id; ?>);
-        if (appt) fd.append('appointment_id', appt);
-        const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
-        const j = await res.json();
-        const wrap = document.getElementById('suggestionsWrap'); wrap.innerHTML = '';
-        if (!j.success) return notifyDoctorSchedule(j.message || 'No suggestions', 'warning');
-        (j.slots || []).slice(0,10).forEach(slot => {
-            const a = document.createElement('a'); a.href='#'; a.className='list-group-item list-group-item-action';
-            a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
-            a.addEventListener('click', function(e){ e.preventDefault(); document.getElementById('createScheduleStart').value = slot.start.replace(' ', 'T').replace(/:00$/,''); document.getElementById('createScheduleEnd').value = slot.end ? slot.end.replace(' ', 'T').replace(/:00$/,'') : ''; });
-            wrap.appendChild(a);
-        });
-    });
 
     document.getElementById('btnCreateScheduleSave').addEventListener('click', async function(){
         const appt = document.getElementById('createScheduleAppointment').value || '';

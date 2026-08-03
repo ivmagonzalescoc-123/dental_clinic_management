@@ -18,6 +18,16 @@
         return v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'yes';
     }
 
+    // True when a free-text medical field actually indicates something worth flagging —
+    // i.e. not empty, and not a "nothing to see here" answer like "N/A" or "Not pregnant".
+    function isAlertWorthy(v) {
+        const s = val(v).toLowerCase();
+        if (!s) return false;
+        if (s.indexOf('n/a') !== -1 || s === 'na') return false;
+        if (s.indexOf('not') !== -1) return false;
+        return true;
+    }
+
     function renderDoctorPatientProfile(patient, profiling, fallbackName) {
         patient = patient || {};
         profiling = profiling || {};
@@ -46,16 +56,15 @@
 
         // --- Medical alerts (the part a doctor needs to see first) ---
         const alerts = [];
-        if (val(profiling.allergies)) alerts.push('Allergies: ' + val(profiling.allergies));
+        if (isAlertWorthy(profiling.allergies)) alerts.push('Allergies: ' + val(profiling.allergies));
         if (yes(profiling.is_hypertensive)) alerts.push('Hypertensive');
         if (yes(profiling.is_diabetic)) alerts.push('Diabetic');
         if (yes(profiling.is_asthmatic)) alerts.push('Asthmatic');
         if (yes(profiling.has_heart_disease)) alerts.push('Heart Disease');
         if (yes(profiling.is_hiv_positive)) alerts.push('HIV Positive');
         if (yes(profiling.bleeding_disorder)) alerts.push('Bleeding Disorder');
-        const pregnancyValLower = val(profiling.pregnancy_status).toLowerCase();
         const isMalePatient = String(patient.gender || '').trim().toLowerCase() === 'male';
-        if (!isMalePatient && pregnancyValLower && pregnancyValLower !== 'not applicable' && pregnancyValLower !== 'n/a' && pregnancyValLower !== 'no') {
+        if (!isMalePatient && isAlertWorthy(profiling.pregnancy_status)) {
             alerts.push('Pregnancy: ' + val(profiling.pregnancy_status));
         }
 

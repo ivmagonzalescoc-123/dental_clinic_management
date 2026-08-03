@@ -849,14 +849,20 @@
       }
     }
 
-    searchInput.addEventListener('input', filterRows)
+    let filterRowsTimer = null
+    searchInput.addEventListener('input', () => {
+      clearTimeout(filterRowsTimer)
+      filterRowsTimer = setTimeout(filterRows, 300)
+    })
     clearBtn.addEventListener('click', () => {
+      clearTimeout(filterRowsTimer)
       searchInput.value = ''
       filterRows()
       searchInput.focus()
     })
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        clearTimeout(filterRowsTimer)
         searchInput.value = ''
         filterRows()
       }
@@ -878,8 +884,30 @@
     })
   }
 
+  // Delays a native 'input' event without needing any access to whatever
+  // library/listener is reacting to it: real keystrokes are intercepted in
+  // the capture phase and held back; once the user pauses, a synthetic
+  // 'input' event is re-dispatched so the original (e.g. simpleDatatables')
+  // listener runs exactly as it always did, just later. isTrusted lets the
+  // handler tell a real keystroke apart from its own synthetic re-dispatch
+  // so it doesn't re-intercept and loop forever.
+  function debounceNativeInputEvent(inputEl, delay) {
+    if (!inputEl || inputEl.dataset.debounceBound === '1') return
+    inputEl.dataset.debounceBound = '1'
+    let timer = null
+    inputEl.addEventListener('input', (e) => {
+      if (!e.isTrusted) return
+      e.stopImmediatePropagation()
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        inputEl.dispatchEvent(new Event('input', { bubbles: true }))
+      }, delay || 300)
+    }, true)
+  }
+
   function styleDatatableSearchInputs() {
     document.querySelectorAll('.datatable-wrapper .datatable-input').forEach((input) => {
+      debounceNativeInputEvent(input, 300)
       if (input.dataset.unifiedStyled === '1') return
       input.dataset.unifiedStyled = '1'
       input.classList.add('unified-table-search-input')

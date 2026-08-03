@@ -1594,8 +1594,6 @@ async function openHistoryModal(appointmentId) {
                 <input type="hidden" id="rescheduleScheduleId" />
                 <div class="mb-2"><label class="form-label">Start</label><input id="rescheduleStart" class="form-control" type="datetime-local"/></div>
                 <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEnd" class="form-control" type="datetime-local"/></div>
-                <div class="mb-2"><button id="rescheduleSuggest" class="btn btn-sm btn-outline-primary">Suggest slots</button></div>
-                <div id="rescheduleSuggestions" class="list-group"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -1636,49 +1634,8 @@ async function openRescheduleModal(schedule) {
     document.getElementById('rescheduleScheduleId').value = schedule.schedule_id || '';
     document.getElementById('rescheduleStart').value = toLocalInput(schedule.scheduled_start || '');
     document.getElementById('rescheduleEnd').value = toLocalInput(schedule.scheduled_end || '');
-    document.getElementById('rescheduleSuggestions').innerHTML = '';
     resModal.show();
-    // attach suggest handler
 }
-
-document.getElementById('rescheduleSuggest').addEventListener('click', async function(){
-    const sid = document.getElementById('rescheduleScheduleId').value;
-    if (!sid) return notifyDoctor('No schedule selected', 'warning');
-    // attempt to find schedule owner by querying schedules endpoint (we have no dedicated get-schedule api); reuse smart_schedule with user_id
-    // We'll derive user_id from the DOM by searching rendered schedule item if possible
-    const btn = this; btn.disabled = true;
-    try {
-        // fetch schedule info for accurate user_id / duration
-        const g = await fetch('../assets/api/appointments/get_schedule.php?schedule_id=' + encodeURIComponent(sid));
-        const gs = await g.json();
-        if (!gs.success) return notifyDoctor(gs.message || 'Could not resolve schedule', 'danger');
-        const user_id = gs.schedule.user_id || CURRENT_USER;
-        const duration = gs.schedule.duration || 30;
-        // Post to smart_schedule
-        const fd = new FormData(); fd.append('user_id', user_id); fd.append('days_ahead', 14); fd.append('duration', duration);
-        const res = await fetch('../assets/api/appointments/smart_schedule.php', { method: 'POST', body: fd });
-        const j = await res.json();
-        const wrap = document.getElementById('rescheduleSuggestions'); wrap.innerHTML = '';
-        if (!j.success) return notifyDoctor(j.message || 'No suggestions', 'warning');
-            (j.slots || []).slice(0,10).forEach(slot => {
-            const a = document.createElement('a'); a.href = '#'; a.className = 'list-group-item list-group-item-action';
-            a.textContent = slot.start + (slot.end ? (' — ' + slot.end) : '');
-            a.addEventListener('click', function(e){
-                e.preventDefault();
-                const startLocal = slot.start.replace(' ', 'T').replace(/:00$/,'');
-                const endLocal = slot.end ? slot.end.replace(' ', 'T').replace(/:00$/,'') : '';
-                if (fpStart && typeof fpStart.setDate === 'function') fpStart.setDate(startLocal);
-                else document.getElementById('rescheduleStart').value = startLocal;
-                if (endLocal) {
-                  if (fpEnd && typeof fpEnd.setDate === 'function') fpEnd.setDate(endLocal);
-                  else document.getElementById('rescheduleEnd').value = endLocal;
-                }
-            });
-            wrap.appendChild(a);
-        });
-    } catch (e) { console.error(e); notifyDoctor('Error fetching suggestions', 'danger'); }
-    btn.disabled = false;
-});
 
 document.getElementById('rescheduleSaveBtn').addEventListener('click', async function(){
     const sid = document.getElementById('rescheduleScheduleId').value;
