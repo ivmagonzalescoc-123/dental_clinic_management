@@ -1,4 +1,4 @@
 # Block direct access to all scripts except cron endpoints
-<FilesMatch "^(?!cron_reminders\.php$|cron_backup\.php$|restore_backup\.php$)">
+<FilesMatch "^(?!cron_reminders\.php$|cron_backup\.php$)">
     Require all denied
 </FilesMatch>

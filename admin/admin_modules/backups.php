@@ -35,9 +35,6 @@ $backupBaseUrl = rtrim((string)env('APP_URL', ''), '/') . '/';
         <button type="button" id="backupNowBtn" class="btn btn-primary btn-sm" onclick="runBackupNow()">
             <i class="bi bi-download"></i> Create Backup Now
         </button>
-        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#restoreModal">
-            <i class="bi bi-upload"></i> Restore from Backup
-        </button>
     </div>
 </div>
 
@@ -149,105 +146,5 @@ async function runBackupNow() {
     }
     btn.disabled = false;
     btn.innerHTML = '<i class="bi bi-download"></i> Create Backup Now';
-}
-</script>
-
-<div class="modal fade" id="restoreModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-upload"></i> Restore Database</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <strong>Warning:</strong> This will <u>overwrite the entire database</u> with the uploaded backup file. All current data will be lost and replaced. This action <strong>cannot be undone</strong>.
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Select .sql backup file</label>
-                    <input type="file" class="form-control" id="restoreFileInput" accept=".sql">
-                </div>
-                <div class="mb-3" id="restorePasswordGroup" style="display:none;">
-                    <label class="form-label">Enter your admin password to confirm</label>
-                    <input type="password" class="form-control" id="restorePassword" placeholder="Admin password">
-                </div>
-                <div id="restoreStatus" class="alert d-none" role="alert"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="restoreBtn" class="btn btn-danger" onclick="restoreBackup()" disabled>
-                    <i class="bi bi-upload"></i> Restore
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-document.getElementById('restoreFileInput').addEventListener('change', function() {
-    var hasFile = this.files.length > 0;
-    document.getElementById('restorePasswordGroup').style.display = hasFile ? '' : 'none';
-    document.getElementById('restoreBtn').disabled = true;
-    document.getElementById('restorePassword').value = '';
-});
-
-document.getElementById('restorePassword').addEventListener('input', function() {
-    var hasFile = document.getElementById('restoreFileInput').files.length > 0;
-    document.getElementById('restoreBtn').disabled = !(hasFile && this.value.length > 0);
-});
-
-async function restoreBackup() {
-    var fileInput = document.getElementById('restoreFileInput');
-    var password = document.getElementById('restorePassword').value;
-    var btn = document.getElementById('restoreBtn');
-    var status = document.getElementById('restoreStatus');
-
-    if (!fileInput.files.length || !password) return;
-
-    var ok = await showConfirmModal({
-        title: 'Confirm Database Restore',
-        message: 'This will completely overwrite the database with the uploaded backup. All current data will be permanently lost. This action cannot be undone.',
-        variant: 'danger',
-        confirmText: 'Yes, Restore'
-    });
-    if (!ok) return;
-
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Restoring...';
-    status.className = 'alert alert-info';
-    status.textContent = 'Verifying password and restoring database... This may take a while.';
-    status.classList.remove('d-none');
-
-    var fd = new FormData();
-    fd.append('backup_file', fileInput.files[0]);
-    fd.append('admin_password', password);
-
-    try {
-        var res = await fetch('<?php echo htmlspecialchars(rtrim((string)env('APP_URL', ''), '/') . '/scripts/restore_backup.php'); ?>', {
-            method: 'POST',
-            body: fd
-        });
-        var json = await res.json();
-        if (json.success) {
-            var msg = 'Restore completed: ' + json.statements + ' statements executed';
-            if (json.errors > 0) {
-                msg += ', ' + json.errors + ' errors';
-                if (json.error_details && json.error_details.length) {
-                    msg += '\n\nErrors: ' + json.error_details.join('\n');
-                }
-            }
-            status.className = 'alert alert-' + (json.errors > 0 ? 'warning' : 'success');
-            status.textContent = msg;
-        } else {
-            status.className = 'alert alert-danger';
-            status.textContent = 'Restore failed: ' + (json.message || 'Unknown error');
-            btn.disabled = false;
-        }
-    } catch (e) {
-        status.className = 'alert alert-danger';
-        status.textContent = 'Restore failed: ' + e.message;
-        btn.disabled = false;
-    }
-    btn.innerHTML = '<i class="bi bi-upload"></i> Restore';
 }
 </script>

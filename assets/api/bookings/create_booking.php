@@ -17,6 +17,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/rate_limit_helpers.php';
 
     security_start_session();
 
@@ -28,6 +29,12 @@ try {
         http_response_code(403);
         echo json_encode(['success' => false, 'message' => 'Invalid security token. Please refresh and try again.']);
         exit;
+    }
+
+    // This endpoint sends an OTP email on every call (including "resend"), so without a
+    // limit it can be used to email-bomb any address. Cap per-IP and per-email separately.
+    if (!rate_limit_check($conn, 'booking_otp_ip', rate_limit_client_ip(), 10, 3600)) {
+        rate_limit_reject('Too many booking attempts from this device. Please try again later.');
     }
 
     $firstName  = trim($_POST['first_name'] ?? '');
@@ -49,6 +56,9 @@ try {
     }
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         throw new Exception('A valid email address is required.');
+    }
+    if (!rate_limit_check($conn, 'booking_otp_email', $email, 3, 600)) {
+        throw new Exception('Too many verification codes requested for this email. Please wait a few minutes and try again.');
     }
     if ($prefDate === '') {
         throw new Exception('Preferred date is required.');

@@ -6,6 +6,7 @@ include '../../../config/security.php';
 include '../../../config/env.php';
 include '../../../config/reminders.php';
 include '../../../config/email_templates.php';
+include_once '../../../config/rate_limit_helpers.php';
 
 security_start_session();
 
@@ -23,9 +24,22 @@ if (!security_validate_csrf_token($csrfToken)) {
     exit;
 }
 
+// This endpoint sends a reset-code email on every valid call — cap per-IP and
+// per-email so it can't be used to email-bomb an address or hammer the mail provider.
+if (!rate_limit_check($conn, 'password_reset_ip', rate_limit_client_ip(), 10, 3600)) {
+    rate_limit_reject('Too many password reset attempts from this device. Please try again later.');
+}
+
 $email = security_clean_string($input['email'] ?? '', 150);
 if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     echo json_encode(['success' => false, 'message' => 'Please enter a valid email address']);
+    exit;
+}
+
+if (!rate_limit_check($conn, 'password_reset_email', $email, 3, 900)) {
+    // Same "may or may not exist" wording as the normal not-found path, so this
+    // doesn't leak account existence via a different response.
+    echo json_encode(['success' => true, 'message' => 'If that email exists, reset instructions will be sent shortly.']);
     exit;
 }
 

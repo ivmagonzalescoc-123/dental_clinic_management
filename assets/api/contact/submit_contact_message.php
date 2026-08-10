@@ -5,6 +5,7 @@ include '../../../config/database.php';
 include '../../../config/security.php';
 include_once '../../../config/contact_messages_helpers.php';
 include_once '../../../config/workflow_notifications.php';
+include_once '../../../config/rate_limit_helpers.php';
 
 security_start_session();
 
@@ -22,6 +23,11 @@ if (!security_validate_csrf_token($csrfToken)) {
     exit;
 }
 
+// Caps spam/flood of the public contact form — per device and, once we know it, per email.
+if (!rate_limit_check($conn, 'contact_message_ip', rate_limit_client_ip(), 5, 600)) {
+    rate_limit_reject('Too many messages sent from this device. Please try again later.');
+}
+
 $fullName = security_clean_string($input['name'] ?? ($input['full_name'] ?? ''), 150);
 $email = security_clean_string($input['email'] ?? '', 150);
 $phoneNumber = security_clean_string($input['phone'] ?? ($input['phone_number'] ?? ''), 30);
@@ -30,6 +36,12 @@ $message = security_clean_string($input['message'] ?? '', 5000);
 if ($fullName === '' || $email === '' || $phoneNumber === '' || $message === '') {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Please complete all fields before sending your message.']);
+    exit;
+}
+
+if (!rate_limit_check($conn, 'contact_message_email', $email, 3, 600)) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'message' => 'Too many messages sent with this email. Please try again later.']);
     exit;
 }
 
