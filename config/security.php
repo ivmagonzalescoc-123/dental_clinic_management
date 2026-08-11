@@ -206,3 +206,54 @@ if (!function_exists('security_clean_string')) {
         return $value;
     }
 }
+
+if (!function_exists('security_sanitize_html_input')) {
+    /**
+     * Strips markup out of free-text input before it is stored (medical history,
+     * clinical notes, comments, etc). The app already escapes on output
+     * (htmlspecialchars/escapeHtml) everywhere this data is rendered, so this is a
+     * second, independent layer: it guarantees no <script>/<img onerror>/etc. markup
+     * ever reaches the database in the first place, which also protects any future
+     * consumer (PDF export, email templates, API integrations) that might forget to
+     * escape on its own.
+     */
+    function security_sanitize_html_input($value, $maxLen = 0)
+    {
+        if (!is_string($value)) {
+            return '';
+        }
+
+        $value = trim($value);
+        // Remove script/style blocks (and their contents) before stripping remaining tags,
+        // so "<script>alert(1)</script>" doesn't leave "alert(1)" behind as plain text.
+        $value = preg_replace('#<(script|style)[^>]*>.*?</\\1>#is', '', $value);
+        $value = strip_tags($value);
+        // Neutralize anything strip_tags missed (bare "<" from a malformed tag, etc.)
+        // and any stray quotes/ampersands so the stored value can never be re-interpreted
+        // as markup even if a future render path forgets to escape it.
+        $value = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+
+        if ($maxLen > 0) {
+            $value = mb_substr($value, 0, $maxLen);
+        }
+
+        return $value;
+    }
+}
+
+if (!function_exists('security_sanitize_html_input_array')) {
+    /**
+     * Applies security_sanitize_html_input() to every string value in an associative
+     * array, leaving non-string values (bools, ints, null) untouched. Useful for
+     * sanitizing a whole free-text form payload (e.g. patient profiling data) in one call.
+     */
+    function security_sanitize_html_input_array(array $data)
+    {
+        foreach ($data as $key => $value) {
+            if (is_string($value)) {
+                $data[$key] = security_sanitize_html_input($value);
+            }
+        }
+        return $data;
+    }
+}

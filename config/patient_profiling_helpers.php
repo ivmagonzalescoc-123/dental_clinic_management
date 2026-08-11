@@ -105,8 +105,14 @@ if (!function_exists('filter_profiling_data')) {
             }
             $value = $data[$key];
             // Keep all values including empty strings (converted to N/A by caller)
-            if (is_bool($value) || is_numeric($value) || is_string($value)) {
+            if (is_bool($value) || is_numeric($value)) {
                 $out[$key] = $value;
+            } elseif (is_string($value)) {
+                // Strip markup before it ever reaches the database (medical history,
+                // background notes, etc. are free-text and could contain <script> tags).
+                $out[$key] = function_exists('security_sanitize_html_input')
+                    ? security_sanitize_html_input($value)
+                    : $value;
             }
         }
         return $out;

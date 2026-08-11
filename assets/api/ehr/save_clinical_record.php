@@ -254,7 +254,9 @@ try {
                 $toothNum = (int)$fdiKey;
                 if ($toothNum <= 0) continue;
                 $surfaces = $toothData['surfaces'] ?? [];
-                $comment = trim((string)($toothData['comment'] ?? ''));
+                $comment = function_exists('security_sanitize_html_input')
+                    ? security_sanitize_html_input((string)($toothData['comment'] ?? ''))
+                    : trim((string)($toothData['comment'] ?? ''));
                 $commentOrNull = $comment !== '' ? $comment : null;
                 if (empty($surfaces)) {
                     if ($comment !== '') {
@@ -285,26 +287,31 @@ try {
             $profData = json_decode($profiling_json, true);
             if (is_array($profData)) {
                 $conn->query("DELETE FROM patient_profiling WHERE patient_id = $patient_id AND record_id = $record_id");
+                // Strip markup out of free-text fields before they reach the database
+                // (medical history, notes, etc. could otherwise carry <script> tags).
+                $sanitizeText = function_exists('security_sanitize_html_input')
+                    ? 'security_sanitize_html_input'
+                    : function ($v) { return $v; };
                 // bind_param() requires plain variables, not expressions, for by-reference args.
-                $pf_race = $profData['race'] ?? null;
-                $pf_occupation = $profData['occupation'] ?? null;
-                $pf_medical_history = $profData['medical_history'] ?? null;
-                $pf_medications = $profData['medications'] ?? null;
-                $pf_allergies = $profData['allergies'] ?? null;
-                $pf_smoking = $profData['smoking'] ?? null;
-                $pf_alcohol = $profData['alcohol'] ?? null;
+                $pf_race = isset($profData['race']) ? $sanitizeText($profData['race']) : null;
+                $pf_occupation = isset($profData['occupation']) ? $sanitizeText($profData['occupation']) : null;
+                $pf_medical_history = isset($profData['medical_history']) ? $sanitizeText($profData['medical_history']) : null;
+                $pf_medications = isset($profData['medications']) ? $sanitizeText($profData['medications']) : null;
+                $pf_allergies = isset($profData['allergies']) ? $sanitizeText($profData['allergies']) : null;
+                $pf_smoking = isset($profData['smoking']) ? $sanitizeText($profData['smoking']) : null;
+                $pf_alcohol = isset($profData['alcohol']) ? $sanitizeText($profData['alcohol']) : null;
                 $pf_hypertensive = (int)($profData['hypertensive'] ?? 0);
                 $pf_diabetic = (int)($profData['diabetic'] ?? 0);
                 $pf_asthmatic = (int)($profData['asthmatic'] ?? 0);
                 $pf_heart_disease = (int)($profData['heart_disease'] ?? 0);
                 $pf_hiv_positive = (int)($profData['hiv_positive'] ?? 0);
-                $pf_bleeding_disorder = $profData['bleeding_disorder'] ?? null;
-                $pf_pregnancy_status = $profData['pregnancy_status'] ?? null;
-                $pf_previous_dental_treatment = $profData['previous_dental_treatment'] ?? null;
-                $pf_dental_anxiety = $profData['dental_anxiety'] ?? null;
-                $pf_emergency_contact = $profData['emergency_contact'] ?? null;
-                $pf_emergency_phone = $profData['emergency_phone'] ?? null;
-                $pf_background_notes = $profData['background_notes'] ?? null;
+                $pf_bleeding_disorder = isset($profData['bleeding_disorder']) ? $sanitizeText($profData['bleeding_disorder']) : null;
+                $pf_pregnancy_status = isset($profData['pregnancy_status']) ? $sanitizeText($profData['pregnancy_status']) : null;
+                $pf_previous_dental_treatment = isset($profData['previous_dental_treatment']) ? $sanitizeText($profData['previous_dental_treatment']) : null;
+                $pf_dental_anxiety = isset($profData['dental_anxiety']) ? $sanitizeText($profData['dental_anxiety']) : null;
+                $pf_emergency_contact = isset($profData['emergency_contact']) ? $sanitizeText($profData['emergency_contact']) : null;
+                $pf_emergency_phone = isset($profData['emergency_phone']) ? $sanitizeText($profData['emergency_phone']) : null;
+                $pf_background_notes = isset($profData['background_notes']) ? $sanitizeText($profData['background_notes']) : null;
 
                 $pfStmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, record_id, race, occupation, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, emergency_contact, emergency_phone, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
                 $pfStmt->bind_param('iisssssssiiiiisssssss',

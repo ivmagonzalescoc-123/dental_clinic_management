@@ -28,10 +28,10 @@ if (!rate_limit_check($conn, 'contact_message_ip', rate_limit_client_ip(), 5, 60
     rate_limit_reject('Too many messages sent from this device. Please try again later.');
 }
 
-$fullName = security_clean_string($input['name'] ?? ($input['full_name'] ?? ''), 150);
+$fullName = security_sanitize_html_input($input['name'] ?? ($input['full_name'] ?? ''), 150);
 $email = security_clean_string($input['email'] ?? '', 150);
 $phoneNumber = security_clean_string($input['phone'] ?? ($input['phone_number'] ?? ''), 30);
-$message = security_clean_string($input['message'] ?? '', 5000);
+$message = security_sanitize_html_input($input['message'] ?? '', 5000);
 
 if ($fullName === '' || $email === '' || $phoneNumber === '' || $message === '') {
     http_response_code(400);
