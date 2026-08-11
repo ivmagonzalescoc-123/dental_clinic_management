@@ -18,7 +18,6 @@ foreach ($backups as $b) $totalSize += (float)($b['file_size'] ?? 0);
 
 $backupApiUrl = rtrim((string)env('APP_URL', ''), '/') . '/scripts/cron_backup.php';
 $backupCronKey = env('CRON_SECRET_KEY', '');
-$backupBaseUrl = rtrim((string)env('APP_URL', ''), '/') . '/';
 ?>
 
 <?php if (isset($_SESSION['message'])): ?>
@@ -104,7 +103,7 @@ $backupBaseUrl = rtrim((string)env('APP_URL', ''), '/') . '/';
                                 <td><?php $sz = (float)($b['file_size'] ?? 0); echo $sz >= 1024 ? round($sz / 1024, 2) . ' MB' : round($sz, 2) . ' KB'; ?></td>
                                 <td><?php echo htmlspecialchars(trim(($b['first_name'] ?? '') . ' ' . ($b['last_name'] ?? '')) ?: 'Cron'); ?></td>
                                 <td>
-                                    <a href="<?php echo htmlspecialchars($backupBaseUrl . $b['file_path']); ?>" class="btn btn-sm btn-outline-primary" download target="_blank" title="Download">
+                                    <a href="../assets/api/admin/download_backup.php?backup_id=<?php echo (int)$b['backup_id']; ?>" class="btn btn-sm btn-outline-primary" title="Download">
                                         <i class="bi bi-download"></i>
                                     </a>
                                 </td>

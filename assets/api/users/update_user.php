@@ -106,7 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sql = 'UPDATE users SET first_name=?, last_name=?, email=?, role_id=?, work_type=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        $_SESSION['message'] = 'Database error: ' . $conn->error;
+        error_log('update_user.php: prepare failed: ' . $conn->error);
+        $_SESSION['message'] = 'Database error. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ' . $redirectUrl);
         exit;

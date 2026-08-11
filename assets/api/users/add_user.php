@@ -112,7 +112,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        $_SESSION['message'] = 'Database error: ' . $conn->error;
+        error_log('add_user.php: prepare failed: ' . $conn->error);
+        $_SESSION['message'] = 'Database error. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin/admin.php?page=manage_users&type=users');
         exit;

@@ -64,7 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        $_SESSION['message'] = 'Database error: ' . $conn->error;
+        error_log('add_patient.php: prepare failed: ' . $conn->error);
+        $_SESSION['message'] = 'Database error. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin.php?page=manage_users&type=patients');
         exit;
@@ -79,7 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'Patient added successfully.'
         );
     } else {
-        $_SESSION['message'] = 'Error adding patient: ' . $stmt->error;
+        error_log('add_patient.php: insert failed: ' . $stmt->error);
+        $_SESSION['message'] = 'Error adding patient. Please try again.';
         $_SESSION['message_type'] = 'danger';
     }
 

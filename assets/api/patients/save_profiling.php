@@ -32,6 +32,18 @@ try {
     // Use N/A for empty text fields to avoid NULLs in database
     $na = 'N/A';
 
+    // Needed to decide the pregnancy_status exception below (male patients never see
+    // that field in the form — see comment further down).
+    $patientGender = '';
+    $genderStmt = $conn->prepare('SELECT gender FROM patients WHERE patient_id = ? LIMIT 1');
+    if ($genderStmt) {
+        $genderStmt->bind_param('i', $patient_id);
+        $genderStmt->execute();
+        $genderRow = $genderStmt->get_result()->fetch_assoc();
+        $genderStmt->close();
+        $patientGender = (string)($genderRow['gender'] ?? '');
+    }
+
     if (!empty($profiling)) {
         $p_race = $profiling['race'] ?: $na;
         $p_medical_history = $profiling['medical_history'] ?: $na;
@@ -45,7 +57,10 @@ try {
         $p_heart_disease = (int)($profiling['heart_disease'] ?? 0);
         $p_hiv_positive = (int)($profiling['hiv_positive'] ?? 0);
         $p_bleeding_disorder = $profiling['bleeding_disorder'] ?: $na;
-        $p_pregnancy_status = $profiling['pregnancy_status'] ?: $na;
+        // Male patients never see the pregnancy field in the form — don't backfill it
+        // with a meaningless "N/A" default; NULL correctly represents "not applicable"
+        // here (matches the same exception in create_walkin.php).
+        $p_pregnancy_status = (strcasecmp($patientGender, 'Male') === 0) ? null : ($profiling['pregnancy_status'] ?: $na);
         $p_previous_dental_treatment = $profiling['previous_dental_treatment'] ?: $na;
         $p_dental_anxiety = $profiling['dental_anxiety'] ?: $na;
         $p_background_notes = $profiling['background_notes'] ?: $na;

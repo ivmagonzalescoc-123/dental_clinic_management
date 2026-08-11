@@ -1,4 +1,17 @@
-# Allow access to backup files
+# Block all direct web access to backup files. These are full database dumps
+# (patient PHI + password hashes) and must only ever be served through the
+# authenticated admin download endpoint (assets/api/admin/download_backup.php),
+# never fetched directly by URL.
 <IfModule mod_authz_core.c>
-    Require all granted
+    Require all denied
 </IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
+
+# Belt-and-suspenders in case .htaccess processing for this folder is ever
+# disabled: also refuse to serve anything with a .sql extension here.
+<FilesMatch "\.sql$">
+    Require all denied
+</FilesMatch>

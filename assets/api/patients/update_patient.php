@@ -50,14 +50,16 @@ if ($isPartialUpdate) {
     $sql = 'UPDATE patients SET gender=? WHERE patient_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+        error_log('update_patient.php: prepare failed: ' . $conn->error);
+        echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
         exit;
     }
     $stmt->bind_param('si', $gender, $patient_id);
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'message' => 'Gender updated successfully.']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Error updating gender: ' . $stmt->error]);
+        error_log('update_patient.php: gender update failed: ' . $stmt->error);
+        echo json_encode(['success' => false, 'message' => 'Error updating gender. Please try again.']);
     }
     $stmt->close();
     exit;
@@ -73,6 +75,9 @@ $gender = security_clean_string($_POST['gender'] ?? '', 20);
 $phone_number = security_clean_string($_POST['phone_number'] ?? '', 30);
 $address = security_clean_string($_POST['address'] ?? '', 500);
 $occupation = security_clean_string($_POST['occupation'] ?? '', 150);
+if ($occupation === '') {
+    $occupation = 'N/A'; // keep the column's convention consistent — never store a blank string
+}
 
 // Ensure occupation column exists in patients table
 $conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS occupation varchar(150) DEFAULT NULL AFTER address");
@@ -103,7 +108,8 @@ $check_stmt->close();
 $sql = 'UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=?, occupation=? WHERE patient_id=?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . $conn->error]);
+    error_log('update_patient.php: prepare failed: ' . $conn->error);
+    echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
     exit;
 }
 
@@ -112,7 +118,8 @@ $stmt->bind_param('sssssssssi', $first_name, $middle_name, $last_name, $email, $
 if ($stmt->execute()) {
     echo json_encode(['success' => true, 'message' => 'Patient updated successfully.']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Error updating patient: ' . $stmt->error]);
+    error_log('update_patient.php: update failed: ' . $stmt->error);
+    echo json_encode(['success' => false, 'message' => 'Error updating patient. Please try again.']);
 }
 
 $stmt->close();

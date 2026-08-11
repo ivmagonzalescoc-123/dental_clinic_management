@@ -136,10 +136,10 @@ $stmt->bind_param(
 );
 
 if (!$stmt->execute()) {
-    $err = $stmt->error;
+    error_log('register_api.php: account insert failed: ' . $stmt->error);
     $stmt->close();
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error creating account: ' . $err]);
+    echo json_encode(['success' => false, 'message' => 'Unable to create your account right now. Please try again.']);
     exit;
 }
 

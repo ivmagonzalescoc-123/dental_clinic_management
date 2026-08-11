@@ -254,7 +254,8 @@ if (!empty($book_start)) {
     $ins = $conn->prepare("INSERT INTO patient_schedules (appointment_id, user_id, scheduled_start, scheduled_end, status) VALUES (?, ?, ?, ?, 'scheduled')");
     $ins->bind_param('iiss', $appointment_id, $doc_id, $book_start, $book_end);
     if (!$ins->execute()) {
-        send_json(['success' => false, 'message' => 'Failed to create schedule: ' . $ins->error], 500);
+        error_log('confirm_appointment.php: schedule insert failed: ' . $ins->error);
+        send_json(['success' => false, 'message' => 'Failed to create schedule. Please try again.'], 500);
     }
     $schedule_id = $conn->insert_id;
     $ins->close();
