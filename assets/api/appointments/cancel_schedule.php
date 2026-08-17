@@ -4,6 +4,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/security.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/capabilities.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -39,6 +40,11 @@ if ($schedule_id <= 0) {
     exit;
 }
 
+$reason = trim((string)($_POST['reason'] ?? ''));
+if ($reason === '') {
+    $reason = 'Cancelled by ' . ($role === 'doctor' ? 'doctor' : ($role === 'secretary' ? 'secretary' : 'admin'));
+}
+
 try {
     // Fetch schedule
     $stmt = $conn->prepare('SELECT schedule_id, user_id, appointment_id, status FROM patient_schedules WHERE schedule_id = ? LIMIT 1');
@@ -57,6 +63,8 @@ try {
         exit;
     }
 
+    $appointmentId = (int)($sch['appointment_id'] ?? 0);
+
     // Perform cancellation
     $ust = $conn->prepare('UPDATE patient_schedules SET status = ?, updated_at = NOW() WHERE schedule_id = ?');
     $status = 'cancelled';
@@ -65,13 +73,52 @@ try {
     $affected = $ust->affected_rows;
     $ust->close();
 
+    // Cascade to the appointment itself and free its timeslot back up — cancelling
+    // just the patient_schedules row (the old behavior) left the appointment showing
+    // "confirmed" forever with the reason nowhere recorded, and the slot permanently
+    // stuck as "booked" so no other patient could ever rebook it.
+    $apptRow = null;
+    if ($appointmentId > 0) {
+        $apptStmt = $conn->prepare('SELECT appointment_id, patient_id, user_id, appointment_date, timeslot_id FROM appointments WHERE appointment_id = ? LIMIT 1');
+        $apptStmt->bind_param('i', $appointmentId);
+        $apptStmt->execute();
+        $apptRow = $apptStmt->get_result()->fetch_assoc();
+        $apptStmt->close();
+    }
+
+    if ($apptRow) {
+        $updAppt = $conn->prepare("UPDATE appointments SET status = 'cancelled', cancellation_reason = ? WHERE appointment_id = ?");
+        $updAppt->bind_param('si', $reason, $appointmentId);
+        $updAppt->execute();
+        $updAppt->close();
+
+        $timeslotId = (int)($apptRow['timeslot_id'] ?? 0);
+        if ($timeslotId > 0) {
+            $freeSlot = $conn->prepare("UPDATE timeslot SET status = 'available', appointment_id = NULL WHERE timeslot_id = ? AND status = 'booked'");
+            $freeSlot->bind_param('i', $timeslotId);
+            $freeSlot->execute();
+            $freeSlot->close();
+        }
+
+        if (function_exists('wf_notify_appointment_cancelled')) {
+            wf_notify_appointment_cancelled(
+                $conn,
+                $appointmentId,
+                (int)($apptRow['patient_id'] ?? 0),
+                (int)($apptRow['user_id'] ?? 0),
+                (string)($apptRow['appointment_date'] ?? ''),
+                $reason
+            );
+        }
+    }
+
     if ($affected > 0 && function_exists('log_system_event')) {
         log_system_event(
             $conn,
             'schedule.cancel',
             'patient_schedules',
             $schedule_id,
-            'Cancelled schedule for appointment_id=' . (int)($sch['appointment_id'] ?? 0),
+            'Cancelled schedule for appointment_id=' . $appointmentId . '. Reason: ' . $reason,
             isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null
         );
     }

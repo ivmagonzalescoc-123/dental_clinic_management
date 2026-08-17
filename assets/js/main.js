@@ -413,6 +413,7 @@
       if (!link) return
       if (link.target === '_blank') return
       if (link.hasAttribute('data-no-ajax')) return
+      if (link.hasAttribute('download')) return
 
       var href = link.getAttribute('href')
       if (!isSamePortal(href)) return
@@ -421,7 +422,7 @@
 
       var fullUrl
       if (href.indexOf('?') === 0 || href.indexOf('./') === 0 || href.indexOf('../') === 0) {
-        fullUrl = new URL(href, window.location.origin).href
+        fullUrl = new URL(href, window.location.href).href
       } else {
         fullUrl = href
       }

@@ -431,17 +431,22 @@ try {
                     $bust->close();
                 }
             } else {
+                // billing.user_id has an FK to users(user_id) — it records which staff
+                // member/doctor the billing is attributed to, NOT the patient. Binding
+                // $patient_id here fails that FK constraint (patient IDs don't exist in
+                // the users table) and — since mysqli_report is OFF — fails silently,
+                // leaving the visit marked "completed" with no billing row at all.
                 $bstmt = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, created_at) VALUES (?, ?, ?, NOW())');
                 if (!$bstmt) throw new Exception('Prepare failed (billing insert): ' . $conn->error);
-                $bstmt->bind_param('iid', $appointment_id, $patient_id, $total);
-                $bstmt->execute();
+                $bstmt->bind_param('iid', $appointment_id, $doctor_id, $total);
+                if (!$bstmt->execute()) throw new Exception('Failed to create billing record: ' . $bstmt->error);
                 $bstmt->close();
             }
         } else {
             $bstmt = $conn->prepare('INSERT INTO billing (appointment_id, user_id, total_amount, created_at) VALUES (?, ?, ?, NOW())');
             if ($bstmt) {
-                $bstmt->bind_param('iid', $appointment_id, $patient_id, $total);
-                $bstmt->execute();
+                $bstmt->bind_param('iid', $appointment_id, $doctor_id, $total);
+                if (!$bstmt->execute()) throw new Exception('Failed to create billing record: ' . $bstmt->error);
                 $bstmt->close();
             }
         }

@@ -322,8 +322,80 @@
         });
     }
 
+    function getEntry(chartId) {
+        return registry[chartId] || (window.AdminCharts._registry && window.AdminCharts._registry[chartId]) || null;
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+    }
+
+    function formatCellValue(val) {
+        if (typeof val !== 'number' || isNaN(val)) return escapeHtml(val);
+        return escapeHtml(val.toLocaleString(undefined, { maximumFractionDigits: 2 }));
+    }
+
+    function buildPrintTableHtml(entry) {
+        var opts = entry.options || {};
+        var categories = (opts.xaxis && opts.xaxis.categories) || opts.labels || [];
+        var isDonut = opts.chart && (opts.chart.type === 'donut' || opts.chart.type === 'pie');
+        var html = '<table class="table table-sm mb-0"><thead><tr>';
+
+        if (isDonut) {
+            var values = opts.series || [];
+            html += '<th>' + escapeHtml(entry.title || 'Label') + '</th><th class="text-end">Value</th></tr></thead><tbody>';
+            if (!categories.length) {
+                html += '<tr><td colspan="2" class="text-muted text-center py-2">No data for this period.</td></tr>';
+            }
+            categories.forEach(function (label, i) {
+                html += '<tr><td>' + escapeHtml(label) + '</td><td class="text-end">' + formatCellValue(values[i]) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            return html;
+        }
+
+        var seriesList = opts.series || [];
+        html += '<th>' + escapeHtml(entry.title || 'Category') + '</th>';
+        seriesList.forEach(function (s) {
+            html += '<th class="text-end">' + escapeHtml(s.name || 'Value') + '</th>';
+        });
+        html += '</tr></thead><tbody>';
+        if (!categories.length) {
+            html += '<tr><td colspan="' + (seriesList.length + 1) + '" class="text-muted text-center py-2">No data for this period.</td></tr>';
+        }
+        categories.forEach(function (cat, i) {
+            html += '<tr><td>' + escapeHtml(cat) + '</td>';
+            seriesList.forEach(function (s) {
+                var v = (s.data && s.data[i] !== undefined) ? s.data[i] : '';
+                html += '<td class="text-end">' + formatCellValue(v) + '</td>';
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function renderPrintTables() {
+        document.querySelectorAll('.clinic-simple-chart').forEach(function (el) {
+            var frame = el.closest('.dental-chart-frame');
+            if (!frame) return;
+            var existing = frame.querySelector('.dental-chart-print-table');
+            if (existing) existing.remove();
+            var entry = getEntry(el.id);
+            if (!entry) return;
+            var wrap = document.createElement('div');
+            wrap.className = 'dental-chart-print-table';
+            wrap.innerHTML = buildPrintTableHtml(entry);
+            frame.appendChild(wrap);
+        });
+    }
+
+    window.addEventListener('beforeprint', renderPrintTables);
+
     function openExpanded(chartId) {
-        var entry = registry[chartId] || (window.AdminCharts._registry && window.AdminCharts._registry[chartId]);
+        var entry = getEntry(chartId);
         if (!entry || typeof ApexCharts === 'undefined') return;
         ensureModal();
         if (!modalEl || !modalHostEl) return;
@@ -365,6 +437,8 @@
         buildMoneyBarOptions: buildMoneyBarOptions,
         renderNoData: renderNoData,
         mount: mount,
-        bindExpandButtons: bindExpandButtons
+        bindExpandButtons: bindExpandButtons,
+        getEntry: getEntry,
+        renderPrintTables: renderPrintTables
     };
 })();

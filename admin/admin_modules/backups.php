@@ -103,7 +103,7 @@ $backupCronKey = env('CRON_SECRET_KEY', '');
                                 <td><?php $sz = (float)($b['file_size'] ?? 0); echo $sz >= 1024 ? round($sz / 1024, 2) . ' MB' : round($sz, 2) . ' KB'; ?></td>
                                 <td><?php echo htmlspecialchars(trim(($b['first_name'] ?? '') . ' ' . ($b['last_name'] ?? '')) ?: 'Cron'); ?></td>
                                 <td>
-                                    <a href="../assets/api/admin/download_backup.php?backup_id=<?php echo (int)$b['backup_id']; ?>" class="btn btn-sm btn-outline-primary" title="Download">
+                                    <a href="../assets/api/admin/download_backup.php?backup_id=<?php echo (int)$b['backup_id']; ?>" download class="btn btn-sm btn-outline-primary" title="Download">
                                         <i class="bi bi-download"></i>
                                     </a>
                                 </td>

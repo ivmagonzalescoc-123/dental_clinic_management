@@ -475,11 +475,8 @@ if (!$hasAnyData) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-outline-primary" id="invoiceExportPdfBtn" onclick="exportInvoicePdf()">
+                <button type="button" class="btn btn-primary" id="invoiceExportPdfBtn" onclick="exportInvoicePdf()">
                     <i class="bi bi-file-earmark-pdf"></i> Export to PDF
-                </button>
-                <button type="button" class="btn btn-primary" onclick="printInvoice()">
-                    <i class="bi bi-printer"></i> Print
                 </button>
             </div>
         </div>
@@ -748,21 +745,6 @@ if (!$hasAnyData) {
                 console.error('Could not load billing details', err);
                 document.getElementById('invoiceContent').innerHTML = '<div class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>Unable to load invoice details. Please try again.</div>';
             });
-    }
-
-    function printInvoice() {
-        const invoiceContent = document.getElementById('invoiceContent').innerHTML;
-        const printWindow = window.open('', '', 'height=600,width=900');
-        const scriptTag = '<scr' + 'ipt>window.print();</scr' + 'ipt>';
-        printWindow.document.write(
-            '<html><head><title>Invoice</title>' +
-            '<link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">' +
-            '<style>body{font-family:Arial,sans-serif;}.container{margin:20px;}</style>' +
-            '</head><body>' + invoiceContent +
-            scriptTag +
-            '</body></html>'
-        );
-        printWindow.document.close();
     }
 
     function filterBillingTable() {

@@ -82,5 +82,3 @@ if (PHP_SAPI !== 'cli' && env('APP_ENV', 'development') === 'development') {
 }
 
 ob_end_clean();
-
-?>

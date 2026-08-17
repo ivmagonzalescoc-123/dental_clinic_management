@@ -733,7 +733,7 @@ $reportNavQuery = array_merge(
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="dental-chip"><?php echo htmlspecialchars($periodLabel); ?></span>
             <?php if ($reportType === 'sales'): ?>
-            <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-success clinic-report-no-print">
+            <a href="<?php echo htmlspecialchars($birExportUrl); ?>" download class="btn btn-sm btn-success clinic-report-no-print">
                 <i class="bi bi-download"></i> Export BIR CSV
             </a>
             <?php endif; ?>
@@ -741,6 +741,25 @@ $reportNavQuery = array_merge(
                 <i class="bi bi-printer"></i> Print
             </button>
         </div>
+    </div>
+
+    <?php
+    $printMetaDoctor = 'All doctors';
+    if ($doctorId > 0) {
+        foreach ($doctors as $doc) {
+            if ((int)$doc['user_id'] === $doctorId) {
+                $printMetaDoctor = trim($doc['first_name'] . ' ' . $doc['last_name']);
+                break;
+            }
+        }
+    }
+    ?>
+    <div class="clinic-report-print-meta">
+        <strong><?php echo htmlspecialchars(function_exists('email_clinic_name') ? email_clinic_name() : "Azucena's Dental Clinic"); ?></strong>
+        — <?php echo htmlspecialchars($reportTypes[$reportType]['label'] ?? 'Report'); ?>
+        &nbsp;|&nbsp; Period: <?php echo htmlspecialchars($periodLabel); ?>
+        &nbsp;|&nbsp; Doctor: <?php echo htmlspecialchars($printMetaDoctor); ?>
+        &nbsp;|&nbsp; Generated: <?php echo date('Y-m-d H:i'); ?>
     </div>
 
     <nav class="module-section-nav clinic-report-no-print" aria-label="Report types">
@@ -928,7 +947,7 @@ $reportNavQuery = array_merge(
             <div class="card-body">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <h5 class="card-title mb-0">BIR Sales Preview</h5>
-                    <a href="<?php echo htmlspecialchars($birExportUrl); ?>" class="btn btn-sm btn-outline-success clinic-report-no-print">
+                    <a href="<?php echo htmlspecialchars($birExportUrl); ?>" download class="btn btn-sm btn-outline-success clinic-report-no-print">
                         <i class="bi bi-file-earmark-spreadsheet"></i> Download CSV
                     </a>
                 </div>
@@ -1913,10 +1932,122 @@ $reportNavQuery = array_merge(
     font-size: 13px;
     vertical-align: middle;
 }
+.dental-chart-print-table { display: none; }
+.clinic-report-print-meta { display: none; }
+
+/* Compact, document-style print output — no cards/icons/shadows, dense tables,
+   everything scoped to the report area so on-screen styling is untouched. */
 @media print {
+    #clinicReportPrintArea.clinic-reports-shell {
+        padding: 0;
+        font-size: 11px;
+        color: #000;
+    }
     .clinic-report-no-print { display: none !important; }
-    .clinic-reports-shell { padding: 0; }
-    .card { break-inside: avoid; border: 1px solid #dee2e6 !important; }
+
+    #clinicReportPrintArea .module-page-header h4 { font-size: 15px; margin-bottom: 2px; }
+    #clinicReportPrintArea .dental-chip {
+        font-size: 10px;
+        padding: 1px 6px;
+        border: 1px solid #94a3b8;
+        background: none !important;
+        color: #000;
+    }
+
+    #clinicReportPrintArea .clinic-report-print-meta {
+        display: block;
+        font-size: 10px;
+        color: #334155;
+        margin: 0 0 8px;
+    }
+
+    /* Flatten every card: no border/shadow/radius, tight spacing. */
+    #clinicReportPrintArea .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        break-inside: avoid;
+        margin-bottom: 4px !important;
+    }
+    #clinicReportPrintArea .card-body { padding: 2px 0 !important; }
+    #clinicReportPrintArea .row { row-gap: 0 !important; }
+    #clinicReportPrintArea .row > [class*="col-"] { padding: 1px 4px !important; }
+
+    /* Force any row of KPI tiles into a fixed 4-per-row grid (ignore the
+       screen breakpoint classes) so tiles are sized to the row, not stretched
+       full-width with mostly-empty space. Tables are untouched — full width. */
+    #clinicReportPrintArea .row:has(> [class*="col-"] > .dental-kpi-card) {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+    #clinicReportPrintArea .row:has(> [class*="col-"] > .dental-kpi-card) > [class*="col-"] {
+        flex: 0 0 25% !important;
+        max-width: 25% !important;
+    }
+
+    /* KPI cards become one-line "Label: Value" strips instead of padded tiles. */
+    #clinicReportPrintArea .dental-kpi-icon { display: none !important; }
+    #clinicReportPrintArea .dental-kpi-card {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        border: 1px solid #cbd5e1 !important;
+        padding: 2px 6px !important;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    #clinicReportPrintArea .dental-kpi-label {
+        font-size: 9px;
+        margin-bottom: 0;
+        color: #475569;
+        white-space: nowrap;
+    }
+    #clinicReportPrintArea .dental-kpi-label::after { content: ":"; }
+    #clinicReportPrintArea .dental-kpi-value { font-size: 12px; line-height: 1.1; color: #000; }
+    #clinicReportPrintArea .dental-kpi-value small { font-size: 9px; }
+
+    #clinicReportPrintArea .dental-section-eyebrow {
+        font-size: 9.5px;
+        margin: 8px 0 3px;
+        color: #000;
+        border-bottom: 1px solid #94a3b8;
+        padding-bottom: 2px;
+    }
+
+    /* Charts are replaced by their data table (see admin-charts.js renderPrintTables). */
+    #clinicReportPrintArea .dental-chart-expand-btn,
+    #clinicReportPrintArea .clinic-simple-chart { display: none !important; }
+    #clinicReportPrintArea .dental-chart-card__head { margin-bottom: 2px; }
+    #clinicReportPrintArea .dental-chart-card__head h5,
+    #clinicReportPrintArea .card-title { font-size: 11px; font-weight: 700; }
+    #clinicReportPrintArea .dental-chart-print-table { display: block !important; }
+    #clinicReportPrintArea .dental-chart-print-table table { font-size: 9.5px; margin-bottom: 0; }
+
+    /* A card holding a long table (many rows) must NOT be forced to stay in
+       one block — that clips it when it's taller than a page. Let it flow
+       across pages instead; only individual rows/table headers stay intact. */
+    #clinicReportPrintArea .card:has(table) { break-inside: auto !important; }
+    #clinicReportPrintArea table { break-inside: auto; }
+    #clinicReportPrintArea tr,
+    #clinicReportPrintArea .dental-kpi-card { break-inside: avoid; }
+    #clinicReportPrintArea thead { display: table-header-group; }
+
+    /* Dense, direct-to-read data tables. */
+    #clinicReportPrintArea .table-responsive { overflow: visible !important; }
+    #clinicReportPrintArea .table { font-size: 10px; margin-bottom: 0; }
+    #clinicReportPrintArea .table th,
+    #clinicReportPrintArea .table td { padding: 3px 5px !important; }
+    #clinicReportPrintArea .table th {
+        font-size: 9px;
+        border-bottom: 1px solid #000;
+    }
+    #clinicReportPrintArea .badge {
+        border: 1px solid #94a3b8;
+        background: none !important;
+        color: #000 !important;
+        padding: 1px 5px;
+        font-size: 9px;
+    }
 }
 
 [data-theme="dark"] .clinic-reports-filter {

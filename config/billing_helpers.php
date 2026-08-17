@@ -509,6 +509,20 @@ if (!function_exists('billing_create_or_update')) {
     {
         billing_migrate_billing_columns($conn);
 
+        // billing.user_id has an FK to users(user_id) — it records which staff member
+        // (the assigned doctor) the billing is attributed to, NOT the patient.
+        // $patientId doesn't exist in the users table, so binding it here fails the FK
+        // constraint. Look up the appointment's actual assigned doctor instead.
+        $billingUserId = null;
+        $docLookup = $conn->prepare('SELECT user_id FROM appointments WHERE appointment_id = ? LIMIT 1');
+        if ($docLookup) {
+            $docLookup->bind_param('i', $appointmentId);
+            $docLookup->execute();
+            $docRow = $docLookup->get_result()->fetch_assoc();
+            $docLookup->close();
+            $billingUserId = $docRow && !empty($docRow['user_id']) ? (int)$docRow['user_id'] : null;
+        }
+
         $discountType = billing_normalize_discount_type($discountOptions['discount_type'] ?? 'none');
         $customPercent = $discountOptions['discount_percent'] ?? null;
         $discountNotes = trim((string)($discountOptions['discount_notes'] ?? ''));
@@ -540,7 +554,7 @@ if (!function_exists('billing_create_or_update')) {
                     $upd->bind_param(
                         'didddsdsi',
                         $totalAmount,
-                        $patientId,
+                        $billingUserId,
                         $paid,
                         $balance,
                         $subtotalAmount,
@@ -571,7 +585,7 @@ if (!function_exists('billing_create_or_update')) {
         $ins->bind_param(
             'iidddsdsds',
             $appointmentId,
-            $patientId,
+            $billingUserId,
             $totalAmount,
             $zeroPaid,
             $initialBalance,
