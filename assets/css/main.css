@@ -27,7 +27,9 @@
     --bs-dropdown-link-active-bg: #0d9488;
     --primary-light: #ccfbf1;
     --primary-soft: #f0fdfa;
-    --sidebar-bg: #f2f9f8;
+    /* Sidebar is now the teal surface; the active item + #main are white and
+       read as one connected shape against it. */
+    --sidebar-bg: #0d9488;
     --sidebar-text: #1f3347;
     --header-bg: var(--primary-color);
     --border-color: #d9e7e4;
@@ -468,7 +470,6 @@ body {
     padding-top: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    border-right: 1px solid #e0e0e0;
     z-index: 101;
     transition: width 0.3s ease;
 }
@@ -480,7 +481,7 @@ body {
     width: 100%;
     height: 60px;
     padding: 0 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 body.toggle-sidebar .sidebar-toggle-area {
@@ -488,6 +489,8 @@ body.toggle-sidebar .sidebar-toggle-area {
     padding: 0;
 }
 
+/* Teal-on-teal doesn't read — use a translucent white surface instead of
+   the old teal-tinted-on-light-bg treatment. */
 .sidebar-toggle-area .toggle-sidebar-btn {
     display: flex;
     align-items: center;
@@ -498,16 +501,16 @@ body.toggle-sidebar .sidebar-toggle-area {
     padding: 0;
     border: none;
     border-radius: 10px;
-    background: rgba(13, 148, 136, 0.06);
-    color: #0d9488;
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
     font-size: 20px;
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .sidebar-toggle-area .toggle-sidebar-btn:hover {
-    background: rgba(13, 148, 136, 0.12);
-    color: #0f766e;
+    background: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
 }
 
 .toggle-icon-open,
@@ -561,12 +564,17 @@ body.toggle-sidebar .footer {
     width: calc(100% - 70px);
 }
 
-/* Collapsed sidebar: icon-only nav links */
+/* Collapsed sidebar: icon-only nav links.
+   Same connected shape as expanded mode — flush to the right edge, square
+   right corners — so the active icon still reads as touching the teal
+   #main background instead of floating as an inset pill. */
 body.toggle-sidebar .sidebar-nav .nav-link {
     justify-content: center;
     padding: 12px 0 !important;
-    margin: 2px 6px !important;
+    margin: 2px 0 2px 6px !important;
     border-radius: 8px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
     position: relative;
 }
 
@@ -629,12 +637,22 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
     display: flex !important;
     align-items: center !important;
     padding: 12px 20px !important;
-    margin: 2px 8px !important;
-    color: var(--sidebar-text) !important;
+    /* Right edge reaches the sidebar boundary and the right corners are
+       square on every state (not just .active) — the shape never changes
+       on click, only the background/color/shadow do. Otherwise the inactive
+       rounded-inset shape briefly shows before the "active" class lands,
+       reading as a flicker/jump when it snaps flush. */
+    margin: 2px 0 2px 8px !important;
+    /* NOT var(--sidebar-text) — that variable is the app's shared body text
+       color, reused everywhere outside the sidebar too. Sidebar bg is teal
+       now, so nav links need their own light color regardless of theme. */
+    color: rgba(255, 255, 255, 0.88) !important;
     text-decoration: none !important;
-    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, padding 0.3s ease, margin 0.3s ease !important;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, padding 0.3s ease !important;
     border: 0 !important;
     border-radius: 8px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
     background-color: transparent !important;
     position: relative !important;
     box-shadow: none;
@@ -642,35 +660,35 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
 
 .sidebar-nav .nav-link:not(.active):hover,
 .sidebar-nav .nav-link:not(.active):focus {
-    background-color: #e8f3fc !important;
-    color: var(--sidebar-text) !important;
+    background-color: rgba(255, 255, 255, 0.14) !important;
+    color: #ffffff !important;
     box-shadow: none !important;
 }
 
 .sidebar-nav .nav-link:focus-visible {
-    outline: 2px solid rgba(13, 148, 136, 0.45);
+    outline: 2px solid rgba(255, 255, 255, 0.6);
     outline-offset: 2px;
 }
 
 .sidebar-nav .nav-link.active {
-    background-color: var(--primary-color) !important;
+    /* No special shape here at all — it just inherits the same flush
+       right edge / rounded-left corner every other nav item already has
+       from the base .nav-link rule. White fill + teal text is the only
+       thing that marks it as active. No box-shadow: it wraps all 4 sides,
+       including the flush right edge, painting a visible seam there. */
+    background-color: #ffffff !important;
     background-image: none !important;
-    color: #ffffff !important;
-    border-radius: 8px !important;
-    box-shadow:
-        0 4px 12px rgba(13, 148, 136, 0.24),
-        0 2px 5px rgba(13, 148, 136, 0.14) !important;
+    color: var(--primary-color) !important;
+    box-shadow: none !important;
     font-weight: 600 !important;
 }
 
 .sidebar-nav .nav-link.active:hover,
 .sidebar-nav .nav-link.active:focus {
-    background-color: var(--primary-color) !important;
+    background-color: #ffffff !important;
     background-image: none !important;
-    color: #ffffff !important;
-    box-shadow:
-        0 5px 14px rgba(13, 148, 136, 0.28),
-        0 3px 6px rgba(13, 148, 136, 0.16) !important;
+    color: var(--primary-color) !important;
+    box-shadow: none !important;
 }
 
 .sidebar-nav .nav-link:active:not(.active) {
@@ -680,14 +698,19 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
 
 .sidebar-nav .nav-link.active:active {
     transform: none !important;
-    box-shadow:
-        0 3px 10px rgba(13, 148, 136, 0.22),
-        0 1px 4px rgba(13, 148, 136, 0.12) !important;
+    box-shadow: none !important;
 }
 
+/* Every sidebar link renders with this static "collapsed" class regardless
+   of the actual collapse/expand state (JS only adds "active" alongside it,
+   never removing "collapsed") — so this shorthand was re-rounding the right
+   corners the base .nav-link rule flattens, for every item, every state. */
 .sidebar-nav .nav-link.collapsed {
     border-radius: 8px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
+
 
 .sidebar-nav .nav-link i {
     margin-right: 12px;
@@ -769,6 +792,12 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
 }
 
 /* ========== MAIN CONTENT ========== */
+/* Background matches the sidebar's active nav item (see .sidebar-nav
+   .nav-link.active) so whichever module is highlighted reads as connected
+   to the page behind it. Module cards/content stay white on top of this —
+   only the space around/behind them changes. */
+/* White — matches the active sidebar pill, so the two read as one
+   connected shape against the teal sidebar. */
 #main {
     flex: 1;
     margin-left: 260px;
@@ -778,6 +807,13 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     width: calc(100% - 260px);
     box-sizing: border-box;
     overflow-x: hidden;
+    background: #ffffff;
+}
+
+[data-theme="dark"] #main {
+    /* Dark theme's page background is already this dark-surface tone
+       elsewhere in the app; matches the active pill's dark override below. */
+    background: var(--dark-surface, #16223a);
 }
 
 .pagetitle {
@@ -1395,6 +1431,9 @@ table a:hover {
 }
 
 /* ========== FOOTER ========== */
+/* Normal document flow, not sticky — it should only appear once you've
+   scrolled past all of the module's content, so the #main background is
+   fully visible instead of the footer sitting pinned over it. */
 .footer {
     margin-left: 260px;
     background-color: var(--light-bg);
@@ -1405,9 +1444,6 @@ table a:hover {
     width: calc(100% - 260px);
     box-sizing: border-box;
     transition: margin-left 0.3s ease;
-    position: sticky;
-    bottom: 0;
-    z-index: 50;
 }
 
 .footer span {
@@ -1984,11 +2020,13 @@ table a:hover {
         width: 100% !important;
     }
 
-    /* Reset desktop collapsed styles on mobile so labels show */
+    /* Reset desktop collapsed styles on mobile so labels show.
+       Margin stays flush-right (0) so the connected-to-background look
+       (see .sidebar-nav .nav-link base rule) holds on mobile too. */
     body.toggle-sidebar .sidebar-nav .nav-link {
         justify-content: flex-start;
         padding: 10px 14px !important;
-        margin: 2px 8px !important;
+        margin: 2px 0 2px 8px !important;
         position: static;
     }
     body.toggle-sidebar .sidebar-nav .nav-link i {
@@ -2695,7 +2733,7 @@ table a:hover {
     --bs-dropdown-link-active-bg: #2dd4bf;
     --primary-light: #134e4a;
     --primary-soft: rgba(45, 212, 191, 0.12);
-    --sidebar-bg: #111c2e;
+    --sidebar-bg: #0f766e;
     --sidebar-text: #cbd5e1;
     --border-color: #2f3d52;
     --light-bg: #0b1420;
@@ -2731,9 +2769,6 @@ table a:hover {
     color: #94a3b8 !important;
 }
 
-[data-theme="dark"] #sidebar {
-    border-right: 1px solid var(--border-color);
-}
 
 [data-theme="dark"] .sidebar-nav .nav-link {
     color: #cbd5e1 !important;
@@ -2905,14 +2940,14 @@ table a:hover {
 
 /* ---- Dark mode: fixes for elements that use hardcoded (non-var) colors ---- */
 
-/* Sidebar active item: use a deeper teal fill instead of the bright dark-mode accent,
-   which was too light for white icon/text to read clearly against. */
+/* Sidebar active item: dark-surface fill (matches #main's dark background)
+   with the bright dark-mode accent as text color, instead of white-on-teal. */
 [data-theme="dark"] .sidebar-nav .nav-link.active,
 [data-theme="dark"] .sidebar-nav .nav-link.active:hover,
 [data-theme="dark"] .sidebar-nav .nav-link.active:focus,
 [data-theme="dark"] .sidebar-nav .nav-link.active:active {
-    background-color: #0f766e !important;
-    color: #ffffff !important;
+    background-color: var(--dark-surface, #16223a) !important;
+    color: #2dd4bf !important;
 }
 
 /* Header clock pill */

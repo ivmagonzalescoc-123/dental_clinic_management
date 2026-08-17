@@ -107,7 +107,7 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260719-dark2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260817-sidebar-final" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260719-dark2" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260719-dark2" rel="stylesheet">
