@@ -298,7 +298,6 @@ $csrf_token = security_generate_csrf_token();
                 </div>
             </div>
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="recordCancelBtn">Cancel</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="recordBackBtn" style="display:none;"><i class="bi bi-arrow-left"></i> Back</button>
                 <button type="button" class="btn btn-success btn-sm" id="recordNextBtn">Next <i class="bi bi-arrow-right"></i></button>
                 <button type="button" class="btn btn-success btn-sm" id="submitSecretaryRecordBtn" style="display:none;"><i class="bi bi-check-lg"></i> Create Record</button>
@@ -495,7 +494,6 @@ window.addEventListener('message', function(ev) {
     if (!stepLinks.length) return;
 
     var totalSteps = stepLinks.length;
-    var cancelBtn = document.getElementById('recordCancelBtn');
     var backBtn = document.getElementById('recordBackBtn');
     var nextBtn = document.getElementById('recordNextBtn');
     var createBtn = document.getElementById('submitSecretaryRecordBtn');
@@ -507,7 +505,6 @@ window.addEventListener('message', function(ev) {
     function updateFooterButtons(activeIndex) {
         var isFirst = activeIndex === 1;
         var isLast = activeIndex === totalSteps;
-        cancelBtn.style.display = isFirst ? '' : 'none';
         backBtn.style.display = isFirst ? 'none' : '';
         nextBtn.style.display = isLast ? 'none' : '';
         createBtn.style.display = isLast ? '' : 'none';

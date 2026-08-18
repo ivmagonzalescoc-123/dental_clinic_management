@@ -1,6 +1,6 @@
 /* Modern module UX layer (content area only) */
 #main {
-  --ux-bg: #f4f7fb;
+  --ux-bg: #ffffff;
   --ux-surface: #ffffff;
   --ux-border: #d9e3f0;
   --ux-border-soft: #edf2f8;
@@ -311,7 +311,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 }
 
 #main .form-control.readonly-muted-field {
-  background-color: var(--ux-bg);
+  background-color: #f4f7fb;
   color: var(--ux-muted);
 }
 

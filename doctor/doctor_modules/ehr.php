@@ -255,9 +255,6 @@ if ($sstmt) {
             <div class="modal-body" id="doctorProfileModalBody">
                 <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
             </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
         </div>
     </div>
 </div>

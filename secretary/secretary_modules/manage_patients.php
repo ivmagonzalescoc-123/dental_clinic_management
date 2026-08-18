@@ -211,7 +211,6 @@ function secretary_patient_format_datetime(?string $value): string
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="addPatientForm" class="btn btn-primary">Create Patient</button>
             </div>
         </div>
@@ -363,9 +362,6 @@ function secretary_patient_format_datetime(?string $value): string
                     <input type="text" class="form-control font-monospace" id="tempPasswordValue" readonly autocomplete="off">
                     <button type="button" class="btn btn-outline-primary" id="tempPasswordCopyBtn">Copy</button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
             </div>
         </div>
     </div>

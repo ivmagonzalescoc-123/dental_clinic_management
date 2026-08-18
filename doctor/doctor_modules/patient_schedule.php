@@ -104,7 +104,6 @@ if ($aStmt) {
         <div class="mb-2"><label class="form-label">End (optional)</label><input id="createScheduleEnd" class="form-control" type="datetime-local"/></div>
         <div class="mt-2 text-muted small">You can use <strong>Auto-schedule</strong> to create a schedule based on profiling suggestions.</div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button id="btnAutoSchedule" type="button" class="btn btn-warning">Auto-schedule</button>
         <button id="btnCreateScheduleSave" type="button" class="btn btn-primary">Save</button>
       </div>

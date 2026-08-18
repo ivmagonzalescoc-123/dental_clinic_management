@@ -87,16 +87,6 @@ switch ($role_key) {
 <html lang="en">
 
 <head>
-    <script>
-    (function () {
-        try {
-            var t = localStorage.getItem('dental_theme');
-            if (t === 'dark' || (!t && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-            }
-        } catch (e) {}
-    })();
-    </script>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>Azucena's Dental Clinic</title>
@@ -168,12 +158,6 @@ switch ($role_key) {
 
         <nav class="header-nav">
             <ul class="d-flex align-items-center">
-                <li class="nav-item me-2">
-                    <button type="button" class="theme-toggle-btn">
-                        <i class="bi bi-sun-fill"></i>
-                        <i class="bi bi-moon-stars-fill"></i>
-                    </button>
-                </li>
 
                 <?php include dirname(__DIR__) . '/includes/header_clock.php'; ?>
 
@@ -354,7 +338,6 @@ switch ($role_key) {
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
     <script src="../assets/js/main.js?v=20260715-header2"></script>
-    <script src="../assets/js/theme-toggle.js?v=20260718-dark1"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/doctor-patient-profile.js?v=20260722-1"></script>

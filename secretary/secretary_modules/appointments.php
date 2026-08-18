@@ -856,7 +856,6 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <div id="declineBookingAlert" class="alert alert-danger mt-2" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-danger" id="declineBookingConfirmBtn">
                     <i class="bi bi-x-circle"></i> Cancel Booking
                 </button>
@@ -889,7 +888,6 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <div id="rescheduleBookingAlert" class="alert alert-danger mt-2" style="display:none;"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="rescheduleBookingConfirmBtn">
                     <i class="bi bi-calendar3"></i> Reschedule Booking
                 </button>
@@ -998,9 +996,6 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <div class="dpp-field-value" id="bookingDetailsPhone"></div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -1223,7 +1218,6 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" id="convertBackBtn" class="btn btn-outline-secondary btn-sm" style="display:none;">
                         <i class="bi bi-arrow-left"></i> Back
                     </button>
@@ -2624,7 +2618,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" id="bookSubmitBtn" class="btn btn-success">
                         <i class="bi bi-check-circle"></i> Book Appointment
                     </button>
@@ -2655,7 +2648,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-x-circle"></i> Decline Appointment
                     </button>
@@ -2693,7 +2685,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="assignDoctorConfirmBtn">
                     <i class="bi bi-check2-square"></i> Confirm Appointment
                 </button>
@@ -2717,9 +2708,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     </div>
                     Loading medical history...
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -2786,9 +2774,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
                     <div id="apptDetailsServicesList"></div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -3684,7 +3669,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button id="rescheduleSaveBtnSec" type="button" class="btn btn-primary">Save</button>
             </div>
         </div>

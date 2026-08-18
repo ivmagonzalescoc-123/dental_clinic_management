@@ -54,26 +54,101 @@
   }
 
   /**
-   * Header clock — updates time and icon every second
+   * Header clock — updates the digital display (no seconds) and, when the
+   * analog popup is open, its clock hands, once per second.
    */
   function updateHeaderClock() {
     var display = select('#headerClockDisplay')
     var icon = select('.header-clock__icon')
-    if (!display) return
     var now = new Date()
     var h = now.getHours()
     var m = now.getMinutes()
     var s = now.getSeconds()
     var ampm = h >= 12 ? 'PM' : 'AM'
     var h12 = h % 12 || 12
-    display.textContent = h12 + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + ' ' + ampm
+    if (display) {
+      display.textContent = h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm
+    }
     if (icon) {
       var isNight = h < 6 || h >= 18
       icon.className = 'header-clock__icon bi ' + (isNight ? 'bi-moon-stars' : 'bi-sun')
     }
+
+    var hourHand = select('#analogClockHour')
+    var minuteHand = select('#analogClockMinute')
+    var secondHand = select('#analogClockSecond')
+    if (hourHand && minuteHand && secondHand) {
+      var hourDeg = ((h % 12) + m / 60) * 30
+      var minuteDeg = (m + s / 60) * 6
+      var secondDeg = s * 6
+      hourHand.style.transform = 'rotate(' + hourDeg + 'deg)'
+      minuteHand.style.transform = 'rotate(' + minuteDeg + 'deg)'
+      secondHand.style.transform = 'rotate(' + secondDeg + 'deg)'
+    }
   }
   updateHeaderClock()
   setInterval(updateHeaderClock, 1000)
+
+  /**
+   * Analog clock popup — opens on clicking the header clock, closes on the
+   * X button or on clicking outside the clock face.
+   */
+  function initAnalogClockPopup() {
+    var trigger = select('#headerClockTrigger')
+    var overlay = select('#analogClockOverlay')
+    var closeBtn = select('#analogClockClose')
+    if (!trigger || !overlay || !closeBtn) return
+
+    // #header uses backdrop-filter, which makes it a containing block for
+    // fixed-position descendants — without this, "inset:0" would center the
+    // popup inside the 60px header bar instead of the actual viewport.
+    // Re-parent to <body> so position:fixed is relative to the viewport.
+    document.body.appendChild(overlay)
+
+    // Second/minute tick marks around the rim — 60 dashes, every 5th one
+    // (the hour positions) drawn longer/darker.
+    var face = select('.analog-clock-face')
+    if (face && !face.querySelector('.analog-clock-tick')) {
+      for (var i = 0; i < 60; i++) {
+        var tick = document.createElement('div')
+        tick.className = 'analog-clock-tick' + (i % 5 === 0 ? ' analog-clock-tick--major' : '')
+        tick.style.transform = 'rotate(' + (i * 6) + 'deg)'
+        face.appendChild(tick)
+      }
+    }
+
+    function openPopup() {
+      overlay.classList.add('show')
+      overlay.setAttribute('aria-hidden', 'false')
+      trigger.setAttribute('aria-expanded', 'true')
+      updateHeaderClock()
+    }
+
+    function closePopup() {
+      overlay.classList.remove('show')
+      overlay.setAttribute('aria-hidden', 'true')
+      trigger.setAttribute('aria-expanded', 'false')
+    }
+
+    trigger.addEventListener('click', function () {
+      if (overlay.classList.contains('show')) {
+        closePopup()
+      } else {
+        openPopup()
+      }
+    })
+
+    closeBtn.addEventListener('click', closePopup)
+
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) closePopup()
+    })
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && overlay.classList.contains('show')) closePopup()
+    })
+  }
+  initAnalogClockPopup()
 
   function convertInlineAlertsToToasts(scope) {
     const root = scope instanceof HTMLElement ? scope : document

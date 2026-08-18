@@ -738,9 +738,6 @@ if ($stmt) {
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -798,9 +795,6 @@ if ($stmt) {
                     <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
                     <div id="docApptDetailsServicesList"></div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -1765,7 +1759,6 @@ async function openHistoryModal(appointmentId) {
                 <div class="mb-2"><label class="form-label">End (optional)</label><input id="rescheduleEnd" class="form-control" type="datetime-local"/></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button id="rescheduleSaveBtn" type="button" class="btn btn-primary">Save</button>
             </div>
         </div>
@@ -1927,7 +1920,6 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="submitFinishAppointmentBtn">
                     <i class="fas fa-check"></i> Finish Appointment
                 </button>

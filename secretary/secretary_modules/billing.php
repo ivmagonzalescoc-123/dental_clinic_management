@@ -474,7 +474,6 @@ if (!$hasAnyData) {
                 <!-- Invoice will be generated here -->
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="invoiceExportPdfBtn" onclick="exportInvoicePdf()">
                     <i class="bi bi-file-earmark-pdf"></i> Export to PDF
                 </button>
@@ -523,7 +522,6 @@ if (!$hasAnyData) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-success" id="savePaymentBtn">Save Payment</button>
             </div>
         </div>

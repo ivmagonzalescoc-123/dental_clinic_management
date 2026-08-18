@@ -401,47 +401,22 @@ foreach ($roles as $roleRow) {
                     <table class="table table-hover datatable" data-skip-table-search="1">
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Name</th>
-                                <th>Email</th>
                                 <th>Role</th>
-                                <th>Work Type</th>
-                                <th>Specialization</th>
-                                <th>Phone</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($users as $user): ?>
+                                <?php $isDoctor = ((int)($user['role_id'] ?? 0) === (int)$doctorRoleId); ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($user['user_id']); ?></td>
                                     <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($user['email']); ?></td>
                                     <td>
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($user['role_name'] ?? 'N/A'); ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <?php
-                                            $isDoctor = ((int)($user['role_id'] ?? 0) === (int)$doctorRoleId);
-                                            $workType = ((string)($user['work_type'] ?? 'regular') === 'part_time') ? 'Part-time' : 'Regular';
-                                        ?>
-                                        <?php if ($isDoctor): ?>
-                                            <span class="badge bg-<?php echo $workType === 'Part-time' ? 'warning text-dark' : 'success'; ?>"><?php echo htmlspecialchars($workType); ?></span>
-                                        <?php else: ?>
-                                            <span class="badge bg-success">Regular</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?php if ($isDoctor): ?>
-                                            <?php echo htmlspecialchars($user['specialization_name'] ?? '—'); ?>
-                                        <?php else: ?>
-                                            <span class="text-muted">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($user['phone_number']); ?></td>
                                     <td>
                                         <?php if ($user['is_active']): ?>
                                             <span class="badge bg-success">Active</span>
@@ -450,9 +425,9 @@ foreach ($roles as $roleRow) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" 
-                                                data-bs-target="#editUserModal" onclick="editUser(<?php echo htmlspecialchars(json_encode($user)); ?>)">
-                                            <i class="bi bi-pencil"></i>
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                data-bs-target="#viewUserModal" onclick="viewUser(<?php echo htmlspecialchars(json_encode($user)); ?>)" title="View Details">
+                                            <i class="bi bi-eye"></i>
                                         </button>
                                         <form method="POST" style="display:inline;" data-confirm="Generate a new temporary password for this account?" data-confirm-title="Reset Password" data-confirm-ok="Generate">
                                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
@@ -641,7 +616,6 @@ foreach ($roles as $roleRow) {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">Add User</button>
                 </div>
             </form>
@@ -741,10 +715,74 @@ foreach ($roles as $roleRow) {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">Update User</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========== VIEW USER MODAL (read-only details) ========== -->
+<div class="modal fade" id="viewUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-badge"></i> User Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <h5 class="mb-0" id="view_user_name">—</h5>
+                    <span id="view_user_status_badge"></span>
+                </div>
+                <div class="row row-cols-2 g-3">
+                    <div>
+                        <div class="small text-muted">Role</div>
+                        <div class="fw-semibold" id="view_user_role">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Work Type</div>
+                        <div class="fw-semibold" id="view_user_work_type">—</div>
+                    </div>
+                    <div id="view_user_specialization_wrap">
+                        <div class="small text-muted">Specialization</div>
+                        <div class="fw-semibold" id="view_user_specialization">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Email</div>
+                        <div class="fw-semibold" id="view_user_email">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Phone</div>
+                        <div class="fw-semibold" id="view_user_phone">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Date of Birth</div>
+                        <div class="fw-semibold" id="view_user_dob">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Gender</div>
+                        <div class="fw-semibold" id="view_user_gender">—</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted">Address</div>
+                        <div class="fw-semibold" id="view_user_address">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Account Created</div>
+                        <div class="fw-semibold" id="view_user_created">—</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted">Last Login</div>
+                        <div class="fw-semibold" id="view_user_last_login">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-info" id="view_user_edit_btn" data-bs-toggle="modal" data-bs-target="#editUserModal">
+                    <i class="bi bi-pencil"></i> Edit
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -809,7 +847,6 @@ foreach ($roles as $roleRow) {
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="addPatientForm" class="btn btn-primary">Create Patient</button>
             </div>
         </div>
@@ -958,6 +995,36 @@ function editUser(user) {
     toggleDoctorWorkTypeFields();
 }
 
+// View User Function — populates the read-only details modal
+let lastViewedUser = null;
+function viewUser(user) {
+    lastViewedUser = user;
+    const doctorRoleId = <?php echo (int)$doctorRoleId; ?>;
+    const isDoctor = String(user.role_id) === String(doctorRoleId);
+
+    document.getElementById('view_user_name').textContent = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ');
+    document.getElementById('view_user_status_badge').innerHTML = (Number(user.is_active) === 1)
+        ? '<span class="badge bg-success">Active</span>'
+        : '<span class="badge bg-warning">Inactive</span>';
+    document.getElementById('view_user_role').textContent = user.role_name || 'N/A';
+    document.getElementById('view_user_work_type').textContent = isDoctor
+        ? (user.work_type === 'part_time' ? 'Part-time' : 'Regular')
+        : 'Regular';
+    document.getElementById('view_user_specialization_wrap').style.display = isDoctor ? '' : 'none';
+    document.getElementById('view_user_specialization').textContent = user.specialization_name || '—';
+    document.getElementById('view_user_email').textContent = user.email || '—';
+    document.getElementById('view_user_phone').textContent = user.phone_number || '—';
+    document.getElementById('view_user_dob').textContent = user.date_of_birth || '—';
+    document.getElementById('view_user_gender').textContent = user.gender || '—';
+    document.getElementById('view_user_address').textContent = user.address || '—';
+    document.getElementById('view_user_created').textContent = formatPatientDateTime(user.created_at);
+    document.getElementById('view_user_last_login').textContent = formatPatientDateTime(user.last_login_at);
+}
+
+document.getElementById('view_user_edit_btn')?.addEventListener('click', function () {
+    if (lastViewedUser) editUser(lastViewedUser);
+});
+
 function toggleDoctorWorkTypeFields() {
     const doctorRoleId = <?php echo (int)$doctorRoleId; ?>;
     const addRole = document.getElementById('add_role_id');
@@ -1014,9 +1081,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input type="text" class="form-control font-monospace" id="tempPasswordValue" readonly autocomplete="off">
                     <button type="button" class="btn btn-outline-primary" id="tempPasswordCopyBtn">Copy</button>
                 </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
-            </div>
         </div>
     </div>
 </div>

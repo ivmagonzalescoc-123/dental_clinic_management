@@ -86,7 +86,6 @@ contact_messages_ensure_table($conn);
                 </dl>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-outline-primary" id="contactModalMarkReadBtn">Mark as Read</button>
                 <button type="button" class="btn btn-outline-danger" id="contactModalArchiveBtn">Archive</button>
             </div>
