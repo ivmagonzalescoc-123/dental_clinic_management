@@ -635,23 +635,31 @@ foreach ($roles as $roleRow) {
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="user_id" id="edit_user_id">
                 <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
+                    <div class="row mb-2">
+                        <div class="col-md-4">
                             <label class="form-label">First Name</label>
                             <input type="text" class="form-control" name="first_name" id="edit_first_name" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" class="form-control" name="middle_name" id="edit_middle_name">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Last Name</label>
                             <input type="text" class="form-control" name="last_name" id="edit_last_name" required>
                         </div>
                     </div>
-                    <div class="row mb-3">
+                    <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">Email</label>
                             <input type="email" class="form-control" name="email" id="edit_email" required>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone_number" id="edit_phone_number">
+                        </div>
                     </div>
-                    <div class="row mb-3">
+                    <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">Role</label>
                             <select class="form-control" name="role_id" id="edit_role_id" required>
@@ -663,12 +671,17 @@ foreach ($roles as $roleRow) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-control" name="phone_number" id="edit_phone_number">
+                        <div class="col-md-6" id="edit_specialization_wrap" style="display:none;">
+                            <label class="form-label">Specialization</label>
+                            <select class="form-control" name="specialization_id" id="edit_specialization_id">
+                                <option value="">Select specialization</option>
+                                <?php foreach ($specializations as $spec): ?>
+                                    <option value="<?php echo (int)$spec['specialization_id']; ?>"><?php echo htmlspecialchars($spec['specialization_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
-                    <div class="row mb-3">
+                    <div class="row mb-2">
                         <div class="col-md-6">
                             <label class="form-label">Date of Birth</label>
                             <input type="date" class="form-control" name="date_of_birth" id="edit_date_of_birth">
@@ -683,35 +696,18 @@ foreach ($roles as $roleRow) {
                             </select>
                         </div>
                     </div>
-                    <div class="row mb-3" id="edit_work_type_wrap" style="display:none;">
-                        <div class="col-md-6">
-                            <label class="form-label">Doctor Work Type</label>
-                            <select class="form-control" name="work_type" id="edit_work_type">
-                                <option value="regular">Regular</option>
-                                <option value="part_time">Part-time</option>
-                            </select>
-                            <small class="text-muted">Part-time doctors can be deployed on specific weekdays in Admin Doctor Deployment.</small>
+                    <div class="row mb-2">
+                        <div class="col-md-8">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-control" name="address" id="edit_address">
                         </div>
-                        <div class="col-md-6" id="edit_specialization_wrap" style="display:none;">
-                            <label class="form-label">Doctor Specialization</label>
-                            <select class="form-control" name="specialization_id" id="edit_specialization_id">
-                                <option value="">Select specialization</option>
-                                <?php foreach ($specializations as $spec): ?>
-                                    <option value="<?php echo (int)$spec['specialization_id']; ?>"><?php echo htmlspecialchars($spec['specialization_name']); ?></option>
-                                <?php endforeach; ?>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select class="form-control" name="is_active" id="edit_is_active">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Address</label>
-                        <input type="text" class="form-control" name="address" id="edit_address">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Status</label>
-                        <select class="form-control" name="is_active" id="edit_is_active">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -982,6 +978,7 @@ foreach ($roles as $roleRow) {
 function editUser(user) {
     document.getElementById('edit_user_id').value = user.user_id;
     document.getElementById('edit_first_name').value = user.first_name;
+    document.getElementById('edit_middle_name').value = user.middle_name || '';
     document.getElementById('edit_last_name').value = user.last_name;
     document.getElementById('edit_email').value = user.email;
     document.getElementById('edit_phone_number').value = user.phone_number;
@@ -990,7 +987,6 @@ function editUser(user) {
     document.getElementById('edit_address').value = user.address;
     document.getElementById('edit_is_active').value = user.is_active;
     document.getElementById('edit_role_id').value = user.role_id;
-    document.getElementById('edit_work_type').value = (user.work_type === 'part_time') ? 'part_time' : 'regular';
     document.getElementById('edit_specialization_id').value = user.specialization_id ? String(user.specialization_id) : '';
     toggleDoctorWorkTypeFields();
 }
@@ -1030,11 +1026,9 @@ function toggleDoctorWorkTypeFields() {
     const addRole = document.getElementById('add_role_id');
     const editRole = document.getElementById('edit_role_id');
     const addWrap = document.getElementById('add_work_type_wrap');
-    const editWrap = document.getElementById('edit_work_type_wrap');
     const addSpecWrap = document.getElementById('add_specialization_wrap');
     const editSpecWrap = document.getElementById('edit_specialization_wrap');
     const addWorkType = document.getElementById('add_work_type');
-    const editWorkType = document.getElementById('edit_work_type');
     const addSpec = document.getElementById('add_specialization_id');
     const editSpec = document.getElementById('edit_specialization_id');
 
@@ -1046,12 +1040,10 @@ function toggleDoctorWorkTypeFields() {
         if (!isDoctor && addWorkType) addWorkType.value = 'regular';
         if (!isDoctor && addSpec) addSpec.value = '';
     }
-    if (editRole && editWrap) {
+    if (editRole && editSpecWrap) {
         const isDoctor = (String(editRole.value) === String(doctorRoleId));
-        editWrap.style.display = isDoctor ? '' : 'none';
-        if (editSpecWrap) editSpecWrap.style.display = isDoctor ? '' : 'none';
+        editSpecWrap.style.display = isDoctor ? '' : 'none';
         if (editSpec) editSpec.required = isDoctor;
-        if (!isDoctor && editWorkType) editWorkType.value = 'regular';
         if (!isDoctor && editSpec) editSpec.value = '';
     }
 }

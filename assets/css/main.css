@@ -41,6 +41,21 @@
     --info: #0d9488;
     --radius-card: 14px;
     --font-body: 'Inter', 'Segoe UI', Roboto, sans-serif;
+
+    /* Type scale — shared by every portal (admin/doctor/secretary/patient
+       all load this file). Use these tokens instead of one-off font-size
+       values so headings, labels, and meta text stay consistent by name,
+       not by coincidence. */
+    --fs-2xs: 0.68rem;  /* tiny meta text, badges */
+    --fs-xs: 0.75rem;   /* small helper/hint text */
+    --fs-sm: 0.85rem;   /* secondary text, compact buttons */
+    --fs-base: 1rem;    /* body text (Bootstrap default) */
+    --fs-h6: 0.92rem;
+    --fs-h5: 1.02rem;   /* also .card-title */
+    --fs-h4: 1.15rem;
+    --fs-h3: 1.3rem;
+    --fs-h2: 1.5rem;
+    --fs-h1: 1.75rem;
 }
 
 body {
@@ -290,7 +305,7 @@ body {
     background: #f0f7ff;
     border: 1px solid rgba(13, 148, 136, 0.1);
     color: #1a365d;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
@@ -607,7 +622,7 @@ body {
 .header-nav .nav-profile .user-display-name {
     color: #0d9488;
     font-weight: 600;
-    font-size: 0.92rem;
+    font-size: var(--fs-h6);
     line-height: 1;
     white-space: nowrap;
 }
@@ -1433,7 +1448,7 @@ a.text-info,
 }
 .profiling-field-label {
     font-weight: 700;
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     color: #1e293b;
     line-height: 1.2;
 }
@@ -1925,7 +1940,7 @@ table a:hover {
 }
 
 .profile-menu__role {
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     opacity: 0.85;
     text-transform: capitalize;
 }
@@ -2092,7 +2107,7 @@ table a:hover {
 }
 
 .notification-dropdown-item__time {
-    font-size: 0.68rem;
+    font-size: var(--fs-2xs);
     color: #b0bec5;
     margin-top: 3px;
 }
@@ -2292,7 +2307,7 @@ table a:hover {
     color: #cbd5e1;
     padding: 3rem 0 1rem 0;
     text-align: left;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     margin-top: 3rem;
     border-top: 1px solid #334155;
 }
@@ -2331,7 +2346,7 @@ table a:hover {
 .footer-grid p {
     text-align: left !important;
     margin: 4px 0;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     line-height: 1.4;
 }
 
@@ -2449,7 +2464,7 @@ table a:hover {
     gap: 6px;
     background: rgba(15, 35, 60, 0.45);
     color: #fff;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     font-weight: 600;
     opacity: 0;
     transition: opacity 0.2s ease;

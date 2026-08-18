@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $user_id = (int)($_POST['user_id'] ?? 0);
     $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
+    $middle_name_raw = security_clean_string($_POST['middle_name'] ?? '', 100);
     $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
     $email = security_clean_string($_POST['email'] ?? '', 150);
     $role_id = (int)($_POST['role_id'] ?? 0);
@@ -28,9 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date_of_birth_raw = security_clean_string($_POST['date_of_birth'] ?? '', 20);
     $gender_raw = security_clean_string($_POST['gender'] ?? '', 20);
     $address_raw = security_clean_string($_POST['address'] ?? '', 500);
-    $work_type_raw = security_clean_string($_POST['work_type'] ?? 'regular', 20);
     $specialization_id = (int)($_POST['specialization_id'] ?? 0);
 
+    $middle_name = $middle_name_raw !== '' ? $middle_name_raw : 'N/A';
     $phone_number = $phone_number_raw !== '' ? $phone_number_raw : null;
     $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
     $gender = $gender_raw !== '' ? $gender_raw : null;
@@ -48,7 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $is_doctor_role = ($doctor_role_id > 0 && $role_id === $doctor_role_id);
-    $work_type = $is_doctor_role && $work_type_raw === 'part_time' ? 'part_time' : 'regular';
+    // work_type is intentionally not touched here — it's managed on the
+    // Doctor Deployment page. Leaving it out of the UPDATE keeps a
+    // part-time doctor's schedule setting intact when their profile is edited.
     $is_active = (int)($_POST['is_active'] ?? 1);
 
     if (empty($user_id) || empty($first_name) || empty($last_name) || empty($email) || empty($role_id)) {
@@ -103,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $check_stmt->close();
 
-    $sql = 'UPDATE users SET first_name=?, last_name=?, email=?, role_id=?, work_type=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?';
+    $sql = 'UPDATE users SET first_name=?, middle_name=?, last_name=?, email=?, role_id=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         error_log('update_user.php: prepare failed: ' . $conn->error);
@@ -113,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $stmt->bind_param('sssisssssii', $first_name, $last_name, $email, $role_id, $work_type, $phone_number, $date_of_birth, $gender, $address, $is_active, $user_id);
+    $stmt->bind_param('ssssissssii', $first_name, $middle_name, $last_name, $email, $role_id, $phone_number, $date_of_birth, $gender, $address, $is_active, $user_id);
 
     $conn->begin_transaction();
     try {
