@@ -357,6 +357,7 @@
       return false
     }
 
+    var pageLoadingSafetyTimer = null
     function setPageLoading(active) {
       var overlay = document.getElementById('globalLoadingOverlay')
       if (!overlay) {
@@ -368,6 +369,14 @@
         document.body.appendChild(overlay)
       }
       overlay.style.display = active ? 'flex' : 'none'
+
+      // Safety net: if the fetch this was shown for stalls (dropped
+      // connection, unresponsive server) and never reaches its .then/.catch,
+      // don't leave the spinner on screen forever.
+      if (pageLoadingSafetyTimer) clearTimeout(pageLoadingSafetyTimer)
+      if (active) {
+        pageLoadingSafetyTimer = setTimeout(function () { overlay.style.display = 'none' }, 8000)
+      }
     }
 
     function cleanupModalState() {
@@ -815,23 +824,28 @@
   const datatables = select('.datatable:not([data-skip-datatable])', true)
   datatables.forEach(datatable => {
     if (datatable.dataset.skipDatatable === '1') return
-    new simpleDatatables.DataTable(datatable, {
-      perPageSelect: [5, 10, 15, ["All", -1]],
-      columns: [{
-          select: 2,
-          sortSequence: ["desc", "asc"]
-        },
-        {
-          select: 3,
-          sortSequence: ["desc"]
-        },
-        {
-          select: 4,
-          cellClass: "green",
-          headerClass: "red"
-        }
-      ]
-    })
+    try {
+      // Column-specific options only make sense if the table actually has
+      // that many columns — a table with fewer columns (e.g. a trimmed-down
+      // admin table) would otherwise make simpleDatatables throw on an
+      // out-of-range column index. Since this runs at top-level script
+      // execution, an uncaught throw here previously killed the rest of
+      // main.js for the whole page (including unrelated things like the
+      // loading-overlay cleanup) — so this is now both defensive about the
+      // column count AND wrapped in try/catch as a second line of defense.
+      const headerCellCount = datatable.querySelectorAll('thead th').length
+      const columns = []
+      if (headerCellCount > 2) columns.push({ select: 2, sortSequence: ["desc", "asc"] })
+      if (headerCellCount > 3) columns.push({ select: 3, sortSequence: ["desc"] })
+      if (headerCellCount > 4) columns.push({ select: 4, cellClass: "green", headerClass: "red" })
+
+      new simpleDatatables.DataTable(datatable, {
+        perPageSelect: [5, 10, 15, ["All", -1]],
+        columns: columns
+      })
+    } catch (e) {
+      console.error('DataTable init failed for', datatable, e)
+    }
   })
   removeDuplicateSearchToolbarsNearDatatable()
 
@@ -1475,18 +1489,31 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    initPortalHeaderSearch();
-    initNotificationDropdown();
-    // Remove global loading overlay when page is ready (with minimum display time)
+  function removeGlobalLoadingOverlay() {
     var overlay = document.getElementById('globalLoadingOverlay');
-    if (overlay) {
-      var loadTime = Date.now() - (window.__pageLoadStart || Date.now());
-      var minDisplay = 300; // minimum 300ms display
-      var remaining = Math.max(0, minDisplay - loadTime);
-      setTimeout(function() { overlay.remove(); }, remaining);
-    }
+    if (!overlay) return;
+    var loadTime = Date.now() - (window.__pageLoadStart || Date.now());
+    var minDisplay = 300; // minimum 300ms display
+    var remaining = Math.max(0, minDisplay - loadTime);
+    setTimeout(function() {
+      if (overlay && overlay.parentNode) overlay.remove();
+    }, remaining);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Removed first and unconditionally — if initPortalHeaderSearch() or
+    // initNotificationDropdown() below throws, this must still have already
+    // run, otherwise the loading spinner is stuck on screen forever.
+    removeGlobalLoadingOverlay();
+    try { initPortalHeaderSearch(); } catch (e) { console.error(e); }
+    try { initNotificationDropdown(); } catch (e) { console.error(e); }
   });
+
+  // Safety net: something upstream of DOMContentLoaded firing cleanly (a
+  // parse error earlier in this file, a script that never finishes, etc.)
+  // must never leave the overlay on screen indefinitely.
+  window.addEventListener('load', removeGlobalLoadingOverlay);
+  setTimeout(removeGlobalLoadingOverlay, 4000);
   // start polling notifications every 30s
   setInterval(fetchNotifications, 30000);
   // update displayed notification times every 5s

@@ -537,11 +537,15 @@ foreach ($roles as $roleRow) {
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <div class="modal-body">
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label class="form-label">First Name</label>
                             <input type="text" class="form-control" id="add_first_name" name="first_name" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <label class="form-label">Middle Name</label>
+                            <input type="text" class="form-control" id="add_middle_name" name="middle_name">
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Last Name</label>
                             <input type="text" class="form-control" id="add_last_name" name="last_name" required>
                         </div>

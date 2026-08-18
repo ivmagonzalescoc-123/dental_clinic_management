@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
+    $middle_name_raw = security_clean_string($_POST['middle_name'] ?? '', 100);
     $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
     $email = security_clean_string($_POST['email'] ?? '', 150);
     $role_id = (int)($_POST['role_id'] ?? 0);
@@ -27,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $work_type_raw = security_clean_string($_POST['work_type'] ?? 'regular', 20);
     $specialization_id = (int)($_POST['specialization_id'] ?? 0);
 
+    $middle_name = $middle_name_raw !== '' ? $middle_name_raw : 'N/A';
     $phone_number = $phone_number_raw !== '' ? $phone_number_raw : null;
     $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
     $gender = $gender_raw !== '' ? $gender_raw : null;
@@ -107,8 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $passwordHash = security_hash_password($defaultPassword);
 
     // Insert new user
-    $sql = "INSERT INTO users (first_name, last_name, email, password_hash, role_id, work_type, phone_number, date_of_birth, gender, address, is_active) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+    $sql = "INSERT INTO users (first_name, middle_name, last_name, email, password_hash, role_id, work_type, phone_number, date_of_birth, gender, address, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -119,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $stmt->bind_param("ssssisssss", $first_name, $last_name, $email, $passwordHash, $role_id, $work_type, $phone_number, $date_of_birth, $gender, $address);
+    $stmt->bind_param("sssssisssss", $first_name, $middle_name, $last_name, $email, $passwordHash, $role_id, $work_type, $phone_number, $date_of_birth, $gender, $address);
 
     $conn->begin_transaction();
     try {

@@ -271,7 +271,7 @@ switch ($role_key) {
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
-    <script src="../assets/js/main.js?v=20260715-header2"></script>
+    <script src="../assets/js/main.js?v=20260818-loaderfix1"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/session-idle.js"></script>
     <script src="../assets/js/appointment-service-manager.js?v=20260718-fix1"></script>
