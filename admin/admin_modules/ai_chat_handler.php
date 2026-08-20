@@ -215,13 +215,17 @@ clinical_records(record_id, appointment_id, doctor_id, patient_id, status[in_pro
 SCHEMA;
 
 $payload = [
-    'model'    => 'llama-3.3-70b-versatile',
+    'model'    => 'openai/gpt-oss-120b',
     'messages' => [
         ['role' => 'system', 'content' => $systemPrompt . "\n\n" . $schema],
         ['role' => 'user',   'content' => $userMessage],
     ],
     'temperature' => 0.05,
     'max_tokens'  => 600,
+    // gpt-oss models spend tokens on a hidden reasoning pass before the visible
+    // answer; without capping it, short max_tokens budgets can be fully consumed
+    // by reasoning and return empty content. 'low' keeps that overhead small.
+    'reasoning_effort' => 'low',
 ];
 
 $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
@@ -336,13 +340,14 @@ if (count($rows) > 0) {
     $interpretPrompt = "You are a clinic analytics assistant. The user asked a question and here is the data from the database.\n\nUSER QUESTION: {$userMessage}\nQUERY RESULTS (JSON): {$dataJson}\n\nTASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured — give the real answer with the values.\n\nRULES:\n- Use the actual values from the results (counts, names, amounts, etc.)\n- Use PHP peso sign for currency\n- Be conversational but factual\n- If results are empty, say No data found for that period.\n- If there is only one row with one value, state it directly\n- For lists/rankings, mention the top results by name\n- Keep it under 3 sentences";
 
     $interpretPayload = [
-        'model' => 'llama-3.3-70b-versatile',
+        'model' => 'openai/gpt-oss-120b',
         'messages' => [
             ['role' => 'system', 'content' => 'You are a friendly dental clinic analytics assistant. Answer with actual data values in natural sentences.'],
             ['role' => 'user',   'content' => $interpretPrompt],
         ],
         'temperature' => 0.3,
         'max_tokens'  => 300,
+        'reasoning_effort' => 'low',
     ];
 
     $ch2 = curl_init('https://api.groq.com/openai/v1/chat/completions');

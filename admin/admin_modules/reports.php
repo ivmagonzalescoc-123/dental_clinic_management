@@ -732,11 +732,6 @@ $reportNavQuery = array_merge(
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="dental-chip"><?php echo htmlspecialchars($periodLabel); ?></span>
-            <?php if ($reportType === 'sales'): ?>
-            <a href="<?php echo htmlspecialchars($birExportUrl); ?>" download class="btn btn-sm btn-success clinic-report-no-print">
-                <i class="bi bi-download"></i> Export BIR CSV
-            </a>
-            <?php endif; ?>
             <button type="button" class="btn btn-sm btn-secondary clinic-report-no-print clinic-report-print-btn" onclick="window.print()">
                 <i class="bi bi-printer"></i> Print
             </button>

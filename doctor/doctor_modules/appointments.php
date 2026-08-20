@@ -649,7 +649,7 @@ if ($stmt) {
                                     <div class="col-md-6">
                                         <div class="hist-field"><span class="hist-label">Appointment Date</span><span id="histApptDate" class="hist-value"></span></div>
                                     </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-6" id="histFollowUpWrap">
                                         <div class="hist-field"><span class="hist-label">Follow-up Date</span><span id="histFollowUpDate" class="hist-value badge bg-info text-dark"></span></div>
                                     </div>
                                 </div>
@@ -1674,10 +1674,15 @@ async function openHistoryModal(appointmentId) {
             presBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No prescriptions</td></tr>';
         }
 
-        // populate follow-up date (secretary sets this when creating the record)
-        document.getElementById('histFollowUpDate').textContent = isDoctorSessionOnly
-            ? 'Not set yet'
-            : (rec.follow_up_date || 'None');
+        // populate follow-up date (secretary sets this when creating the record) —
+        // hide the whole field instead of showing a placeholder when no date was set
+        const histFollowUpWrap = document.getElementById('histFollowUpWrap');
+        if (!isDoctorSessionOnly && rec.follow_up_date) {
+            document.getElementById('histFollowUpDate').textContent = rec.follow_up_date;
+            histFollowUpWrap.style.display = '';
+        } else {
+            histFollowUpWrap.style.display = 'none';
+        }
 
         // services availed for this appointment
         populateServicesAvailedList(document.getElementById('histServices'), j.services_availed || []);

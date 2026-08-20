@@ -180,13 +180,17 @@ SCHEMA;
 
 // ── STEP 1: Generate SQL via AI ──
 $payload = [
-    'model' => 'llama-3.3-70b-versatile',
+    'model' => 'openai/gpt-oss-120b',
     'messages' => [
         ['role' => 'system', 'content' => $systemPrompt . "\n\n" . $schema],
         ['role' => 'user',   'content' => $userMessage],
     ],
     'temperature' => 0.05,
     'max_tokens'  => 600,
+    // gpt-oss models spend tokens on a hidden reasoning pass before the visible
+    // answer; without capping it, short max_tokens budgets can be fully consumed
+    // by reasoning and return empty content. 'low' keeps that overhead small.
+    'reasoning_effort' => 'low',
 ];
 
 $ch = curl_init('https://api.groq.com/openai/v1/chat/completions');
@@ -317,13 +321,14 @@ RULES:
 PROMPT;
 
     $interpretPayload = [
-        'model' => 'llama-3.3-70b-versatile',
+        'model' => 'openai/gpt-oss-120b',
         'messages' => [
             ['role' => 'system', 'content' => 'You are a friendly dental clinic analytics assistant. Answer with actual data values in natural sentences.'],
             ['role' => 'user',   'content' => $interpretPrompt],
         ],
         'temperature' => 0.3,
         'max_tokens'  => 300,
+        'reasoning_effort' => 'low',
     ];
 
     $ch2 = curl_init('https://api.groq.com/openai/v1/chat/completions');

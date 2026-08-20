@@ -248,6 +248,7 @@ $csrf_token = security_generate_csrf_token();
                                 </div>
 
                                 <div class="p-2 bg-light border rounded mt-2 mb-2" id="billingTotalsSummary">
+                                    <div class="d-flex justify-content-between small text-muted" id="billingConsultationFeeRow" style="display:none;"><span>Consultation Fee <em>(no services selected)</em></span><span id="billingConsultationFeeDisplay">₱0.00</span></div>
                                     <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
                                     <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
                                     <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
@@ -480,6 +481,8 @@ window.secretaryOdontogramData = {};
 window.SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
 window.BILLING_SENIOR_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_senior_discount_percent()); ?>;
 window.BILLING_PWD_DISCOUNT_PERCENT = <?php echo json_encode((float) billing_pwd_discount_percent()); ?>;
+// Auto-applied when no services/charges are added (see create_secretary_record.php)
+window.BILLING_CONSULTATION_FEE = <?php echo json_encode((float) get_clinical_setting($conn, 'consultation_fee', 0)); ?>;
 
 window.addEventListener('message', function(ev) {
     if (ev.data && ev.data.type === 'odontogram_update' && ev.data.toothState) {
@@ -948,12 +951,20 @@ function formatBillingAmount(amount) {
 
 function getBillingSubtotal() {
     let subtotal = 0;
+    let hasLineItems = false;
     document.querySelectorAll('#billingServicesBody tr[data-service-id]').forEach(tr => {
         subtotal += parseFloat(tr.querySelector('.billing-service-amount')?.value || '0') || 0;
+        hasLineItems = true;
     });
     document.querySelectorAll('#billingChargesBody tr').forEach(tr => {
         subtotal += parseFloat(tr.querySelector('.billing-charge-amt')?.value || '0') || 0;
+        hasLineItems = true;
     });
+    // Mirrors create_secretary_record.php: when nothing is added, the server auto-applies
+    // the clinic's default consultation fee, so reflect that here before submission too.
+    if (!hasLineItems && window.BILLING_CONSULTATION_FEE > 0) {
+        subtotal += window.BILLING_CONSULTATION_FEE;
+    }
     return Math.max(0, subtotal);
 }
 
@@ -985,6 +996,18 @@ function updateBillingTotals() {
     const discountDisplay = document.getElementById('billingDiscountDisplay');
     const totalEl = document.getElementById('billingTotalDisplay');
     const customFields = document.getElementById('customDiscountFields');
+    const feeRow = document.getElementById('billingConsultationFeeRow');
+    const feeDisplay = document.getElementById('billingConsultationFeeDisplay');
+
+    const hasLineItems = document.querySelector('#billingServicesBody tr[data-service-id]') || document.querySelector('#billingChargesBody tr');
+    if (feeRow && feeDisplay) {
+        if (!hasLineItems && window.BILLING_CONSULTATION_FEE > 0) {
+            feeDisplay.textContent = '₱' + formatBillingAmount(window.BILLING_CONSULTATION_FEE);
+            feeRow.style.display = '';
+        } else {
+            feeRow.style.display = 'none';
+        }
+    }
 
     if (subtotalEl) subtotalEl.textContent = '₱' + formatBillingAmount(subtotal);
     if (totalEl) totalEl.textContent = '₱' + formatBillingAmount(total);
