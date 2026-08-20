@@ -800,21 +800,22 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
                                                     <i class="bi bi-check2-square"></i> Approve
                                                 </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-sm btn-success"
+                                                    onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
+                                                        'booking_id' => (int)$gb['booking_id'],
+                                                        'first_name' => $gb['first_name'],
+                                                        'last_name' => $gb['last_name'],
+                                                        'email' => $gb['email'],
+                                                        'phone_number' => $gb['phone_number'] ?? '',
+                                                        'date_of_birth' => $gb['date_of_birth'] ?? '',
+                                                        'preferred_date' => $gb['preferred_date'],
+                                                        'preferred_time' => $gb['preferred_time'],
+                                                        'reason' => $gb['reason'] ?? '',
+                                                    ]), ENT_QUOTES, 'UTF-8'); ?>)'>
+                                                    <i class="bi bi-arrow-right-circle"></i> Process
+                                                </button>
                                             <?php endif; ?>
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
-                                                    'booking_id' => (int)$gb['booking_id'],
-                                                    'first_name' => $gb['first_name'],
-                                                    'last_name' => $gb['last_name'],
-                                                    'email' => $gb['email'],
-                                                    'phone_number' => $gb['phone_number'] ?? '',
-                                                    'date_of_birth' => $gb['date_of_birth'] ?? '',
-                                                    'preferred_date' => $gb['preferred_date'],
-                                                    'preferred_time' => $gb['preferred_time'],
-                                                    'reason' => $gb['reason'] ?? '',
-                                                ]), ENT_QUOTES, 'UTF-8'); ?>)'>
-                                                <i class="bi bi-arrow-right-circle"></i> Process
-                                            </button>
                                             <button type="button" class="btn btn-sm btn-outline-secondary"
                                                 onclick='openRescheduleBookingModal(<?php echo htmlspecialchars(json_encode([
                                                     'booking_id' => (int)$gb['booking_id'],
