@@ -16,7 +16,6 @@ if (!function_exists('security_start_session')) {
         }
 
         $secure = app_request_is_https() || (env('SECURE_COOKIES', false) && !app_is_localhost());
-        $params = session_get_cookie_params();
         session_set_cookie_params([
             'lifetime' => (int)env('SESSION_LIFETIME', 1800),
             'path' => env('SESSION_PATH', '/'),
@@ -28,6 +27,17 @@ if (!function_exists('security_start_session')) {
 
         ini_set('session.use_only_cookies', '1');
         ini_set('session.use_strict_mode', '1');
+
+        // XAMPP's default session.gc_maxlifetime (1440s = 24 min) is shorter than
+        // some of our own role-based idle timeouts (secretary: 2h, doctor: none).
+        // Without this, PHP's garbage collector can delete a session's server-side
+        // data before our own check_session() logic ever gets a chance to enforce
+        // its (longer, or nonexistent) timeout — silently logging out an active
+        // user regardless of what the app's role rules say. Raise it to cover our
+        // longest role timeout; the app-level checks in session_check.php remain
+        // the actual source of truth for when a session should end.
+        ini_set('session.gc_maxlifetime', (string)(int)env('SESSION_GC_MAXLIFETIME', 21600));
+
         session_start();
     }
 }

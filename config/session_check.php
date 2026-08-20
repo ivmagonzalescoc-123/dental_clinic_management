@@ -162,6 +162,26 @@ if (!function_exists('check_session')) {
     if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
         touch_session_log_rows($GLOBALS['conn']);
     }
+
+    // Slide the session cookie's own expiration forward on every active request.
+    // security_start_session() sets a fixed lifetime (SESSION_LIFETIME, default
+    // 30 min) once when the cookie is first issued at login; without renewing it
+    // here, the browser cookie itself expires ~30 min after login regardless of
+    // activity, even for roles (like doctor) whose idle-timeout check above is
+    // intentionally disabled. Renewing it each request makes the cookie a true
+    // sliding window that only expires after real inactivity.
+    if (!headers_sent() && session_id() !== '') {
+        $slideSeconds = $timeoutSeconds > 0 ? $timeoutSeconds : (int)env('SESSION_GC_MAXLIFETIME', 21600);
+        $cookieParams = session_get_cookie_params();
+        setcookie(session_name(), session_id(), [
+            'expires' => time() + $slideSeconds,
+            'path' => $cookieParams['path'],
+            'domain' => $cookieParams['domain'],
+            'secure' => $cookieParams['secure'],
+            'httponly' => $cookieParams['httponly'],
+            'samesite' => $cookieParams['samesite'] ?: 'Lax',
+        ]);
+    }
 }
 }
 

@@ -73,7 +73,8 @@ When deploying to production:
 | `APP_ENV` | Application environment | `development` | `production` |
 | `APP_TIMEZONE` | Server timezone | `Asia/Manila` | `UTC`, `America/New_York` |
 | `APP_URL` | Application URL | `http://localhost/capstone_dental` | `https://clinic.example.com` |
-| `SESSION_LIFETIME` | Session timeout (seconds) | `1800` | `3600` |
+| `SESSION_LIFETIME` | Cookie lifetime on issue; renewed on every active request (sliding window) | `1800` | `3600` |
+| `SESSION_GC_MAXLIFETIME` | How long PHP keeps server-side session data with no site-wide activity — must be ≥ the longest role idle timeout (secretary: 2h) or PHP's garbage collector can delete a session before the app's own timeout logic runs | `21600` | `21600` |
 | `SECURE_COOKIES` | Use secure cookies (HTTPS only) | `false` | `true` |
 | `SESSION_DOMAIN` | Session domain | `` (empty) | `.example.com` |
 | `SESSION_PATH` | Session path | `/` | `/clinic` |
