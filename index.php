@@ -449,6 +449,26 @@ $aboutPoints = [
             cursor: pointer;
         }
 
+        /* Booking tracker: smooth pop when a step turns active */
+        @keyframes trackStepPop {
+            0%   { transform: scale(0.55); opacity: 0.4; }
+            60%  { transform: scale(1.12); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .track-step-pop {
+            animation: trackStepPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #line1, #line2 {
+            transform-origin: left center;
+        }
+        .track-line-grow {
+            animation: trackLineGrow 0.5s ease-out;
+        }
+        @keyframes trackLineGrow {
+            0%   { transform: scaleX(0); }
+            100% { transform: scaleX(1); }
+        }
+
     </style>
 </head>
 <body class="font-sans antialiased text-foreground bg-background">
@@ -1048,12 +1068,14 @@ $aboutPoints = [
                     <div>
                         <label for="book-dob" class="mb-1 block text-xs font-semibold text-slate-600">Birthdate</label>
                         <input type="date" id="book-dob" name="date_of_birth" required
+                            min="1900-01-01" max="<?php echo date('Y-m-d'); ?>"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
                         <p class="auth-field-msg" id="book-dob-error"></p>
                     </div>
                     <div>
-                        <label for="book-pref-date" class="mb-1 block text-xs font-semibold text-slate-600">Preferred Date</label>
+                        <label for="book-pref-date" class="mb-1 block text-xs font-semibold text-slate-600">Appointment Date</label>
                         <input type="date" id="book-pref-date" name="preferred_date" required
+                            min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+30 days')); ?>"
                             class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
                         <p class="auth-field-msg" id="book-pref-date-error"></p>
                     </div>
@@ -1073,9 +1095,12 @@ $aboutPoints = [
                 </div>
 
                 <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-600">Chief Complaint</label>
-                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
-                        
+                    <label class="flex items-center gap-2 cursor-pointer group mb-1">
+                        <input type="checkbox" id="book-has-complaint" class="rounded border-slate-300 text-primary focus:ring-primary/40">
+                        <span class="text-xs font-semibold text-slate-600 group-hover:text-primary transition-colors">Do you have a specific complaint or concern?</span>
+                    </label>
+                    <div id="book-complaint-grid" class="hidden grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
+
                         <label class="flex items-center gap-2 cursor-pointer group">
                             <input type="checkbox" name="complaint[]" value="Toothache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
                             <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Toothache</span>
@@ -1120,13 +1145,16 @@ $aboutPoints = [
                             <input type="checkbox" name="complaint[]" value="Abscess / Pus" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
                             <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Abscess / Pus</span>
                         </label>
-                    </div>
-                </div>
+                        <label class="flex items-center gap-2 cursor-pointer group col-span-2">
+                            <input type="checkbox" id="book-complaint-other" class="complaint-other-toggle rounded border-slate-300 text-primary focus:ring-primary/40">
+                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Other / Additional Details</span>
+                        </label>
 
-                <div>
-                    <label for="book-reason" class="mb-1 block text-xs font-semibold text-slate-600">Additional Details <span class="font-normal text-slate-400">(optional)</span></label>
-                    <textarea id="book-reason" name="reason" rows="2" placeholder="Any other details about your condition..."
-                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
+                        <div id="book-reason-wrap" class="hidden col-span-2 mt-1">
+                            <textarea id="book-reason" name="reason" rows="2" placeholder="Any other details about your condition..."
+                                class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -1180,6 +1208,8 @@ $aboutPoints = [
                 <button type="button" id="resend-otp-btn" class="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
                     Resend code
                 </button>
+
+                <p class="mt-4 text-xs text-slate-400">Already have a booking, or need a different date? Contact the clinic directly at <strong class="text-slate-500">+63 (88) 000 0000</strong> instead of submitting a new request.</p>
             </div>
 
             <!-- Step 3: Success (hidden by default) -->
@@ -1417,7 +1447,19 @@ $aboutPoints = [
             const resultCard = document.getElementById('bookingTrackResult');
             const errorEl = document.getElementById('bookingTrackError');
 
-            function setStep(circleId, labelId, active, isError) {
+            // Background auto-refresh state — once a booking is tracked, we keep polling
+            // for it silently so newly-completed steps animate in on their own without the
+            // visitor having to press "Track" again.
+            var pollTimer = null;
+            var pollQuery = null; // { id, isNumeric }
+            var prevSteps = { step1: false, step2: false, step3: false };
+            var POLL_INTERVAL_MS = 15000;
+
+            function sleep(ms) {
+                return new Promise(function(resolve) { setTimeout(resolve, ms); });
+            }
+
+            function setStep(circleId, labelId, active, isError, animate) {
                 const circle = document.getElementById(circleId);
                 const label = document.getElementById(labelId);
                 if (isError) {
@@ -1431,13 +1473,24 @@ $aboutPoints = [
                     label.className = label.className.replace('text-slate-400', 'text-green-600');
                     circle.innerHTML = '<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>';
                 }
+                if (animate && (active || isError)) {
+                    circle.classList.remove('track-step-pop');
+                    // Force reflow so the animation replays even if the class was already present.
+                    void circle.offsetWidth;
+                    circle.classList.add('track-step-pop');
+                }
             }
 
-            function setLineActive(lineId, isError) {
+            function setLineActive(lineId, isError, animate) {
                 const line = document.getElementById(lineId);
                 if (line) {
                     const color = isError ? 'bg-red-500' : 'bg-green-500';
                     line.className = line.className.replace('bg-slate-200', color);
+                    if (animate) {
+                        line.classList.remove('track-line-grow');
+                        void line.offsetWidth;
+                        line.classList.add('track-line-grow');
+                    }
                 }
             }
 
@@ -1453,37 +1506,84 @@ $aboutPoints = [
                     var el = document.getElementById(id);
                     if (el) el.className = 'h-0.5 w-full bg-slate-200 transition-colors duration-300';
                 });
+                prevSteps = { step1: false, step2: false, step3: false };
             }
 
-            function doTrack() {
-                var raw = (input.value || '').trim();
-                // Old-style plain numeric booking numbers (from links/emails sent before
-                // the tracking code existed) still work via booking_id; anything else is
-                // treated as the newer, unguessable alphanumeric tracking code.
-                var isNumeric = /^[0-9]+$/.test(raw);
-                var id = isNumeric ? raw : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-                if (!id) {
-                    errorEl.textContent = 'Please enter a valid booking reference number.';
-                    errorEl.classList.remove('hidden');
-                    resultCard.classList.add('hidden');
-                    return;
+            function stopPolling() {
+                if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+                pollQuery = null;
+            }
+
+            function scheduleNextPoll() {
+                if (!pollQuery) return;
+                pollTimer = setTimeout(function() {
+                    fetchTracking(pollQuery.id, pollQuery.isNumeric, { silent: true });
+                }, POLL_INTERVAL_MS);
+            }
+
+            // Reveal newly-completed steps one at a time (instead of all at once) so
+            // progress reads as a smooth left-to-right animation.
+            async function animateStepsIn(data) {
+                var newlyStep1 = data.step1 && !prevSteps.step1;
+                var newlyStep2 = data.step2 && !prevSteps.step2;
+                var newlyStep3 = data.step3 && !prevSteps.step3;
+
+                if (newlyStep1) {
+                    setStep('step1Circle', 'step1Label', true, false, true);
+                    await sleep(350);
+                } else if (data.step1) {
+                    setStep('step1Circle', 'step1Label', true, false, false);
                 }
-                errorEl.classList.add('hidden');
-                resultCard.classList.add('hidden');
-                btn.textContent = 'Searching...';
-                btn.disabled = true;
+
+                if (newlyStep2) {
+                    setLineActive('line1', false, true);
+                    await sleep(200);
+                    setStep('step2Circle', 'step2Label', true, false, true);
+                    await sleep(350);
+                } else if (data.step2) {
+                    setLineActive('line1', false, false);
+                    setStep('step2Circle', 'step2Label', true, false, false);
+                }
+
+                if (newlyStep3) {
+                    setLineActive('line2', false, true);
+                    await sleep(200);
+                    setStep('step3Circle', 'step3Label', true, false, true);
+                } else if (data.step3) {
+                    setLineActive('line2', false, false);
+                    setStep('step3Circle', 'step3Label', true, false, false);
+                }
+
+                prevSteps = { step1: !!data.step1, step2: !!data.step2, step3: !!data.step3 };
+            }
+
+            function fetchTracking(id, isNumeric, opts) {
+                opts = opts || {};
+                var silent = !!opts.silent;
+
+                if (!silent) {
+                    errorEl.classList.add('hidden');
+                    btn.textContent = 'Searching...';
+                    btn.disabled = true;
+                }
 
                 var trackParam = isNumeric ? ('booking_id=' + encodeURIComponent(id)) : ('tracking_code=' + encodeURIComponent(id));
-                fetch('assets/api/bookings/track_booking.php?' + trackParam)
+                return fetch('assets/api/bookings/track_booking.php?' + trackParam)
                     .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        btn.textContent = 'Track';
-                        btn.disabled = false;
+                    .then(async function(data) {
+                        if (!silent) {
+                            btn.textContent = 'Track';
+                            btn.disabled = false;
+                        }
                         if (!data.success) {
-                            errorEl.textContent = data.message || 'Booking not found.';
-                            errorEl.classList.remove('hidden');
+                            if (!silent) {
+                                errorEl.textContent = data.message || 'Booking not found.';
+                                errorEl.classList.remove('hidden');
+                            }
+                            stopPolling();
                             return;
                         }
+
                         document.getElementById('trackBookingId').textContent = data.tracking_code || data.booking_id;
                         var statusEl = document.getElementById('trackBookingStatus');
                         var reasonEl = document.getElementById('trackBookingReason');
@@ -1501,10 +1601,11 @@ $aboutPoints = [
                             resetSteps();
                             // Booking Created still happened — keep it green — then mark the
                             // next step (where it was rejected/cancelled) red with a cross.
-                            setStep('step1Circle', 'step1Label', true);
-                            setStep('step2Circle', 'step2Label', false, true);
-                            setLineActive('line1', true);
+                            setStep('step1Circle', 'step1Label', true, false, !silent);
+                            setStep('step2Circle', 'step2Label', false, true, !silent);
+                            setLineActive('line1', true, !silent);
                             resultCard.classList.remove('hidden');
+                            stopPolling(); // terminal state — nothing left to wait for
                             return;
                         }
 
@@ -1514,16 +1615,12 @@ $aboutPoints = [
                             statusEl.style.color = '#dc2626';
                             resetSteps();
                             resultCard.classList.remove('hidden');
+                            stopPolling(); // terminal state
                             return;
                         }
 
-                        resetSteps();
+                        await animateStepsIn(data);
 
-                        resetSteps();
-                        if (data.step1) setStep('step1Circle', 'step1Label', true);
-                        if (data.step2) { setStep('step2Circle', 'step2Label', true); setLineActive('line1'); }
-                        if (data.step3) { setStep('step3Circle', 'step3Label', true); setLineActive('line2'); }
-                        
                         if (data.step3) {
                             statusEl.textContent = 'Successfully visited the clinic';
                             statusEl.style.backgroundColor = '#dcfce7';
@@ -1538,17 +1635,58 @@ $aboutPoints = [
                             statusEl.style.color = '#92400e';
                         }
                         resultCard.classList.remove('hidden');
+
+                        if (data.step3) {
+                            stopPolling(); // reached the final step — done
+                        } else {
+                            pollQuery = { id: id, isNumeric: isNumeric };
+                            scheduleNextPoll();
+                        }
                     })
                     .catch(function() {
-                        btn.textContent = 'Track';
-                        btn.disabled = false;
-                        errorEl.textContent = 'Something went wrong. Please try again.';
-                        errorEl.classList.remove('hidden');
+                        if (!silent) {
+                            btn.textContent = 'Track';
+                            btn.disabled = false;
+                            errorEl.textContent = 'Something went wrong. Please try again.';
+                            errorEl.classList.remove('hidden');
+                        }
+                        // Silent background polls fail quietly and just retry on the next tick.
                     });
+            }
+
+            function doTrack() {
+                var raw = (input.value || '').trim();
+                // Old-style plain numeric booking numbers (from links/emails sent before
+                // the tracking code existed) still work via booking_id; anything else is
+                // treated as the newer, unguessable alphanumeric tracking code.
+                var isNumeric = /^[0-9]+$/.test(raw);
+                var id = isNumeric ? raw : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                if (!id) {
+                    errorEl.textContent = 'Please enter a valid booking reference number.';
+                    errorEl.classList.remove('hidden');
+                    resultCard.classList.add('hidden');
+                    return;
+                }
+
+                stopPolling();
+                resetSteps();
+                errorEl.classList.add('hidden');
+                resultCard.classList.add('hidden');
+                fetchTracking(id, isNumeric, { silent: false });
             }
 
             if (btn) btn.addEventListener('click', doTrack);
             if (input) input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doTrack(); } });
+
+            // Stop background polling once the visitor navigates away from the page/tab
+            // to avoid burning requests for a result nobody is looking at.
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+                } else if (pollQuery && !pollTimer) {
+                    scheduleNextPoll();
+                }
+            });
         })();
 
         // ----- Header scroll behavior (Figma-style transparent → solid) -----
@@ -1906,9 +2044,29 @@ $aboutPoints = [
             return true;
         }
 
+        // Native <input type="date"> lets some browsers accept more than 4 digits in the
+        // year segment when typed via keyboard (e.g. "20255-01-01"), even with min/max set.
+        // This regex + range check is the actual guard against that.
+        function isValidIsoDateWith4DigitYear(val) {
+            const m = String(val || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) return false;
+            const year = parseInt(m[1], 10);
+            const month = parseInt(m[2], 10);
+            const day = parseInt(m[3], 10);
+            const d = new Date(year, month - 1, day);
+            return d.getFullYear() === year && (d.getMonth() + 1) === month && d.getDate() === day;
+        }
+
         function validateBookDob() {
             const val = document.getElementById('book-dob').value;
             if (!val) { showFieldError('book-dob', 'book-dob-error', 'Date of birth is required.'); return false; }
+            if (!isValidIsoDateWith4DigitYear(val)) { showFieldError('book-dob', 'book-dob-error', 'Enter a valid birthdate (4-digit year).'); return false; }
+            const year = parseInt(val.slice(0, 4), 10);
+            const currentYear = new Date().getFullYear();
+            if (year < 1900 || year > currentYear) { showFieldError('book-dob', 'book-dob-error', 'Birth year must be between 1900 and ' + currentYear + '.'); return false; }
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (new Date(val) > today) { showFieldError('book-dob', 'book-dob-error', 'Birthdate cannot be in the future.'); return false; }
             clearFieldError('book-dob', 'book-dob-error');
             return true;
         }
@@ -1916,9 +2074,14 @@ $aboutPoints = [
         function validateBookPrefDate() {
             const val = document.getElementById('book-pref-date').value;
             if (!val) { showFieldError('book-pref-date', 'book-pref-date-error', 'Preferred date is required.'); return false; }
+            if (!isValidIsoDateWith4DigitYear(val)) { showFieldError('book-pref-date', 'book-pref-date-error', 'Enter a valid date (4-digit year).'); return false; }
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             if (new Date(val) < today) { showFieldError('book-pref-date', 'book-pref-date-error', 'Preferred date cannot be in the past.'); return false; }
+            const maxDate = new Date();
+            maxDate.setHours(0, 0, 0, 0);
+            maxDate.setDate(maxDate.getDate() + 30);
+            if (new Date(val) > maxDate) { showFieldError('book-pref-date', 'book-pref-date-error', 'Preferred date must be within the next 30 days.'); return false; }
             clearFieldError('book-pref-date', 'book-pref-date-error');
             return true;
         }
@@ -2029,6 +2192,52 @@ $aboutPoints = [
                 if (v > 59) v = 59;
                 this.value = v < 10 ? '0' + v : '' + v;
                 syncAndValidate();
+            });
+        })();
+
+        // The Chief Complaint checkbox grid stays hidden until the patient says they have
+        // one; unchecking that toggle hides the whole box again and clears every selection
+        // inside it (including the nested Other/Additional Details box) so nothing stale
+        // gets submitted silently.
+        (function() {
+            const hasComplaintToggle = document.getElementById('book-has-complaint');
+            const complaintGrid = document.getElementById('book-complaint-grid');
+            const otherToggle = document.getElementById('book-complaint-other');
+            const reasonWrap = document.getElementById('book-reason-wrap');
+            const reasonInput = document.getElementById('book-reason');
+            if (!hasComplaintToggle || !complaintGrid) return;
+
+            hasComplaintToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    complaintGrid.classList.remove('hidden');
+                } else {
+                    complaintGrid.classList.add('hidden');
+                    complaintGrid.querySelectorAll('.complaint-check:checked').forEach(function(cb) { cb.checked = false; });
+                    if (otherToggle) otherToggle.checked = false;
+                    if (reasonWrap) reasonWrap.classList.add('hidden');
+                    if (reasonInput) reasonInput.value = '';
+                }
+            });
+        })();
+
+        // "Other / Additional Details" is the last chief-complaint option — checking it
+        // reveals the free-text box (kept inside the same Chief Complaint box); unchecking
+        // it hides the box again and clears whatever was typed so stale text can't be
+        // submitted silently.
+        (function() {
+            const otherToggle = document.getElementById('book-complaint-other');
+            const reasonWrap = document.getElementById('book-reason-wrap');
+            const reasonInput = document.getElementById('book-reason');
+            if (!otherToggle || !reasonWrap || !reasonInput) return;
+
+            otherToggle.addEventListener('change', function() {
+                if (this.checked) {
+                    reasonWrap.classList.remove('hidden');
+                    reasonInput.focus();
+                } else {
+                    reasonWrap.classList.add('hidden');
+                    reasonInput.value = '';
+                }
             });
         })();
 

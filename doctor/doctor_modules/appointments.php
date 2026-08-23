@@ -1895,15 +1895,10 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                         <i class="fas fa-list-check"></i> Services Performed
                     </h6>
                     <div class="row g-2 mb-2">
-                        <div class="col-md-8">
-                            <select id="finishServiceSelect" class="form-select">
+                        <div class="col-12">
+                            <select id="finishServiceSelect" class="form-select" onchange="addFinishService()">
                                 <option value="">-- Select Service --</option>
                             </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" class="btn btn-success w-100" onclick="addFinishService()">
-                                <i class="fas fa-plus"></i> Add
-                            </button>
                         </div>
                     </div>
                     <div class="table-responsive">

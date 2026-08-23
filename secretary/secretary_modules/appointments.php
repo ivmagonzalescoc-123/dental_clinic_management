@@ -816,6 +816,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                     <i class="bi bi-arrow-right-circle"></i> Process
                                                 </button>
                                             <?php endif; ?>
+                                            <?php if ($gb['status'] !== 'approved'): ?>
                                             <button type="button" class="btn btn-sm btn-outline-secondary"
                                                 onclick='openRescheduleBookingModal(<?php echo htmlspecialchars(json_encode([
                                                     'booking_id' => (int)$gb['booking_id'],
@@ -825,6 +826,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                                 ]), ENT_QUOTES, 'UTF-8'); ?>)'>
                                                 <i class="bi bi-calendar3"></i> Reschedule
                                             </button>
+                                            <?php endif; ?>
                                             <button type="button" class="btn btn-sm btn-danger"
                                                 onclick="openDeclineBookingModal(<?php echo (int)$gb['booking_id']; ?>, '<?php echo htmlspecialchars(addslashes(trim($gb['first_name'] . ' ' . $gb['last_name'])), ENT_QUOTES, 'UTF-8'); ?>')">
                                                 <i class="bi bi-x-circle"></i> Cancel
@@ -1051,14 +1053,9 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <!-- Services -->
                         <div class="mb-2">
                             <label class="form-label fw-bold" style="font-size:0.8rem;">Add Service</label>
-                            <div class="input-group input-group-sm">
-                                <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;">
-                                    <option value="">-- Select Service --</option>
-                                </select>
-                                <button type="button" class="btn btn-success btn-sm" onclick="addProcessService()">
-                                    <i class="bi bi-plus"></i> Add
-                                </button>
-                            </div>
+                            <select id="convertServiceSelect" class="form-select form-select-sm" style="font-size:0.82rem;" onchange="addProcessService()">
+                                <option value="">-- Select Service --</option>
+                            </select>
                         </div>
 
                         <!-- Selected Services Table -->
@@ -1343,6 +1340,7 @@ var convertBookingData = {};
 var convertIsEarlyWalkIn = false;
 var processSelectedServices = [];
 var processServicesCatalog = [];
+var convertPreferredTimeWarned = false;
 
 function openConvertBookingModal(booking) {
     convertBookingData = booking;
@@ -1381,6 +1379,7 @@ function openConvertBookingModal(booking) {
     document.getElementById('convertTimeslotSelect').innerHTML = '<option value="">-- Select Doctor first --</option>';
     document.getElementById('convertTimeslotSelect').disabled = true;
     document.getElementById('convertServiceSelect').innerHTML = '<option value="">-- Select Service --</option>';
+    convertPreferredTimeWarned = false;
 
     resetConvertProfilingForm();
     showConvertStep(1);
@@ -1714,14 +1713,41 @@ function loadProcessTimeslots(doctorId, date) {
                     var opt = document.createElement('option');
                     opt.value = slot.timeslot_id;
                     opt.textContent = slot.label;
+                    opt.dataset.start = slot.start_time || '';
                     timeslotSelect.appendChild(opt);
                 });
                 timeslotSelect.disabled = false;
+                preselectPreferredProcessTimeslot();
             } else {
                 timeslotSelect.innerHTML = '<option value="">No available times</option>';
                 timeslotSelect.disabled = true;
             }
         });
+}
+
+// Try to preselect the timeslot matching the guest's preferred booking time, so the
+// secretary isn't left to manually hunt for it (or accidentally pick the wrong slot).
+// If that exact time isn't in the available list (e.g. another session already
+// occupies it), leave the selection blank and warn once so the secretary picks
+// an available time deliberately instead of guessing.
+function preselectPreferredProcessTimeslot() {
+    var timeslotSelect = document.getElementById('convertTimeslotSelect');
+    var preferredTime = convertBookingData && convertBookingData.preferred_time;
+    if (!timeslotSelect || !preferredTime) return;
+
+    var preferred24 = time12To24(preferredTime);
+    if (!preferred24) return;
+
+    var matchOption = Array.prototype.find.call(timeslotSelect.options, function(opt) {
+        return opt.value && (opt.dataset.start || '').slice(0, 5) === preferred24;
+    });
+
+    if (matchOption) {
+        timeslotSelect.value = matchOption.value;
+    } else if (!convertPreferredTimeWarned) {
+        convertPreferredTimeWarned = true;
+        notifySecretary('Preferred time (' + preferredTime + ') is already taken by another session. Please select an available time.', 'warning');
+    }
 }
 
 // Add service to table
@@ -2144,9 +2170,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                                 <i class="bi bi-calendar3"></i>
                                             </button>
                                         <?php elseif ($status === 'awaiting_secretary_records'): ?>
-                                            <button type="button" class="btn btn-sm btn-success" onclick="openSecretaryRecordModal(<?php echo (int)$appointment['appointment_id']; ?>, <?php echo (int)$appointment['patient_id']; ?>)" title="Create clinical record and billing">
+                                            <?php // The record-creation modal only exists on the EHR Queue page — send the
+                                                  // secretary there instead of calling a function that isn't loaded here. ?>
+                                            <a href="secretary.php?page=ehr_queue" class="btn btn-sm btn-success" title="Create clinical record and billing">
                                                 <i class="bi bi-pencil-square"></i>
-                                            </button>
+                                            </a>
                                         <?php endif; ?>
 
                                         <?php

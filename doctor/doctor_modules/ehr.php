@@ -160,7 +160,7 @@ if ($sstmt) {
             <label class="form-label fw-bold mb-0"><i class="fas fa-list-check"></i> Services Performed</label>
         </div>
         <div class="row g-1 mb-2">
-            <div class="col-md-9">
+            <div class="col-12">
                 <select id="ehrServiceSelect" class="form-select form-select-sm">
                     <option value="">-- Select Service --</option>
                     <?php foreach ($services as $svc): ?>
@@ -171,11 +171,6 @@ if ($sstmt) {
                         </option>
                     <?php endforeach; ?>
                 </select>
-            </div>
-            <div class="col-md-3">
-                <button type="button" class="btn btn-primary btn-sm w-100" id="addEhrServiceBtn">
-                    <i class="fas fa-plus"></i> Add
-                </button>
             </div>
         </div>
         <div class="table-responsive">
@@ -624,8 +619,8 @@ if ($sstmt) {
             return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        // Add service button event listener
-        document.getElementById('addEhrServiceBtn')?.addEventListener('click', addEhrService);
+        // Auto-add on selection (no separate Add button)
+        document.getElementById('ehrServiceSelect')?.addEventListener('change', addEhrService);
 
         // Photo Upload Handler
         document.getElementById('finishPhotoUpload').addEventListener('change', async function(e) {

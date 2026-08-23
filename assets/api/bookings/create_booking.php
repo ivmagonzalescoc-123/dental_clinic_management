@@ -63,6 +63,27 @@ try {
     if ($prefDate === '') {
         throw new Exception('Preferred date is required.');
     }
+
+    // Validate date of birth (optional field, but if present it must be a real
+    // calendar date with a sane 4-digit year — some browsers let users type more
+    // than 4 digits into a <input type="date"> year segment).
+    if ($dob !== '') {
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+            throw new Exception('Invalid birthdate format. Use YYYY-MM-DD.');
+        }
+        $dobDt = DateTime::createFromFormat('Y-m-d', $dob);
+        if (!$dobDt || $dobDt->format('Y-m-d') !== $dob) {
+            throw new Exception('Invalid birthdate.');
+        }
+        $dobYear = (int)$dobDt->format('Y');
+        $currentYear = (int)date('Y');
+        if ($dobYear < 1900 || $dobYear > $currentYear) {
+            throw new Exception('Birth year must be between 1900 and ' . $currentYear . '.');
+        }
+        if ($dobDt > new DateTime('today')) {
+            throw new Exception('Birthdate cannot be in the future.');
+        }
+    }
     // Validate exact time (matches the frontend picker: H:MM AM/PM, 8:00 AM - 4:30 PM)
     if (!preg_match('/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i', $prefTime, $timeMatch)) {
         throw new Exception('Please select a valid preferred time.');
@@ -85,7 +106,12 @@ try {
     // Normalize to a consistent "H:MM AM/PM" format for storage/display
     $prefTime = $prefHour . ':' . str_pad((string)$prefMinute, 2, '0', STR_PAD_LEFT) . ' ' . $prefMeridiem;
 
-    // Validate date format and range
+    // Validate date format and range. Require exactly a 4-digit year up front so a
+    // browser quirk that lets someone type extra digits into the year segment (e.g.
+    // "20255-01-01") is rejected outright instead of relying only on the max-date check below.
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $prefDate)) {
+        throw new Exception('Invalid date format. Use YYYY-MM-DD.');
+    }
     $dt = DateTime::createFromFormat('Y-m-d', $prefDate);
     if (!$dt || $dt->format('Y-m-d') !== $prefDate) {
         throw new Exception('Invalid date format. Use YYYY-MM-DD.');
