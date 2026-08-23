@@ -111,13 +111,6 @@ $testimonials = [
     ],
 ];
 
-$stats = [
-    ['value' => '2,500+', 'label' => 'Happy Patients'],
-    ['value' => '15+', 'label' => 'Years Experience'],
-    ['value' => '98%', 'label' => 'Satisfaction Rate'],
-    ['value' => '12', 'label' => 'Expert Specialists'],
-];
-
 $aboutPoints = [
     'Gentle, patient-first approach',
     'State-of-the-art digital X-rays',
@@ -563,14 +556,6 @@ $aboutPoints = [
                         </a>
                     </div>
 
-                    <div class="mt-12 flex flex-wrap gap-8">
-                        <?php foreach ($stats as $stat): ?>
-                        <div class="text-white">
-                            <div class="font-display text-2xl" style="font-weight: 700; color: #5eead4;"><?php echo htmlspecialchars($stat['value'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            <div class="mt-0.5 text-sm text-white/65"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
                 </div>
             </div>
 
@@ -728,14 +713,6 @@ $aboutPoints = [
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="flex flex-wrap gap-8">
-                            <?php foreach (array_slice($stats, 0, 3) as $stat): ?>
-                            <div>
-                                <div class="text-primary" style="font-family: 'Lora', Georgia, serif; font-size: 2rem; font-weight: 700;"><?php echo htmlspecialchars($stat['value'], ENT_QUOTES, 'UTF-8'); ?></div>
-                                <div class="text-muted-foreground text-sm"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
                     </div>
                 </div>
             </div>
