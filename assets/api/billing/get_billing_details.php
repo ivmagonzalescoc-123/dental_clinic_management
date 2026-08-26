@@ -79,7 +79,7 @@ if ($inst) {
     $inst->close();
     if ($installment) {
         $tid = (int)$installment['installment_id'];
-        $tstmt = $conn->prepare('SELECT term_number, due_date, amount, status, paid_at FROM billing_installment_terms WHERE installment_id = ? ORDER BY term_number');
+        $tstmt = $conn->prepare('SELECT term_number, due_date, amount, paid_amount, status, paid_at FROM billing_installment_terms WHERE installment_id = ? ORDER BY term_number');
         if ($tstmt) {
             $tstmt->bind_param('i', $tid);
             $tstmt->execute();

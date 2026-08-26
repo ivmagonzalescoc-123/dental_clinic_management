@@ -221,8 +221,8 @@ $csrf_token = security_generate_csrf_token();
                                 <h6 class="small fw-bold mb-2">Services</h6>
                                 <div class="table-responsive">
                                     <table class="table table-sm align-middle mb-2">
-                                        <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th><th style="width:40px;"></th></tr></thead>
-                                        <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="3" class="text-muted small">No services added.</td></tr></tbody>
+                                        <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th></tr></thead>
+                                        <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="2" class="text-muted small">No services added.</td></tr></tbody>
                                     </table>
                                     <small class="text-muted">Services are set by the doctor during charting and can't be added here.</small>
                                 </div>
@@ -562,6 +562,7 @@ document.getElementById('useInstallment')?.addEventListener('change', function()
     if (opts) opts.style.display = this.checked ? 'flex' : 'none';
     if (notice) notice.style.display = this.checked ? '' : 'none';
     if (typeof updateInstallmentNotice === 'function') updateInstallmentNotice();
+    if (typeof updatePaymentCalculation === 'function') updatePaymentCalculation();
 });
 
 function addPrescriptionRow(rx = {}) {
@@ -1033,8 +1034,7 @@ function updateBillingTotals() {
 function updateInstallmentNotice() {
     const notice = document.getElementById('installmentDownPaymentNotice');
     if (!notice) return;
-    const total = getBillingTotalDue();
-    const downPayment = Math.round(total * 0.5 * 100) / 100;
+    const downPayment = getInstallmentDownPaymentAmount();
     notice.textContent = 'Patient pays today: ₱' + formatBillingAmount(downPayment) + ' (50% down payment)';
 }
 
@@ -1047,10 +1047,23 @@ function getBillingTotalDue() {
     return Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
 }
 
+function getInstallmentDownPaymentAmount() {
+    return Math.round(getBillingTotalDue() * 0.5 * 100) / 100;
+}
+
+// When an installment plan is being created, only today's down payment is actually due —
+// the rest is due on future terms. Capping against the full total (instead of the down
+// payment) would record the whole tendered amount as a payment and mark every future term
+// paid immediately, instead of returning the excess as change.
+function getAmountDueNow() {
+    const useInstallment = document.getElementById('useInstallment')?.checked;
+    return useInstallment ? getInstallmentDownPaymentAmount() : getBillingTotalDue();
+}
+
 function updatePaymentCalculation() {
     const tendered = parseFloat(document.getElementById('paymentAmountTendered')?.value || '0') || 0;
-    const totalDue = getBillingTotalDue();
-    const amountApplied = Math.min(tendered, totalDue);
+    const amountDueNow = getAmountDueNow();
+    const amountApplied = Math.min(tendered, amountDueNow);
     const change = Math.max(0, tendered - amountApplied);
 
     const appliedEl = document.getElementById('paymentAmountAppliedDisplay');
@@ -1107,7 +1120,7 @@ function updateBillingServicesEmptyRow() {
     if (!tbody.querySelector('#billingServicesEmptyRow')) {
         const tr = document.createElement('tr');
         tr.id = 'billingServicesEmptyRow';
-        tr.innerHTML = '<td colspan="3" class="text-muted small">No package services added.</td>';
+        tr.innerHTML = '<td colspan="2" class="text-muted small">No package services added.</td>';
         tbody.appendChild(tr);
     }
 }
@@ -1128,18 +1141,10 @@ function addBillingServiceRow(serviceId, desc, amount) {
             <span class="billing-service-price">₱${formatBillingAmount(amount)}</span>
             <input type="hidden" class="billing-service-amount" value="${formatBillingAmount(amount)}">
         </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-outline-danger billing-remove-service" title="Remove service">
-                <i class="bi bi-trash"></i>
-            </button>
-        </td>
     `;
-    tr.querySelector('.billing-remove-service')?.addEventListener('click', () => {
-        recordBillingServiceIds.delete(sid);
-        tr.remove();
-        updateBillingServicesEmptyRow();
-        updateBillingTotals();
-    });
+    // Clinically-rendered services can't be removed here — they reflect what was actually
+    // done for the patient. Only manually-added "extra charge" rows (addBillingChargeRow)
+    // are deletable.
     tbody.appendChild(tr);
     recordBillingServiceIds.add(sid);
     updateBillingServicesEmptyRow();
@@ -1238,8 +1243,10 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         const recordPaymentNow = document.getElementById('recordPaymentNow')?.checked || false;
         const paymentTendered = parseFloat(document.getElementById('paymentAmountTendered')?.value || '0') || 0;
         const paymentOrNumber = document.getElementById('paymentOrNumber')?.value?.trim() || '';
-        const totalDue = getBillingTotalDue();
-        const paymentAmountApplied = Math.min(paymentTendered, totalDue);
+        // If an installment plan is being created, only today's down payment is due now —
+        // cap against that, not the full total, so any excess tendered comes back as change.
+        const amountDueNow = getAmountDueNow();
+        const paymentAmountApplied = Math.min(paymentTendered, amountDueNow);
 
         if (recordPaymentNow) {
             if (paymentOrNumber === '') {
@@ -1252,8 +1259,8 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
                 secretaryRecordSubmitting = false;
                 return;
             }
-            if (paymentAmountApplied < totalDue && paymentAmountApplied < totalDue * 0.5) {
-                notifySecretary('A partial payment must be at least 50% of the Total Due, or leave it blank to pay in full/later.', 'warning');
+            if (paymentAmountApplied < amountDueNow && paymentAmountApplied < amountDueNow * 0.5) {
+                notifySecretary('A partial payment must be at least 50% of the amount due now, or leave it blank to pay in full/later.', 'warning');
                 secretaryRecordSubmitting = false;
                 return;
             }

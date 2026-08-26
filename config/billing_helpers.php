@@ -129,10 +129,13 @@ if (!function_exists('billing_ensure_tables')) {
             due_soon_reminder_sent_at DATETIME NULL,
             overdue_reminder_sent_at DATETIME NULL,
             KEY idx_bit_installment (installment_id),
-            KEY idx_bit_due (due_date)
+            KEY idx_bit_due (due_date),
+            CONSTRAINT fk_bit_installment FOREIGN KEY (installment_id)
+                REFERENCES billing_installments (installment_id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
         billing_migrate_installment_term_reminders($conn);
+        billing_migrate_installment_terms_fk($conn);
 
         $conn->query("CREATE TABLE IF NOT EXISTS payments (
             payment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -252,7 +255,7 @@ if (!function_exists('billing_is_overdue')) {
         }
 
         $installmentId = (int)$instRow['installment_id'];
-        $termChk = $conn->prepare("SELECT term_id FROM billing_installment_terms WHERE installment_id = ? AND status = 'pending' AND due_date < CURDATE() LIMIT 1");
+        $termChk = $conn->prepare("SELECT term_id FROM billing_installment_terms WHERE installment_id = ? AND status IN ('pending','partial') AND due_date < CURDATE() LIMIT 1");
         if (!$termChk) {
             return false;
         }
@@ -426,9 +429,14 @@ if (!function_exists('billing_sync_installment_terms')) {
         $terms = $tstmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $tstmt->close();
 
-        $markPaid = $conn->prepare("UPDATE billing_installment_terms SET status = 'paid', paid_at = COALESCE(paid_at, NOW()) WHERE term_id = ?");
-        $markPending = $conn->prepare("UPDATE billing_installment_terms SET status = 'pending', paid_at = NULL WHERE term_id = ?");
-        if (!$markPaid || !$markPending) {
+        // Allocate the running total paid across terms in order. Each term keeps whatever
+        // portion of the payments it actually absorbs (paid_amount), so a term that received
+        // a partial payment shows a reduced remaining balance instead of appearing as if
+        // nothing had been paid toward it at all.
+        $markPaid = $conn->prepare("UPDATE billing_installment_terms SET status = 'paid', paid_amount = ?, paid_at = COALESCE(paid_at, NOW()) WHERE term_id = ?");
+        $markPartial = $conn->prepare("UPDATE billing_installment_terms SET status = 'partial', paid_amount = ?, paid_at = NULL WHERE term_id = ?");
+        $markPending = $conn->prepare("UPDATE billing_installment_terms SET status = 'pending', paid_amount = 0, paid_at = NULL WHERE term_id = ?");
+        if (!$markPaid || !$markPartial || !$markPending) {
             return false;
         }
 
@@ -439,10 +447,15 @@ if (!function_exists('billing_sync_installment_terms')) {
                 continue;
             }
 
-            if ($remainingPaid + 0.001 >= $amount) {
-                $markPaid->bind_param('i', $termId);
+            $applied = max(0, min($remainingPaid, $amount));
+            $remainingPaid = round($remainingPaid - $applied, 2);
+
+            if ($applied + 0.001 >= $amount) {
+                $markPaid->bind_param('di', $amount, $termId);
                 $markPaid->execute();
-                $remainingPaid = round($remainingPaid - $amount, 2);
+            } elseif ($applied > 0) {
+                $markPartial->bind_param('di', $applied, $termId);
+                $markPartial->execute();
             } else {
                 $markPending->bind_param('i', $termId);
                 $markPending->execute();
@@ -450,6 +463,7 @@ if (!function_exists('billing_sync_installment_terms')) {
         }
 
         $markPaid->close();
+        $markPartial->close();
         $markPending->close();
 
         return true;
@@ -653,52 +667,147 @@ if (!function_exists('billing_create_installment_plan')) {
         $remaining = max(0, round($totalAmount - $downPaymentAmount, 2));
         $termAmount = $numTerms > 0 ? round($remaining / $numTerms, 2) : 0.0;
 
-        $del = $conn->prepare('DELETE FROM billing_installments WHERE billing_id = ?');
-        if ($del) {
-            $del->bind_param('i', $billingId);
-            $del->execute();
-            $del->close();
+        // Remove any prior plan (and its term rows) for this billing before creating a fresh one,
+        // so regenerating a plan never leaves orphaned terms behind (which used to duplicate
+        // the schedule shown on the invoice).
+        $oldInstallmentId = null;
+        $find = $conn->prepare('SELECT installment_id FROM billing_installments WHERE billing_id = ?');
+        if ($find) {
+            $find->bind_param('i', $billingId);
+            $find->execute();
+            $res = $find->get_result();
+            if ($res && ($row = $res->fetch_assoc())) {
+                $oldInstallmentId = (int)$row['installment_id'];
+            }
+            $find->close();
         }
 
-        $ins = $conn->prepare('
-            INSERT INTO billing_installments (billing_id, total_amount, down_payment_percent, down_payment_amount, num_terms)
-            VALUES (?, ?, ?, ?, ?)
-        ');
-        if (!$ins) {
+        // This function may be called from inside a caller's own transaction (e.g.
+        // create_secretary_record.php) or stand-alone. Calling begin_transaction() while one
+        // is already open would implicitly commit the caller's outer transaction early (MySQL
+        // has no true nested transactions), silently breaking its atomicity. Detect which case
+        // we're in and use a SAVEPOINT for the nested case so this is safe either way.
+        $inTransactionResult = $conn->query('SELECT @@in_transaction AS t');
+        $alreadyInTransaction = $inTransactionResult && (int)($inTransactionResult->fetch_assoc()['t'] ?? 0) === 1;
+
+        if ($alreadyInTransaction) {
+            $conn->query('SAVEPOINT sp_installment_plan');
+        } else {
+            $conn->begin_transaction();
+        }
+
+        try {
+            if ($oldInstallmentId !== null) {
+                $delTerms = $conn->prepare('DELETE FROM billing_installment_terms WHERE installment_id = ?');
+                if ($delTerms) {
+                    $delTerms->bind_param('i', $oldInstallmentId);
+                    $delTerms->execute();
+                    $delTerms->close();
+                }
+            }
+
+            $del = $conn->prepare('DELETE FROM billing_installments WHERE billing_id = ?');
+            if ($del) {
+                $del->bind_param('i', $billingId);
+                $del->execute();
+                $del->close();
+            }
+
+            $ins = $conn->prepare('
+                INSERT INTO billing_installments (billing_id, total_amount, down_payment_percent, down_payment_amount, num_terms)
+                VALUES (?, ?, ?, ?, ?)
+            ');
+            if (!$ins) {
+                throw new Exception('Failed to prepare billing_installments insert');
+            }
+            $ins->bind_param('idddi', $billingId, $totalAmount, $downPaymentPercent, $downPaymentAmount, $numTerms);
+            if (!$ins->execute()) {
+                $ins->close();
+                throw new Exception('Failed to insert billing_installments row');
+            }
+            $installmentId = (int)$conn->insert_id;
+            $ins->close();
+
+            $termIns = $conn->prepare('
+                INSERT INTO billing_installment_terms (installment_id, term_number, due_date, amount, status)
+                VALUES (?, ?, ?, ?, ?)
+            ');
+            if (!$termIns) {
+                throw new Exception('Failed to prepare billing_installment_terms insert');
+            }
+
+            $pending = 'pending';
+            $termNumber = 0;
+            $dueDate = date('Y-m-d');
+            $termIns->bind_param('iisds', $installmentId, $termNumber, $dueDate, $downPaymentAmount, $pending);
+            if (!$termIns->execute()) {
+                $termIns->close();
+                throw new Exception('Failed to insert down payment term');
+            }
+
+            $distributed = $downPaymentAmount;
+            for ($i = 1; $i <= $numTerms; $i++) {
+                $amount = ($i === $numTerms)
+                    ? round($remaining - ($termAmount * ($numTerms - 1)), 2)
+                    : $termAmount;
+                $distributed += $amount;
+                $due = date('Y-m-d', strtotime('+' . $i . ' month'));
+                $termIns->bind_param('iisds', $installmentId, $i, $due, $amount, $pending);
+                if (!$termIns->execute()) {
+                    $termIns->close();
+                    throw new Exception('Failed to insert installment term ' . $i);
+                }
+            }
+            $termIns->close();
+
+            if ($alreadyInTransaction) {
+                $conn->query('RELEASE SAVEPOINT sp_installment_plan');
+            } else {
+                $conn->commit();
+            }
+            return $installmentId;
+        } catch (Exception $e) {
+            if ($alreadyInTransaction) {
+                $conn->query('ROLLBACK TO SAVEPOINT sp_installment_plan');
+            } else {
+                $conn->rollback();
+            }
+            error_log('billing_create_installment_plan failed: ' . $e->getMessage());
             return false;
         }
-        $ins->bind_param('idddi', $billingId, $totalAmount, $downPaymentPercent, $downPaymentAmount, $numTerms);
-        $ins->execute();
-        $installmentId = (int)$conn->insert_id;
-        $ins->close();
+    }
+}
 
-        $termIns = $conn->prepare('
-            INSERT INTO billing_installment_terms (installment_id, term_number, due_date, amount, status)
-            VALUES (?, ?, ?, ?, ?)
+if (!function_exists('billing_migrate_installment_terms_fk')) {
+    function billing_migrate_installment_terms_fk($conn)
+    {
+        if (!billing_table_exists($conn, 'billing_installment_terms') || !billing_table_exists($conn, 'billing_installments')) {
+            return;
+        }
+
+        $exists = $conn->query("
+            SELECT 1 FROM information_schema.TABLE_CONSTRAINTS
+            WHERE CONSTRAINT_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'billing_installment_terms'
+              AND CONSTRAINT_NAME = 'fk_bit_installment'
+        ");
+        if ($exists && $exists->num_rows > 0) {
+            return;
+        }
+
+        // Only add the safety-net FK once any orphaned term rows (installment_id with no
+        // matching parent) have been cleared; otherwise the ALTER would fail.
+        @$conn->query('
+            DELETE bit FROM billing_installment_terms bit
+            LEFT JOIN billing_installments bi ON bi.installment_id = bit.installment_id
+            WHERE bi.installment_id IS NULL
         ');
-        if (!$termIns) {
-            return false;
-        }
 
-        $pending = 'pending';
-        $termNumber = 0;
-        $dueDate = date('Y-m-d');
-        $termIns->bind_param('iisds', $installmentId, $termNumber, $dueDate, $downPaymentAmount, $pending);
-        $termIns->execute();
-
-        $distributed = $downPaymentAmount;
-        for ($i = 1; $i <= $numTerms; $i++) {
-            $amount = ($i === $numTerms)
-                ? round($remaining - ($termAmount * ($numTerms - 1)), 2)
-                : $termAmount;
-            $distributed += $amount;
-            $due = date('Y-m-d', strtotime('+' . $i . ' month'));
-            $termIns->bind_param('iisds', $installmentId, $i, $due, $amount, $pending);
-            $termIns->execute();
-        }
-        $termIns->close();
-
-        return $installmentId;
+        @$conn->query('
+            ALTER TABLE billing_installment_terms
+            ADD CONSTRAINT fk_bit_installment FOREIGN KEY (installment_id)
+                REFERENCES billing_installments (installment_id) ON DELETE CASCADE
+        ');
     }
 }
 
@@ -723,6 +832,15 @@ if (!function_exists('billing_migrate_installment_term_reminders')) {
         if (!isset($cols['overdue_reminder_sent_at'])) {
             @$conn->query('ALTER TABLE billing_installment_terms ADD COLUMN overdue_reminder_sent_at DATETIME NULL AFTER due_soon_reminder_sent_at');
         }
+        if (!isset($cols['paid_amount'])) {
+            @$conn->query('ALTER TABLE billing_installment_terms ADD COLUMN paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER amount');
+            // Backfill: anything already marked 'paid' is fully covered by its own amount.
+            @$conn->query("UPDATE billing_installment_terms SET paid_amount = amount WHERE status = 'paid'");
+        }
+        // Widen the status enum to allow a 'partial' state for terms with a partial payment
+        // applied (previously a term with any payment less than its full amount showed as
+        // plain 'pending' with no credit for what had already been paid toward it).
+        @$conn->query("ALTER TABLE billing_installment_terms MODIFY COLUMN status ENUM('pending','partial','paid') NOT NULL DEFAULT 'pending'");
     }
 }
 
@@ -743,14 +861,14 @@ if (!function_exists('billing_send_installment_reminders')) {
         $sentCount = 0;
         $queries = [
             [
-                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, bit.amount,
+                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, (bit.amount - bit.paid_amount) AS amount,
                                  p.email, p.first_name, p.last_name, b.billing_id
                           FROM billing_installment_terms bit
                           INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
                           INNER JOIN billing b ON b.billing_id = bi.billing_id
                           INNER JOIN appointments a ON a.appointment_id = b.appointment_id
                           INNER JOIN patients p ON p.patient_id = a.patient_id
-                          WHERE bit.status = 'pending'
+                          WHERE bit.status IN ('pending','partial')
                             AND bit.term_number > 0
                             AND bit.due_date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
                             AND bit.due_soon_reminder_sent_at IS NULL",
@@ -758,14 +876,14 @@ if (!function_exists('billing_send_installment_reminders')) {
                 'mark_column' => 'due_soon_reminder_sent_at',
             ],
             [
-                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, bit.amount,
+                'sql' => "SELECT bit.term_id, bit.term_number, bit.due_date, (bit.amount - bit.paid_amount) AS amount,
                                  p.email, p.first_name, p.last_name, b.billing_id
                           FROM billing_installment_terms bit
                           INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
                           INNER JOIN billing b ON b.billing_id = bi.billing_id
                           INNER JOIN appointments a ON a.appointment_id = b.appointment_id
                           INNER JOIN patients p ON p.patient_id = a.patient_id
-                          WHERE bit.status = 'pending'
+                          WHERE bit.status IN ('pending','partial')
                             AND bit.term_number > 0
                             AND bit.due_date = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
                             AND bit.overdue_reminder_sent_at IS NULL",

@@ -97,7 +97,7 @@ if ($inst) {
     $inst->close();
     if ($installment) {
         $tid = (int)$installment['installment_id'];
-        $tstmt = $conn->prepare('SELECT term_number, due_date, amount, status, paid_at FROM billing_installment_terms WHERE installment_id = ? ORDER BY term_number');
+        $tstmt = $conn->prepare('SELECT term_number, due_date, amount, paid_amount, status, paid_at FROM billing_installment_terms WHERE installment_id = ? ORDER BY term_number');
         if ($tstmt) {
             $tstmt->bind_param('i', $tid);
             $tstmt->execute();
@@ -156,7 +156,13 @@ $instRows = '';
 if ($installment) {
     foreach ($terms as $t) {
         $termStatus = ($t['status'] === 'paid' || $billingFullyPaid) ? 'paid' : $t['status'];
-        $instRows .= '<tr><td>Term ' . (int)$t['term_number'] . ' — due ' . pdf_esc($t['due_date']) . ' (' . pdf_esc($termStatus) . ')</td><td class="amt">&#8369;' . number_format((float)$t['amount'], 2) . '</td></tr>';
+        $termAmount = (float)$t['amount'];
+        $termPaid = (float)($t['paid_amount'] ?? 0);
+        $termRemaining = $billingFullyPaid ? 0 : max(0, round($termAmount - $termPaid, 2));
+        $amountLabel = ($termStatus === 'partial')
+            ? number_format($termRemaining, 2) . ' remaining of &#8369;' . number_format($termAmount, 2)
+            : number_format($termAmount, 2);
+        $instRows .= '<tr><td>Term ' . (int)$t['term_number'] . ' — due ' . pdf_esc($t['due_date']) . ' (' . pdf_esc($termStatus) . ')</td><td class="amt">&#8369;' . $amountLabel . '</td></tr>';
     }
 }
 

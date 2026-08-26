@@ -380,8 +380,13 @@ try {
 
     billing_save_line_items($conn, $appointmentId, $billingId, $lineItems);
 
+    $installmentDownPaymentAmount = null;
     if ($useInstallment === 1 && $installmentTerms > 0) {
-        billing_create_installment_plan($conn, $billingId, $grandTotal, $installmentTerms, 50.0);
+        $installmentDownPaymentAmount = round($grandTotal * 0.5, 2);
+        $newInstallmentId = billing_create_installment_plan($conn, $billingId, $grandTotal, $installmentTerms, 50.0);
+        if ($newInstallmentId === false) {
+            throw new Exception('Failed to create installment plan.');
+        }
     }
 
     billing_create_invoice($conn, $billingId, $secretaryId);
@@ -394,11 +399,16 @@ try {
         if ($paymentOrNumber === '') {
             throw new Exception('OR number is required to record a payment.');
         }
-        $amountApplied = round(min($paymentAmountApplied, $grandTotal), 2);
+        // When an installment plan is being created alongside this payment, only today's
+        // down payment is actually due — cap what gets applied/recorded to that amount (not
+        // the full grand total) so a larger amount tendered is returned as change instead of
+        // being recorded as payment and prematurely marking every future term paid.
+        $amountDueNow = $installmentDownPaymentAmount ?? $grandTotal;
+        $amountApplied = round(min($paymentAmountApplied, $amountDueNow), 2);
         if ($amountApplied <= 0) {
             throw new Exception('Enter an amount tendered to record a payment.');
         }
-        if ($amountApplied < $grandTotal && $amountApplied < round($grandTotal * 0.5, 2)) {
+        if ($amountApplied < $amountDueNow && $amountApplied < round($amountDueNow * 0.5, 2)) {
             throw new Exception('A partial payment must be at least 50% of the total due.');
         }
         $change = max(0, round($paymentAmountTendered - $amountApplied, 2));

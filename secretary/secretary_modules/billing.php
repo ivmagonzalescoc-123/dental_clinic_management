@@ -362,15 +362,16 @@ if (!$hasAnyData) {
                                             if ($instRow) {
                                                 $hasInstallment = true;
                                                 $downPaymentAmount = (float)($instRow['down_payment_amount'] ?? 0);
-                                                // Get first pending term amount
-                                                $termCheck = $conn->prepare('SELECT amount FROM billing_installment_terms WHERE installment_id = ? AND status = "pending" ORDER BY term_number ASC LIMIT 1');
+                                                // Get the remaining balance on the earliest not-yet-fully-paid term
+                                                // (pending or partial), not just its original full amount.
+                                                $termCheck = $conn->prepare("SELECT (amount - paid_amount) AS remaining FROM billing_installment_terms WHERE installment_id = ? AND status IN ('pending','partial') ORDER BY term_number ASC LIMIT 1");
                                                 if ($termCheck) {
                                                     $termCheck->bind_param('i', $instRow['installment_id']);
                                                     $termCheck->execute();
                                                     $termRow = $termCheck->get_result()->fetch_assoc();
                                                     $termCheck->close();
                                                     if ($termRow) {
-                                                        $nextTermAmount = (float)($termRow['amount'] ?? 0);
+                                                        $nextTermAmount = (float)($termRow['remaining'] ?? 0);
                                                     }
                                                 }
                                             }
@@ -666,7 +667,13 @@ if (!$hasAnyData) {
                     instRows += `<p class="small mb-1"><strong>Installment Plan:</strong> 50% down (₱${parseFloat(details.installment.down_payment_amount).toFixed(2)}) + ${details.installment.num_terms} terms</p>`;
                     (details.installment_terms || []).forEach(t => {
                         const termStatus = (t.status === 'paid' || billingFullyPaid) ? 'paid' : t.status;
-                        instRows += `<tr><td>Term ${t.term_number} — due ${t.due_date} (${termStatus})</td><td class="text-end">₱${(parseFloat(t.amount)||0).toFixed(2)}</td></tr>`;
+                        const termAmount = parseFloat(t.amount) || 0;
+                        const termPaid = parseFloat(t.paid_amount) || 0;
+                        const termRemaining = billingFullyPaid ? 0 : Math.max(0, termAmount - termPaid);
+                        const amountLabel = (termStatus === 'partial')
+                            ? `₱${termRemaining.toFixed(2)} remaining of ₱${termAmount.toFixed(2)}`
+                            : `₱${termAmount.toFixed(2)}`;
+                        instRows += `<tr><td>Term ${t.term_number} — due ${t.due_date} (${termStatus})</td><td class="text-end">${amountLabel}</td></tr>`;
                     });
                 }
                 const billingTotal = parseFloat(billing.total_amount) || 0;
