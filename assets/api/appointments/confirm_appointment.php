@@ -64,7 +64,7 @@ if ($appointment_id <= 0) {
 }
 
 // Load appointment
-$a_stmt = $conn->prepare('SELECT appointment_id, user_id, patient_id, appointment_date, status FROM appointments WHERE appointment_id = ? LIMIT 1');
+$a_stmt = $conn->prepare('SELECT appointment_id, user_id, patient_id, appointment_date, status, timeslot_id FROM appointments WHERE appointment_id = ? LIMIT 1');
 $a_stmt->bind_param('i', $appointment_id);
 $a_stmt->execute();
 $appointment = $a_stmt->get_result()->fetch_assoc();
@@ -94,6 +94,17 @@ if ($action === 'decline') {
     $upd->bind_param('si', $reason, $appointment_id);
     $upd->execute();
     $upd->close();
+
+    // Free the timeslot back up — otherwise it stays stuck as "booked" forever
+    // and blocks every future patient from booking that time.
+    $declinedTimeslotId = (int)($appointment['timeslot_id'] ?? 0);
+    if ($declinedTimeslotId > 0) {
+        $freeSlot = $conn->prepare("UPDATE timeslot SET status = 'available' WHERE timeslot_id = ? AND status = 'booked'");
+        $freeSlot->bind_param('i', $declinedTimeslotId);
+        $freeSlot->execute();
+        $freeSlot->close();
+    }
+
     if (function_exists('log_system_event')) {
         log_system_event(
             $conn,

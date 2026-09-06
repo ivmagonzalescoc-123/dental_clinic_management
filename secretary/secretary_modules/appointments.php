@@ -274,7 +274,7 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     try {
-        $curStmt = $conn->prepare('SELECT status, patient_id, user_id, appointment_date FROM appointments WHERE appointment_id = ? LIMIT 1');
+        $curStmt = $conn->prepare('SELECT status, patient_id, user_id, appointment_date, timeslot_id FROM appointments WHERE appointment_id = ? LIMIT 1');
         if (!$curStmt) {
             throw new Exception('Unable to validate appointment status.');
         }
@@ -300,6 +300,19 @@ if ($action === 'decline' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('ssi', $status, $reason, $appointmentId);
             $stmt->execute();
             $stmt->close();
+        }
+
+        // Free the timeslot back up — otherwise it stays stuck as "booked" forever
+        // and blocks every future patient (including new patients being processed)
+        // from booking that same time.
+        $declinedTimeslotId = (int)($cur['timeslot_id'] ?? 0);
+        if ($declinedTimeslotId > 0) {
+            $freeSlot = $conn->prepare("UPDATE timeslot SET status = 'available' WHERE timeslot_id = ? AND status = 'booked'");
+            if ($freeSlot) {
+                $freeSlot->bind_param('i', $declinedTimeslotId);
+                $freeSlot->execute();
+                $freeSlot->close();
+            }
         }
 
         if (function_exists('log_system_event')) {
@@ -1012,7 +1025,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <h5 class="modal-title" style="font-size:0.9rem;">
                     <i class="bi bi-arrow-right-circle"></i> Process New Booked Appointment
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" id="convertCloseBtn" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="convertBookingForm">
                 <input type="hidden" id="convertBookingId" name="booking_id">
@@ -1383,10 +1396,27 @@ function openConvertBookingModal(booking) {
 
     resetConvertProfilingForm();
     showConvertStep(1);
+    setConvertModalProcessing(false);
 
     var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('convertBookingModal'));
     modal.show();
 }
+
+// While the create-patient/create-appointment requests are in flight, the secretary
+// clicking the backdrop, pressing Escape, or hitting the X shouldn't be able to make
+// the modal vanish out from under a request that's still running — they'd have no way
+// to tell whether it actually finished. Lock those exits down for the duration.
+var convertIsProcessing = false;
+function setConvertModalProcessing(isProcessing) {
+    convertIsProcessing = isProcessing;
+    var closeBtn = document.getElementById('convertCloseBtn');
+    var backBtn = document.getElementById('convertBackBtn');
+    if (closeBtn) closeBtn.disabled = isProcessing;
+    if (backBtn) backBtn.disabled = isProcessing;
+}
+document.getElementById('convertBookingModal')?.addEventListener('hide.bs.modal', function(e) {
+    if (convertIsProcessing) e.preventDefault();
+});
 
 // --- 2-step wizard: step 1 (appointment) / step 2 (new-patient profiling) ---
 function showConvertStep(step) {
@@ -1727,9 +1757,15 @@ function loadProcessTimeslots(doctorId, date) {
 
 // Try to preselect the timeslot matching the guest's preferred booking time, so the
 // secretary isn't left to manually hunt for it (or accidentally pick the wrong slot).
-// If that exact time isn't in the available list (e.g. another session already
-// occupies it), leave the selection blank and warn once so the secretary picks
-// an available time deliberately instead of guessing.
+// If that exact time isn't in the available list, leave the selection blank and warn
+// once so the secretary picks an available time deliberately instead of guessing.
+//
+// The exact time can be missing for two different reasons, and the warning must not
+// claim it's "already taken" when that's not actually true:
+//   1. It's genuinely booked by someone else.
+//   2. It's still free, but the currently selected service(s) run long enough that
+//      starting at that time would spill into a break or past closing — get_timeslots.php
+//      only returns start times with enough *consecutive* room for the chosen duration.
 function preselectPreferredProcessTimeslot() {
     var timeslotSelect = document.getElementById('convertTimeslotSelect');
     var preferredTime = convertBookingData && convertBookingData.preferred_time;
@@ -1746,7 +1782,11 @@ function preselectPreferredProcessTimeslot() {
         timeslotSelect.value = matchOption.value;
     } else if (!convertPreferredTimeWarned) {
         convertPreferredTimeWarned = true;
-        notifySecretary('Preferred time (' + preferredTime + ') is already taken by another session. Please select an available time.', 'warning');
+        var durationMinutes = processSelectedServices.reduce(function(sum, s) { return sum + (s.duration || 0); }, 0);
+        var message = durationMinutes > 0
+            ? 'Preferred time (' + preferredTime + ') isn\'t available for the selected service(s) — either it\'s already booked, or the total duration (' + durationMinutes + ' min) doesn\'t fit starting there before a break or closing time. Please select another time.'
+            : 'Preferred time (' + preferredTime + ') is no longer available. Please select another time.';
+        notifySecretary(message, 'warning');
     }
 }
 
@@ -1850,6 +1890,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     }
 
     DentalUI.btnLoading(submitBtn, 'Processing...');
+    setConvertModalProcessing(true);
 
     try {
         // 1. Create patient account — profiling (allergies, hypertensive/diabetic/etc.) and
@@ -1893,6 +1934,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         if (!patientData.success || !patientData.patient_id) {
             notifySecretary('Error creating patient: ' + (patientData.message || 'Unknown error'), 'danger');
             DentalUI.btnRestore(submitBtn);
+            setConvertModalProcessing(false);
             return;
         }
 
@@ -1944,6 +1986,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             // confirmation before the popup disappears from under them.
             notifySecretary('Booking processed! Patient account created. Password sent to: ' + (convertBookingData.email || 'email'), 'success');
             DentalUI.btnRestore(submitBtn);
+            setConvertModalProcessing(false);
             closeConvertBookingModal();
             return;
         } else {
@@ -1960,6 +2003,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     }
 
     DentalUI.btnRestore(submitBtn);
+    setConvertModalProcessing(false);
 });
 </script>
 

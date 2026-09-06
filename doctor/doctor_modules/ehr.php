@@ -142,7 +142,12 @@ if ($sstmt) {
         <div class="p-2 border rounded bg-light">
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <label class="form-label fw-bold mb-0"><i class="bi bi-tooth"></i> Odontogram / Charting</label>
-                <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-secondary btn-sm">Full Screen</button>
+                <div class="d-flex gap-2">
+                    <button type="button" id="saveChartBtn" class="btn btn-success btn-sm">
+                        <i class="bi bi-save"></i> Save Chart
+                    </button>
+                    <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-secondary btn-sm">Full Screen</button>
+                </div>
             </div>
             <div id="odontogramViewport" class="odontogram-viewport">
                 <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
@@ -151,6 +156,7 @@ if ($sstmt) {
                 <div id="odontogramContainer"></div>
             </div>
             <input type="hidden" id="odontogram_data" name="odontogram">
+            <small class="text-muted d-block mt-1">Save Chart stores this odontogram immediately so it is not lost, no matter which screen is used to finish the appointment.</small>
         </div>
     </div>
 
@@ -592,6 +598,9 @@ if ($sstmt) {
             ehrSelectedServices = ehrSelectedServices.filter(function(s) { return s.service_id !== serviceId; });
             renderEhrServicesTable();
         }
+        // Exposed globally because rows use an inline onclick="removeEhrService(...)"
+        // handler, which resolves against the global scope, not this IIFE's closure.
+        window.removeEhrService = removeEhrService;
 
         function renderEhrServicesTable() {
             var tbody = document.getElementById('ehrServicesBody');
@@ -730,6 +739,52 @@ if ($sstmt) {
             uploadedPhotos.splice(idx, 1);
             updatePhotoGalleryPreview();
         }
+
+        let ehrChartSaving = false;
+
+        // Save Chart: persists the odontogram immediately (status stays in_progress,
+        // does NOT move the appointment to the secretary queue) so charting is never
+        // lost regardless of which "Finish Appointment" screen is used afterwards.
+        document.getElementById('saveChartBtn')?.addEventListener('click', async function() {
+            const appointmentId = document.getElementById('appointment_id_hidden').value;
+            if (!appointmentId) {
+                notifyDoctor('Please select a patient/appointment first.', 'warning');
+                return;
+            }
+            if (ehrChartSaving) return;
+            ehrChartSaving = true;
+
+            const btnText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const odontogramPayload = collectOdontogramPayload();
+                const fd = new FormData();
+                fd.append('appointment_id', appointmentId);
+                fd.append('doctor_notes', document.getElementById('doctor_notes')?.value || '');
+                fd.append('csrf_token', doctorCsrfToken);
+                if (odontogramPayload) fd.append('odontogram', odontogramPayload);
+
+                const res = await fetch('../assets/api/ehr/save_clinical_record.php', {
+                    method: 'POST',
+                    body: fd
+                });
+                const json = await res.json();
+                if (!json.success) {
+                    notifyDoctor(json.message || 'Failed to save chart', 'danger');
+                } else {
+                    notifyDoctor('Chart saved', 'success');
+                }
+            } catch (e) {
+                console.error(e);
+                notifyDoctor('Error saving chart', 'danger');
+            } finally {
+                ehrChartSaving = false;
+                this.disabled = false;
+                this.innerHTML = btnText;
+            }
+        });
 
         let ehrFinishSubmitting = false;
         let ehrFinishIdempotencyKey = null;

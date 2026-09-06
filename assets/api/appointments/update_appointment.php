@@ -191,10 +191,15 @@ try {
         }
     }
 
+    // Cancelling (or marking no-show) frees the slot even when the timeslot_id
+    // itself isn't changing — otherwise the timeslot stays stuck as "booked"
+    // forever and blocks every future patient from booking that time.
+    $statusBecameTerminal = ($status !== $currentStatus) && in_array($status, ['cancelled', 'no_show'], true);
+
     $conn->begin_transaction();
 
     try {
-        if ($timeslotChanged && $currentTimeslotId > 0) {
+        if (($timeslotChanged || $statusBecameTerminal) && $currentTimeslotId > 0) {
             $freeOld = $conn->prepare("UPDATE timeslot SET status = 'available' WHERE timeslot_id = ? AND status = 'booked'");
             if (!$freeOld) throw new Exception('Prepare free-old failed: ' . $conn->error);
             $freeOld->bind_param('i', $currentTimeslotId);
@@ -202,7 +207,7 @@ try {
             $freeOld->close();
         }
 
-        if ($timeslotChanged && $timeslot_id > 0) {
+        if ($timeslotChanged && $timeslot_id > 0 && !$statusBecameTerminal) {
             $bookNew = $conn->prepare("UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'");
             if (!$bookNew) throw new Exception('Prepare book-new failed: ' . $conn->error);
             $bookNew->bind_param('i', $timeslot_id);
