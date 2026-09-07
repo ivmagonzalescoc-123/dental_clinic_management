@@ -749,6 +749,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                         <th>Ref. No.</th>
                         <th>Name</th>
                         <th>Preferred Date</th>
+                        <th>Time</th>
                         <th>Status</th>
                         <th>Action</th>
                     </tr>
@@ -756,7 +757,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                 <tbody>
                     <?php if (empty($guestBookings)): ?>
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="6" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No guest bookings yet.
                             </td>
@@ -777,9 +778,10 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 $rowStatus = $isDeclined ? 'declined' : ($isConverted ? 'processed' : ($gb['status'] === 'approved' ? 'approved' : 'pending'));
                             ?>
                             <tr data-status="<?php echo $rowStatus; ?>" data-date="<?php echo htmlspecialchars(date('Y-m-d', strtotime($gb['preferred_date']))); ?>" data-search="<?php echo htmlspecialchars(strtolower(trim($gb['first_name'] . ' ' . $gb['last_name']) . ' ' . $gb['email'] . ' ' . ($gb['phone_number'] ?? ''))); ?>" style="<?php echo ($isConverted || $isDeclined) ? 'opacity:0.7;' : ''; ?>">
-                                <td><strong>#<?php echo (int)$gb['booking_id']; ?></strong></td>
+                                <td><strong><?php echo htmlspecialchars($gb['tracking_code'] ?? '#' . (int)$gb['booking_id']); ?></strong></td>
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
+                                <td><?php echo htmlspecialchars($gb['preferred_time'] ?? '—'); ?></td>
                                 <td>
                                     <?php if ($isDeclined): ?>
                                         <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelled</span>

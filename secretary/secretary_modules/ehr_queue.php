@@ -476,6 +476,7 @@ window.currentRecordAppointmentId = null;
 window.currentRecordPatientId = null;
 window.currentRecordPatientName = '';
 window.currentRecordDoctorName = '';
+window.currentRecordDoctorId = 0;
 window.currentRecordPatientDob = '';
 window.secretaryOdontogramData = {};
 window.SECRETARY_ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
@@ -626,9 +627,110 @@ function printPrescriptions() {
         notifySecretary('Add at least one prescription before printing.', 'warning');
         return;
     }
+    
+    // Show loading state
+    const printBtn = document.getElementById('printPrescriptionsBtn');
+    const originalBtnText = printBtn?.innerHTML;
+    if (printBtn) {
+        printBtn.disabled = true;
+        printBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading...';
+    }
+    
+    // Fetch doctor's prescription profile
+    fetch('../assets/api/doctors/get_prescription_profile.php?doctor_id=' + currentRecordDoctorId)
+        .then(response => response.json())
+        .then(data => {
+            if (printBtn) {
+                printBtn.disabled = false;
+                printBtn.innerHTML = originalBtnText;
+            }
+            
+            const profile = data.success ? data.profile : null;
+            generateAndPrintPrescription(rows, profile);
+        })
+        .catch(err => {
+            console.error('Error fetching prescription profile:', err);
+            if (printBtn) {
+                printBtn.disabled = false;
+                printBtn.innerHTML = originalBtnText;
+            }
+            // Fallback to default
+            generateAndPrintPrescription(rows, null);
+        });
+}
+
+function generateAndPrintPrescription(rows, profile) {
     const esc = escapeBillingHtml;
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const age = calculatePatientAge(currentRecordPatientDob);
+    
+    // Use profile data or defaults
+    const doctorName = profile?.full_name || ('Dr. ' + (currentRecordDoctorName || ''));
+    const professionalTitle = profile?.professional_title || 'DMD';
+    const clinicName = profile?.clinic_name || "Azucena's Dental Clinic";
+    const clinicAddress = profile?.clinic_address || 'Metz Arcade, Cagayan de Oro City, Philippines';
+    const clinicPhone = profile?.clinic_phone || '(088) 123 4567';
+    
+    // Build license display
+    let licenseHtml = '';
+    if (profile) {
+        const licenses = [];
+        if (profile.license_type_1 && profile.license_number_1) {
+            licenses.push({ type: profile.license_type_1, number: profile.license_number_1 });
+        }
+        if (profile.license_type_2 && profile.license_number_2) {
+            licenses.push({ type: profile.license_type_2, number: profile.license_number_2 });
+        }
+        if (profile.license_type_3 && profile.license_number_3) {
+            licenses.push({ type: profile.license_type_3, number: profile.license_number_3 });
+        }
+        
+        if (licenses.length > 0) {
+            licenses.forEach((lic, idx) => {
+                licenseHtml += `
+                    <div style="line-height:1.9;">
+                        <div>${esc(lic.type)} No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">${esc(lic.number)}</span></div>
+                    </div>`;
+            });
+        } else {
+            licenseHtml = `
+                <div style="line-height:1.9;">
+                    <div>Lic. No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+                    <div>PTR No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+                </div>`;
+        }
+    } else {
+        licenseHtml = `
+            <div style="line-height:1.9;">
+                <div>Lic. No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+                <div>PTR No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+            </div>`;
+    }
+    
+    // Signature handling
+    let signatureHtml = '';
+    if (profile?.signature_drawn) {
+        signatureHtml = `
+            <div style="text-align:center;width:230px;">
+                <img src="${esc(profile.signature_drawn)}" alt="Signature" style="max-width:100%; max-height:60px; border-top:1px solid #111; padding-top:4px;">
+                <div style="font-size:0.82em;color:#666;margin-top:4px;">${esc(doctorName)}</div>
+                <div style="font-size:0.82em;color:#666;">${esc(professionalTitle)}</div>
+            </div>`;
+    } else if (profile?.signature_image) {
+        signatureHtml = `
+            <div style="text-align:center;width:230px;">
+                <img src="../${esc(profile.signature_image)}" alt="Signature" style="max-width:100%; max-height:60px; border-top:1px solid #111; padding-top:4px;">
+                <div style="font-size:0.82em;color:#666;margin-top:4px;">${esc(doctorName)}</div>
+                <div style="font-size:0.82em;color:#666;">${esc(professionalTitle)}</div>
+            </div>`;
+    } else {
+        signatureHtml = `
+            <div style="text-align:center;width:230px;">
+                <div style="border-top:1px solid #111;padding-top:4px;font-weight:600;min-height:40px;">${esc(doctorName)}</div>
+                <div style="font-size:0.82em;color:#666;">${esc(professionalTitle)}</div>
+                <div style="font-size:0.82em;color:#666;">Signature over Printed Name</div>
+            </div>`;
+    }
 
     let rxRowsHtml = '';
     rows.forEach((rx, i) => {
@@ -645,9 +747,9 @@ function printPrescriptions() {
     const html = `
         <div style="text-align:center;border-bottom:2px solid #16a34a;padding-bottom:10px;margin-bottom:14px;">
             <img src="../assets/img/clinic-logo.png" style="height:48px;" onerror="this.style.display='none'">
-            <div style="font-size:1.15em;font-weight:700;margin-top:4px;letter-spacing:0.02em;">Azucena's Dental Clinic</div>
-            <div style="font-size:0.75em;color:#555;">Metz Arcade, Cagayan de Oro City, Philippines</div>
-            <div style="font-size:0.75em;color:#555;">Tel: (088) 123 4567</div>
+            <div style="font-size:1.15em;font-weight:700;margin-top:4px;letter-spacing:0.02em;">${esc(clinicName)}</div>
+            <div style="font-size:0.75em;color:#555;">${esc(clinicAddress)}</div>
+            <div style="font-size:0.75em;color:#555;">Tel: ${esc(clinicPhone)}</div>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:0.85em;margin-bottom:6px;">
             <div><strong>Patient:</strong> ${esc(currentRecordPatientName || '')}${age !== '' ? ' (' + age + ' y/o)' : ''}</div>
@@ -658,14 +760,10 @@ function printPrescriptions() {
         <div style="min-height:180px;">${rxRowsHtml}</div>
         <div style="margin-top:50px;font-size:0.85em;">
             <div style="display:flex;justify-content:flex-end;">
-                <div style="text-align:center;width:230px;">
-                    <div style="border-top:1px solid #111;padding-top:4px;font-weight:600;">Dr. ${esc(currentRecordDoctorName || '_________________________')}</div>
-                    <div style="font-size:0.82em;color:#666;">Signature over Printed Name</div>
-                </div>
+                ${signatureHtml}
             </div>
-            <div style="margin-top:18px;line-height:1.9;">
-                <div>Lic. No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
-                <div>PTR No.: <span style="display:inline-block;min-width:180px;border-bottom:1px solid #333;">&nbsp;</span></div>
+            <div style="margin-top:18px;">
+                ${licenseHtml}
             </div>
         </div>
     `;
@@ -678,6 +776,7 @@ function printPrescriptions() {
             <style>
                 @page { size: 5.5in 8.5in; margin: 0.4in; }
                 body { width: 5.5in; font-family: Arial, sans-serif; color: #111; margin: 0; padding: 0.2in; }
+                img { max-width: 100%; }
             </style>
         </head>
         <body>${html}</body>
@@ -819,6 +918,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Populate patient header
         currentRecordPatientName = String(data.appointment?.patient_name || '').trim();
         currentRecordDoctorName = String(data.appointment?.doctor_name || '').trim();
+        currentRecordDoctorId = (int)(data.appointment?.doctor_id || 0);
         currentRecordPatientDob = data.appointment?.date_of_birth || '';
         if (patientNameEl) {
             patientNameEl.textContent = currentRecordPatientName || 'Create Clinical Record';

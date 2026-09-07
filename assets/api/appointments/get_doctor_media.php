@@ -35,7 +35,7 @@ if (!$appointmentId) {
 billing_ensure_tables($conn);
 
 try {
-    $stmt = $conn->prepare('SELECT a.appointment_id, a.status, p.patient_id, p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.email, u.first_name AS doctor_first_name, u.last_name AS doctor_last_name FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id LEFT JOIN users u ON u.user_id = a.user_id WHERE a.appointment_id = ?');
+    $stmt = $conn->prepare('SELECT a.appointment_id, a.status, a.user_id AS doctor_id, p.patient_id, p.first_name, p.last_name, p.date_of_birth, p.phone_number, p.email, u.first_name AS doctor_first_name, u.last_name AS doctor_last_name FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id LEFT JOIN users u ON u.user_id = a.user_id WHERE a.appointment_id = ?');
     if (!$stmt) throw new Exception('Failed to load appointment: ' . $conn->error);
     $stmt->bind_param('i', $appointmentId);
     $stmt->execute();
@@ -204,6 +204,7 @@ try {
             'phone_number' => $appointment['phone_number'],
             'email' => $appointment['email'],
             'doctor_name' => trim(($appointment['doctor_first_name'] ?? '') . ' ' . ($appointment['doctor_last_name'] ?? '')),
+            'doctor_id' => (int)($appointment['doctor_id'] ?? 0),
         ],
         'photos' => $photos,
         'notes' => $notes,
