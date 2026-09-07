@@ -821,9 +821,9 @@
     })
   }
 
-  const datatables = select('.datatable:not([data-skip-datatable])', true)
+  const datatables = select('.datatable:not([data-skip-datatable]):not([data-skip-table-search])', true)
   datatables.forEach(datatable => {
-    if (datatable.dataset.skipDatatable === '1') return
+    if (datatable.dataset.skipDatatable === '1' || datatable.dataset.skipTableSearch === '1') return
     try {
       // Column-specific options only make sense if the table actually has
       // that many columns — a table with fewer columns (e.g. a trimmed-down

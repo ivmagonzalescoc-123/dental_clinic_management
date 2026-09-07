@@ -401,7 +401,7 @@ foreach ($roles as $roleRow) {
                     <table class="table table-hover datatable" data-skip-table-search="1">
                         <thead>
                             <tr>
-                                <th>Name</th>
+                                <th>User</th>
                                 <th>Role</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -410,8 +410,23 @@ foreach ($roles as $roleRow) {
                         <tbody>
                             <?php foreach ($users as $user): ?>
                                 <?php $isDoctor = ((int)($user['role_id'] ?? 0) === (int)$doctorRoleId); ?>
+                                <?php
+                                    $userAvatar = '';
+                                    if (!empty($user['profile_image'])) {
+                                        $imgPath = $user['profile_image'];
+                                        $imgUrl = (strpos($imgPath, 'http') === 0) ? $imgPath : '../' . ltrim($imgPath, '/');
+                                        $userAvatar = '<img src="' . htmlspecialchars($imgUrl) . '" alt="" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" class="me-2">';
+                                    } else {
+                                        $userAvatar = '<span class="me-2 d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:32px;height:32px;font-size:0.85rem;"><i class="bi bi-person-fill"></i></span>';
+                                    }
+                                ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></td>
+                                    <td>
+                                        <?php echo $userAvatar; ?>
+                                        <div class="d-inline-block align-middle">
+                                            <div class="fw-semibold"><?php echo htmlspecialchars($user['first_name'] . ' ' . $user['last_name']); ?></div>
+                                        </div>
+                                    </td>
                                     <td>
                                         <span class="badge bg-secondary">
                                             <?php echo htmlspecialchars($user['role_name'] ?? 'N/A'); ?>
@@ -488,40 +503,53 @@ foreach ($roles as $roleRow) {
 
         <div class="table-responsive">
             <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
-                <thead>
+<thead>
                     <tr>
                         <th>ID</th>
-                                <th>Patient</th>
-                                <th>Phone</th>
-                                <th>DOB</th>
-                                <th>Gender</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (empty($patients)): ?>
-                                <tr><td colspan="7" class="text-center text-muted py-4">No patients found.</td></tr>
-                            <?php else: ?>
-                            <?php foreach ($patients as $patient): ?>
-                                <?php $patientJson = htmlspecialchars(json_encode($patient, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8'); ?>
-                                <tr>
-                                    <td><?php echo (int)$patient['patient_id']; ?></td>
-                                    <td>
-                                        <div class="fw-semibold"><?php echo htmlspecialchars(trim(($patient['first_name'] ?? '') . ' ' . ($patient['middle_name'] ?? '') . ' ' . ($patient['last_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></div>
-                                        <div class="small text-muted"><?php echo htmlspecialchars((string)($patient['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
-                                    </td>
-                                    <td><?php echo htmlspecialchars((string)($patient['phone_number'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($patient['date_of_birth'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td><?php echo htmlspecialchars((string)($patient['gender'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                    <td class="text-end">
-                                        <button type="button" class="btn btn-sm btn-primary" title="View and manage patient" onclick="openPatientProfileModal(<?php echo $patientJson; ?>, 'profile')">
-                                            <i class="bi bi-person-lines-fill"></i> Manage
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
+                        <th>Patient</th>
+                        <th>Phone</th>
+                        <th>DOB</th>
+                        <th>Gender</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($patients)): ?>
+                        <tr><td colspan="6" class="text-center text-muted py-4">No patients found.</td></tr>
+                    <?php else: ?>
+                    <?php foreach ($patients as $patient): ?>
+                        <?php $patientJson = htmlspecialchars(json_encode($patient, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8'); ?>
+                        <?php
+                            $patientAvatar = '';
+                            if (!empty($patient['profile_image'])) {
+                                $imgPath = $patient['profile_image'];
+                                $imgUrl = (strpos($imgPath, 'http') === 0) ? $imgPath : '../' . ltrim($imgPath, '/');
+                                $patientAvatar = '<img src="' . htmlspecialchars($imgUrl) . '" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" class="me-2">';
+                            } else {
+                                $patientAvatar = '<span class="me-2 d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:36px;height:36px;font-size:0.9rem;"><i class="bi bi-person-fill"></i></span>';
+                            }
+                        ?>
+                        <tr>
+                            <td><?php echo (int)$patient['patient_id']; ?></td>
+                            <td>
+                                <?php echo $patientAvatar; ?>
+                                <div class="d-inline-block align-middle">
+                                    <div class="fw-semibold"><?php echo htmlspecialchars(trim(($patient['first_name'] ?? '') . ' ' . ($patient['middle_name'] ?? '') . ' ' . ($patient['last_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="small text-muted"><?php echo htmlspecialchars((string)($patient['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
+                                </div>
+                            </td>
+                            <td><?php echo htmlspecialchars((string)($patient['phone_number'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string)($patient['date_of_birth'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string)($patient['gender'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-primary" title="View and manage patient" onclick="openPatientProfileModal(<?php echo $patientJson; ?>, 'profile')">
+                                    <i class="bi bi-person-lines-fill"></i> Manage
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
                     </table>
                 </div>
     </div>
@@ -731,9 +759,14 @@ foreach ($roles as $roleRow) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <h5 class="mb-0" id="view_user_name">—</h5>
-                    <span id="view_user_status_badge"></span>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div id="view_user_avatar" class="flex-shrink-0" style="width: 72px; height: 72px; border-radius: 50%; background: #eef1f6; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                        <i class="bi bi-person-fill" style="font-size: 2rem; opacity: 0.5;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0" id="view_user_name">—</h5>
+                        <span id="view_user_status_badge"></span>
+                    </div>
                 </div>
                 <div class="row row-cols-2 g-3">
                     <div>
@@ -1001,6 +1034,15 @@ function viewUser(user) {
     lastViewedUser = user;
     const doctorRoleId = <?php echo (int)$doctorRoleId; ?>;
     const isDoctor = String(user.role_id) === String(doctorRoleId);
+
+    // Set avatar
+    const avatarEl = document.getElementById('view_user_avatar');
+    if (user.profile_image) {
+        const imgUrl = /^https?:\/\//i.test(user.profile_image) ? user.profile_image : '../' + user.profile_image.replace(/^\/+/, '');
+        avatarEl.innerHTML = '<img src="' + imgUrl + '" alt="" style="width:100%;height:100%;object-fit:cover;">';
+    } else {
+        avatarEl.innerHTML = '<i class="bi bi-person-fill" style="font-size: 2rem; opacity: 0.5;"></i>';
+    }
 
     document.getElementById('view_user_name').textContent = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ');
     document.getElementById('view_user_status_badge').innerHTML = (Number(user.is_active) === 1)

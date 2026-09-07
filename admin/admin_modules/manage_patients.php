@@ -90,7 +90,7 @@ function admin_patient_format_datetime(?string $value): string
 <div id="patientDefaultTableView">
 <div class="table-responsive history-table-wrap">
     <table class="table table-hover datatable" id="patientsTable" data-skip-table-search="1">
-                <thead>
+<thead>
                     <tr>
                         <th>ID</th>
                         <th>Patient</th>
@@ -109,25 +109,38 @@ function admin_patient_format_datetime(?string $value): string
                             </td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($patients as $p): ?>
-                            <?php $patientJson = htmlspecialchars(json_encode($p, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8'); ?>
-                            <tr>
-                                <td><?php echo (int)$p['patient_id']; ?></td>
-                                <td>
+                    <?php foreach ($patients as $p): ?>
+                        <?php $patientJson = htmlspecialchars(json_encode($p, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP), ENT_QUOTES, 'UTF-8'); ?>
+                        <?php
+                            $patientAvatar = '';
+                            if (!empty($p['profile_image'])) {
+                                $imgPath = $p['profile_image'];
+                                $imgUrl = (strpos($imgPath, 'http') === 0) ? $imgPath : '../' . ltrim($imgPath, '/');
+                                $patientAvatar = '<img src="' . htmlspecialchars($imgUrl) . '" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" class="me-2">';
+                            } else {
+                                $patientAvatar = '<span class="me-2 d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:36px;height:36px;font-size:0.9rem;"><i class="bi bi-person-fill"></i></span>';
+                            }
+                        ?>
+                        <tr>
+                            <td><?php echo (int)$p['patient_id']; ?></td>
+                            <td>
+                                <?php echo $patientAvatar; ?>
+                                <div class="d-inline-block align-middle">
                                     <div class="fw-semibold"><?php echo htmlspecialchars(admin_patient_full_name($p), ENT_QUOTES, 'UTF-8'); ?></div>
                                     <div class="small text-muted"><?php echo htmlspecialchars((string)($p['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
-                                </td>
-                                <td><?php echo htmlspecialchars((string)($p['phone_number'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars((string)($p['date_of_birth'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars((string)($p['gender'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><?php echo htmlspecialchars(admin_patient_format_datetime($p['created_at'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-primary" title="View and manage patient" onclick="openPatientProfileModal(<?php echo $patientJson; ?>, 'profile')">
-                                        <i class="bi bi-person-lines-fill"></i> Manage
-                                    </button>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                                </div>
+                            </td>
+                            <td><?php echo htmlspecialchars((string)($p['phone_number'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string)($p['date_of_birth'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars((string)($p['gender'] ?? '—'), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td><?php echo htmlspecialchars(admin_patient_format_datetime($p['created_at'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-primary" title="View and manage patient" onclick="openPatientProfileModal(<?php echo $patientJson; ?>, 'profile')">
+                                    <i class="bi bi-person-lines-fill"></i> Manage
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -499,9 +512,16 @@ function fillProfileForm(patient) {
 
     function renderPatientRow(p, index) {
         const fullName = patientDisplayName(p) || '—';
+        let avatarHtml = '';
+        if (p.profile_image) {
+            const imgUrl = (p.profile_image.startsWith('http')) ? p.profile_image : '../' + p.profile_image.replace(/^\/+/, '');
+            avatarHtml = '<img src="' + escapeHtml(imgUrl) + '" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" class="me-2">';
+        } else {
+            avatarHtml = '<span class="me-2 d-inline-flex align-items-center justify-content-center rounded-circle bg-secondary text-white" style="width:36px;height:36px;font-size:0.9rem;"><i class="bi bi-person-fill"></i></span>';
+        }
         return '<tr>'
             + '<td>' + (parseInt(p.patient_id, 10) || 0) + '</td>'
-            + '<td><div class="fw-semibold">' + escapeHtml(fullName) + '</div><div class="small text-muted">' + escapeHtml(p.email || '') + '</div></td>'
+            + '<td>' + avatarHtml + '<div class="d-inline-block align-middle"><div class="fw-semibold">' + escapeHtml(fullName) + '</div><div class="small text-muted">' + escapeHtml(p.email || '') + '</div></div></td>'
             + '<td>' + escapeHtml(p.phone_number || '—') + '</td>'
             + '<td>' + escapeHtml(p.date_of_birth || '—') + '</td>'
             + '<td>' + escapeHtml(p.gender || '—') + '</td>'
