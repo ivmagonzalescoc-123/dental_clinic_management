@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        error_log('add_patient.php: An error occurred. Please try again.
+        error_log('add_patient.php: prepare failed: ' . $conn->error);
         $_SESSION['message'] = 'An error occurred. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin.php?page=manage_users&type=patients');

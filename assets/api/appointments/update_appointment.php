@@ -165,7 +165,7 @@ try {
     if ($timeslot_id > 0) {
         $tsStmt = $conn->prepare('SELECT timeslot_id, doctor_id, slot_date, status FROM timeslot WHERE timeslot_id = ? LIMIT 1');
         if (!$tsStmt) {
-            throw new Exception('An error occurred. Please try again.
+            throw new Exception('Prepare failed: ' . $conn->error);
         }
         $tsStmt->bind_param('i', $timeslot_id);
         $tsStmt->execute();

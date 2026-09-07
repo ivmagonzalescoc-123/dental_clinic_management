@@ -50,7 +50,7 @@ if ($isPartialUpdate) {
     $sql = 'UPDATE patients SET gender=? WHERE patient_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        error_log('update_patient.php: An error occurred. Please try again.
+        error_log('update_patient.php: prepare failed (gender update): ' . $conn->error);
         echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
@@ -108,7 +108,7 @@ $check_stmt->close();
 $sql = 'UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=?, occupation=? WHERE patient_id=?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
-    error_log('update_patient.php: An error occurred. Please try again.
+    error_log('update_patient.php: prepare failed (full update): ' . $conn->error);
     echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }

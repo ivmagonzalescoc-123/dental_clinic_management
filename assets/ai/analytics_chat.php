@@ -1,4 +1,7 @@
 <?php
+/**
+ * Analytics Chat Endpoint - Uses Groq API directly
+ */
 ob_start();
 error_reporting(0);
 ini_set('display_errors', '0');
@@ -11,14 +14,13 @@ require_once dirname(dirname(__DIR__)) . '/config/database.php';
 
 security_start_session();
 
-// ── DEBUG MODE ── hit analytics_chat.php?debug=1 to see diagnostics
+// ── DEBUG MODE ──
 if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     ob_end_clean();
-
+    
     $groqKeyRaw = env('GROQ_API_KEY', '');
     $groqKeyOk  = !empty($groqKeyRaw) && $groqKeyRaw !== 'your_groq_api_key_here';
-
-    // Test outbound cURL to Groq
+    
     $curlTest = ['supported' => false, 'reachable' => false, 'error' => null, 'http_code' => null];
     if (function_exists('curl_init')) {
         $curlTest['supported'] = true;
@@ -35,18 +37,17 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
         $curlTest['reachable'] = ($curlTest['http_code'] >= 200 && $curlTest['http_code'] < 500);
         curl_close($ch);
     }
-
+    
     echo json_encode([
-        'debug'        => true,
-        'php_version'  => PHP_VERSION,
-        'https'        => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+        'debug' => true,
+        'php_version' => PHP_VERSION,
+        'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
         'session' => [
-            'status'      => session_status(), // 1=disabled 2=active
-            'id'          => session_id() ?: null,
+            'status' => session_status(),
+            'id' => session_id() ?: null,
             'has_user_id' => isset($_SESSION['user_id']),
-            'user_id'     => $_SESSION['user_id'] ?? null,
-            'role'        => $_SESSION['role'] ?? null,
-            'keys'        => array_keys($_SESSION),
+            'user_id' => $_SESSION['user_id'] ?? null,
+            'role' => $_SESSION['role'] ?? null,
         ],
         'groq_key_loaded' => $groqKeyOk,
         'groq_key_prefix' => $groqKeyOk ? substr($groqKeyRaw, 0, 8) . '...' : null,
@@ -56,23 +57,15 @@ if (isset($_GET['debug']) && $_GET['debug'] === '1') {
     exit;
 }
 
+// Admin only
 if (empty($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     ob_end_clean();
     http_response_code(403);
     echo json_encode([
-        'error'        => 'Unauthorized',
-        'debug_hint'   => 'Session is empty or role is not admin. Visit this URL with ?debug=1 to diagnose.',
+        'error' => 'Unauthorized',
+        'debug_hint' => 'Session is empty or role is not admin. Visit with ?debug=1 to diagnose.',
         'session_keys' => array_keys($_SESSION),
-        'has_user_id'  => isset($_SESSION['user_id']),
-        'role'         => $_SESSION['role'] ?? null,
     ]);
-    exit;
-}
-
-$groqKey = env('GROQ_API_KEY', '');
-if (!$groqKey || $groqKey === 'your_groq_api_key_here') {
-    ob_end_clean();
-    echo json_encode(['error' => 'Groq API key not configured. Add GROQ_API_KEY to .env']);
     exit;
 }
 
@@ -81,6 +74,13 @@ $userMessage = trim($input['message'] ?? '');
 if ($userMessage === '') {
     ob_end_clean();
     echo json_encode(['error' => 'Message is required']);
+    exit;
+}
+
+$groqKey = env('GROQ_API_KEY', '');
+if (!$groqKey || $groqKey === 'your_groq_api_key_here') {
+    ob_end_clean();
+    echo json_encode(['error' => 'Groq API key not configured. Add GROQ_API_KEY to .env']);
     exit;
 }
 
@@ -109,17 +109,17 @@ TIME-BASED QUERIES (critical for "busiest hour", "peak hours", etc.):
 - Always exclude cancelled and no_show appointments from busy-hour analysis.
 - Return start_time and count, ORDER BY count DESC, LIMIT 5.
 
-COLUMN → TABLE MAP (memorize — use these exact aliases):
-  appointments a   → a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency, a.timeslot_id
-  patients p       → p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
-  users u          → u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
-  role r           → r.role_id, r.role_name
-  billing b        → b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status
-  services s       → s.service_id, s.service_name, s.initial_price
-  selected_services ss → ss.selected_service_id, ss.appointment_id, ss.service_id
-  payments py      → py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at
-  clinical_records cr  → cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
-  timeslot t       → t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
+COLUMN -> TABLE MAP (memorize - use these exact aliases):
+  appointments a   -> a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency, a.timeslot_id
+  patients p       -> p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
+  users u          -> u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
+  role r           -> r.role_id, r.role_name
+  billing b        -> b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status
+  services s       -> s.service_id, s.service_name, s.initial_price
+  selected_services ss -> ss.selected_service_id, ss.appointment_id, ss.service_id
+  payments py      -> py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at
+  clinical_records cr  -> cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
+  timeslot t       -> t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
 
 DATE PATTERNS (always qualify with table alias):
   Today        : a.appointment_date = CURDATE()
@@ -127,7 +127,7 @@ DATE PATTERNS (always qualify with table alias):
   This month   : MONTH(a.appointment_date) = MONTH(CURDATE()) AND YEAR(a.appointment_date) = YEAR(CURDATE())
   Last 7 days  : a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
   Last 30 days : a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
-  New patients : DATE(p.created_at) (NOT appointment_date — patients table has no appointment_date)
+  New patients : DATE(p.created_at) (NOT appointment_date - patients table has no appointment_date)
 
 ANSWER RULES:
 - The "answer" describes what was measured, e.g. "Total appointments scheduled for today." or "Top services booked this month."
@@ -135,7 +135,7 @@ ANSWER RULES:
 - NEVER say "you asked" or reference the question.
 - Use ₱ for currency amounts.
 
-OFF-TOPIC: If not about clinic data → {"sql": null, "answer": "I can only answer questions about clinic appointments, patients, services, billing, and doctor activity."}
+OFF-TOPIC: If not about clinic data -> {"sql": null, "answer": "I can only answer questions about clinic appointments, patients, services, billing, and doctor activity."}
 
 EXAMPLES:
 Q: How many appointments today?
@@ -176,9 +176,10 @@ selected_services(selected_service_id, appointment_id, service_id)
 billing(billing_id, appointment_id, total_amount, amount_paid, balance, status[unpaid|partial|paid])
 payments(payment_id, billing_id, amount, payment_method, paid_at)
 clinical_records(record_id, appointment_id, doctor_id, patient_id, status[in_progress|submitted|finalized])
+timeslot(timeslot_id, doctor_id, slot_date, start_time, end_time, status)
 SCHEMA;
 
-// ── STEP 1: Generate SQL via AI ──
+// ── STEP 1: Generate SQL via Groq ──
 $payload = [
     'model' => 'openai/gpt-oss-120b',
     'messages' => [
@@ -187,9 +188,6 @@ $payload = [
     ],
     'temperature' => 0.05,
     'max_tokens'  => 600,
-    // gpt-oss models spend tokens on a hidden reasoning pass before the visible
-    // answer; without capping it, short max_tokens budgets can be fully consumed
-    // by reasoning and return empty content. 'low' keeps that overhead small.
     'reasoning_effort' => 'low',
 ];
 
@@ -208,17 +206,27 @@ curl_setopt_array($ch, [
 $response  = curl_exec($ch);
 $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
-unset($ch);
+curl_close($ch);
 
 if ($curlError) {
+    error_log('analytics_chat: Groq request failed: ' . $curlError);
     ob_end_clean();
-    echo json_encode(['error' => 'Could not reach Groq: ' . $curlError]);
+    echo json_encode(['error' => 'The system is currently busy. Please try again in a moment.']);
     exit;
 }
 
 if ($httpCode !== 200) {
     $errData = json_decode($response, true);
-    $msg = $errData['error']['message'] ?? 'Groq API error (HTTP ' . $httpCode . ')';
+    $rawMsg = $errData['error']['message'] ?? ('Groq API error (HTTP ' . $httpCode . ')');
+    error_log('analytics_chat: Groq API error: ' . $rawMsg);
+    $msg = 'The analytics assistant is temporarily unavailable. Please try again shortly.';
+    if (stripos($rawMsg, 'rate limit') !== false || $httpCode === 429) {
+        $msg = 'The system is busy. Please wait a moment and try again.';
+    } elseif ($httpCode === 401 || $httpCode === 403) {
+        $msg = 'The analytics assistant needs configuration. Please contact the administrator.';
+    } elseif ($httpCode === 504 || stripos($rawMsg, 'timeout') !== false) {
+        $msg = 'The request took too long. Please try a simpler question.';
+    }
     ob_end_clean();
     echo json_encode(['error' => $msg]);
     exit;
@@ -250,12 +258,12 @@ if ($answer !== '' && strlen($answer) > 4) {
     similar_text(strtolower($answer), strtolower($userMessage), $pct);
     if ($pct > 72) {
         ob_end_clean();
-        echo json_encode(['error' => 'Could not generate a proper answer. Please rephrase your question.']);
+        echo json_encode(['error' => 'Could not generate a proper answer. Please try again.']);
         exit;
     }
 }
 
-// No SQL — text-only answer (off-topic or non-data questions)
+// No SQL - text-only answer (off-topic or non-data questions)
 if ($sql === '' || strtolower($sql) === 'null') {
     if (!isset($_SESSION['ai_chat_history'])) $_SESSION['ai_chat_history'] = [];
     $_SESSION['ai_chat_history'][] = ['role' => 'user', 'text' => $userMessage];
@@ -278,12 +286,10 @@ if (strpos($upperSql, 'SELECT') !== 0 || preg_match('/\b(INSERT|UPDATE|DELETE|DR
 
 $result = $conn->query($sql);
 if (!$result) {
+    error_log('analytics_chat: SQL error: ' . $conn->error . ' | SQL: ' . $sql);
     ob_end_clean();
     echo json_encode([
-        'answer'    => $answer,
-        'rows'      => [],
-        'row_count' => 0,
-        'sql_error' => $conn->error,
+        'error' => 'Sorry, I could not run that query. Please try rephrasing your question.',
     ]);
     exit;
 }
@@ -308,7 +314,7 @@ You are a clinic analytics assistant. The user asked a question and here is the 
 USER QUESTION: {$userMessage}
 QUERY RESULTS (JSON): {$dataJson}
 
-TASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured — give the real answer with the values.
+TASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured - give the real answer with the values.
 
 RULES:
 - Use the actual values from the results (counts, names, amounts, etc.)
@@ -346,7 +352,7 @@ PROMPT;
     $response2  = curl_exec($ch2);
     $httpCode2  = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
     $curlError2 = curl_error($ch2);
-    unset($ch2);
+    curl_close($ch2);
 
     if (!$curlError2 && $httpCode2 === 200) {
         $aiResponse2 = json_decode($response2, true);

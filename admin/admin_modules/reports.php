@@ -2161,7 +2161,7 @@ $reportNavQuery = array_merge(
                 <div class="ai-chat-header-icon"><i class="bi bi-robot"></i></div>
                 <div class="ai-chat-header-text">
                     <h6>Analytics Assistant</h6>
-                    <span class="ai-chat-subtitle"><span class="ai-chat-status-dot"></span>Powered by Groq AI</span>
+                    <span class="ai-chat-subtitle"><span class="ai-chat-status-dot"></span><span id="aiProviderLabel">Powered by Groq AI</span></span>
                 </div>
             </div>
             <button type="button" class="ai-chat-close" id="aiChatClose">&times;</button>
@@ -2557,6 +2557,21 @@ $reportNavQuery = array_merge(
         var rows = data.rows || [];
         var answer = data.answer || '';
         var html = '';
+        
+        // Update AI provider label dynamically
+        var providerLabel = document.getElementById('aiProviderLabel');
+        if (providerLabel && data.provider) {
+            var providerNames = {
+                'gemma': 'Gemma 2B (Ollama)',
+                'groq': 'Groq AI',
+                'unknown': 'AI Assistant'
+            };
+            var label = providerNames[data.provider] || (data.provider.charAt(0).toUpperCase() + data.provider.slice(1) + ' AI');
+            if (data.fallback_used) {
+                label += ' (via ' + (data.fallback_provider || 'fallback') + ')';
+            }
+            providerLabel.textContent = 'Powered by ' + label;
+        }
 
         if (answer) {
             html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';

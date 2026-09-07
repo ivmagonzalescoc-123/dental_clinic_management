@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sql = 'UPDATE users SET first_name=?, middle_name=?, last_name=?, email=?, role_id=?, phone_number=?, date_of_birth=?, gender=?, address=?, is_active=? WHERE user_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        error_log('update_user.php: An error occurred. Please try again.
+        error_log('update_user.php: prepare failed: ' . $conn->error);
         $_SESSION['message'] = 'An error occurred. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ' . $redirectUrl);

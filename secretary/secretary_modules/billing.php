@@ -340,8 +340,8 @@ if (!$hasAnyData) {
                                     <strong>₱<?php echo number_format($balance, 2); ?></strong>
                                 </td>
                                 <td><span class="badge bg-<?php echo $badgeClass; ?>"><?php echo htmlspecialchars(ucfirst($st)); ?></span></td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                <td class="text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
                                         data-bs-target="#invoiceModal"
                                         onclick="viewInvoice(<?php echo htmlspecialchars(json_encode($billing)); ?>)">
                                         <i class="bi bi-file-pdf"></i> Invoice
@@ -380,7 +380,7 @@ if (!$hasAnyData) {
                                         ?>
                                         <button type="button" class="btn btn-sm btn-success ms-1"
                                             onclick="openPaymentModal(<?php echo (int)$billing['billing_id']; ?>, <?php echo $paymentAmount; ?>, <?php echo $balance; ?>, <?php echo $hasInstallment ? 'true' : 'false'; ?>)">
-                                            Record Payment
+                                            <i class="bi bi-cash-coin"></i> Record Payment
                                         </button>
                                     <?php endif; ?>
                                 </td>
@@ -484,46 +484,75 @@ if (!$hasAnyData) {
 </div>
 
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Record Payment</h5>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success bg-opacity-10 border-0">
+                <h5 class="modal-title d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-success text-white flex-shrink-0" style="width:34px;height:34px;">
+                        <i class="bi bi-cash-coin"></i>
+                    </span>
+                    Record Payment
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body pt-4">
                 <input type="hidden" id="paymentBillingId">
-                <p class="text-muted small mb-2" id="paymentBalanceHint">Remaining balance: ₱0.00</p>
-                <div class="mb-3">
-                    <label class="form-label">Payment Amount (PHP)</label>
-                    <input type="number" step="0.01" min="0.01" class="form-control" id="paymentAmount">
+
+                <div class="rounded-3 border bg-body-secondary bg-opacity-50 px-3 py-2 mb-4 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle text-muted"></i>
+                    <p class="text-muted small mb-0" id="paymentBalanceHint">Remaining balance: ₱0.00</p>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Amount Tendered (PHP)</label>
-                    <input type="number" step="0.01" min="0" class="form-control" id="paymentAmountTendered" placeholder="Cash handed by patient">
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-uppercase text-muted">Payment Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="paymentAmount">
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-uppercase text-muted">Amount Tendered</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" step="0.01" min="0" class="form-control" id="paymentAmountTendered" placeholder="Cash handed">
+                        </div>
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <p class="text-muted small mb-0">Change: <span id="paymentChangeDisplay">₱0.00</span></p>
+
+                <div class="rounded-3 border border-success-subtle bg-success-subtle px-3 py-2 mt-3 mb-1 d-flex justify-content-between align-items-center">
+                    <span class="small fw-semibold text-success-emphasis"><i class="bi bi-arrow-return-left me-1"></i>Change</span>
+                    <span class="fs-6 fw-bold text-success-emphasis" id="paymentChangeDisplay">₱0.00</span>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Payment Method</label>
-                    <select class="form-select" id="paymentMethod">
-                        <option value="cash">Cash</option>
-                        <option value="gcash">GCash</option>
-                        <option value="card">Card</option>
-                        <option value="bank">Bank Transfer</option>
-                    </select>
+
+                <hr class="my-4">
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-uppercase text-muted">Payment Method</label>
+                        <select class="form-select" id="paymentMethod">
+                            <option value="cash">Cash</option>
+                            <option value="gcash">GCash</option>
+                            <option value="card">Card</option>
+                            <option value="bank">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold text-uppercase text-muted">OR Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="paymentOrNumber" maxlength="50" required placeholder="Official receipt #">
+                    </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">OR Number <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="paymentOrNumber" maxlength="50" required placeholder="Official receipt number">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Notes</label>
-                    <input type="text" class="form-control" id="paymentNotes" placeholder="Optional">
+
+                <div class="mt-3">
+                    <label class="form-label small fw-semibold text-uppercase text-muted">Notes</label>
+                    <input type="text" class="form-control" id="paymentNotes" placeholder="Optional remarks">
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-success" id="savePaymentBtn">Save Payment</button>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success px-4" id="savePaymentBtn">
+                    <i class="bi bi-check2-circle me-1"></i> Save Payment
+                </button>
             </div>
         </div>
     </div>

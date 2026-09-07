@@ -66,7 +66,7 @@ try {
         $p_background_notes = $profiling['background_notes'] ?: $na;
 
         $stmt = $conn->prepare('INSERT INTO patient_profiling (patient_id, race, medical_history, medications, allergies, smoking, alcohol, is_hypertensive, is_diabetic, is_asthmatic, has_heart_disease, is_hiv_positive, bleeding_disorder, pregnancy_status, previous_dental_treatment, dental_anxiety, background_notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
-        if (!$stmt) throw new Exception('An error occurred. Please try again.
+        if (!$stmt) throw new Exception('Prepare failed: ' . $conn->error);
         $stmt->bind_param(
             'issssssiiiiisssss',
             $patient_id,

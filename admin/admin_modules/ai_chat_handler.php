@@ -92,18 +92,18 @@ TIME-BASED QUERIES (critical for "busiest hour", "peak hours", etc.):
 - Always exclude cancelled and no_show appointments from busy-hour analysis.
 - Return start_time and count, ORDER BY count DESC, LIMIT 5.
 
-COLUMN → TABLE MAP (use these exact aliases):
-  appointments a   → a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency, a.timeslot_id
-  patients p       → p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
-  users u          → u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
-  role r           → r.role_id, r.role_name
-  billing b        → b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status, b.created_at
-  services s       → s.service_id, s.service_name, s.initial_price
-  selected_services ss → ss.selected_service_id, ss.appointment_id, ss.service_id
-  payments py      → py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at, py.or_number
-  clinical_records cr  → cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
-  billing_line_items bli → bli.item_id, bli.billing_id, bli.appointment_id, bli.service_id, bli.description, bli.amount, bli.item_type
-  timeslot t       → t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
+COLUMN -> TABLE MAP (use these exact aliases):
+  appointments a   -> a.appointment_id, a.appointment_date, a.status, a.patient_id, a.user_id, a.is_emergency, a.timeslot_id
+  patients p       -> p.patient_id, p.first_name, p.last_name, p.created_at, p.gender, p.phone_number
+  users u          -> u.user_id, u.first_name, u.last_name, u.email, u.role_id, u.is_active
+  role r           -> r.role_id, r.role_name
+  billing b        -> b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.balance, b.status, b.created_at
+  services s       -> s.service_id, s.service_name, s.initial_price
+  selected_services ss -> ss.selected_service_id, ss.appointment_id, ss.service_id
+  payments py      -> py.payment_id, py.billing_id, py.amount, py.payment_method, py.paid_at, py.or_number
+  clinical_records cr  -> cr.record_id, cr.appointment_id, cr.doctor_id, cr.patient_id
+  billing_line_items bli -> bli.item_id, bli.billing_id, bli.appointment_id, bli.service_id, bli.description, bli.amount, bli.item_type
+  timeslot t       -> t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
 
 DATE PATTERNS (always qualify with table alias):
   APPOINTMENTS:
@@ -131,20 +131,20 @@ ANSWER RULES:
 
 RESPONSE CATEGORIES:
 1. GREETINGS (hi, hello, hey, good morning, etc.): Respond with a brief, friendly greeting. No SQL needed.
-   → {"sql": null, "answer": "Hello! I'm your clinic analytics assistant. Ask me about appointments, patients, services, billing, or doctor activity."}
+   -> {"sql": null, "answer": "Hello! I'm your clinic analytics assistant. Ask me about appointments, patients, services, billing, or doctor activity."}
 
 2. CAPABILITIES (what can you do, help, what do you know): Explain what you can help with. No SQL needed.
-   → {"sql": null, "answer": "I can answer questions about: appointments (schedules, counts, no-shows), patients (demographics, new registrations), services (popular services, bookings), billing (revenue, outstanding, payments), and doctor activity. Just ask!"}
+   -> {"sql": null, "answer": "I can answer questions about: appointments (schedules, counts, no-shows), patients (demographics, new registrations), services (popular services, bookings), billing (revenue, outstanding, payments), and doctor activity. Just ask!"}
 
 3. THANKS / POLITE (thanks, thank you, nice, great): Acknowledge briefly. No SQL needed.
-   → {"sql": null, "answer": "You're welcome! Let me know if you have more questions about your clinic data."}
+   -> {"sql": null, "answer": "You're welcome! Let me know if you have more questions about your clinic data."}
 
 4. CLINIC DATA QUESTIONS: Generate SQL and answer.
 
 5. UNRELATED (jokes, weather, sports, politics, random topics): Politely redirect.
-   → {"sql": null, "answer": "I'm focused on Azucena's Dental Clinic data. Try asking about appointments, patients, billing, or services instead!"}
+   -> {"sql": null, "answer": "I'm focused on Azucena's Dental Clinic data. Try asking about appointments, patients, billing, or services instead!"}
 
-OFF-TOPIC: For any question that is NOT a greeting AND NOT about clinic data → {"sql": null, "answer": "I'm focused on Azucena's Dental Clinic data. Try asking about appointments, patients, billing, or services instead!"}
+OFF-TOPIC: For any question that is NOT a greeting AND NOT about clinic data -> {"sql": null, "answer": "I'm focused on Azucena's Dental Clinic data. Try asking about appointments, patients, billing, or services instead!"}
 
 EXAMPLES:
 
@@ -206,14 +206,15 @@ appointments(appointment_id, appointment_date, status[scheduled|confirmed|arrive
 users(user_id, first_name, last_name, email, role_id, is_active)
 role(role_id, role_name[admin|doctor|secretary|patient])
 payments(payment_id, billing_id, amount, payment_method, or_number, notes, recorded_by, paid_at)
-  → paid_at is when the payment was RECEIVED. Use this for "payments today/this week/this month" questions.
-  → Do NOT use billing.created_at or appointment_date for payment date queries.
+  -> paid_at is when the payment was RECEIVED. Use this for "payments today/this week/this month" questions.
+  -> Do NOT use billing.created_at or appointment_date for payment date queries.
 services(service_id, service_name, initial_price, is_active)
 selected_services(selected_service_id, appointment_id, service_id)
 billing(billing_id, appointment_id, total_amount, amount_paid, balance, status[unpaid|partial|paid])
 clinical_records(record_id, appointment_id, doctor_id, patient_id, status[in_progress|submitted|finalized])
 SCHEMA;
 
+// ── STEP 1: Generate SQL via Groq ──
 $payload = [
     'model'    => 'openai/gpt-oss-120b',
     'messages' => [
@@ -222,9 +223,6 @@ $payload = [
     ],
     'temperature' => 0.05,
     'max_tokens'  => 600,
-    // gpt-oss models spend tokens on a hidden reasoning pass before the visible
-    // answer; without capping it, short max_tokens budgets can be fully consumed
-    // by reasoning and return empty content. 'low' keeps that overhead small.
     'reasoning_effort' => 'low',
 ];
 
@@ -313,12 +311,10 @@ if (strpos($upperSql, 'SELECT') !== 0 || preg_match('/\b(INSERT|UPDATE|DELETE|DR
 
 $result = $conn->query($sql);
 if (!$result) {
+    error_log('ai_chat_handler: SQL error: ' . $conn->error . ' | SQL: ' . $sql);
     ob_end_clean();
     echo json_encode([
-        'answer'    => $answer,
-        'rows'      => [],
-        'row_count' => 0,
-        'sql_error' => $conn->error,
+        'error' => 'Sorry, I could not run that query. Please try rephrasing your question.',
     ]);
     exit;
 }
@@ -337,7 +333,7 @@ if (count($rows) > 0) {
         $dataJson = json_encode($rows, JSON_UNESCAPED_UNICODE);
     }
 
-    $interpretPrompt = "You are a clinic analytics assistant. The user asked a question and here is the data from the database.\n\nUSER QUESTION: {$userMessage}\nQUERY RESULTS (JSON): {$dataJson}\n\nTASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured — give the real answer with the values.\n\nRULES:\n- Use the actual values from the results (counts, names, amounts, etc.)\n- Use PHP peso sign for currency\n- Be conversational but factual\n- If results are empty, say No data found for that period.\n- If there is only one row with one value, state it directly\n- For lists/rankings, mention the top results by name\n- Keep it under 3 sentences";
+    $interpretPrompt = "You are a clinic analytics assistant. The user asked a question and here is the data from the database.\n\nUSER QUESTION: {$userMessage}\nQUERY RESULTS (JSON): {$dataJson}\n\nTASK: Write a clear, concise answer in a natural sentence or two. State the actual numbers and findings from the data. Do NOT just describe what the query measured — give the real answer with the values.\n\nRULES:\n- Use the actual values from the results (counts, names, amounts, etc.)\n- Use ₱ for currency\n- Be conversational but factual\n- If results are empty, say \"No data found for that period.\"\n- If there is only one row with one value, state it directly\n- For lists/rankings, mention the top results by name\n- Keep it under 3 sentences";
 
     $interpretPayload = [
         'model' => 'openai/gpt-oss-120b',
@@ -365,14 +361,11 @@ if (count($rows) > 0) {
     $response2  = curl_exec($ch2);
     $httpCode2  = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
     $curlError2 = curl_error($ch2);
-    unset($ch2);
-
-    error_log('CHATBOT_STEP2: http=' . $httpCode2 . ' error=' . $curlError2 . ' response=' . substr((string)$response2, 0, 500));
+    curl_close($ch2);
 
     if (!$curlError2 && $httpCode2 === 200) {
         $aiResponse2 = json_decode($response2, true);
         $naturalAnswer = trim($aiResponse2['choices'][0]['message']['content'] ?? '');
-        error_log('CHATBOT_STEP2: naturalAnswer=' . $naturalAnswer);
         if ($naturalAnswer !== '') {
             $answer = $naturalAnswer;
         }

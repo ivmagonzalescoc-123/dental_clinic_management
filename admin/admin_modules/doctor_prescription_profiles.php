@@ -124,9 +124,6 @@ if ($doc_stmt) {
 <div class="card border-0">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0"><i class="bi bi-file-medical"></i> Doctor Prescription Profiles</h5>
-        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProfileModal" onclick="openAddProfileModal()">
-            <i class="bi bi-plus-circle"></i> Add Profile
-        </button>
     </div>
     <div class="card-body">
         <?php if (isset($_SESSION['message'])): ?>
@@ -145,14 +142,13 @@ if ($doc_stmt) {
                         <th>Professional Title</th>
                         <th>License(s)</th>
                         <th>Signature</th>
-                        <th>Clinic Info</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($doctors)): ?>
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">No active doctors found.</td>
+                            <td colspan="5" class="text-center text-muted py-4">No active doctors found.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($doctors as $doc): ?>
@@ -182,11 +178,6 @@ if ($doc_stmt) {
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <small><?php echo htmlspecialchars($doc['clinic_name'] ?? 'Azucena\'s Dental Clinic'); ?></small>
-                                    <br><small class="text-muted"><?php echo htmlspecialchars($doc['clinic_address'] ?? 'Metz Arcade, Cagayan de Oro City, Philippines'); ?></small>
-                                    <br><small class="text-muted"><?php echo htmlspecialchars($doc['clinic_phone'] ?? '(088) 123 4567'); ?></small>
-                                </td>
-                                <td>
                                     <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addProfileModal"
                                         onclick='editProfile(<?php echo htmlspecialchars(json_encode($doc), ENT_QUOTES, 'UTF-8'); ?>)'>
                                         <i class="bi bi-pencil"></i> Edit
@@ -213,40 +204,24 @@ if ($doc_stmt) {
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input type="hidden" name="action" value="save_profile">
                 <input type="hidden" name="user_id" id="profile_user_id">
+                <!-- Clinic details are fixed clinic-wide info, not part of a doctor's own
+                     prescription credentials, so they're not editable per profile here. -->
+                <input type="hidden" name="clinic_name" value="Azucena's Dental Clinic">
+                <input type="hidden" name="clinic_phone" value="(088) 123 4567">
+                <input type="hidden" name="clinic_address" value="Metz Arcade, Cagayan de Oro City, Philippines">
                 <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
-                    <!-- Doctor Selector (only shown in Add mode) -->
-                    <div class="row g-3 mb-3" id="doctorSelectorRow">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Doctor <span class="text-danger">*</span></label>
-                            <select class="form-select" id="profile_doctor_select" name="doctor_select" required>
-                                <option value="">Select a doctor</option>
-                                <?php foreach ($doctors as $doc): ?>
-                                    <?php if (empty($doc['profile_id'])): ?>
-                                    <option value="<?php echo $doc['user_id']; ?>" data-name="<?php echo htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']); ?>">
-                                        Dr. <?php echo htmlspecialchars($doc['first_name'] . ' ' . $doc['last_name']); ?>
-                                    </option>
-                                    <?php endif; ?>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Full Name (as it should appear on prescription) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" name="full_name" id="profile_full_name" required placeholder="e.g., Dr. Juan Dela Cruz, DMD">
-                        </div>
-                    </div>
-                    
-                    <!-- Doctor Display (only shown in Edit mode) -->
-                    <div class="row g-3 mb-3" id="doctorDisplayRow" style="display:none;">
+                    <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Doctor</label>
                             <input type="text" class="form-control" id="profile_doctor_display" readonly style="background:#f8f9fa;">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Full Name (as it should appear on prescription) <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="profile_full_name_edit" required placeholder="e.g., Dr. Juan Dela Cruz, DMD">
+                            <input type="text" class="form-control" name="full_name" id="profile_full_name" required placeholder="e.g., Dr. Juan Dela Cruz, DMD">
+                            <small class="text-muted" id="profile_full_name_lock_hint" style="display:none;">Name is already set for this profile and can no longer be edited here. Only Professional Title & Licenses (and below) can be updated.</small>
                         </div>
                     </div>
-                    
+
                     <hr class="my-3">
                     <h6 class="fw-semibold mb-3"><i class="bi bi-award"></i> Professional Title & Licenses</h6>
                     <div class="row g-3">
@@ -307,23 +282,6 @@ if ($doc_stmt) {
                                 <img id="previewImg" src="" alt="Signature preview" style="max-height:120px; border:1px solid #dee2e6; border-radius:4px;">
                             </div>
                             <small class="text-muted">Supported formats: PNG, JPG, GIF, SVG. Recommended: transparent background PNG.</small>
-                        </div>
-                    </div>
-                    
-                    <hr class="my-3">
-                    <h6 class="fw-semibold mb-3"><i class="bi bi-building"></i> Clinic Information</h6>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Clinic Name</label>
-                            <input type="text" class="form-control" name="clinic_name" id="profile_clinic_name" value="Azucena's Dental Clinic">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Clinic Phone</label>
-                            <input type="text" class="form-control" name="clinic_phone" id="profile_clinic_phone" value="(088) 123 4567">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Clinic Address</label>
-                            <textarea class="form-control" name="clinic_address" id="profile_clinic_address" rows="2">Metz Arcade, Cagayan de Oro City, Philippines</textarea>
                         </div>
                     </div>
                 </div>
@@ -420,6 +378,12 @@ function draw(e) {
 }
 
 function stopDrawing() {
+    if (isDrawing && signatureCanvas) {
+        // Persist the drawn bitmap into the hidden field now — this is what
+        // actually gets submitted; without it, a freshly drawn signature is
+        // never saved.
+        document.getElementById('profile_signature_drawn').value = signatureCanvas.toDataURL('image/png');
+    }
     isDrawing = false;
     strokePoints = [];
 }
@@ -506,66 +470,60 @@ window.addEventListener('resize', function() {
 });
 
 // Profile modal handling
+// The canvas can only be sized correctly once the modal is actually visible
+// (a hidden modal reports 0 width), so any signature to preload is stashed
+// here by editProfile() and drawn once 'shown.bs.modal' fires — drawing it
+// immediately on click (before the modal is shown) silently no-ops.
+let pendingSignatureDrawn = null;
+
 document.getElementById('addProfileModal')?.addEventListener('shown.bs.modal', function() {
     initSignatureCanvas();
-    // resetProfileForm() is called by openAddProfileModal or editProfile
+    if (signatureCtx && signatureCanvas) {
+        signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+    }
+    if (pendingSignatureDrawn) {
+        const img = new Image();
+        img.onload = function() {
+            if (signatureCtx && signatureCanvas) {
+                signatureCtx.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+                signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
+                document.getElementById('signaturePlaceholder').style.display = 'none';
+            }
+        };
+        img.src = pendingSignatureDrawn;
+    } else {
+        document.getElementById('signaturePlaceholder').style.display = 'flex';
+    }
+    pendingSignatureDrawn = null;
 });
 
-function openAddProfileModal() {
-    // Show add mode: doctor selector visible, doctor display hidden
-    document.getElementById('doctorSelectorRow').style.display = '';
-    document.getElementById('doctorDisplayRow').style.display = 'none';
-    document.getElementById('profile_doctor_select').required = true;
-    document.getElementById('profile_full_name').required = true;
-    document.getElementById('profile_full_name_edit').required = false;
-    resetProfileForm();
-}
-
-function resetProfileForm() {
-    document.getElementById('profileForm').reset();
-    document.getElementById('profile_user_id').value = '';
-    document.getElementById('profile_doctor_select').value = '';
-    document.getElementById('profile_full_name').value = '';
-    document.getElementById('profile_full_name_edit').value = '';
-    document.getElementById('profile_professional_title').value = 'DMD';
-    document.getElementById('customTitleField').style.display = 'none';
-    document.getElementById('profile_professional_title_custom').value = '';
-    document.getElementById('profile_professional_title_custom').required = false;
-    // Remove any hidden input from previous submit
-    const hiddenInput = document.getElementById('professional_title_final');
-    if (hiddenInput) hiddenInput.remove();
-    document.getElementById('profile_professional_title').disabled = false;
-    document.getElementById('profile_license_type_1').value = 'PRC';
-    document.getElementById('profile_license_number_1').value = '';
-    document.getElementById('profile_signature_drawn').value = '';
-    clearSignature();
-    document.getElementById('signaturePreview').style.display = 'none';
-    document.getElementById('profile_clinic_name').value = "Azucena's Dental Clinic";
-    document.getElementById('profile_clinic_phone').value = '(088) 123 4567';
-    document.getElementById('profile_clinic_address').value = 'Metz Arcade, Cagayan de Oro City, Philippines';
-    document.getElementById('profileModalTitle').innerHTML = '<i class="bi bi-file-medical"></i> Add Prescription Profile';
-    // Remove extra license fields
-    const licenseFields = document.getElementById('licenseFields');
-    while (licenseFields.children.length > 3) {
-        licenseFields.lastChild.remove();
-    }
-}
-
 function editProfile(doc) {
-    // Show edit mode: doctor selector hidden, doctor display visible
-    document.getElementById('doctorSelectorRow').style.display = 'none';
-    document.getElementById('doctorDisplayRow').style.display = '';
-    document.getElementById('profile_doctor_select').required = false;
-    document.getElementById('profile_full_name').required = false;
-    document.getElementById('profile_full_name_edit').required = true;
-    
-    document.getElementById('profileModalTitle').innerHTML = '<i class="bi bi-file-medical"></i> Edit Prescription Profile';
+    // Reset any leftover state from a previous time this modal was opened
+    // (extra license rows, custom-title lock, signature) before loading doc.
+    const licenseFieldsContainer = document.getElementById('licenseFields');
+    while (licenseFieldsContainer.children.length > 3) {
+        licenseFieldsContainer.lastChild.remove();
+    }
+    licenseCount = 1;
+    document.getElementById('profile_professional_title').disabled = false;
+    const oldHiddenTitle = document.getElementById('professional_title_final');
+    if (oldHiddenTitle) oldHiddenTitle.remove();
+
+    document.getElementById('profileModalTitle').innerHTML = '<i class="bi bi-file-medical"></i> '
+        + (doc.full_name ? 'Edit' : 'Set Up') + ' Prescription Profile';
     document.getElementById('profile_user_id').value = doc.user_id;
     document.getElementById('profile_doctor_display').value = 'Dr. ' + doc.first_name + ' ' + doc.last_name;
-    document.getElementById('profile_full_name_edit').value = doc.full_name || 'Dr. ' + doc.first_name + ' ' + doc.last_name;
-    // Also set the hidden full_name field for form submission
-    document.getElementById('profile_full_name').value = doc.full_name || 'Dr. ' + doc.first_name + ' ' + doc.last_name;
-    
+    const nameField = document.getElementById('profile_full_name');
+    nameField.value = doc.full_name || 'Dr. ' + doc.first_name + ' ' + doc.last_name;
+
+    // Once a profile already has a name, lock it — editing here should only
+    // touch Professional Title & Licenses (and the sections below it).
+    const nameAlreadySet = !!(doc.full_name && doc.full_name.trim() !== '');
+    nameField.readOnly = nameAlreadySet;
+    nameField.classList.toggle('bg-light', nameAlreadySet);
+    nameField.title = nameAlreadySet ? 'Name is locked once set.' : '';
+    document.getElementById('profile_full_name_lock_hint').style.display = nameAlreadySet ? '' : 'none';
+
     // Handle professional title - check if it's a custom value
     const predefinedTitles = ['DMD', 'DDS', 'MD', 'DMD, MD'];
     const profTitle = doc.professional_title || 'DMD';
@@ -591,32 +549,22 @@ function editProfile(doc) {
             } else {
                 addLicenseField(lic.type || '', lic.number || '');
             }
-        }
+        });
     } else {
         document.getElementById('profile_license_type_1').value = 'PRC';
         document.getElementById('profile_license_number_1').value = '';
     }
     
-    // Set signature
-    if (doc.signature_drawn) {
-        document.getElementById('profile_signature_drawn').value = doc.signature_drawn;
-        const img = new Image();
-        img.onload = function() {
-            if (signatureCtx && signatureCanvas) {
-                signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
-                document.getElementById('signaturePlaceholder').style.display = 'none';
-            }
-        };
-        img.src = doc.signature_drawn;
-    }
+    // Set signature — actual drawing is deferred to 'shown.bs.modal' since the
+    // canvas can't be sized correctly while the modal is still hidden.
+    document.getElementById('profile_signature_drawn').value = doc.signature_drawn || '';
+    pendingSignatureDrawn = doc.signature_drawn || null;
     if (doc.signature_image) {
         document.getElementById('previewImg').src = '../' + doc.signature_image;
         document.getElementById('signaturePreview').style.display = 'block';
+    } else {
+        document.getElementById('signaturePreview').style.display = 'none';
     }
-    
-    document.getElementById('profile_clinic_name').value = doc.clinic_name || "Azucena's Dental Clinic";
-    document.getElementById('profile_clinic_phone').value = doc.clinic_phone || '(088) 123 4567';
-    document.getElementById('profile_clinic_address').value = doc.clinic_address || 'Metz Arcade, Cagayan de Oro City, Philippines';
 }
 
 let licenseCount = 1;
@@ -641,14 +589,6 @@ function addLicenseField(type = '', number = '') {
     `;
     container.appendChild(div);
 }
-
-// Auto-fill full name when doctor is selected
-document.getElementById('profile_doctor_select')?.addEventListener('change', function() {
-    const selected = this.options[this.selectedIndex];
-    if (selected.value) {
-        document.getElementById('profile_full_name').value = 'Dr. ' + selected.dataset.name;
-    }
-});
 
 // Handle custom professional title field
 document.getElementById('profile_professional_title')?.addEventListener('change', function() {
