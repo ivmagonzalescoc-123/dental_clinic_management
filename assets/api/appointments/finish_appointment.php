@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token.']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again..']);
     exit;
 }
 

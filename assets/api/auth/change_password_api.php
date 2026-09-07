@@ -17,7 +17,7 @@ $input = security_json_input();
 $csrfToken = $input['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -53,7 +53,7 @@ if ($isPatient) {
     $stmt = $conn->prepare('SELECT password_hash, google_id, password_updated_at FROM patients WHERE patient_id = ? LIMIT 1');
     if (!$stmt) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Database error']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $stmt->bind_param('i', $patientId);
@@ -91,7 +91,7 @@ if ($isPatient) {
     $upd = $conn->prepare('UPDATE patients SET password_hash = ?, must_change_password = 0, password_updated_at = NOW(), failed_login_attempts = 0, locked_until = NULL WHERE patient_id = ?');
     if (!$upd) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Database error']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $upd->bind_param('si', $newHash, $patientId);
@@ -112,7 +112,7 @@ if ($userId <= 0) {
 $stmt = $conn->prepare('SELECT password_hash FROM users WHERE user_id = ? LIMIT 1');
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $stmt->bind_param('i', $userId);
@@ -143,7 +143,7 @@ $newHash = security_hash_password($newPassword);
 $upd = $conn->prepare('UPDATE users SET password_hash = ?, must_change_password = 0, password_updated_at = NOW(), failed_login_attempts = 0, locked_until = NULL WHERE user_id = ?');
 if (!$upd) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $upd->bind_param('si', $newHash, $userId);

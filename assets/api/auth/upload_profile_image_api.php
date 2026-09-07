@@ -20,13 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $csrfToken = (string)($_POST['csrf_token'] ?? '');
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Security token mismatch. Please refresh and try again.']);
-    exit;
-}
-
-if (!profile_role_allows_custom_photo()) {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Administrator accounts use the default clinic profile image and cannot upload a custom photo.']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 

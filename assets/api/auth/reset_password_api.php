@@ -16,7 +16,7 @@ $input = security_json_input();
 $csrfToken = $input['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -51,7 +51,7 @@ $otpHash = hash('sha256', $otp);
 $stmt = $conn->prepare('SELECT reset_id, user_type, user_id, expires_at, used_at, otp_hash FROM password_resets WHERE email = ? ORDER BY reset_id DESC LIMIT 1');
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 
@@ -92,7 +92,7 @@ if ($reset['user_type'] === 'user') {
 
 if (!$updateStmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 

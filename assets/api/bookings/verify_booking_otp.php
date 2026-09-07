@@ -54,7 +54,7 @@ try {
     $sql = "INSERT INTO bookings (first_name, last_name, email, phone_number, date_of_birth, preferred_date, preferred_time, reason, status, created_at, tracking_code)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) throw new Exception('Database error: ' . $conn->error);
+    if (!$stmt) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
 
     $stmt->bind_param('ssssssssss',
         $pending['first_name'],

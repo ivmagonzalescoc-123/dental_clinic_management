@@ -17,27 +17,22 @@ $profile_avatar_markup = profile_render_avatar_markup($conn, '..', [
             <?php echo $profile_avatar_markup; ?>
         </div>
         <div>
-            <?php if ($profile_can_upload_photo): ?>
-                <h6 class="mb-2">Profile Photo</h6>
-                <form id="profilePhotoForm" enctype="multipart/form-data">
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-                    <input
-                        type="file"
-                        class="form-control form-control-sm profile-photo-input"
-                        id="profilePhotoInput"
-                        name="profile_image"
-                        accept="image/jpeg,image/png,image/webp"
-                    >
-                    <p class="text-muted small mb-2 profile-photo-upload-guide"><?php echo htmlspecialchars(profile_photo_upload_guide_text(), ENT_QUOTES, 'UTF-8'); ?></p>
-                    <button type="submit" class="btn btn-primary btn-sm mt-2" id="profilePhotoSaveBtn">
-                        Save Photo
-                    </button>
-                </form>
-                <div id="profilePhotoAlert" class="small mt-2"></div>
-            <?php else: ?>
-                <h6 class="mb-2">Profile Photo</h6>
-                <p class="text-muted small mb-0">Administrator accounts use the default clinic profile image and cannot upload a custom photo.</p>
-            <?php endif; ?>
+            <h6 class="mb-2">Profile Photo</h6>
+            <div id="profilePhotoForm" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                <input
+                    type="file"
+                    class="form-control form-control-sm profile-photo-input"
+                    id="profilePhotoInput"
+                    name="profile_image"
+                    accept="image/jpeg,image/png,image/webp"
+                >
+                <p class="text-muted small mb-2 profile-photo-upload-guide"><?php echo htmlspecialchars(profile_photo_upload_guide_text(), ENT_QUOTES, 'UTF-8'); ?></p>
+                <button type="button" class="btn btn-primary btn-sm mt-2" id="profilePhotoSaveBtn" onclick="handleProfilePhotoSave()">
+                    Save Photo
+                </button>
+            </div>
+            <div id="profilePhotoAlert" class="small mt-2"></div>
         </div>
     </div>
 </div>
@@ -106,8 +101,7 @@ function initProfilePhotoUpload() {
         reader.readAsDataURL(file);
     });
 
-    form.addEventListener('submit', async function (e) {
-        e.preventDefault();
+    window.handleProfilePhotoSave = async function () {
         const file = input.files && input.files[0];
         const validationError = validateProfilePhotoFile(file);
         if (validationError) {
@@ -128,7 +122,7 @@ function initProfilePhotoUpload() {
             if (!resp.ok || !data.success) {
                 showPhotoAlert(data.message || 'Unable to upload profile photo.', 'danger');
             } else {
-                showPhotoAlert('Profile photo updated. Refreshing...', 'success');
+                showPhotoAlert('Profile photo updated successfully!', 'success');
                 document.querySelectorAll('.header-profile-avatar').forEach(function (node) {
                     if (node.tagName === 'IMG') {
                         node.src = data.profile_image_url + '?t=' + Date.now();
@@ -141,7 +135,7 @@ function initProfilePhotoUpload() {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save Photo';
         }
-    });
+    };
 }
 document.addEventListener('DOMContentLoaded', initProfilePhotoUpload);
 window.addEventListener('page-loaded', function () {

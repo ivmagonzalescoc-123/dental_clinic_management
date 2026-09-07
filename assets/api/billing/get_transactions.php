@@ -37,7 +37,7 @@ try {
         ORDER BY a.appointment_date DESC, a.appointment_id DESC
     ");
     if (!$stmt) {
-        throw new RuntimeException('Unable to prepare transaction query.');
+        throw new RuntimeException('An error occurred. Please try again.');
     }
     $stmt->bind_param('i', $patient_id);
     $stmt->execute();

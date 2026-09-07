@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
-    $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+    $_SESSION['message'] = 'Please refresh the page and try again.';
     $_SESSION['message_type'] = 'danger';
     header('Location: ' . $redirectUrl);
     exit;
@@ -42,7 +42,7 @@ if ($patientId <= 0) {
 
 $findStmt = $conn->prepare('SELECT patient_id, first_name, last_name, email FROM patients WHERE patient_id = ? LIMIT 1');
 if (!$findStmt) {
-    $_SESSION['message'] = 'Database error while preparing reset.';
+    $_SESSION['message'] = 'An error occurred. Please try again.';
     $_SESSION['message_type'] = 'danger';
     header('Location: ' . $redirectUrl);
     exit;
@@ -81,7 +81,7 @@ $updStmt = $conn->prepare(
      WHERE patient_id = ?'
 );
 if (!$updStmt) {
-    $_SESSION['message'] = 'Database error while saving new password.';
+    $_SESSION['message'] = 'An error occurred. Please try again.';
     $_SESSION['message_type'] = 'danger';
     header('Location: ' . $redirectUrl);
     exit;

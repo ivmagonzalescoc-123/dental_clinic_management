@@ -22,7 +22,7 @@ try {
 
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrfToken)) {
-        throw new Exception('Invalid security token');
+        throw new Exception('Please refresh the page and try again.');
     }
 
     $first_name = trim($_POST['first_name'] ?? '');

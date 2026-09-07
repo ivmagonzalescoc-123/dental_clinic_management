@@ -37,7 +37,7 @@ if (!in_array($role, ['admin', 'secretary'], true)) {
 $csrfToken = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token. Please refresh and try again.']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -65,7 +65,7 @@ try {
 
     $stmt = $conn->prepare("UPDATE bookings SET status = 'cancelled', decline_reason = ? WHERE booking_id = ? AND status IN ('pending_verification','verified','approved')");
     if (!$stmt) {
-        throw new Exception('Database error: ' . $conn->error);
+        throw new Exception('An error occurred. Please try again.: ' . $conn->error);
     }
     $stmt->bind_param('si', $reason, $bookingId);
     $stmt->execute();

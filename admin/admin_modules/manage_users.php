@@ -31,7 +31,7 @@ if ($action === 'archive' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
-        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message'] = 'Please refresh the page and try again.';
         $_SESSION['message_type'] = 'danger';
         manage_users_redirect($_POST['type'] ?? 'users');
     }
@@ -65,7 +65,7 @@ if ($action === 'reactivate' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=users');
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
-        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message'] = 'Please refresh the page and try again.';
         $_SESSION['message_type'] = 'danger';
         manage_users_redirect($_POST['type'] ?? 'users');
     }
@@ -112,7 +112,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     capabilities_require_web('manage_users', 'admin.php?page=manage_users&type=' . $resetType);
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
-        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message'] = 'Please refresh the page and try again.';
         $_SESSION['message_type'] = 'danger';
         manage_users_redirect($resetType);
     }
@@ -133,7 +133,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     LIMIT 1';
         $findStmt = $conn->prepare($findSql);
         if (!$findStmt) {
-            $_SESSION['message'] = 'Database error while preparing reset.';
+            $_SESSION['message'] = 'An error occurred. Please try again.';
             $_SESSION['message_type'] = 'danger';
             manage_users_redirect('patients');
         }
@@ -168,7 +168,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                    WHERE patient_id = ?';
         $updStmt = $conn->prepare($updSql);
         if (!$updStmt) {
-            $_SESSION['message'] = 'Database error while saving new password.';
+            $_SESSION['message'] = 'An error occurred. Please try again.';
             $_SESSION['message_type'] = 'danger';
             manage_users_redirect('patients');
         }
@@ -199,7 +199,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 LIMIT 1";
     $findStmt = $conn->prepare($findSql);
     if (!$findStmt) {
-        $_SESSION['message'] = 'Database error while preparing reset.';
+        $_SESSION['message'] = 'An error occurred. Please try again.';
         $_SESSION['message_type'] = 'danger';
         manage_users_redirect('users');
     }
@@ -227,7 +227,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
                WHERE user_id = ?";
     $updStmt = $conn->prepare($updSql);
     if (!$updStmt) {
-        $_SESSION['message'] = 'Database error while saving new password.';
+        $_SESSION['message'] = 'An error occurred. Please try again.';
         $_SESSION['message_type'] = 'danger';
         manage_users_redirect('users');
     }

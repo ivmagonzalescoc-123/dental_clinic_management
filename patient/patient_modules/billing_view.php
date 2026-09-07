@@ -15,7 +15,7 @@ if ($billing_id <= 0) {
 // Fetch billing and appointment
 $stmt = $conn->prepare("SELECT b.*, a.appointment_id, a.appointment_date, a.patient_id FROM billing b LEFT JOIN appointments a ON b.appointment_id = a.appointment_id WHERE b.billing_id = ? LIMIT 1");
 if (!$stmt) {
-    echo '<div class="alert alert-danger">Database error.</div>';
+    echo '<div class="alert alert-danger">An error occurred. Please try again.</div>';
     return;
 }
 $stmt->bind_param('i', $billing_id);

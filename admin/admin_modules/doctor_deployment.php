@@ -26,7 +26,7 @@ $messageType = 'info';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
-        $message = 'Security token mismatch. Please refresh and try again.';
+        $message = 'Please refresh the page and try again.';
         $messageType = 'danger';
     } else {
         $doctorId = (int)($_POST['doctor_id'] ?? 0);

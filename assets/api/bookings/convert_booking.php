@@ -39,7 +39,7 @@ try {
     // requiring only 'verified' meant this update silently never matched in the common
     // path, leaving bookings.status stuck even after a real appointment was created.
     $stmt = $conn->prepare("UPDATE bookings SET status = 'converted' WHERE booking_id = ? AND status IN ('verified', 'approved')");
-    if (!$stmt) throw new Exception('Database error.');
+    if (!$stmt) throw new Exception('An error occurred. Please try again.');
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
     $affected = $stmt->affected_rows;

@@ -6,7 +6,7 @@ if (!function_exists('profile_role_uses_default_png')) {
     function profile_role_uses_default_png(?string $role = null): bool
     {
         $role = strtolower(trim($role ?? (string)($_SESSION['role'] ?? '')));
-        return $role === 'admin';
+        return false; // Allow all roles to upload custom photos
     }
 }
 

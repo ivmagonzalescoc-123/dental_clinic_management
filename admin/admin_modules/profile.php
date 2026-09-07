@@ -28,6 +28,7 @@ if ($userId > 0) {
         <?php else: ?>
             <div id="profileAlert"></div>
             <?php include dirname(dirname(__DIR__)) . '/includes/profile_photo_upload.php'; ?>
+            
             <form id="profileForm" class="row g-3" novalidate>
                 <div class="col-md-4">
                     <label class="form-label">First Name</label>

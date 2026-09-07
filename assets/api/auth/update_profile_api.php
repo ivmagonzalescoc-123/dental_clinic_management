@@ -19,7 +19,7 @@ $input = security_json_input();
 $csrfToken = (string)($input['csrf_token'] ?? '');
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Security token mismatch. Please refresh and try again.']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -86,7 +86,7 @@ if ($isPatient) {
     $stmt = $conn->prepare('UPDATE patients SET first_name = ?, middle_name = ?, last_name = ?, email = ?, phone_number = ?, date_of_birth = ?, gender = ?, address = ? WHERE patient_id = ? LIMIT 1');
     if (!$stmt) {
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Unable to prepare profile update.']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $stmt->bind_param('ssssssssi', $firstName, $middleName, $lastName, $email, $phoneValue, $dobValue, $genderValue, $addressValue, $patientId);
@@ -154,7 +154,7 @@ $addressValue = $address !== '' ? $address : null;
 $stmt = $conn->prepare('UPDATE users SET first_name = ?, middle_name = ?, last_name = ?, email = ?, phone_number = ?, date_of_birth = ?, gender = ?, address = ? WHERE user_id = ? LIMIT 1');
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Unable to prepare profile update.']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $stmt->bind_param('ssssssssi', $firstName, $middleName, $lastName, $email, $phoneValue, $dobValue, $genderValue, $addressValue, $userId);

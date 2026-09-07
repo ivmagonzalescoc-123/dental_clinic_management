@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
-    echo json_encode(['success' => false, 'message' => 'Security token mismatch. Please refresh and try again.']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -50,8 +50,8 @@ if ($isPartialUpdate) {
     $sql = 'UPDATE patients SET gender=? WHERE patient_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        error_log('update_patient.php: prepare failed: ' . $conn->error);
-        echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
+        error_log('update_patient.php: An error occurred. Please try again.
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $stmt->bind_param('si', $gender, $patient_id);
@@ -108,8 +108,8 @@ $check_stmt->close();
 $sql = 'UPDATE patients SET first_name=?, middle_name=?, last_name=?, email=?, date_of_birth=?, gender=?, phone_number=?, address=?, occupation=? WHERE patient_id=?';
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
-    error_log('update_patient.php: prepare failed: ' . $conn->error);
-    echo json_encode(['success' => false, 'message' => 'Database error. Please try again.']);
+    error_log('update_patient.php: An error occurred. Please try again.
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 

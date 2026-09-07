@@ -42,7 +42,7 @@ if (!$conn) {
 
 try {
     $stmt = $conn->prepare("UPDATE bookings SET status = 'approved' WHERE booking_id = ? AND status = 'verified'");
-    if (!$stmt) throw new Exception('Database error: ' . $conn->error);
+    if (!$stmt) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
     $stmt->bind_param('i', $bookingId);
     $stmt->execute();
     $affected = $stmt->affected_rows;

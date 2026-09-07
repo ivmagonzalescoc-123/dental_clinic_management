@@ -26,14 +26,14 @@ $baseSql = 'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_num
 if ($trackingCode !== '') {
     $stmt = $conn->prepare(sprintf($baseSql, 'b.tracking_code = ?'));
     if (!$stmt) {
-        echo json_encode(['success' => false, 'message' => 'Database error.']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $stmt->bind_param('s', $trackingCode);
 } else {
     $stmt = $conn->prepare(sprintf($baseSql, 'b.booking_id = ?'));
     if (!$stmt) {
-        echo json_encode(['success' => false, 'message' => 'Database error.']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
         exit;
     }
     $stmt->bind_param('i', $bookingId);

@@ -14,7 +14,7 @@ if ($doctor_id <= 0) {
 
 $stmt = $conn->prepare("SELECT * FROM doctor_prescription_profiles WHERE user_id = ? LIMIT 1");
 if (!$stmt) {
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $stmt->bind_param('i', $doctor_id);
@@ -55,6 +55,6 @@ if ($profile) {
             echo json_encode(['success' => false, 'message' => 'Doctor not found']);
         }
     } else {
-        echo json_encode(['success' => false, 'message' => 'Database error']);
+        echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     }
 }

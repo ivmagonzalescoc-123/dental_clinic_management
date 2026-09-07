@@ -10,7 +10,7 @@ check_session(['admin']);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrf)) {
-        $_SESSION['message'] = 'Security token mismatch. Please refresh and try again.';
+        $_SESSION['message'] = 'Please refresh the page and try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin/admin.php?page=manage_users&type=users');
         exit;
@@ -114,8 +114,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
-        error_log('add_user.php: prepare failed: ' . $conn->error);
-        $_SESSION['message'] = 'Database error. Please try again.';
+        error_log('add_user.php: An error occurred. Please try again.
+        $_SESSION['message'] = 'An error occurred. Please try again.';
         $_SESSION['message_type'] = 'danger';
         header('Location: ../../../admin/admin.php?page=manage_users&type=users');
         exit;

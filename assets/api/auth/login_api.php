@@ -295,7 +295,7 @@ $psql = "SELECT patient_id, first_name, last_name, password_hash, email,
          LIMIT 1";
 $pstmt = $conn->prepare($psql);
 if (!$pstmt) {
-    auth_fail('Database error', 500);
+    auth_fail('An error occurred. Please try again.', 500);
 }
 $pstmt->bind_param('s', $email);
 $pstmt->execute();

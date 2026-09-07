@@ -30,7 +30,7 @@ $input = security_json_input();
 $csrf = (string)($input['csrf_token'] ?? '');
 if (!security_validate_csrf_token($csrf)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -62,7 +62,7 @@ if (!empty($policyErrors)) {
 $findStmt = $conn->prepare('SELECT patient_id, email FROM patients WHERE patient_id = ? LIMIT 1');
 if (!$findStmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error.']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $findStmt->bind_param('i', $patientId);
@@ -88,7 +88,7 @@ $updStmt = $conn->prepare(
 );
 if (!$updStmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error.']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 $updStmt->bind_param('si', $hash, $patientId);

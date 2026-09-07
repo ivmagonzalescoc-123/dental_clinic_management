@@ -27,7 +27,7 @@ try {
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!security_validate_csrf_token($csrfToken)) {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.']);
+        echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
         exit;
     }
 

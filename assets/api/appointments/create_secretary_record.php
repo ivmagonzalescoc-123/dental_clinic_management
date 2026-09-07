@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
-    api_respond(['success' => false, 'message' => 'Invalid security token.'], 403);
+    api_respond(['success' => false, 'message' => 'Please refresh the page and try again..'], 403);
 }
 
 $appointmentId = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;

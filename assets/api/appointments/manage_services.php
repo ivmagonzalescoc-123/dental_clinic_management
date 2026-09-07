@@ -111,7 +111,7 @@ try {
         $csrfToken = $_POST['csrf_token'] ?? '';
         if (!security_validate_csrf_token($csrfToken)) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
+            echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
             exit;
         }
         
@@ -129,7 +129,7 @@ try {
         // Verify appointment exists and user is authorized
         $appt_sql = "SELECT a.appointment_id, a.patient_id, a.user_id FROM appointments a WHERE a.appointment_id = ?";
         $appt_stmt = $conn->prepare($appt_sql);
-        if (!$appt_stmt) throw new Exception('Database error: ' . $conn->error);
+        if (!$appt_stmt) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
         
         $appt_stmt->bind_param('i', $appointment_id);
         $appt_stmt->execute();
@@ -159,7 +159,7 @@ try {
         // Clear existing selected services
         $delete_sql = "DELETE FROM selected_services WHERE appointment_id = ?";
         $del_stmt = $conn->prepare($delete_sql);
-        if (!$del_stmt) throw new Exception('Database error: ' . $conn->error);
+        if (!$del_stmt) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
         $del_stmt->bind_param('i', $appointment_id);
         $del_stmt->execute();
         $del_stmt->close();
@@ -184,7 +184,7 @@ try {
                      ) ts ON ts.service_id = s.service_id
                      WHERE s.service_id = ? AND s.is_active = 1"
                 );
-                if (!$srv_check) throw new Exception('Database error: ' . $conn->error);
+                if (!$srv_check) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
                 
                 $srv_check->bind_param('i', $service_id);
                 $srv_check->execute();
@@ -197,7 +197,7 @@ try {
                     
                     $insert_sql = "INSERT INTO selected_services (appointment_id, service_id) VALUES (?, ?)";
                     $ins_stmt = $conn->prepare($insert_sql);
-                    if (!$ins_stmt) throw new Exception('Database error: ' . $conn->error);
+                    if (!$ins_stmt) throw new Exception('An error occurred. Please try again.: ' . $conn->error);
                     
                     $ins_stmt->bind_param('ii', $appointment_id, $service_id);
                     $ins_stmt->execute();

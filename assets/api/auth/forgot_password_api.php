@@ -20,7 +20,7 @@ $input = security_json_input();
 $csrfToken = $input['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+    echo json_encode(['success' => false, 'message' => 'Please refresh the page and try again.']);
     exit;
 }
 
@@ -115,7 +115,7 @@ $ipAddress = (string)($_SERVER['REMOTE_ADDR'] ?? '');
 $stmt = $conn->prepare('INSERT INTO password_resets (user_type, user_id, email, token_hash, otp_hash, expires_at, used_at, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)');
 if (!$stmt) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Database error']);
+    echo json_encode(['success' => false, 'message' => 'An error occurred. Please try again.']);
     exit;
 }
 

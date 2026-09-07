@@ -47,7 +47,7 @@ if (!capabilities_can('appointment.manage')) {
 
 $csrfToken = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
-    send_json(['success' => false, 'message' => 'Invalid CSRF token. Please refresh and try again.'], 403);
+    send_json(['success' => false, 'message' => 'Please refresh the page and try again.'], 403);
 }
 
 $appointment_id = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;

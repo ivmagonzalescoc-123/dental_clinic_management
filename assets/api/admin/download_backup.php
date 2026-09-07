@@ -20,7 +20,7 @@ if ($backupId <= 0) {
 $stmt = $conn->prepare('SELECT backup_id, file_name, file_path FROM backup WHERE backup_id = ? LIMIT 1');
 if (!$stmt) {
     http_response_code(500);
-    exit('Database error');
+    exit('An error occurred. Please try again.');
 }
 $stmt->bind_param('i', $backupId);
 $stmt->execute();

@@ -546,7 +546,7 @@ if ($tsRes) {
                     <tr>
                         <th>Service</th>
                         <th>Price</th>
-                        <th>Smart Duration</th>
+                        <th>Duration</th>
                         <th>Slots Used</th>
                         <th>Buffer</th>
                         <th>Daily Limit</th>
