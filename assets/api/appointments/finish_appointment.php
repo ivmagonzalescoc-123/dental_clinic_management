@@ -28,6 +28,11 @@ include_once __DIR__ . '/availability_guard.php';
 if (ob_get_level()) ob_end_clean();
 
 set_error_handler(function($severity, $message, $file, $line) {
+    // Respect @-suppressed errors (e.g. @imagecreatefromjpeg()) instead of
+    // escalating them to a fatal ErrorException that aborts the whole request.
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
     // convert warnings/notices to ErrorException so they get caught
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
@@ -66,6 +71,29 @@ register_shutdown_function(function () {
         echo json_encode(['success' => false, 'message' => 'Internal server error']);
     }
 });
+
+/**
+ * Parse the PHP memory_limit ini setting into bytes.
+ * Returns -1 for unlimited, 0 if it couldn't be determined.
+ */
+function appt_media_memory_limit_bytes() {
+    $limit = ini_get('memory_limit');
+    if ($limit === false || $limit === '') {
+        return 0;
+    }
+    $limit = trim($limit);
+    if ($limit === '-1') {
+        return -1;
+    }
+    $unit = strtolower(substr($limit, -1));
+    $value = (int)$limit;
+    switch ($unit) {
+        case 'g': $value *= 1024 * 1024 * 1024; break;
+        case 'm': $value *= 1024 * 1024; break;
+        case 'k': $value *= 1024; break;
+    }
+    return $value;
+}
 
 // Verify doctor role
 if (($_SESSION['role'] ?? '') !== 'doctor') {
@@ -306,33 +334,59 @@ try {
             $gdAvailable = function_exists('imagecreatefromjpeg')
                 && function_exists('imagecreatetruecolor')
                 && function_exists('imagecopyresampled');
+
+            // Skip GD entirely if decoding the image wouldn't fit in the
+            // remaining memory budget (shared hosts like InfinityFree cap
+            // memory_limit low and kill the whole request on exhaustion —
+            // better to just store the original file than crash the request).
             if ($gdAvailable && $mimeType !== 'image/webp') {
-                $image = null;
-                if ($mimeType === 'image/jpeg') {
-                    $image = @imagecreatefromjpeg($tmpPath) ?: null;
-                } elseif ($mimeType === 'image/png' && function_exists('imagecreatefrompng')) {
-                    $image = @imagecreatefrompng($tmpPath) ?: null;
-                } elseif ($mimeType === 'image/gif' && function_exists('imagecreatefromgif')) {
-                    $image = @imagecreatefromgif($tmpPath) ?: null;
+                $dims = @getimagesize($tmpPath);
+                if ($dims) {
+                    $estimatedBytes = $dims[0] * $dims[1] * 5; // ~4 bytes/px truecolor + headroom
+                    $limitBytes = appt_media_memory_limit_bytes();
+                    $usedBytes = memory_get_usage(true);
+                    if ($limitBytes > 0 && ($usedBytes + $estimatedBytes) > ($limitBytes * 0.7)) {
+                        $gdAvailable = false; // too risky, fall back to raw copy below
+                    }
                 }
-                if ($image) {
-                    $width = imagesx($image);
-                    $height = imagesy($image);
-                    if ($width > 2000 || $height > 2000) {
-                        $ratio = min(2000 / $width, 2000 / $height);
-                        $newWidth = (int)($width * $ratio);
-                        $newHeight = (int)($height * $ratio);
-                        $resized = imagecreatetruecolor($newWidth, $newHeight);
-                        imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+            }
+
+            if ($gdAvailable && $mimeType !== 'image/webp') {
+                // Any failure here (including a fatal memory error converted
+                // by the shutdown handler, or a caught warning) must not take
+                // down the whole finish-appointment transaction — fall back
+                // to saving the untouched upload instead.
+                try {
+                    $image = null;
+                    if ($mimeType === 'image/jpeg') {
+                        $image = @imagecreatefromjpeg($tmpPath) ?: null;
+                    } elseif ($mimeType === 'image/png' && function_exists('imagecreatefrompng')) {
+                        $image = @imagecreatefrompng($tmpPath) ?: null;
+                    } elseif ($mimeType === 'image/gif' && function_exists('imagecreatefromgif')) {
+                        $image = @imagecreatefromgif($tmpPath) ?: null;
+                    }
+                    if ($image) {
+                        $width = imagesx($image);
+                        $height = imagesy($image);
+                        if ($width > 2000 || $height > 2000) {
+                            $ratio = min(2000 / $width, 2000 / $height);
+                            $newWidth = (int)($width * $ratio);
+                            $newHeight = (int)($height * $ratio);
+                            $resized = imagecreatetruecolor($newWidth, $newHeight);
+                            imagecopyresampled($resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
+                            imagedestroy($image);
+                            $image = $resized;
+                        }
+                        if (($ext === 'jpg' || $ext === 'jpeg') && function_exists('imagejpeg')) {
+                            $saved = imagejpeg($image, $filePath, 85);
+                        } elseif ($ext === 'png' && function_exists('imagepng')) {
+                            $saved = imagepng($image, $filePath, 7);
+                        }
                         imagedestroy($image);
-                        $image = $resized;
                     }
-                    if (($ext === 'jpg' || $ext === 'jpeg') && function_exists('imagejpeg')) {
-                        $saved = imagejpeg($image, $filePath, 85);
-                    } elseif ($ext === 'png' && function_exists('imagepng')) {
-                        $saved = imagepng($image, $filePath, 7);
-                    }
-                    imagedestroy($image);
+                } catch (Throwable $gdError) {
+                    error_log('finish_appointment.php: GD resize failed for ' . $originalName . ': ' . $gdError->getMessage());
+                    $saved = false;
                 }
             }
             if (!$saved) {

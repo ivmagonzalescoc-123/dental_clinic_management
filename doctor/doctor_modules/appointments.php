@@ -1959,24 +1959,91 @@ function escapeHtmlFinish(str) {
     return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Resize/compress an image File in-browser before it's ever uploaded.
+// This is what actually fixes "invalid response from server" on hosts
+// with tight PHP memory limits (e.g. InfinityFree) — the server never
+// has to decode a multi-megapixel camera photo into memory.
+async function compressImageFile(file, maxDimension = 1600, quality = 0.8) {
+    try {
+        const bitmap = await createImageBitmap(file).catch(() => null);
+        let width, height, drawSource;
+
+        if (bitmap) {
+            width = bitmap.width;
+            height = bitmap.height;
+            drawSource = bitmap;
+        } else {
+            // Fallback for browsers without createImageBitmap support
+            const img = await new Promise((resolve, reject) => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = reject;
+                el.src = URL.createObjectURL(file);
+            });
+            width = img.naturalWidth;
+            height = img.naturalHeight;
+            drawSource = img;
+        }
+
+        if (!width || !height) {
+            return file; // couldn't read dimensions, upload as-is
+        }
+
+        if (width > maxDimension || height > maxDimension) {
+            const ratio = Math.min(maxDimension / width, maxDimension / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(drawSource, 0, 0, width, height);
+
+        if (bitmap && typeof bitmap.close === 'function') {
+            bitmap.close();
+        }
+
+        const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, outType, quality));
+        if (!blob) {
+            return file; // compression failed, fall back to original
+        }
+
+        // Only use the compressed version if it's actually smaller
+        if (blob.size >= file.size) {
+            return file;
+        }
+
+        const ext = outType === 'image/png' ? 'png' : 'jpg';
+        const newName = file.name.replace(/\.[^.]+$/, '') + '.' + ext;
+        return new File([blob], newName, { type: outType });
+    } catch (err) {
+        console.warn('Image compression failed, using original file:', err);
+        return file; // never block the upload because compression failed
+    }
+}
+
 // Photo Upload Handler
 document.getElementById('finishPhotoUpload').addEventListener('change', async function(e) {
     const files = Array.from(e.target.files);
     if (!files.length) return;
-    
+
     for (const file of files) {
         if (!file.type.startsWith('image/')) {
             notifyDoctor('Only image files allowed', 'warning');
             continue;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            notifyDoctor(`File ${file.name} exceeds 5MB limit`, 'warning');
+        if (file.size > 15 * 1024 * 1024) {
+            notifyDoctor(`File ${file.name} exceeds 15MB limit`, 'warning');
             continue;
         }
-        uploadedPhotos.push(file);
+        const compressed = await compressImageFile(file);
+        uploadedPhotos.push(compressed);
     }
-    
+
     updatePhotoGalleryPreview();
+    this.value = '';
 });
 
 // Camera Capture Handler
@@ -2028,16 +2095,25 @@ document.getElementById('cameraButton').addEventListener('click', async function
 function capturePhoto(stream) {
     const video = document.getElementById('cameraPreviewVideo');
     const canvas = document.getElementById('cameraCaptureCanvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    
+
+    const maxDimension = 1600;
+    let width = video.videoWidth;
+    let height = video.videoHeight;
+    if (width > maxDimension || height > maxDimension) {
+        const ratio = Math.min(maxDimension / width, maxDimension / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+    }
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+
     canvas.toBlob((blob) => {
         const file = new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' });
         uploadedPhotos.push(file);
         updatePhotoGalleryPreview();
         notifyDoctor('Photo captured', 'success');
-    }, 'image/jpeg', 0.9);
+    }, 'image/jpeg', 0.8);
 }
 
 function updatePhotoGalleryPreview() {

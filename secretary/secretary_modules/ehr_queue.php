@@ -1126,7 +1126,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         if (typeof renderMediaGallery === 'function') {
             renderMediaGallery(photoContainer, data.photos || [], function (photo) {
                 return resolveMediaUrl(photo.file_path);
-            });
+            }, { iconOnlyDownload: true });
         } else if (photoContainer) {
             photoContainer.innerHTML = '<p class="text-muted">No photos uploaded</p>';
         }

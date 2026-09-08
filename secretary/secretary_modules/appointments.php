@@ -2230,6 +2230,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                                 <i class="bi bi-calendar3"></i>
                                             </button>
                                         <?php endif; ?>
+                                        <?php if (!$isTodayAppt): ?>
+                                            <button type="button" class="btn btn-sm btn-outline-success" onclick='openEarlyCheckinModalSec(<?php echo htmlspecialchars(json_encode($appointment), ENT_QUOTES, "UTF-8"); ?>)' title="Patient arrived early - check in as walk-in today">
+                                                <i class="bi bi-person-walking"></i>
+                                            </button>
+                                        <?php endif; ?>
                                         <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
                                                 <i class="bi bi-x-circle"></i>
@@ -2237,6 +2242,11 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openRescheduleForAppointmentSec(<?php echo htmlspecialchars(json_encode($appointment), ENT_QUOTES, 'UTF-8'); ?>)' title="Reschedule appointment">
                                                 <i class="bi bi-calendar3"></i>
                                             </button>
+                                            <?php if ($status === 'confirmed' && !$isTodayAppt): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-success" onclick='openEarlyCheckinModalSec(<?php echo htmlspecialchars(json_encode($appointment), ENT_QUOTES, "UTF-8"); ?>)' title="Patient arrived early - check in as walk-in today">
+                                                    <i class="bi bi-person-walking"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         <?php elseif ($status === 'awaiting_secretary_records'): ?>
                                             <?php // The record-creation modal only exists on the EHR Queue page — send the
                                                   // secretary there instead of calling a function that isn't loaded here. ?>
@@ -2268,7 +2278,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                             </button>
                                         <?php endif; ?>
                                         
-                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View medical history">
+                                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#viewProfilingModal" onclick="openViewProfilingModal(<?php echo (int)$appointment['patient_id']; ?>, '<?php echo htmlspecialchars($appointment['first_name']); ?>', '<?php echo htmlspecialchars($appointment['last_name']); ?>')" title="View profiling">
                                             <i class="bi bi-file-medical"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#appointmentDetailsModal" onclick='openAppointmentDetailsModal(<?php echo htmlspecialchars(json_encode([
@@ -3882,6 +3892,47 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     </div>
 </div>
 
+<!-- Early Check-In (existing patient arrived earlier than scheduled) -->
+<div class="modal fade" id="earlyCheckinModalSec" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-person-walking"></i> Check In Today (Walk-In)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-success py-2 px-2" style="font-size:0.85rem;">
+                    <strong id="earlyCheckinPatientName"></strong> was originally scheduled for
+                    <strong id="earlyCheckinOriginalDate"></strong>. This moves the appointment to
+                    <strong>today</strong>, marks it as a walk-in, and checks the patient in immediately.
+                </div>
+                <input type="hidden" id="earlyCheckinAppointmentId" />
+                <div class="mb-2">
+                    <label class="form-label">Doctor</label>
+                    <select id="earlyCheckinDoctorSelect" class="form-select">
+                        <?php foreach ($doctors as $doc): ?>
+                            <option value="<?php echo (int)$doc['user_id']; ?>"><?php echo htmlspecialchars(trim($doc['first_name'] . ' ' . $doc['last_name'])); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label">Available Time Today</label>
+                    <select id="earlyCheckinTimeslotSelect" class="form-select">
+                        <option value="">-- Select available slot --</option>
+                    </select>
+                    <small class="text-muted">Only today's open slots for the selected doctor are shown.</small>
+                </div>
+                <div id="earlyCheckinAlert" class="alert alert-danger py-1 px-2 mt-2" style="display:none;font-size:0.8rem;"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="earlyCheckinSaveBtnSec" type="button" class="btn btn-success">
+                    <i class="bi bi-person-walking"></i> Check In Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 window.resModalSec = null;
 window.fpStartSec = null; window.fpEndSec = null;
@@ -4081,6 +4132,139 @@ document.getElementById('rescheduleSaveBtnSec').addEventListener('click', async 
     } catch (e) {
         console.error(e);
         notifySecretary('Unable to complete this action. Please try again.', 'danger');
+    }
+});
+
+// --- Early Check-In: existing patient arrived earlier than their scheduled date ---
+// Moves the appointment to today, marks it as a walk-in (is_online_appointment = 0),
+// and sets status = checked_in in one step — the existing-patient equivalent of the
+// "Process Booking" walk-in conversion used for new patients.
+//
+// NOTE: this is defined in its own local helper (rather than reusing
+// getTodayDateStringSecretary() from earlier in the page) because this page's
+// module loader evals each <script> block in its own isolated scope — a
+// function declared in one block isn't visible to code in a later block, even
+// on the same page.
+function earlyCheckinTodayDateString() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + m + '-' + day;
+}
+
+window.earlyCheckinModalSec = null;
+window.earlyCheckinAppointmentData = null;
+
+function initEarlyCheckinModalSec() {
+    try {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const el = document.getElementById('earlyCheckinModalSec');
+            if (el) earlyCheckinModalSec = new bootstrap.Modal(el);
+        }
+    } catch (e) { console.warn('bootstrap modal init deferred', e); }
+}
+document.addEventListener('DOMContentLoaded', initEarlyCheckinModalSec);
+window.addEventListener('page-loaded', initEarlyCheckinModalSec);
+
+async function loadEarlyCheckinTimeslots() {
+    const doctorId = document.getElementById('earlyCheckinDoctorSelect').value || '';
+    const select = document.getElementById('earlyCheckinTimeslotSelect');
+    if (!select) return;
+
+    if (!doctorId) {
+        select.innerHTML = '<option value="">-- Select available slot --</option>';
+        return;
+    }
+
+    select.innerHTML = '<option value="">Loading slots...</option>';
+    try {
+        const todayStr = earlyCheckinTodayDateString();
+        const url = '../assets/api/appointments/get_timeslots.php?doctor_id=' + encodeURIComponent(doctorId) + '&date=' + encodeURIComponent(todayStr);
+        const res = await fetch(url);
+        const j = await res.json();
+        select.innerHTML = '<option value="">-- Select available slot --</option>';
+        if (!j.success || !Array.isArray(j.slots) || j.slots.length === 0) {
+            select.innerHTML = '<option value="">No available slots today for this doctor</option>';
+            return;
+        }
+        j.slots.forEach(function(slot) {
+            const opt = document.createElement('option');
+            opt.value = String(slot.timeslot_id || '');
+            opt.textContent = String(slot.label || (slot.start_time + ' - ' + slot.end_time));
+            select.appendChild(opt);
+        });
+    } catch (e) {
+        console.error(e);
+        select.innerHTML = '<option value="">Error loading slots</option>';
+    }
+}
+
+function openEarlyCheckinModalSec(appointment) {
+    earlyCheckinAppointmentData = appointment;
+    document.getElementById('earlyCheckinAppointmentId').value = appointment.appointment_id || '';
+    document.getElementById('earlyCheckinPatientName').textContent =
+        ((appointment.first_name || '') + ' ' + (appointment.last_name || '')).trim() || 'This patient';
+    document.getElementById('earlyCheckinOriginalDate').textContent = appointment.appointment_date || '';
+
+    const doctorSelect = document.getElementById('earlyCheckinDoctorSelect');
+    if (doctorSelect) doctorSelect.value = String(appointment.user_id || '');
+
+    const alertEl = document.getElementById('earlyCheckinAlert');
+    if (alertEl) alertEl.style.display = 'none';
+
+    loadEarlyCheckinTimeslots();
+    if (!earlyCheckinModalSec) initEarlyCheckinModalSec();
+    earlyCheckinModalSec?.show();
+}
+
+document.getElementById('earlyCheckinDoctorSelect')?.addEventListener('change', loadEarlyCheckinTimeslots);
+
+document.getElementById('earlyCheckinSaveBtnSec')?.addEventListener('click', async function() {
+    const btn = this;
+    const apptId = document.getElementById('earlyCheckinAppointmentId').value;
+    const doctorId = document.getElementById('earlyCheckinDoctorSelect').value;
+    const timeslotId = document.getElementById('earlyCheckinTimeslotSelect').value;
+    const alertEl = document.getElementById('earlyCheckinAlert');
+
+    if (alertEl) alertEl.style.display = 'none';
+
+    if (!doctorId) {
+        if (alertEl) { alertEl.textContent = 'Please select a doctor.'; alertEl.style.display = ''; }
+        return;
+    }
+    if (!timeslotId) {
+        if (alertEl) { alertEl.textContent = 'Please select an available time slot for today.'; alertEl.style.display = ''; }
+        return;
+    }
+
+    DentalUI.btnLoading(btn, 'Checking in...');
+    try {
+        const fd = new FormData();
+        fd.append('appointment_id', apptId);
+        fd.append('user_id', doctorId);
+        fd.append('appointment_date', earlyCheckinTodayDateString());
+        fd.append('timeslot_id', timeslotId);
+        fd.append('status', 'checked_in');
+        fd.append('is_online_appointment', '0'); // convert from online to walk-in
+        fd.append('csrf_token', secretaryCsrfToken);
+
+        const r = await fetch('../assets/api/appointments/update_appointment.php', { method: 'POST', body: fd });
+        const j = await r.json();
+
+        if (!j.success) {
+            if (alertEl) { alertEl.textContent = j.message || 'Failed to check in patient.'; alertEl.style.display = ''; }
+            DentalUI.btnRestore(btn);
+            return;
+        }
+
+        notifySecretary('Patient checked in as a walk-in for today.', 'success');
+        earlyCheckinModalSec?.hide();
+        DentalUI.btnRestore(btn);
+        location.reload();
+    } catch (e) {
+        console.error(e);
+        if (alertEl) { alertEl.textContent = 'Unable to complete check-in. Please try again.'; alertEl.style.display = ''; }
+        DentalUI.btnRestore(btn);
     }
 });
 

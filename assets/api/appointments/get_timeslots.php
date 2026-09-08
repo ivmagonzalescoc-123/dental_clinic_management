@@ -4,11 +4,45 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', dirname(__FILE__) . '/error.log');
 
+// JSON-only responses: some hosts (e.g. InfinityFree) force display_errors on
+// regardless of ini_set above, which would otherwise leak a stray PHP notice/
+// warning into the response body and break the caller's res.json() parsing.
+// Buffer everything and guarantee clean JSON no matter what happens below.
+ob_start();
+
 session_start();
 header('Content-Type: application/json');
 
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) {
+        return false; // respect @-suppressed errors
+    }
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+set_exception_handler(function ($e) {
+    error_log('get_timeslots.php: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) header('Content-Type: application/json');
+    http_response_code(500);
+    if (ob_get_length()) ob_clean();
+    echo json_encode(['success' => false, 'message' => 'Internal server error', 'slots' => []]);
+    exit;
+});
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        error_log('get_timeslots.php shutdown fatal: ' . print_r($err, true));
+        if (!headers_sent()) header('Content-Type: application/json');
+        http_response_code(500);
+        if (ob_get_length()) ob_clean();
+        echo json_encode(['success' => false, 'message' => 'Internal server error', 'slots' => []]);
+    }
+});
+
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include __DIR__ . '/availability_guard.php';
+
+// Discard any warnings/notices buffered while loading the includes above.
+if (ob_get_level()) ob_end_clean();
 
 $doctor_id  = isset($_GET['doctor_id'])  ? (int)$_GET['doctor_id']  : 0;
 $date       = isset($_GET['date'])       ? trim($_GET['date'])       : '';

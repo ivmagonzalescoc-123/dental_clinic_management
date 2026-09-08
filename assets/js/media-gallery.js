@@ -82,8 +82,10 @@
      * @param {HTMLElement} container
      * @param {Array} items - { file_path, file_name, url, name }
      * @param {Function} resolveUrl - optional (item) => url
+     * @param {Object} options - optional { iconOnlyDownload: boolean }
      */
-    function renderMediaGallery(container, items, resolveUrl) {
+    function renderMediaGallery(container, items, resolveUrl, options) {
+        const iconOnlyDownload = !!(options && options.iconOnlyDownload);
         if (!container) {
             return;
         }
@@ -117,8 +119,8 @@
                         '<img src="' + escapeAttr(url) + '" alt="' + escapeAttr(fileName) + '" class="media-gallery-thumb-img">' +
                         '<span class="media-gallery-thumb-overlay"><i class="bi bi-zoom-in"></i> View</span>' +
                     '</button>' +
-                    '<a href="' + escapeAttr(url) + '" download="' + escapeAttr(fileName) + '" class="btn btn-sm btn-outline-primary w-100 mt-1">' +
-                        '<i class="bi bi-download"></i> Download' +
+                    '<a href="' + escapeAttr(url) + '" download="' + escapeAttr(fileName) + '" class="btn btn-sm btn-outline-primary w-100 mt-1" title="Download">' +
+                        (iconOnlyDownload ? '<i class="bi bi-download"></i>' : '<i class="bi bi-download"></i> Download') +
                     '</a>' +
                 '</div>';
 

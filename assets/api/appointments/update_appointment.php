@@ -103,7 +103,10 @@ try {
 
     $currentStatus = (string)($current['status'] ?? 'scheduled');
     $transitionMatrix = [
-        'scheduled' => ['confirmed', 'cancelled', 'no_show'],
+        // 'scheduled' -> 'checked_in' covers an existing patient walking in
+        // early (before their originally scheduled date/time) and being
+        // checked in on the spot, without needing a separate "confirm" step.
+        'scheduled' => ['confirmed', 'checked_in', 'cancelled', 'no_show'],
         'confirmed' => ['checked_in', 'cancelled', 'no_show', 'scheduled'],
         'checked_in' => ['in_progress', 'no_show'],
         'in_progress' => ['completed'],
