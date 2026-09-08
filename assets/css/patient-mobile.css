@@ -203,18 +203,9 @@ body.patient-portal {
     }
 
     /* Services module */
-    body.patient-portal .services-grid {
-        grid-template-columns: 1fr !important;
+    body.patient-portal .patient-svc-grid {
+        grid-template-columns: 1fr 1fr !important;
         gap: 0.65rem !important;
-    }
-
-    body.patient-portal .service-card.card {
-        border: 1px solid #dbe4f0 !important;
-        border-radius: 10px !important;
-        box-shadow: none !important;
-        background: #fff !important;
-        padding: 0.85rem !important;
-        margin-bottom: 0;
     }
 
     /* Dashboard module */

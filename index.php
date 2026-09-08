@@ -31,7 +31,7 @@ $year = date('Y');
 $csrf_token = security_generate_csrf_token();
 $googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
 $clinicLogo = 'assets/img/clinic-logo.png';
-$pageBackgroundImage = 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=1400&h=900&fit=crop&auto=format';
+$pageBackgroundImage = 'assets/img/landing-background.jpg';
 
 $pageBgSrc = $pageBackgroundImage;
 if (!preg_match('#^https?://#i', $pageBackgroundImage)) {
