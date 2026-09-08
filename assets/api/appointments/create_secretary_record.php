@@ -59,6 +59,12 @@ $followUpIntervalMonths = isset($_POST['follow_up_interval_months']) ? (int)$_PO
 $followUpTotalVisits = isset($_POST['follow_up_total_visits']) ? (int)$_POST['follow_up_total_visits'] : 0;
 $useInstallment = isset($_POST['use_installment']) ? (int)$_POST['use_installment'] : 0;
 $installmentTerms = isset($_POST['installment_terms']) ? (int)$_POST['installment_terms'] : 0;
+// A plain peso amount rather than a fixed 50% — a doctor-priced case (e.g. braces) may use a
+// ₱5,000-10,000 down payment regardless of the total. Null means "not sent" so we can still
+// fall back to 50% below for older clients/requests that don't send this field.
+$installmentDownPaymentRaw = isset($_POST['installment_down_payment']) && $_POST['installment_down_payment'] !== ''
+    ? (float)$_POST['installment_down_payment']
+    : null;
 $discountType = billing_normalize_discount_type($_POST['discount_type'] ?? 'none');
 $discountPercent = isset($_POST['discount_percent']) ? (float)$_POST['discount_percent'] : 0.0;
 $discountNotes = isset($_POST['discount_notes']) ? trim($_POST['discount_notes']) : '';
@@ -100,7 +106,7 @@ if ($cached !== null) {
 
 try {
     $stmt = $conn->prepare('
-        SELECT appointment_id, status, user_id AS doctor_id, patient_id
+        SELECT appointment_id, status, user_id AS doctor_id, patient_id, rescheduled_from
         FROM appointments
         WHERE appointment_id = ? AND patient_id = ?
         LIMIT 1
@@ -135,6 +141,13 @@ try {
     }
 
     $doctorId = (int)($appointment['doctor_id'] ?? 0);
+
+    // Is this a follow-up visit of an existing installment plan (e.g. one of the 12 monthly
+    // braces-adjustment visits)? If so, and the doctor didn't select any billable service for
+    // it, this visit is already covered by that plan — it must NOT fall back to auto-billing
+    // a fresh Consultation Fee, which would silently create an unrelated charge instead of the
+    // real installment amount (see billing_get_installment_plan_for_followup docblock).
+    $installmentFollowUp = billing_get_installment_plan_for_followup($conn, $appointmentId);
 
     $doctorNotes = '';
     $noteStmt = $conn->prepare('SELECT note_text FROM appointment_doctor_notes WHERE appointment_id = ? ORDER BY created_at DESC LIMIT 1');
@@ -345,8 +358,15 @@ try {
         }
     }
 
-    // Auto-add consultation fee if no line items
-    if (empty($lineItems)) {
+    // If this visit is a follow-up of an existing installment plan and the doctor didn't
+    // select any billable service for it, there's genuinely nothing new to bill — it's already
+    // covered by that plan. Skip the auto-Consultation-Fee fallback in that case (it would
+    // otherwise silently create an unrelated charge on a brand new billing_id instead of the
+    // real installment amount).
+    $installmentCoveredNoCharge = ($installmentFollowUp !== null && empty($lineItems));
+
+    // Auto-add consultation fee if no line items (and not an installment-covered follow-up)
+    if (empty($lineItems) && !$installmentCoveredNoCharge) {
         $consultationFee = get_clinical_setting($conn, 'consultation_fee', 0);
         if ($consultationFee > 0) {
             $lineItems[] = [
@@ -366,30 +386,52 @@ try {
         $discountNotes = '';
     }
 
-    $discountTotals = billing_apply_discount($subtotal, $discountType, $discountPercent);
-    $grandTotal = $discountTotals['total_amount'];
-
-    $billingId = billing_create_or_update($conn, $appointmentId, $patientId, $subtotal, 'unpaid', [
-        'discount_type' => $discountType,
-        'discount_percent' => $discountType === 'custom' ? $discountPercent : null,
-        'discount_notes' => $discountNotes,
-    ]);
-    if ($billingId <= 0) {
-        throw new Exception('Failed to create billing record');
-    }
-
-    billing_save_line_items($conn, $appointmentId, $billingId, $lineItems);
-
     $installmentDownPaymentAmount = null;
-    if ($useInstallment === 1 && $installmentTerms > 0) {
-        $installmentDownPaymentAmount = round($grandTotal * 0.5, 2);
-        $newInstallmentId = billing_create_installment_plan($conn, $billingId, $grandTotal, $installmentTerms, 50.0);
-        if ($newInstallmentId === false) {
-            throw new Exception('Failed to create installment plan.');
-        }
-    }
 
-    billing_create_invoice($conn, $billingId, $secretaryId);
+    if ($installmentCoveredNoCharge) {
+        // Nothing new to bill — reuse the ORIGINAL billing_id (from the visit that created the
+        // installment plan) instead of creating a new one, so a payment recorded during this
+        // visit lands on the real plan rather than an empty, unrelated invoice. Ignore any
+        // "start a new installment plan" checkbox here too — regenerating a plan against this
+        // $0 total would wipe out the real one's remaining terms.
+        $billingId = $installmentFollowUp['billing_id'];
+        $grandTotal = 0.0;
+        $discountTotals = ['subtotal_amount' => 0.0, 'discount_type' => 'none', 'discount_percent' => 0.0, 'discount_amount' => 0.0, 'total_amount' => 0.0];
+    } else {
+        $discountTotals = billing_apply_discount($subtotal, $discountType, $discountPercent);
+        $grandTotal = $discountTotals['total_amount'];
+
+        $billingId = billing_create_or_update($conn, $appointmentId, $patientId, $subtotal, 'unpaid', [
+            'discount_type' => $discountType,
+            'discount_percent' => $discountType === 'custom' ? $discountPercent : null,
+            'discount_notes' => $discountNotes,
+        ]);
+        if ($billingId <= 0) {
+            throw new Exception('Failed to create billing record');
+        }
+
+        billing_save_line_items($conn, $appointmentId, $billingId, $lineItems);
+
+        if ($useInstallment === 1 && $installmentTerms > 0) {
+            // Clamp whatever was sent to [0, grandTotal] and fall back to 50% down if the field
+            // was missing or invalid, then convert to the percent billing_create_installment_plan
+            // expects — the down payment itself (not a fixed percentage) is what the doctor
+            // actually agrees with the patient on for a big-ticket, variably-priced case.
+            if ($installmentDownPaymentRaw !== null && $grandTotal > 0) {
+                $installmentDownPaymentAmount = round(max(0, min($installmentDownPaymentRaw, $grandTotal)), 2);
+                $installmentDownPaymentPercent = round(($installmentDownPaymentAmount / $grandTotal) * 100, 2);
+            } else {
+                $installmentDownPaymentAmount = round($grandTotal * 0.5, 2);
+                $installmentDownPaymentPercent = 50.0;
+            }
+            $newInstallmentId = billing_create_installment_plan($conn, $billingId, $grandTotal, $installmentTerms, $installmentDownPaymentPercent);
+            if ($newInstallmentId === false) {
+                throw new Exception('Failed to create installment plan.');
+            }
+        }
+
+        billing_create_invoice($conn, $billingId, $secretaryId);
+    }
 
     $paymentRecorded = false;
     if ($recordPayment === 1) {
@@ -402,8 +444,19 @@ try {
         // When an installment plan is being created alongside this payment, only today's
         // down payment is actually due — cap what gets applied/recorded to that amount (not
         // the full grand total) so a larger amount tendered is returned as change instead of
-        // being recorded as payment and prematurely marking every future term paid.
-        $amountDueNow = $installmentDownPaymentAmount ?? $grandTotal;
+        // being recorded as payment and prematurely marking every future term paid. For an
+        // installment-covered follow-up visit, "due now" is whatever the next pending term
+        // on the real plan actually is (not this visit's $0 total).
+        if ($installmentCoveredNoCharge) {
+            $amountDueNow = !empty($installmentFollowUp['pending_terms'])
+                ? $installmentFollowUp['pending_terms'][0]['remaining_amount']
+                : 0.0;
+            if ($amountDueNow <= 0) {
+                throw new Exception('This installment plan has no pending balance to pay.');
+            }
+        } else {
+            $amountDueNow = $installmentDownPaymentAmount ?? $grandTotal;
+        }
         $amountApplied = round(min($paymentAmountApplied, $amountDueNow), 2);
         if ($amountApplied <= 0) {
             throw new Exception('Enter an amount tendered to record a payment.');
@@ -425,17 +478,42 @@ try {
     }
 
     $followUpAppointmentId = null;
+    $recurringFollowUps = null;
+    $followUpSchedulingError = null;
     if ($followUpDateDb !== null) {
-        try {
-            $followUpAppointmentId = workflow_create_followup_appointment(
+        // More than one visit + a repeat interval means this is a recurring case (e.g. 12
+        // monthly braces-adjustment visits) — book the whole series up front instead of just
+        // the next single visit, so a month never goes by without an appointment to attach a
+        // clinical record (and odontogram snapshot) to.
+        if ($followUpTotalVisits > 1 && $followUpIntervalMonths > 0) {
+            $recurringFollowUps = workflow_create_recurring_followup_appointments(
                 $conn,
                 $appointmentId,
                 $patientId,
                 $doctorId,
-                $followUpDateDb
+                $followUpDateDb,
+                $followUpIntervalMonths,
+                $followUpTotalVisits
             );
-        } catch (Exception $e) {
-            error_log('Follow-up scheduling failed: ' . $e->getMessage());
+            if (!empty($recurringFollowUps['created'])) {
+                $followUpAppointmentId = $recurringFollowUps['created'][0];
+            }
+        } else {
+            try {
+                $followUpAppointmentId = workflow_create_followup_appointment(
+                    $conn,
+                    $appointmentId,
+                    $patientId,
+                    $doctorId,
+                    $followUpDateDb
+                );
+            } catch (Exception $e) {
+                // Previously this failure was only written to the PHP error log — the record
+                // still "succeeded" with no visible indication that the follow-up silently
+                // never got booked. Surface it in the response instead so it can't hide again.
+                error_log('Follow-up scheduling failed: ' . $e->getMessage());
+                $followUpSchedulingError = $e->getMessage();
+            }
         }
     }
 
@@ -459,7 +537,8 @@ try {
 
     $action = 'appointment.secretary_records_created';
     $details = 'Secretary submitted clinical record. Record ID: ' . $clinicalRecordId . ', Billing ID: ' . $billingId . ', Total: ' . $grandTotal
-        . ($paymentRecorded ? ', Payment recorded: ' . round(min($paymentAmountApplied, $grandTotal), 2) : '');
+        . ($installmentCoveredNoCharge ? ' (installment-covered visit, no new charge)' : '')
+        . ($paymentRecorded ? ', Payment recorded: ' . round($amountApplied ?? 0, 2) : '');
     $ipAddr = $_SERVER['REMOTE_ADDR'] ?? '';
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
     $logStmt = $conn->prepare('
@@ -484,9 +563,20 @@ try {
         'discount_percent' => $discountTotals['discount_percent'],
         'discount_amount' => $discountTotals['discount_amount'],
         'total_amount' => $grandTotal,
-        'installment' => ($useInstallment === 1 && $installmentTerms > 0),
+        'installment' => (!$installmentCoveredNoCharge && $useInstallment === 1 && $installmentTerms > 0),
         'follow_up_appointment_id' => $followUpAppointmentId,
+        'follow_up_scheduling_error' => $followUpSchedulingError,
+        'recurring_follow_ups' => $recurringFollowUps === null ? null : [
+            'booked' => count($recurringFollowUps['created']),
+            'requested' => $followUpTotalVisits,
+            'failed' => $recurringFollowUps['failed'],
+        ],
         'payment_recorded' => $paymentRecorded,
+        // Set when this visit didn't get its own new charge because it's already covered by
+        // an existing installment plan — lets the UI explain the ₱0.00 total instead of it
+        // looking like a mistake, and shows what was actually paid toward the real plan.
+        'installment_covered_visit' => $installmentCoveredNoCharge,
+        'installment_payment_applied' => ($installmentCoveredNoCharge && $paymentRecorded) ? $amountApplied : null,
     ];
     idempotency_store_response($idempotencyScope, $idempotencyKey, $response);
     api_respond($response);

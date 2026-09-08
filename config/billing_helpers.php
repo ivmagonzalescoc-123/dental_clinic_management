@@ -268,6 +268,158 @@ if (!function_exists('billing_is_overdue')) {
     }
 }
 
+if (!function_exists('billing_get_patient_outstanding_installments')) {
+    /**
+     * All pending/partial installment terms across every billing this patient has, regardless
+     * of which appointment/visit they're currently checking in for. Installment terms are due
+     * on fixed calendar dates independent of whether the patient actually shows up each month —
+     * a missed visit does not cancel or merge that term, it just sits there (and goes overdue).
+     *
+     * This exists so the secretary can be shown "this patient still owes for an earlier missed
+     * term" proactively at the point of contact (opening Create Record / check-in), instead of
+     * relying on someone remembering to go check the Billing screen separately. Payments are
+     * applied oldest-term-first (see billing_sync_installment_terms), so collecting only "this
+     * visit's" amount would silently pay off the old term instead of the current one.
+     *
+     * @return array{total_outstanding: float, has_overdue: bool, terms: array}
+     */
+    function billing_get_patient_outstanding_installments(mysqli $conn, int $patientId): array
+    {
+        $result = ['total_outstanding' => 0.0, 'has_overdue' => false, 'terms' => []];
+        if ($patientId <= 0 || !billing_table_exists($conn, 'billing_installment_terms')) {
+            return $result;
+        }
+
+        $stmt = $conn->prepare("
+            SELECT bit.term_id, bit.term_number, bit.due_date, bit.amount, bit.paid_amount, bit.status,
+                   b.billing_id, a.appointment_id
+            FROM billing_installment_terms bit
+            INNER JOIN billing_installments bi ON bi.installment_id = bit.installment_id
+            INNER JOIN billing b ON b.billing_id = bi.billing_id
+            INNER JOIN appointments a ON a.appointment_id = b.appointment_id
+            WHERE a.patient_id = ?
+              AND bit.status IN ('pending','partial')
+            ORDER BY bit.due_date ASC, bit.term_number ASC
+        ");
+        if (!$stmt) {
+            return $result;
+        }
+        $stmt->bind_param('i', $patientId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $remaining = round((float)$row['amount'] - (float)$row['paid_amount'], 2);
+            if ($remaining <= 0) {
+                continue;
+            }
+            $overdue = strtotime((string)$row['due_date']) < strtotime(date('Y-m-d'));
+            $result['terms'][] = [
+                'billing_id' => (int)$row['billing_id'],
+                'appointment_id' => (int)$row['appointment_id'],
+                'term_number' => (int)$row['term_number'],
+                'due_date' => (string)$row['due_date'],
+                'remaining_amount' => $remaining,
+                'status' => (string)$row['status'],
+                'overdue' => $overdue,
+            ];
+            $result['total_outstanding'] = round($result['total_outstanding'] + $remaining, 2);
+            if ($overdue) {
+                $result['has_overdue'] = true;
+            }
+        }
+        $stmt->close();
+
+        return $result;
+    }
+}
+
+if (!function_exists('billing_get_installment_plan_for_followup')) {
+    /**
+     * Resolve whether a given appointment is a follow-up visit (rescheduled_from) of an
+     * appointment whose billing has an active installment plan — e.g. one of the 12 monthly
+     * braces-adjustment visits auto-booked from the original treatment visit.
+     *
+     * This exists so create_secretary_record.php can avoid auto-billing a fresh Consultation
+     * Fee for a visit that's actually already covered by an existing installment plan — without
+     * this check, every monthly adjustment visit with no doctor-selected service would silently
+     * generate its own unrelated ₱[consultation fee] charge instead of the real installment
+     * amount, which lives on a completely different billing_id tied to the original visit.
+     *
+     * @return array{source_appointment_id:int, billing_id:int, installment_id:int, pending_terms:array}|null
+     */
+    function billing_get_installment_plan_for_followup(mysqli $conn, int $appointmentId): ?array
+    {
+        if ($appointmentId <= 0) {
+            return null;
+        }
+
+        $stmt = $conn->prepare('SELECT rescheduled_from FROM appointments WHERE appointment_id = ? LIMIT 1');
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param('i', $appointmentId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $sourceId = (int)($row['rescheduled_from'] ?? 0);
+        if ($sourceId <= 0) {
+            return null;
+        }
+
+        $stmt = $conn->prepare('
+            SELECT bi.installment_id, b.billing_id
+            FROM billing b
+            INNER JOIN billing_installments bi ON bi.billing_id = b.billing_id
+            WHERE b.appointment_id = ?
+            LIMIT 1
+        ');
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param('i', $sourceId);
+        $stmt->execute();
+        $planRow = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$planRow) {
+            return null;
+        }
+
+        $installmentId = (int)$planRow['installment_id'];
+        $billingId = (int)$planRow['billing_id'];
+
+        $terms = [];
+        $tStmt = $conn->prepare("
+            SELECT term_id, term_number, due_date, amount, paid_amount, status
+            FROM billing_installment_terms
+            WHERE installment_id = ? AND status IN ('pending','partial')
+            ORDER BY due_date ASC
+        ");
+        if ($tStmt) {
+            $tStmt->bind_param('i', $installmentId);
+            $tStmt->execute();
+            $res = $tStmt->get_result();
+            while ($t = $res->fetch_assoc()) {
+                $terms[] = [
+                    'term_number' => (int)$t['term_number'],
+                    'due_date' => (string)$t['due_date'],
+                    'remaining_amount' => round((float)$t['amount'] - (float)$t['paid_amount'], 2),
+                    'status' => (string)$t['status'],
+                ];
+            }
+            $tStmt->close();
+        }
+
+        return [
+            'source_appointment_id' => $sourceId,
+            'billing_id' => $billingId,
+            'installment_id' => $installmentId,
+            'pending_terms' => $terms,
+        ];
+    }
+}
+
 if (!function_exists('billing_normalize_discount_type')) {
     function billing_normalize_discount_type($type): string
     {

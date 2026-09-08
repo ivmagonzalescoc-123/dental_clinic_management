@@ -24,11 +24,15 @@ if (!function_exists('workflow_create_followup_appointment')) {
 
         appt_ensure_standard_timeslots_for_doctor_date($conn, $doctorId, $followDateYmd);
 
+        // Standard slots are generated in APPT_BASE_SLOT_MINUTES (10-minute) increments —
+        // a follow-up/adjustment visit books exactly one of those, not a fixed 20-minute
+        // block (which never exists, since nothing generates 20-minute slots). This was
+        // silently failing every single follow-up booking before this fix.
         $slotSel = $conn->prepare(
             "SELECT timeslot_id, start_time, end_time
              FROM timeslot
              WHERE doctor_id = ? AND slot_date = ? AND status = 'available'
-               AND TIMESTAMPDIFF(MINUTE, start_time, end_time) = 20
+               AND TIMESTAMPDIFF(MINUTE, start_time, end_time) = " . (int) APPT_BASE_SLOT_MINUTES . "
              ORDER BY start_time ASC
              LIMIT 1"
         );
@@ -106,5 +110,61 @@ if (!function_exists('workflow_create_followup_appointment')) {
         reminder_queue_default_pack($conn, $scheduleId, $bookStart, $followupAppointmentId);
 
         return $followupAppointmentId;
+    }
+}
+
+if (!function_exists('workflow_create_recurring_followup_appointments')) {
+    /**
+     * Auto-book a whole series of monthly follow-up appointments up front (e.g. 12 monthly
+     * braces-adjustment visits), instead of relying on the secretary/doctor to manually set
+     * a single "Follow-up Date" again at the end of every single visit. This is what actually
+     * guarantees a clinical record (and odontogram snapshot) gets a chance to be logged each
+     * month for a long-running case — a missed manual re-entry previously meant that month
+     * had no appointment at all to attach anything to.
+     *
+     * One bad month (e.g. no open slot, doctor on leave) must not cancel the rest of the
+     * series — each visit is booked independently and failures are collected, not thrown.
+     *
+     * @return array{created: int[], failed: array<array{visit:int, date:string, error:string}>}
+     */
+    function workflow_create_recurring_followup_appointments(
+        mysqli $conn,
+        int $sourceAppointmentId,
+        int $patientId,
+        int $doctorId,
+        string $firstVisitDateYmd,
+        int $intervalMonths,
+        int $totalVisits
+    ): array {
+        $created = [];
+        $failed = [];
+
+        $intervalMonths = max(1, $intervalMonths);
+        $totalVisits = max(1, min(60, $totalVisits)); // sanity cap — 60 monthly visits is 5 years
+
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $firstVisitDateYmd)) {
+            return ['created' => $created, 'failed' => $failed];
+        }
+
+        for ($visit = 1; $visit <= $totalVisits; $visit++) {
+            $monthsOut = ($visit - 1) * $intervalMonths;
+            $visitDate = $monthsOut > 0
+                ? date('Y-m-d', strtotime($firstVisitDateYmd . ' +' . $monthsOut . ' months'))
+                : $firstVisitDateYmd;
+
+            try {
+                $apptId = workflow_create_followup_appointment($conn, $sourceAppointmentId, $patientId, $doctorId, $visitDate);
+                if ($apptId !== null) {
+                    $created[] = $apptId;
+                } else {
+                    $failed[] = ['visit' => $visit, 'date' => $visitDate, 'error' => 'Invalid date or parameters.'];
+                }
+            } catch (Exception $e) {
+                $failed[] = ['visit' => $visit, 'date' => $visitDate, 'error' => $e->getMessage()];
+                error_log("workflow_create_recurring_followup_appointments: visit {$visit} on {$visitDate} failed: " . $e->getMessage());
+            }
+        }
+
+        return ['created' => $created, 'failed' => $failed];
     }
 }

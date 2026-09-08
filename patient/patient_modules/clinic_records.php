@@ -222,8 +222,6 @@ document.addEventListener('DOMContentLoaded', function () {
         modalMeta.textContent = (appointmentDate ? new Date(appointmentDate + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A') + ' · ' + doctorName + (patientInfo.name ? ' · ' + patientInfo.name : '') + (appointment.status ? ' · ' + statusLabel(appointment.status) : '');
 
         const services = Array.isArray(record.recommended_services) ? record.recommended_services : [];
-        const treatmentPlan = Array.isArray(record.treatment_plan) ? record.treatment_plan : [];
-        const materials = Array.isArray(record.materials_used) ? record.materials_used : [];
         const prescriptions = Array.isArray(data.prescriptions) ? data.prescriptions : [];
         const media = [];
         if (Array.isArray(record.images)) media.push.apply(media, record.images);
@@ -247,25 +245,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (amount !== null && !Number.isNaN(amount) && amount > 0) {
                     label += ' (₱' + amount.toFixed(2) + ')';
                 }
-                return label;
-            }) + '</div>' +
-            '<div class="mb-2"><div class="small text-muted fw-semibold">Treatment Plan</div>' + renderList(treatmentPlan, 'No treatment plan recorded.', function (item) {
-                let label = escapeHtml(item.description || '');
-                const extras = [];
-                if (item.tooth_number) extras.push('Tooth #' + escapeHtml(item.tooth_number));
-                if (item.status) extras.push(escapeHtml(statusLabel(item.status)));
-                if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
-                    extras.push('Est. ₱' + Number(item.estimated_cost).toFixed(2));
-                }
-                return label + (extras.length ? ' <span class="text-muted">(' + extras.join(' · ') + ')</span>' : '');
-            }) + '</div>' +
-            '<div class="mb-2"><div class="small text-muted fw-semibold">Materials Used</div>' + renderList(materials, 'No materials recorded.', function (item) {
-                let label = escapeHtml(item.material_name || '');
-                const extras = [];
-                if (item.quantity) extras.push(Number(item.quantity) + (item.unit ? ' ' + escapeHtml(item.unit) : ''));
-                if (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0) extras.push('₱' + Number(item.cost).toFixed(2));
-                if (extras.length) label += ' <span class="text-muted">(' + extras.join(', ') + ')</span>';
-                if (item.notes) label += '<div class="small text-muted">' + escapeHtml(item.notes) + '</div>';
                 return label;
             }) + '</div>' +
             '</div>');

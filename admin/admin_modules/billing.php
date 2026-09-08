@@ -663,7 +663,8 @@ if (!$hasAnyData) {
                 const invoicePaid = parseFloat(details.paid_total) || 0;
                 const billingFullyPaid = invoiceBalance <= 0 && invoicePaid > 0;
                 if (details.installment) {
-                    instRows += `<p class="small mb-1"><strong>Installment Plan:</strong> 50% down (₱${parseFloat(details.installment.down_payment_amount).toFixed(2)}) + ${details.installment.num_terms} terms</p>`;
+                    const downPct = parseFloat(details.installment.down_payment_percent) || 0;
+                    instRows += `<p class="small mb-1"><strong>Installment Plan:</strong> ${downPct.toFixed(downPct % 1 === 0 ? 0 : 2)}% down (₱${parseFloat(details.installment.down_payment_amount).toFixed(2)}) + ${details.installment.num_terms} terms</p>`;
                     (details.installment_terms || []).forEach(t => {
                         const termStatus = (t.status === 'paid' || billingFullyPaid) ? 'paid' : t.status;
                         instRows += `<tr><td>Term ${t.term_number} — due ${t.due_date} (${termStatus})</td><td class="text-end">₱${(parseFloat(t.amount)||0).toFixed(2)}</td></tr>`;

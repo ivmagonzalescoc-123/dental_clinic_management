@@ -169,10 +169,11 @@ $csrf_token = security_generate_csrf_token();
                                 <div class="pf-section mb-0">
                                     <div class="pf-section__title"><i class="bi bi-calendar-plus"></i> Follow-up</div>
                                     <div class="row g-1">
-                                        <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;"></div>
-                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;"></div>
-                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;"></div>
+                                        <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;" title="First follow-up visit date"></div>
+                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;" title="Repeat every N months"></div>
+                                        <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;" title="Total number of visits to auto-book"></div>
                                     </div>
+                                    <div class="small text-muted mt-1">Set "Mo." + "Visits" &gt; 1 for a recurring case (e.g. braces adjustments) — all visits are booked up front, spaced that many months apart.</div>
                                 </div>
                             </div>
                         </div>
@@ -279,6 +280,9 @@ $csrf_token = security_generate_csrf_token();
 
                     <!-- Billing -->
                     <div class="tab-pane fade" id="tabBilling" role="tabpanel">
+                        <div id="outstandingInstallmentBanner" class="alert alert-warning py-2 px-3 mb-3" style="display:none; font-size:0.85rem;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> <span id="outstandingInstallmentBannerText"></span>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <div class="pf-section">
@@ -329,10 +333,16 @@ $csrf_token = security_generate_csrf_token();
                                 <div class="pf-section">
                                     <div class="pf-section__title"><i class="bi bi-calendar-week"></i> Installment Plan</div>
                                     <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                        <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
-                                        <div id="installmentOptions" class="d-flex align-items-center gap-1" style="display:none;">
-                                            <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Terms" style="max-width:80px; font-size:0.82rem;">
-                                            <span class="small text-muted">monthly terms</span>
+                                        <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan</label></div>
+                                    </div>
+                                    <div id="installmentOptions" class="row g-1 mb-1" style="display:none;">
+                                        <div class="col-6">
+                                            <label class="small text-muted mb-0" for="installmentDownPayment">Down payment (₱)</label>
+                                            <input type="number" min="0" step="0.01" class="form-control form-control-sm" id="installmentDownPayment" placeholder="e.g. 10000" style="font-size:0.82rem;">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="small text-muted mb-0" for="installmentTerms">Monthly terms</label>
+                                            <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Terms" style="font-size:0.82rem;">
                                         </div>
                                     </div>
                                     <div class="small text-muted mb-0" id="installmentDownPaymentNotice" style="display:none;">Patient pays today: ₱0.00</div>
@@ -744,8 +754,20 @@ window.addEventListener('message', function(ev) {
 document.getElementById('useInstallment')?.addEventListener('change', function() {
     const opts = document.getElementById('installmentOptions');
     const notice = document.getElementById('installmentDownPaymentNotice');
-    if (opts) opts.style.display = this.checked ? 'flex' : 'none';
+    if (opts) opts.style.display = this.checked ? '' : 'none';
     if (notice) notice.style.display = this.checked ? '' : 'none';
+    // Prefill a sensible starting point (50% of the total due) so the field isn't blank —
+    // the secretary/doctor can then adjust it to whatever down payment was actually agreed
+    // (e.g. a fixed ₱5,000–10,000 for a big-ticket case like braces, rather than a percentage).
+    const downInput = document.getElementById('installmentDownPayment');
+    if (this.checked && downInput && (downInput.value === '' || Number(downInput.value) <= 0)) {
+        downInput.value = (getBillingTotalDue() * 0.5).toFixed(2);
+    }
+    if (typeof updateInstallmentNotice === 'function') updateInstallmentNotice();
+    if (typeof updatePaymentCalculation === 'function') updatePaymentCalculation();
+});
+
+document.getElementById('installmentDownPayment')?.addEventListener('input', function() {
     if (typeof updateInstallmentNotice === 'function') updateInstallmentNotice();
     if (typeof updatePaymentCalculation === 'function') updatePaymentCalculation();
 });
@@ -1067,6 +1089,66 @@ function resolveMediaUrl(filePath) {
 
 window.recordBillingServiceIds = new Set();
 
+// Populated by checkOutstandingInstallments() when the appointment currently open in Create
+// Record is itself a follow-up visit of an existing installment plan — used by
+// getAmountDueNow() so "Record a payment now" collects the real next-term amount instead of
+// being stuck at ₱0.00 (this visit has no billable service of its own).
+window.currentVisitInstallmentInfo = null;
+
+async function checkOutstandingInstallments(patientId, appointmentId) {
+    const banner = document.getElementById('outstandingInstallmentBanner');
+    const bannerText = document.getElementById('outstandingInstallmentBannerText');
+    currentVisitInstallmentInfo = null;
+    if (banner) banner.style.display = 'none';
+
+    try {
+        const url = '../assets/api/billing/get_patient_outstanding_installments.php?patient_id=' + patientId
+            + (appointmentId ? '&appointment_id=' + appointmentId : '');
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!data.success) return;
+
+        currentVisitInstallmentInfo = data.current_visit_installment || null;
+        updatePaymentCalculation();
+
+        if (currentVisitInstallmentInfo && Array.isArray(currentVisitInstallmentInfo.pending_terms) && currentVisitInstallmentInfo.pending_terms.length > 0) {
+            const nextTerm = currentVisitInstallmentInfo.pending_terms[0];
+            const label = `This visit is part of an existing installment plan — no new charge will be added. `
+                + `Next payment due: ₱${Number(nextTerm.remaining_amount).toFixed(2)} (term ${nextTerm.term_number}, due ${nextTerm.due_date}). `
+                + `Check "Record a payment now" below to collect it.`;
+            if (bannerText) bannerText.textContent = label;
+            if (banner) {
+                banner.className = 'alert alert-info py-2 px-3 mb-3';
+                banner.style.display = '';
+            }
+            notifySecretary(label, 'info');
+            return;
+        }
+
+        if (!Array.isArray(data.terms) || data.terms.length === 0) {
+            return;
+        }
+
+        const total = Number(data.total_outstanding) || 0;
+        const count = data.terms.length;
+        const label = data.has_overdue
+            ? `This patient has ${count} unpaid installment term${count === 1 ? '' : 's'} from an earlier billing — ₱${total.toFixed(2)} overdue. Collecting only today's amount will apply to the oldest unpaid term first, not this visit.`
+            : `This patient has ${count} pending installment term${count === 1 ? '' : 's'} totaling ₱${total.toFixed(2)}. Confirm which term you're collecting for before recording payment.`;
+
+        if (bannerText) bannerText.textContent = label;
+        if (banner) {
+            banner.className = 'alert py-2 px-3 mb-3 ' + (data.has_overdue ? 'alert-danger' : 'alert-warning');
+            banner.style.display = '';
+        }
+
+        // A banner tucked inside the Billing tab is easy to miss if the secretary doesn't
+        // click that far — a toast up front makes sure it's seen immediately on open.
+        notifySecretary(label, data.has_overdue ? 'danger' : 'warning');
+    } catch (e) {
+        console.error('checkOutstandingInstallments failed:', e);
+    }
+}
+
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
@@ -1088,6 +1170,12 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Fetch patient details
         const patientRes = await fetch('../assets/api/patients/get_profiling.php?patient_id=' + patientId);
         const patientData = await patientRes.json().catch(() => null);
+
+        // Check for outstanding installment terms from earlier billings (e.g. a missed
+        // monthly braces-adjustment payment) — surfaced proactively here, not just left for
+        // the secretary to notice on the Billing screen, since payments apply oldest-term-first
+        // and collecting only "this visit's" amount would otherwise silently miss it.
+        checkOutstandingInstallments(patientId, appointmentId);
 
         // Fetch doctor media and notes
         const res = await fetch('../assets/api/appointments/get_doctor_media.php?appointment_id=' + appointmentId);
@@ -1182,6 +1270,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         document.getElementById('installmentOptions').style.display = 'none';
         document.getElementById('installmentDownPaymentNotice').style.display = 'none';
         document.getElementById('installmentTerms').value = '6';
+        document.getElementById('installmentDownPayment').value = '';
         document.getElementById('recordPaymentNow').checked = false;
         document.getElementById('paymentFields').style.display = 'none';
         document.getElementById('paymentAmountTendered').value = '';
@@ -1320,7 +1409,9 @@ function updateInstallmentNotice() {
     const notice = document.getElementById('installmentDownPaymentNotice');
     if (!notice) return;
     const downPayment = getInstallmentDownPaymentAmount();
-    notice.textContent = 'Patient pays today: ₱' + formatBillingAmount(downPayment) + ' (50% down payment)';
+    const total = getBillingTotalDue();
+    const percent = total > 0 ? (downPayment / total * 100) : 0;
+    notice.textContent = 'Patient pays today: ₱' + formatBillingAmount(downPayment) + ' (' + percent.toFixed(1).replace(/\.0$/, '') + '% down payment)';
 }
 
 function getBillingTotalDue() {
@@ -1332,8 +1423,15 @@ function getBillingTotalDue() {
     return Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100);
 }
 
+// The down payment is a plain peso amount the secretary/doctor sets directly (not a fixed
+// 50% — a big-ticket, doctor-priced case like braces might use a ₱5,000-10,000 down payment
+// regardless of the total), clamped to the total due so it can never exceed what's owed.
 function getInstallmentDownPaymentAmount() {
-    return Math.round(getBillingTotalDue() * 0.5 * 100) / 100;
+    const total = getBillingTotalDue();
+    const input = document.getElementById('installmentDownPayment');
+    const entered = input ? parseFloat(input.value) : NaN;
+    const downPayment = Number.isFinite(entered) && entered >= 0 ? entered : total * 0.5;
+    return Math.round(Math.min(downPayment, total) * 100) / 100;
 }
 
 // When an installment plan is being created, only today's down payment is actually due —
@@ -1342,7 +1440,17 @@ function getInstallmentDownPaymentAmount() {
 // paid immediately, instead of returning the excess as change.
 function getAmountDueNow() {
     const useInstallment = document.getElementById('useInstallment')?.checked;
-    return useInstallment ? getInstallmentDownPaymentAmount() : getBillingTotalDue();
+    if (useInstallment) return getInstallmentDownPaymentAmount();
+
+    const billingTotal = getBillingTotalDue();
+    // This visit has no billable service/charge of its own (billingTotal === 0) but is a
+    // follow-up of an existing installment plan — "due now" is the real next term amount,
+    // not ₱0.00. If the doctor DID add a charge for this visit (e.g. a broken bracket repair),
+    // that takes priority and is billed normally instead.
+    if (billingTotal <= 0 && currentVisitInstallmentInfo && Array.isArray(currentVisitInstallmentInfo.pending_terms) && currentVisitInstallmentInfo.pending_terms.length > 0) {
+        return Number(currentVisitInstallmentInfo.pending_terms[0].remaining_amount) || 0;
+    }
+    return billingTotal;
 }
 
 function updatePaymentCalculation() {
@@ -1568,6 +1676,7 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         fd.append('follow_up_total_visits', document.getElementById('followUpTotalVisits')?.value || '0');
         fd.append('use_installment', document.getElementById('useInstallment')?.checked ? '1' : '0');
         fd.append('installment_terms', document.getElementById('installmentTerms')?.value || '0');
+        fd.append('installment_down_payment', String(getInstallmentDownPaymentAmount()));
         fd.append('record_payment', recordPaymentNow ? '1' : '0');
         fd.append('payment_amount_applied', String(paymentAmountApplied));
         fd.append('payment_amount_tendered', String(paymentTendered));
@@ -1599,10 +1708,48 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         }
         
         notifySecretary(json.already_processed || json.idempotent_replay ? 'Clinical record was already submitted.' : 'Clinical record created successfully!', 'success');
+
+        // This visit didn't get its own new charge because it's already covered by an
+        // existing installment plan — confirm clearly what actually happened instead of
+        // leaving the secretary looking at a ₱0.00 total wondering if something broke.
+        if (json.installment_covered_visit) {
+            if (json.installment_payment_applied) {
+                notifySecretary(`No new charge for this visit (installment-covered). ₱${Number(json.installment_payment_applied).toFixed(2)} applied to the existing installment plan.`, 'success');
+            } else {
+                notifySecretary('No new charge for this visit — already covered by an existing installment plan.', 'info');
+            }
+        }
+
+        // A single (non-recurring) follow-up date failing to book used to be swallowed
+        // silently — the record would "succeed" with no visible sign the visit never got
+        // scheduled. Surface it loudly now instead.
+        if (json.follow_up_scheduling_error) {
+            notifySecretary('Follow-up visit was NOT scheduled: ' + json.follow_up_scheduling_error, 'danger');
+        }
+
+        // Recurring follow-ups (e.g. 12 monthly braces-adjustment visits) were booked up
+        // front — let the secretary know right away if any month couldn't be scheduled
+        // (e.g. no open slot) so it can be booked manually instead of silently missing.
+        const recurring = json.recurring_follow_ups;
+        if (recurring) {
+            if (recurring.failed && recurring.failed.length > 0) {
+                const missedDates = recurring.failed.map(f => f.date).join(', ');
+                notifySecretary(
+                    `Booked ${recurring.booked} of ${recurring.requested} monthly follow-up visits. ` +
+                    `Could not book: ${missedDates} — please schedule these manually.`,
+                    'warning'
+                );
+            } else if (recurring.booked > 0) {
+                notifySecretary(`All ${recurring.booked} monthly follow-up visits were booked.`, 'success');
+            }
+        }
+
         bootstrap.Modal.getInstance(document.getElementById('secretaryRecordModal')).hide();
-        
-        // Reload page to update queue
-        setTimeout(() => location.reload(), 1000);
+
+        // Reload page to update queue — give extra time to actually read any extra toast
+        // (scheduling error, installment info, recurring summary) before it's gone.
+        const hasExtraToast = !!(recurring || json.follow_up_scheduling_error || json.installment_covered_visit);
+        setTimeout(() => location.reload(), hasExtraToast ? 2500 : 1000);
     } catch (e) {
         console.error(e);
         notifySecretary('The system is currently busy. Please try again in a moment.', 'danger');

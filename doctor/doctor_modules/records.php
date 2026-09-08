@@ -87,7 +87,12 @@ if ($stmt) {
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Clinical Record History</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="histPrintBtnRec">
+                                <i class="bi bi-printer"></i> Print
+                            </button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
                     </div>
                     <div class="modal-body" style="max-height:75vh; overflow:auto;">
                         <div id="histContentRec">
@@ -121,24 +126,12 @@ if ($stmt) {
                                     <pre id="histNotesRec" class="hist-pre"></pre>
                                 </div>
                             </div>
-                            <!-- Row 4: Services + Treatment + Materials -->
+                            <!-- Row 4: Services Availed -->
                             <div class="row g-2 mb-2">
-                                <div class="col-md-4">
+                                <div class="col-md-12">
                                     <div class="hist-section">
                                         <span class="hist-section-title">Services Availed</span>
                                         <ul id="histServicesRec" class="mb-0 small"></ul>
-                                    </div>
-                                </div>
-                                <div class="col-md-4" id="histTreatmentRecWrap" style="display:none;">
-                                    <div class="hist-section">
-                                        <span class="hist-section-title">Treatment Plan</span>
-                                        <pre id="histTreatmentRec" class="hist-pre"></pre>
-                                    </div>
-                                </div>
-                                <div class="col-md-4" id="histMaterialsRecWrap" style="display:none;">
-                                    <div class="hist-section">
-                                        <span class="hist-section-title">Materials Used</span>
-                                        <pre id="histMaterialsRec" class="hist-pre"></pre>
                                     </div>
                                 </div>
                             <!-- Row 4b: Prescriptions (full width) -->
@@ -330,74 +323,46 @@ if ($stmt) {
             ?>
         };
 
-        function isClinicalFieldEmptyRec(value) {
-            if (value === null || value === undefined) return true;
-            if (typeof value === 'string') {
-                const trimmed = value.trim();
-                return trimmed === '' || trimmed === '{}' || trimmed === '[]';
-            }
-            if (Array.isArray(value)) return value.length === 0;
-            if (typeof value === 'object') return Object.keys(value).length === 0;
-            return false;
+        // Mirrors odontogram/chart-constants.js CHART_LEGEND — the print window can't load
+        // the odontogram iframe (it's a live editor app, not a static image, and has no
+        // tooth data of its own once opened in a fresh window), so we render the findings
+        // as a plain table from the same JSON the iframe would have been fed via postMessage.
+        var ODONTOGRAM_LEGEND_REC = {
+            C: 'Dental Caries', C1: 'Caries — Vital Pulp Expose', C2: 'Caries — Non-vital Pulp Expose',
+            X: 'Indicated for Extraction', RF: 'Retained Root Fragment', Am: 'Amalgam Filling',
+            S: 'Silicate Filling', GC: 'Gold Crown', Ab1: 'Bridge Abutment', P: 'Pontic',
+            GCI: 'Gold Clasp', GI: 'Gold Inlays', M: 'Missing (Extraction)', Un: 'Unerupted'
+        };
+        var ODONTOGRAM_SURFACE_LABELS_REC = { O: 'Occlusal', M: 'Mesial', D: 'Distal', B: 'Buccal', L: 'Lingual', root: 'Root', whole: 'Whole Tooth' };
+
+        function formatOdontogramFindingsHtmlRec(odontogramData) {
+            if (!odontogramData || typeof odontogramData !== 'object') return '';
+            var teeth = Object.keys(odontogramData).sort();
+            var rows = [];
+            teeth.forEach(function (fdi) {
+                var entry = odontogramData[fdi];
+                if (!entry || typeof entry !== 'object') return;
+                var parts = [];
+                if (entry.surfaces && typeof entry.surfaces === 'object') {
+                    Object.keys(entry.surfaces).forEach(function (surface) {
+                        var labels = entry.surfaces[surface];
+                        if (!Array.isArray(labels) || !labels.length) return;
+                        var names = labels.map(function (code) { return ODONTOGRAM_LEGEND_REC[code] || code; }).join(', ');
+                        parts.push((ODONTOGRAM_SURFACE_LABELS_REC[surface] || surface) + ': ' + names);
+                    });
+                }
+                var comment = String(entry.comment || '').trim();
+                if (!parts.length && !comment) return;
+                rows.push('<tr><td>#' + escapeHtml(fdi) + '</td><td>' + escapeHtml(parts.join('; ')) + '</td><td>' + escapeHtml(comment) + '</td></tr>');
+            });
+            if (!rows.length) return '<div class="text-muted small">No findings recorded on the dental chart.</div>';
+            return '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Tooth</th><th>Findings</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
         }
 
-        function formatTreatmentPlanDisplayRec(plan) {
-            if (isClinicalFieldEmptyRec(plan)) return '';
-            if (typeof plan === 'string') return plan.trim();
-            if (Array.isArray(plan)) {
-                return plan.map(function(item) {
-                    if (!item || typeof item !== 'object') return '- ' + String(item);
-                    const extras = [];
-                    if (item.tooth_number) extras.push('Tooth #' + item.tooth_number);
-                    if (item.status) extras.push(item.status);
-                    if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
-                        extras.push('Est. PHP ' + Number(item.estimated_cost).toFixed(2));
-                    }
-                    return '- ' + (item.description || '').trim() + (extras.length ? ' (' + extras.join(', ') + ')' : '');
-                }).join('\n');
-            }
-            if (typeof plan === 'object' && plan !== null) {
-                const months = plan.follow_up_interval_months;
-                const visits = plan.follow_up_total_visits;
-                const parts = [];
-                if (months !== undefined && months !== null && String(months).trim() !== '' && Number(months) > 0) {
-                    parts.push('Follow-up interval: every ' + months + ' month(s)');
-                }
-                if (visits !== undefined && visits !== null && String(visits).trim() !== '' && Number(visits) > 0) {
-                    parts.push('Total follow-up visits: ' + visits);
-                }
-                if (parts.length) return parts.join('\n');
-                return JSON.stringify(plan, null, 2);
-            }
-            return String(plan);
-        }
-
-        function formatMaterialsDisplayRec(materials) {
-            if (isClinicalFieldEmptyRec(materials)) return 'No materials recorded.';
-            if (typeof materials === 'string') return materials.trim() || 'No materials recorded.';
-            if (Array.isArray(materials)) {
-                if (!materials.length) return 'No materials recorded.';
-                return materials.map(function(item, index) {
-                    if (item && typeof item === 'object') {
-                        const name = String(item.material_name || item.name || item.material || item.item || ('Material ' + (index + 1))).trim();
-                        const extras = [];
-                        if (item.quantity) extras.push(item.quantity + (item.unit ? ' ' + item.unit : ''));
-                        if (item.cost !== undefined && item.cost !== null && Number(item.cost) > 0) extras.push('PHP ' + Number(item.cost).toFixed(2));
-                        let line = '- ' + name + (extras.length ? ' (' + extras.join(', ') + ')' : '');
-                        if (item.notes) line += ' — ' + item.notes;
-                        return line;
-                    }
-                    return '- ' + String(item);
-                }).join('\n');
-            }
-            if (typeof materials === 'object') {
-                const keys = Object.keys(materials);
-                if (!keys.length) return 'No materials recorded.';
-                return keys.map(function(key) {
-                    return key + ': ' + String(materials[key]);
-                }).join('\n');
-            }
-            return String(materials);
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = String(str || '');
+            return div.innerHTML;
         }
 
         function populateServicesAvailedListRec(listEl, services) {
@@ -501,17 +466,16 @@ if ($stmt) {
         document.getElementById('historyModalRecords')?.addEventListener('hidden.bs.modal', exitHistoryOdontogramFullscreenRec);
         syncHistoryOdontogramFullscreenUIRec();
 
+        window.currentHistoryRecordDataRec = null;
+
         async function openHistoryByRecord(recordId) {
             const modalEl = document.getElementById('historyModalRecords');
             const bs = new bootstrap.Modal(modalEl);
+            currentHistoryRecordDataRec = null;
             document.getElementById('histPatientNameRec').textContent = '';
             document.getElementById('histSubmittedAtRec').textContent = '';
             document.getElementById('histNotesRec').textContent = '';
             document.getElementById('histServicesRec').innerHTML = '';
-            document.getElementById('histTreatmentRec').textContent = '';
-            document.getElementById('histMaterialsRec').textContent = '';
-            document.getElementById('histTreatmentRecWrap').style.display = 'none';
-            document.getElementById('histMaterialsRecWrap').style.display = 'none';
             exitHistoryOdontogramFullscreenRec();
 
             try {
@@ -549,28 +513,6 @@ if ($stmt) {
                 }
 
                 populateServicesAvailedListRec(document.getElementById('histServicesRec'), j.services_availed || []);
-
-                const treatmentWrapRec = document.getElementById('histTreatmentRecWrap');
-                const materialsWrapRec = document.getElementById('histMaterialsRecWrap');
-                const treatmentTextRec = formatTreatmentPlanDisplayRec(rec.treatment_plan);
-                const materialsTextRec = formatMaterialsDisplayRec(rec.materials_used);
-                const materialsEmptyRec = isClinicalFieldEmptyRec(rec.materials_used) || materialsTextRec === 'No materials recorded.';
-
-                if (!isClinicalFieldEmptyRec(rec.treatment_plan) && treatmentTextRec !== '') {
-                    document.getElementById('histTreatmentRec').textContent = treatmentTextRec;
-                    treatmentWrapRec.style.display = '';
-                } else {
-                    document.getElementById('histTreatmentRec').textContent = '';
-                    treatmentWrapRec.style.display = 'none';
-                }
-
-                if (!materialsEmptyRec) {
-                    document.getElementById('histMaterialsRec').textContent = materialsTextRec;
-                    materialsWrapRec.style.display = '';
-                } else {
-                    document.getElementById('histMaterialsRec').textContent = '';
-                    materialsWrapRec.style.display = 'none';
-                }
 
                 const presWrapRec = document.getElementById('histPrescriptionsRecWrap');
                 const presBodyRec = document.querySelector('#histPrescriptionsRec tbody');
@@ -620,7 +562,57 @@ if ($stmt) {
 
                 postHistoryOdontogramRec(rec.odontogram || null);
 
+                currentHistoryRecordDataRec = rec;
+
                 bs.show();
             } catch (e) { console.error(e); notifyDoctorRecord('Error loading record', 'danger'); }
         }
+
+        // Print the currently open record. The odontogram is a live editor app running in
+        // an iframe — a fresh print window can't load its tooth-state data into a brand new
+        // iframe, so we print the findings as a plain table instead (same approach used on
+        // the patient portal's clinic records print).
+        document.getElementById('histPrintBtnRec')?.addEventListener('click', function () {
+            if (!currentHistoryRecordDataRec) {
+                notifyDoctorRecord('Load a record before printing.', 'warning');
+                return;
+            }
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            if (!printWindow) return;
+
+            const contentEl = document.getElementById('histContentRec');
+            const printBody = document.createElement('div');
+            printBody.innerHTML = contentEl.innerHTML;
+
+            const odontoWrapEl = printBody.querySelector('#histOdontogramWrapRec');
+            if (odontoWrapEl) {
+                odontoWrapEl.outerHTML = formatOdontogramFindingsHtmlRec(currentHistoryRecordDataRec.odontogram || null);
+            }
+            printBody.querySelector('#histOdontogramFullscreenBtnRec')?.remove();
+            printBody.querySelector('#histOdontogramFullscreenCloseBtnRec')?.remove();
+
+            const title = 'Clinical Record — ' + (document.getElementById('histPatientNameRec').textContent || 'Patient');
+
+            printWindow.document.write(
+                '<!doctype html><html><head><title>' + escapeHtml(title) + '</title>' +
+                '<style>' +
+                'body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#212529;}' +
+                'h1{font-size:18px;margin:0 0 4px;}' +
+                '.hist-patient-header,.hist-field,.hist-section{border:1px solid #dee2e6;border-radius:8px;padding:10px;margin-bottom:12px;background:#fff;}' +
+                '.hist-section-title,.hist-label{display:block;font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}' +
+                '.hist-value{font-size:14px;} .hist-pre{white-space:pre-wrap;font-size:13px;margin:0;}' +
+                'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:6px;text-align:left;font-size:13px;}' +
+                'ul{margin:0;padding-left:18px;}' +
+                '.row,.g-2{display:block;} .col-md-6,.col-md-4,.col-md-12{display:block;width:100%;}' +
+                '.btn,button{display:none !important;}' +
+                'img{max-width:150px;max-height:120px;}' +
+                '</style></head><body>' +
+                '<h1>' + escapeHtml(title) + '</h1>' +
+                printBody.innerHTML +
+                '</body></html>'
+            );
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(function () { printWindow.print(); }, 300);
+        });
         </script>

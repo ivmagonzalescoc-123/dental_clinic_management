@@ -586,7 +586,12 @@ if ($stmt) {
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title">Appointment History</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="histPrintBtn">
+                                    <i class="bi bi-printer"></i> Print
+                                </button>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
                         </div>
                         <div class="modal-body" style="max-height:75vh; overflow:auto;">
                             <div id="historyContent">
@@ -647,24 +652,12 @@ if ($stmt) {
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Row 5: Services + Treatment + Materials -->
+                                <!-- Row 5: Services Availed -->
                                 <div class="row g-2 mb-2">
-                                    <div class="col-md-4">
+                                    <div class="col-md-12">
                                         <div class="hist-section">
                                             <span class="hist-section-title">Services Availed</span>
                                             <ul id="histServices" class="mb-0 small"></ul>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4" id="histTreatmentWrap" style="display:none;">
-                                        <div class="hist-section">
-                                            <span class="hist-section-title">Treatment Plan</span>
-                                            <pre id="histTreatment" class="hist-pre"></pre>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4" id="histMaterialsWrap" style="display:none;">
-                                        <div class="hist-section">
-                                            <span class="hist-section-title">Materials Used</span>
-                                            <pre id="histMaterials" class="hist-pre"></pre>
                                         </div>
                                     </div>
                                 </div>
@@ -1188,120 +1181,40 @@ document.addEventListener('DOMContentLoaded', function () {
     initDoctorGeneralTableSearch();
 });
 
-function tryParseJson(value) {
-    if (typeof value !== 'string') return value;
-    const trimmed = value.trim();
-    if (!trimmed) return '';
-    try {
-        return JSON.parse(trimmed);
-    } catch (e) {
-        return value;
-    }
-}
+// Mirrors odontogram/chart-constants.js CHART_LEGEND — the print window can't load the
+// odontogram iframe (it's a live editor app, not a static image, and has no tooth data
+// of its own once opened in a fresh window), so we render the findings as a plain table
+// from the same JSON the iframe would have been fed via postMessage.
+var ODONTOGRAM_LEGEND_HIST = {
+    C: 'Dental Caries', C1: 'Caries — Vital Pulp Expose', C2: 'Caries — Non-vital Pulp Expose',
+    X: 'Indicated for Extraction', RF: 'Retained Root Fragment', Am: 'Amalgam Filling',
+    S: 'Silicate Filling', GC: 'Gold Crown', Ab1: 'Bridge Abutment', P: 'Pontic',
+    GCI: 'Gold Clasp', GI: 'Gold Inlays', M: 'Missing (Extraction)', Un: 'Unerupted'
+};
+var ODONTOGRAM_SURFACE_LABELS_HIST = { O: 'Occlusal', M: 'Mesial', D: 'Distal', B: 'Buccal', L: 'Lingual', root: 'Root', whole: 'Whole Tooth' };
 
-function formatPrimitive(value) {
-    if (value === null || value === undefined) return '';
-    return String(value).trim();
-}
-
-function formatMaterialsDisplay(materials) {
-    const parsed = tryParseJson(materials);
-
-    if (!parsed || (typeof parsed === 'string' && !parsed.trim())) {
-        return 'No materials recorded.';
-    }
-
-    if (typeof parsed === 'string') {
-        return parsed;
-    }
-
-    if (Array.isArray(parsed)) {
-        if (!parsed.length) return 'No materials recorded.';
-
-        const lines = parsed.map(function(item, index) {
-            if (item && typeof item === 'object') {
-                const name = formatPrimitive(item.material_name || item.name || item.material || item.item || ('Material ' + (index + 1)));
-                const qty = item.quantity !== undefined ? item.quantity : item.qty;
-                const unit = item.unit;
-                const price = item.cost !== undefined ? item.cost : item.price;
-
-                let line = name;
-                if (qty !== undefined && qty !== null && String(qty).trim() !== '') {
-                    line += ' x' + qty + (unit ? ' ' + unit : '');
-                }
-                if (price !== undefined && price !== null && String(price).trim() !== '' && Number(price) > 0) {
-                    line += ' (PHP ' + Number(price).toFixed(2) + ')';
-                }
-                if (item.notes) {
-                    line += ' — ' + item.notes;
-                }
-                return '- ' + line;
-            }
-            return '- ' + formatPrimitive(item);
-        }).filter(function(line) {
-            return line !== '- ';
-        });
-
-        return lines.length ? lines.join('\n') : 'No materials recorded.';
-    }
-
-    if (typeof parsed === 'object') {
-        const keys = Object.keys(parsed);
-        if (!keys.length) return 'No materials recorded.';
-
-        const lines = keys.map(function(key) {
-            const value = parsed[key];
-            if (value !== null && typeof value === 'object') {
-                return key + ': ' + JSON.stringify(value);
-            }
-            return key + ': ' + formatPrimitive(value);
-        });
-        return lines.join('\n');
-    }
-
-    return String(parsed);
-}
-
-function isClinicalFieldEmpty(value) {
-    if (value === null || value === undefined) return true;
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        return trimmed === '' || trimmed === '{}' || trimmed === '[]';
-    }
-    if (Array.isArray(value)) return value.length === 0;
-    if (typeof value === 'object') return Object.keys(value).length === 0;
-    return false;
-}
-
-function formatTreatmentPlanDisplay(plan) {
-    if (isClinicalFieldEmpty(plan)) return '';
-    if (typeof plan === 'string') return plan.trim();
-    if (Array.isArray(plan)) {
-        return plan.map(function(item) {
-            if (!item || typeof item !== 'object') return '- ' + formatPrimitive(item);
-            const extras = [];
-            if (item.tooth_number) extras.push('Tooth #' + item.tooth_number);
-            if (item.status) extras.push(item.status);
-            if (item.estimated_cost !== undefined && item.estimated_cost !== null && Number(item.estimated_cost) > 0) {
-                extras.push('Est. PHP ' + Number(item.estimated_cost).toFixed(2));
-            }
-            return '- ' + formatPrimitive(item.description) + (extras.length ? ' (' + extras.join(', ') + ')' : '');
-        }).join('\n');
-    }
-    if (typeof plan === 'object' && plan !== null) {
-        const months = plan.follow_up_interval_months;
-        const visits = plan.follow_up_total_visits;
-        const parts = [];
-        if (months !== undefined && months !== null && String(months).trim() !== '' && Number(months) > 0) {
-            parts.push('Follow-up interval: every ' + months + ' month(s)');
+function formatOdontogramFindingsHtmlHist(odontogramData) {
+    if (!odontogramData || typeof odontogramData !== 'object') return '';
+    var teeth = Object.keys(odontogramData).sort();
+    var rows = [];
+    teeth.forEach(function (fdi) {
+        var entry = odontogramData[fdi];
+        if (!entry || typeof entry !== 'object') return;
+        var parts = [];
+        if (entry.surfaces && typeof entry.surfaces === 'object') {
+            Object.keys(entry.surfaces).forEach(function (surface) {
+                var labels = entry.surfaces[surface];
+                if (!Array.isArray(labels) || !labels.length) return;
+                var names = labels.map(function (code) { return ODONTOGRAM_LEGEND_HIST[code] || code; }).join(', ');
+                parts.push((ODONTOGRAM_SURFACE_LABELS_HIST[surface] || surface) + ': ' + names);
+            });
         }
-        if (visits !== undefined && visits !== null && String(visits).trim() !== '' && Number(visits) > 0) {
-            parts.push('Total follow-up visits: ' + visits);
-        }
-        if (parts.length) return parts.join('\n');
-        return JSON.stringify(plan, null, 2);
-    }
-    return String(plan);
+        var comment = String(entry.comment || '').trim();
+        if (!parts.length && !comment) return;
+        rows.push('<tr><td>#' + escapeHtml(fdi) + '</td><td>' + escapeHtml(parts.join('; ')) + '</td><td>' + escapeHtml(comment) + '</td></tr>');
+    });
+    if (!rows.length) return '<div class="text-muted small">No findings recorded on the dental chart.</div>';
+    return '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Tooth</th><th>Findings</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
 }
 
 function populateServicesAvailedList(listEl, services) {
@@ -1508,6 +1421,9 @@ function openDoctorAppointmentDetailsModal(appt) {
 
     bootstrap.Modal.getOrCreateInstance(document.getElementById('doctorAppointmentDetailsModal')).show();
 }
+
+window.currentHistoryRecordData = null;
+
 async function openHistoryModal(appointmentId) {
     const modalEl = document.getElementById('historyModal');
     const bs = new bootstrap.Modal(modalEl);
@@ -1516,10 +1432,7 @@ async function openHistoryModal(appointmentId) {
     document.getElementById('histApptDate').textContent = '';
     document.getElementById('histNotes').textContent = '';
     document.getElementById('histServices').innerHTML = '';
-    document.getElementById('histTreatment').textContent = '';
-    document.getElementById('histMaterials').textContent = '';
-    document.getElementById('histTreatmentWrap').style.display = 'none';
-    document.getElementById('histMaterialsWrap').style.display = 'none';
+    currentHistoryRecordData = null;
     const workflowBannerReset = document.getElementById('histWorkflowBanner');
     if (workflowBannerReset) {
         workflowBannerReset.style.display = 'none';
@@ -1630,29 +1543,6 @@ async function openHistoryModal(appointmentId) {
         // services availed for this appointment
         populateServicesAvailedList(document.getElementById('histServices'), j.services_availed || []);
 
-        // treatment plan and materials (only when recorded)
-        const treatmentWrap = document.getElementById('histTreatmentWrap');
-        const materialsWrap = document.getElementById('histMaterialsWrap');
-        const treatmentText = formatTreatmentPlanDisplay(rec.treatment_plan);
-        const materialsText = formatMaterialsDisplay(rec.materials_used);
-        const materialsEmpty = isClinicalFieldEmpty(rec.materials_used) || materialsText === 'No materials recorded.';
-
-        if (!isClinicalFieldEmpty(rec.treatment_plan) && treatmentText !== '') {
-            document.getElementById('histTreatment').textContent = treatmentText;
-            treatmentWrap.style.display = '';
-        } else {
-            document.getElementById('histTreatment').textContent = '';
-            treatmentWrap.style.display = 'none';
-        }
-
-        if (!materialsEmpty) {
-            document.getElementById('histMaterials').textContent = materialsText;
-            materialsWrap.style.display = '';
-        } else {
-            document.getElementById('histMaterials').textContent = '';
-            materialsWrap.style.display = 'none';
-        }
-
         // images
         const imgWrap = document.getElementById('histImages');
         if (typeof renderMediaGallery === 'function') {
@@ -1684,12 +1574,63 @@ async function openHistoryModal(appointmentId) {
         // odontogram: send to iframe via postMessage if present (read-only)
         postHistoryOdontogram(rec.odontogram || null);
 
+        currentHistoryRecordData = rec;
+
         bs.show();
     } catch (e) {
         console.error(e);
         notifyDoctor('Error loading history', 'danger');
     }
 }
+
+// Print the currently open history record. The odontogram is a live editor app running in
+// an iframe — a fresh print window can't load its tooth-state data into a brand new iframe,
+// so we print the findings as a plain table instead (same approach used on the patient
+// portal's clinic records print).
+document.getElementById('histPrintBtn')?.addEventListener('click', function () {
+    if (!currentHistoryRecordData) {
+        notifyDoctor('Load a record before printing.', 'warning');
+        return;
+    }
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) return;
+
+    const contentEl = document.getElementById('historyContent');
+    const printBody = document.createElement('div');
+    printBody.innerHTML = contentEl.innerHTML;
+
+    const odontoWrapEl = printBody.querySelector('#histOdontogramWrap');
+    if (odontoWrapEl) {
+        odontoWrapEl.outerHTML = formatOdontogramFindingsHtmlHist(currentHistoryRecordData.odontogram || null);
+    }
+    printBody.querySelector('#histOdontogramFullscreenBtn')?.remove();
+    printBody.querySelector('#histOdontogramFullscreenCloseBtn')?.remove();
+
+    const title = 'Clinical Record — ' + (document.getElementById('histPatientName').textContent || 'Patient');
+
+    printWindow.document.write(
+        '<!doctype html><html><head><title>' + escapeHtml(title) + '</title>' +
+        '<style>' +
+        'body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#212529;}' +
+        'h1{font-size:18px;margin:0 0 4px;}' +
+        '.hist-patient-header,.hist-field,.hist-section{border:1px solid #dee2e6;border-radius:8px;padding:10px;margin-bottom:12px;background:#fff;}' +
+        '.hist-section-title,.hist-label{display:block;font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;}' +
+        '.hist-value{font-size:14px;} .hist-pre{white-space:pre-wrap;font-size:13px;margin:0;}' +
+        'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:6px;text-align:left;font-size:13px;}' +
+        'ul{margin:0;padding-left:18px;}' +
+        '.row,.g-2{display:block;} .col-md-6,.col-md-4,.col-md-12{display:block;width:100%;}' +
+        '.btn,button{display:none !important;}' +
+        'img{max-width:150px;max-height:120px;}' +
+        '#histWorkflowBanner{display:none;}' +
+        '</style></head><body>' +
+        '<h1>' + escapeHtml(title) + '</h1>' +
+        printBody.innerHTML +
+        '</body></html>'
+    );
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(function () { printWindow.print(); }, 300);
+});
 </script>
 <!-- Reschedule Modal -->
 <link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
