@@ -6,9 +6,16 @@ if (!defined('APPT_BASE_SLOT_MINUTES')) {
 
 function appt_table_exists(mysqli $conn, $tableName)
 {
+    // This gets called on nearly every helper invocation below (often dozens/hundreds of
+    // times per request when checking a whole date range) — memoize per request instead of
+    // re-running SHOW TABLES every single time for the same table name.
+    static $cache = [];
+    if (isset($cache[$tableName])) {
+        return $cache[$tableName];
+    }
     $safeName = $conn->real_escape_string($tableName);
     $q = $conn->query("SHOW TABLES LIKE '{$safeName}'");
-    return $q && $q->num_rows > 0;
+    return $cache[$tableName] = ($q && $q->num_rows > 0);
 }
 
 function appt_ensure_work_type_column(mysqli $conn)
@@ -111,38 +118,61 @@ function appt_ensure_standard_timeslots_for_doctor_date(mysqli $conn, $doctorId,
     ];
     $slotSeconds = APPT_BASE_SLOT_MINUTES * 60;
 
+    // Build the full set of (start,end) pairs this day should have.
+    $wantedSlots = [];
     foreach ($windows as $window) {
         $startSec = strtotime($date . ' ' . $window[0]);
         $endSec = strtotime($date . ' ' . $window[1]);
         for ($cur = $startSec; $cur + $slotSeconds <= $endSec; $cur += $slotSeconds) {
-            $slotStart = date('H:i:s', $cur);
-            $slotEnd = date('H:i:s', $cur + $slotSeconds);
-
-            $check = $conn->prepare(
-                'SELECT timeslot_id FROM timeslot WHERE doctor_id = ? AND slot_date = ? AND start_time = ? AND end_time = ? LIMIT 1'
-            );
-            if (!$check) {
-                continue;
-            }
-            $check->bind_param('isss', $doctorId, $date, $slotStart, $slotEnd);
-            $check->execute();
-            $exists = $check->get_result()->fetch_assoc();
-            $check->close();
-
-            if ($exists) {
-                continue;
-            }
-
-            $ins = $conn->prepare(
-                "INSERT INTO timeslot (doctor_id, slot_date, start_time, end_time, status)
-                 VALUES (?, ?, ?, ?, 'available')"
-            );
-            if ($ins) {
-                $ins->bind_param('isss', $doctorId, $date, $slotStart, $slotEnd);
-                $ins->execute();
-                $ins->close();
-            }
+            $wantedSlots[] = [date('H:i:s', $cur), date('H:i:s', $cur + $slotSeconds)];
         }
+    }
+    if (empty($wantedSlots)) {
+        return;
+    }
+
+    // One query to see what already exists for the whole day, instead of one SELECT per
+    // individual slot (up to ~48 round-trips down to 1). Only the missing ones get inserted,
+    // in a single multi-row statement instead of one INSERT per slot.
+    $existing = [];
+    $existStmt = $conn->prepare('SELECT start_time, end_time FROM timeslot WHERE doctor_id = ? AND slot_date = ?');
+    if ($existStmt) {
+        $existStmt->bind_param('is', $doctorId, $date);
+        $existStmt->execute();
+        $res = $existStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $existing[$row['start_time'] . '|' . $row['end_time']] = true;
+        }
+        $existStmt->close();
+    }
+
+    $missing = [];
+    foreach ($wantedSlots as [$slotStart, $slotEnd]) {
+        if (!isset($existing[$slotStart . '|' . $slotEnd])) {
+            $missing[] = [$slotStart, $slotEnd];
+        }
+    }
+    if (empty($missing)) {
+        return; // already fully generated for this day — nothing to do
+    }
+
+    $placeholders = [];
+    $types = '';
+    $params = [];
+    foreach ($missing as [$slotStart, $slotEnd]) {
+        $placeholders[] = "(?, ?, ?, ?, 'available')";
+        $types .= 'isss';
+        $params[] = $doctorId;
+        $params[] = $date;
+        $params[] = $slotStart;
+        $params[] = $slotEnd;
+    }
+    $sql = 'INSERT INTO timeslot (doctor_id, slot_date, start_time, end_time, status) VALUES ' . implode(', ', $placeholders);
+    $ins = $conn->prepare($sql);
+    if ($ins) {
+        $ins->bind_param($types, ...$params);
+        $ins->execute();
+        $ins->close();
     }
 }
 
@@ -268,6 +298,72 @@ function appt_doctor_has_schedule_on_date(mysqli $conn, $doctorId, $date)
     }
 
     return false;
+}
+
+/**
+ * Batched equivalent of appt_has_doctor_leave() + appt_doctor_has_schedule_on_date() for
+ * checking a whole date range at once (e.g. "is this doctor bookable on each of the next 30
+ * days?") — fetches leave ranges and part-time weekday availability ONCE instead of running
+ * 2+ queries per day in a loop. Returns a closure that does the actual per-date check purely
+ * in PHP (no further queries), so a 30/90-day range check costs a small constant number of
+ * queries instead of scaling linearly with the number of days.
+ *
+ * @return callable(string $date): array{0: bool, 1: string} same shape as appt_assert_doctor_bookable()
+ */
+function appt_build_bookable_checker(mysqli $conn, int $doctorId): callable
+{
+    $leaveRanges = [];
+    if (appt_table_exists($conn, 'doctor_leaves')) {
+        appt_ensure_doctor_leaves_table($conn);
+        $stmt = $conn->prepare("SELECT leave_start_date, leave_end_date FROM doctor_leaves WHERE user_id = ? AND status = 'approved'");
+        if ($stmt) {
+            $stmt->bind_param('i', $doctorId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $leaveRanges[] = [$row['leave_start_date'], $row['leave_end_date']];
+            }
+            $stmt->close();
+        }
+    }
+
+    $workType = appt_get_doctor_work_type($conn, $doctorId);
+    $availableWeekdays = null; // null = regular (every Mon-Sat), array = specific weekdays only
+    if ($workType !== 'regular' && appt_table_exists($conn, 'doctor_availability')) {
+        $availableWeekdays = [];
+        $stmt = $conn->prepare('SELECT DISTINCT weekday FROM doctor_availability WHERE user_id = ?');
+        if ($stmt) {
+            $stmt->bind_param('i', $doctorId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $availableWeekdays[(int)$row['weekday']] = true;
+            }
+            $stmt->close();
+        }
+    }
+
+    return function (string $date) use ($leaveRanges, $availableWeekdays): array {
+        if (!appt_validate_appointment_date($date)) {
+            return [false, 'Invalid appointment date format.'];
+        }
+
+        foreach ($leaveRanges as [$start, $end]) {
+            if ($date >= $start && $date <= $end) {
+                return [false, 'Doctor is on approved leave on the selected date.'];
+            }
+        }
+
+        $weekday = (int)date('w', strtotime($date));
+        if ($weekday === 0) {
+            return [false, 'Doctor has no active schedule on the selected date.'];
+        }
+        if ($availableWeekdays !== null && !isset($availableWeekdays[$weekday])) {
+            return [false, 'Doctor has no active schedule on the selected date.'];
+        }
+
+        return [true, 'ok'];
+    };
 }
 
 function appt_doctor_has_open_timeslot(mysqli $conn, $doctorId, $date)

@@ -18,15 +18,27 @@ try {
     $start = date('Y-m-d');
     $end   = date('Y-m-d', strtotime("+{$days} days"));
 
+    // Built once per request (leave ranges + part-time weekday availability fetched in a
+    // small constant number of queries) and reused for both the slot-generation pass below
+    // and the per-day bookability check further down — instead of re-querying leave/schedule
+    // data on every single day in each of those two loops separately.
+    $bookableChecker = $user_id > 0 ? appt_build_bookable_checker($conn, $user_id) : null;
+
     if ($user_id > 0) {
-        // Ensure timeslots exist for the specific doctor
+        // Ensure timeslots exist for the specific doctor — skip days we already know aren't
+        // bookable (leave/no schedule) instead of letting appt_ensure_standard_timeslots_for_
+        // doctor_date re-derive that itself with its own extra queries for every such day.
         $genPeriod = new DatePeriod(
             new DateTime($start),
             new DateInterval('P1D'),
             (new DateTime($end))->modify('+1 day')
         );
         foreach ($genPeriod as $dt) {
-            appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $dt->format('Y-m-d'));
+            $dStr = $dt->format('Y-m-d');
+            [$isBookable] = $bookableChecker($dStr);
+            if ($isBookable) {
+                appt_ensure_standard_timeslots_for_doctor_date($conn, $user_id, $dStr);
+            }
         }
     } else {
         // No doctor — ensure timeslots for ALL active doctors on each date
@@ -110,7 +122,7 @@ try {
 
         if ($user_id > 0) {
             // Even with open capacity, do not allow dates with no schedule or approved leave.
-            [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $user_id, $d);
+            [$bookable, $bookableMsg] = $bookableChecker($d);
             $available = $available && $bookable;
             if (!$bookable) {
                 $reason = (string)$bookableMsg;
