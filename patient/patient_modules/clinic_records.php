@@ -228,6 +228,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (record.primary_image) media.unshift(record.primary_image);
 
         const sections = [];
+        const profileImage = String(patientInfo.profile_image || '').trim();
+        const profileImageUrl = profileImage
+            ? (/^https?:\/\//i.test(profileImage) ? profileImage : '../' + profileImage.replace(/^\/+/, ''))
+            : '';
+        sections.push('<div class="clinic-record-patient-header">' +
+            (profileImageUrl
+                ? '<img src="' + escapeHtml(profileImageUrl) + '" alt="" class="clinic-record-patient-avatar">'
+                : '<div class="clinic-record-patient-avatar clinic-record-patient-avatar-placeholder"><i class="bi bi-person-fill"></i></div>') +
+            '<div><div class="fw-semibold">' + escapeHtml(patientInfo.name || 'Patient') + '</div>' +
+            '<div class="small text-muted">' + escapeHtml([patientInfo.email, patientInfo.phone, patientInfo.address].filter(Boolean).join(' | ')) + '</div></div>' +
+            '</div>');
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Assessment</div>' +
             '<div class="mb-2"><div class="small text-muted fw-semibold">Reason</div><div>' + escapeHtml(record.reason || '') + '</div></div>' +
             '<div class="mb-2"><div class="small text-muted fw-semibold">Clinical Summary</div><div>' + escapeHtml(record.summary || 'No summary recorded.') + '</div></div>' +
@@ -325,6 +336,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 const odontogramData = currentRecordData && currentRecordData.record ? currentRecordData.record.odontogram : null;
                 odontoFrameEl.parentElement.outerHTML = formatOdontogramFindingsHtml(odontogramData);
             }
+            printBody.querySelectorAll('img').forEach(function (img) {
+                const src = img.getAttribute('src') || '';
+                if (src && !/^https?:\/\//i.test(src) && !src.startsWith('data:')) {
+                    img.setAttribute('src', new URL(src, window.location.href).href);
+                }
+            });
 
             printWindow.document.write(
                 '<!doctype html><html><head><title>' + escapeHtml(modalTitle.textContent) + '</title>' +
@@ -336,7 +353,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 '.small{font-size:12px;} .fw-semibold{font-weight:600;} .text-muted{color:#6c757d;}' +
                 'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:6px;text-align:left;font-size:13px;}' +
                 'ul{margin:0;padding-left:18px;}' +
-                '.row,.g-2{display:none;}' +
+                '.clinic-record-patient-header{display:flex;align-items:center;gap:12px;border:1px solid #dee2e6;border-radius:8px;padding:10px;margin-bottom:12px;}' +
+                '.clinic-record-patient-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;border:1px solid #dee2e6;}' +
+                '.clinic-record-patient-avatar-placeholder{display:flex;align-items:center;justify-content:center;background:#e2e8f0;color:#64748b;font-size:22px;}' +
+                '.row,.g-2{display:flex;flex-wrap:wrap;gap:8px;} .row>[class*="col-"],.g-2>[class*="col-"]{display:block;box-sizing:border-box;}' +
+                '.col-6{width:calc(50% - 4px);} .col-md-3{width:calc(25% - 6px);} .col-md-4{width:calc(33.333% - 6px);} .col-md-12{width:100%;}' +
+                '.media-gallery-card{break-inside:avoid;} .media-gallery-thumb-btn{display:block;border:0;background:none;padding:0;} .media-gallery-thumb-overlay,.media-gallery-card a{display:none !important;} .media-gallery-thumb-img{display:block;width:100%;max-width:180px;height:130px;object-fit:cover;border:1px solid #dee2e6;padding:2px;border-radius:4px;}' +
                 '</style></head><body>' +
                 '<h1>' + escapeHtml(modalTitle.textContent) + '</h1>' +
                 '<div class="meta">' + escapeHtml(modalMeta.textContent) + '</div>' +
