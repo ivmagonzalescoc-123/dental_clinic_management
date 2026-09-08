@@ -127,34 +127,47 @@ $csrf_token = security_generate_csrf_token();
                     <div class="tab-pane fade" id="tabNotes" role="tabpanel">
                         <div class="row g-3">
                             <div class="col-md-7">
-                                <h6 class="small text-uppercase text-muted mb-1" style="font-size:0.72rem;">Reason for Visit</h6>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-6"><label class="form-label fw-semibold small">Chief Complaint</label><textarea class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit, in the patient's words" style="font-size:0.85rem;"></textarea></div>
-                                    <div class="col-md-6"><label class="form-label fw-semibold small">Case History</label><textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history" style="font-size:0.85rem;"></textarea></div>
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-chat-square-text"></i> Reason for Visit</div>
+                                    <div class="pf-grid-2">
+                                        <div class="pf-field">
+                                            <label>Chief Complaint</label>
+                                            <textarea class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit, in the patient's words" style="font-size:0.85rem;"></textarea>
+                                        </div>
+                                        <div class="pf-field">
+                                            <label>Case History</label>
+                                            <textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history" style="font-size:0.85rem;"></textarea>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Visit Wrap-up</h6>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold small">Doctor's Notes</label>
-                                    <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold small">Clinical Summary</label>
-                                    <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
+                                <div class="pf-section mb-0">
+                                    <div class="pf-section__title"><i class="bi bi-journal-check"></i> Visit Wrap-up</div>
+                                    <div class="pf-field">
+                                        <label>Doctor's Notes</label>
+                                        <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
+                                    </div>
+                                    <div class="pf-field">
+                                        <label>Clinical Summary</label>
+                                        <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-5">
-                                <label class="form-label fw-semibold small">Doctor's Photos</label>
-                                <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1 mb-3"></div>
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-images"></i> Doctor's Photos</div>
+                                    <div id="doctorPhotoGallery" class="d-flex flex-wrap gap-1"></div>
+                                </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold small">Prescriptions</label>
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-capsule"></i> Prescriptions</div>
                                     <div id="prescriptionsBody" style="font-size: 0.85rem;"></div>
                                     <button type="button" class="btn btn-sm btn-outline-secondary mt-1 py-0" id="addPrescriptionBtn" style="font-size: 0.78rem;"><i class="bi bi-plus"></i> Add</button>
                                     <button type="button" class="btn btn-sm btn-outline-primary mt-1 py-0" id="printPrescriptionsBtn" style="font-size: 0.78rem;" disabled><i class="bi bi-printer"></i> Print</button>
                                 </div>
-                                <div>
-                                    <label class="form-label fw-semibold small">Follow-up</label>
+
+                                <div class="pf-section mb-0">
+                                    <div class="pf-section__title"><i class="bi bi-calendar-plus"></i> Follow-up</div>
                                     <div class="row g-1">
                                         <div class="col-6"><input type="date" class="form-control form-control-sm" id="followUpDate" style="font-size: 0.8rem;"></div>
                                         <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;"></div>
@@ -167,36 +180,86 @@ $csrf_token = security_generate_csrf_token();
 
                     <!-- Clinical Assessment -->
                     <div class="tab-pane fade show active" id="tabClinical" role="tabpanel">
-                        <div>
-                            <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Clinical Assessment</h6>
-                            <div class="row g-2 mb-2">
-                                <div class="col-md-4"><label class="form-label small mb-1">Gingiva Consistency</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Firm" id="gf"><label class="form-check-label small" for="gf">Firm</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Hyper plastic" id="gh"><label class="form-check-label small" for="gh">Hyper</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingiva_consistency" value="Smooth" id="gs"><label class="form-check-label small" for="gs">Smooth</label></div></div></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Oral Hygiene</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Good" id="og"><label class="form-check-label small" for="og">Good</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Fair" id="of"><label class="form-check-label small" for="of">Fair</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="oral_hygiene" value="Bad" id="ob"><label class="form-check-label small" for="ob">Bad</label></div></div></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Gingival Color</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" value="Pink" id="cp"><label class="form-check-label small" for="cp">Pink</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="gingival_color" value="Bright red" id="cr"><label class="form-check-label small" for="cr">Red</label></div></div></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Lymph Nodes</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" value="Not palpable" id="ln"><label class="form-check-label small" for="ln">Not palpable</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="lymph_nodes" value="Palpable" id="lp"><label class="form-check-label small" for="lp">Palpable</label></div></div></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Tongue</label><div class="d-flex gap-1 flex-wrap"><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" value="Normal" id="tn"><label class="form-check-label small" for="tn">Normal</label></div><div class="form-check form-check-sm m-0"><input type="radio" class="form-check-input visit-clinical-field" name="tongue" value="Coated" id="tc"><label class="form-check-label small" for="tc">Coated</label></div></div></div>
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-clipboard2-pulse"></i> Clinical Assessment</div>
+                            <div class="pf-grid-3">
+                                <div class="pf-field">
+                                    <label>Gingiva Consistency</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="radio" name="gingiva_consistency" value="Firm" id="gf"><label class="pf-pill" for="gf">Firm</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="gingiva_consistency" value="Hyper plastic" id="gh"><label class="pf-pill" for="gh">Hyper</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="gingiva_consistency" value="Smooth" id="gs"><label class="pf-pill" for="gs">Smooth</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Oral Hygiene</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="radio" name="oral_hygiene" value="Good" id="og"><label class="pf-pill" for="og">Good</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="oral_hygiene" value="Fair" id="of"><label class="pf-pill" for="of">Fair</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="oral_hygiene" value="Bad" id="ob"><label class="pf-pill" for="ob">Bad</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Gingival Color</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="radio" name="gingival_color" value="Pink" id="cp"><label class="pf-pill" for="cp">Pink</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="gingival_color" value="Bright red" id="cr"><label class="pf-pill" for="cr">Red</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Lymph Nodes</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="radio" name="lymph_nodes" value="Not palpable" id="ln"><label class="pf-pill" for="ln">Not palpable</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="lymph_nodes" value="Palpable" id="lp"><label class="pf-pill" for="lp">Palpable</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Tongue</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="radio" name="tongue" value="Normal" id="tn"><label class="pf-pill" for="tn">Normal</label>
+                                        <input class="pf-check visit-clinical-field" type="radio" name="tongue" value="Coated" id="tc"><label class="pf-pill" for="tc">Coated</label>
+                                    </div>
+                                </div>
                             </div>
+                        </div>
 
-                            <h6 class="small text-uppercase text-muted mb-1 mt-2" style="font-size:0.72rem;">Additional Clinical Findings</h6>
-                            <div class="row g-2">
-                                <div class="col-md-4"><label class="form-label small mb-1">Occlusion</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="occlusion" placeholder="e.g. Angle Class I" style="font-size:0.82rem;"></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Cl. I Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_i_type" placeholder="Normal" style="font-size:0.82rem;"></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Cl.II Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_division" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Cl.II SubDiv</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_subdivision" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Cl.II Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_type" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Cl.III Div</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_division" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Cl.III SubDiv</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_subdivision" style="font-size:0.82rem;"></div>
-                                <div class="col-md-6"><label class="form-label small mb-1">Operation if any</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="operation_if_any" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Blood Sugar</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_sugar" placeholder="Value" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">BS Status</label><div class="d-flex gap-2 flex-wrap"><div class="form-check form-check-sm m-0"><input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_normal" id="bsn"><label class="form-check-label small" for="bsn">Normal</label></div><div class="form-check form-check-sm m-0"><input type="checkbox" class="form-check-input visit-clinical-field" name="blood_sugar_high_low" id="bsh"><label class="form-check-label small" for="bsh">High/Low</label></div></div></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Bleeding Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="bleeding_time" style="font-size:0.82rem;"></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Clotting Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="clotting_time" style="font-size:0.82rem;"></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">B.P.</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_pressure" placeholder="e.g. 120/80" style="font-size:0.82rem;"></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Allergy</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="allergy_notes" placeholder="No" style="font-size:0.82rem;"></div>
-                                <div class="col-md-4"><label class="form-label small mb-1">Blood Diseases</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_diseases" style="font-size:0.82rem;"></div>
-                                <div class="col-md-6"><label class="form-label small mb-1">Radiographic Interpretation</label><textarea class="form-control form-control-sm visit-clinical-field" name="radiographic_interpretation" rows="2" style="font-size:0.82rem;"></textarea></div>
-                                <div class="col-md-3"><label class="form-label small mb-1">Fainting</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="fainting" style="font-size:0.82rem;"></div>
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-diagram-3"></i> Occlusal Classification</div>
+                            <div class="pf-grid-3">
+                                <div class="pf-field"><label>Occlusion</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="occlusion" placeholder="e.g. Angle Class I" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. I Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_i_type" placeholder="Normal" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_division" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_type" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. III Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_division" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. III SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="pf-field pf-span-2"><label>Operation if any</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="operation_if_any" style="font-size:0.82rem;"></div>
                             </div>
+                        </div>
+
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-heart-pulse"></i> Vitals &amp; Lab Findings</div>
+                            <div class="pf-grid-3">
+                                <div class="pf-field"><label>Blood Sugar</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_sugar" placeholder="Value" style="font-size:0.82rem;"></div>
+                                <div class="pf-field">
+                                    <label>BS Status</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check visit-clinical-field" type="checkbox" name="blood_sugar_normal" id="bsn"><label class="pf-pill" for="bsn">Normal</label>
+                                        <input class="pf-check visit-clinical-field" type="checkbox" name="blood_sugar_high_low" id="bsh"><label class="pf-pill" for="bsh">High/Low</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field"><label>B.P.</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_pressure" placeholder="e.g. 120/80" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Bleeding Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="bleeding_time" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Clotting Time</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="clotting_time" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Fainting</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="fainting" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Allergy</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="allergy_notes" placeholder="No" style="font-size:0.82rem;"></div>
+                                <div class="pf-field pf-span-2"><label>Blood Diseases</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_diseases" style="font-size:0.82rem;"></div>
+                            </div>
+                        </div>
+
+                        <div class="pf-section mb-0">
+                            <div class="pf-section__title"><i class="bi bi-file-earmark-medical"></i> Radiographic Interpretation</div>
+                            <textarea class="form-control form-control-sm visit-clinical-field" name="radiographic_interpretation" rows="2" style="font-size:0.82rem;"></textarea>
                         </div>
                     </div>
 
@@ -218,80 +281,94 @@ $csrf_token = security_generate_csrf_token();
                     <div class="tab-pane fade" id="tabBilling" role="tabpanel">
                         <div class="row g-3">
                             <div class="col-md-7">
-                                <h6 class="small fw-bold mb-2">Services</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle mb-2">
-                                        <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th></tr></thead>
-                                        <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="2" class="text-muted small">No services added.</td></tr></tbody>
-                                    </table>
-                                    <small class="text-muted">Services are set by the doctor during charting and can't be added here.</small>
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-clipboard2-check"></i> Services</div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle mb-2">
+                                            <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th></tr></thead>
+                                            <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="2" class="text-muted small">No services added.</td></tr></tbody>
+                                        </table>
+                                        <small class="text-muted">Services are set by the doctor during charting and can't be added here.</small>
+                                    </div>
                                 </div>
 
-                                <h6 class="small fw-bold mb-2">Additional Charges</h6>
-                                <table class="table table-sm align-middle mb-2">
-                                    <thead class="table-light"><tr><th>Description</th><th style="width:120px;">Amount</th><th style="width:40px;"></th></tr></thead>
-                                    <tbody id="billingChargesBody"></tbody>
-                                    <tfoot><tr><td colspan="3"><button type="button" class="btn btn-sm btn-outline-secondary py-0" id="addBillingChargeBtn" style="font-size:0.78rem;"><i class="bi bi-plus"></i> Add Charge</button></td></tr></tfoot>
-                                </table>
+                                <div class="pf-section mb-0">
+                                    <div class="pf-section__title"><i class="bi bi-receipt-cutoff"></i> Additional Charges</div>
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-light"><tr><th>Description</th><th style="width:120px;">Amount</th><th style="width:40px;"></th></tr></thead>
+                                        <tbody id="billingChargesBody"></tbody>
+                                        <tfoot><tr><td colspan="3"><button type="button" class="btn btn-sm btn-outline-secondary py-0" id="addBillingChargeBtn" style="font-size:0.78rem;"><i class="bi bi-plus"></i> Add Charge</button></td></tr></tfoot>
+                                    </table>
+                                </div>
                             </div>
                             <div class="col-md-5">
-                                <h6 class="small fw-bold mb-2">Discount</h6>
-                                <div class="mb-2">
-                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountNone" value="none" checked><label class="form-check-label small" for="discountNone">None</label></div>
-                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountSenior" value="senior"><label class="form-check-label small" for="discountSenior">Senior (<?php echo (int) billing_senior_discount_percent(); ?>%)</label></div>
-                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountPwd" value="pwd"><label class="form-check-label small" for="discountPwd">PWD (<?php echo (int) billing_pwd_discount_percent(); ?>%)</label></div>
-                                    <div class="form-check form-check-sm"><input class="form-check-input billing-discount-type" type="radio" name="billingDiscountType" id="discountCustom" value="custom"><label class="form-check-label small" for="discountCustom">Custom</label></div>
-                                </div>
-                                <div id="customDiscountFields" style="display:none;">
-                                    <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm mb-1" id="customDiscountPercent" value="20" placeholder="%" style="font-size:0.82rem;">
-                                    <input type="text" class="form-control form-control-sm" id="discountNotes" maxlength="255" placeholder="Reason" style="font-size:0.82rem;">
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-percent"></i> Discount</div>
+                                    <div class="pf-pill-group mb-2">
+                                        <input class="pf-check billing-discount-type" type="radio" name="billingDiscountType" id="discountNone" value="none" checked><label class="pf-pill" for="discountNone">None</label>
+                                        <input class="pf-check billing-discount-type" type="radio" name="billingDiscountType" id="discountSenior" value="senior"><label class="pf-pill" for="discountSenior">Senior (<?php echo (int) billing_senior_discount_percent(); ?>%)</label>
+                                        <input class="pf-check billing-discount-type" type="radio" name="billingDiscountType" id="discountPwd" value="pwd"><label class="pf-pill" for="discountPwd">PWD (<?php echo (int) billing_pwd_discount_percent(); ?>%)</label>
+                                        <input class="pf-check billing-discount-type" type="radio" name="billingDiscountType" id="discountCustom" value="custom"><label class="pf-pill" for="discountCustom">Custom</label>
+                                    </div>
+                                    <div id="customDiscountFields" style="display:none;">
+                                        <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm mb-1" id="customDiscountPercent" value="20" placeholder="%" style="font-size:0.82rem;">
+                                        <input type="text" class="form-control form-control-sm" id="discountNotes" maxlength="255" placeholder="Reason" style="font-size:0.82rem;">
+                                    </div>
                                 </div>
 
-                                <div class="p-2 bg-light border rounded mt-2 mb-2" id="billingTotalsSummary">
-                                    <div class="d-flex justify-content-between small text-muted" id="billingConsultationFeeRow" style="display:none;"><span>Consultation Fee <em>(no services selected)</em></span><span id="billingConsultationFeeDisplay">₱0.00</span></div>
-                                    <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
-                                    <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
-                                    <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
-                                </div>
-
-                                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                                    <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
-                                    <div id="installmentOptions" class="d-flex align-items-center gap-1" style="display:none;">
-                                        <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Terms" style="max-width:80px; font-size:0.82rem;">
-                                        <span class="small text-muted">monthly terms</span>
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-calculator"></i> Totals</div>
+                                    <div class="p-2 bg-light border rounded" id="billingTotalsSummary">
+                                        <div class="d-flex justify-content-between small text-muted" id="billingConsultationFeeRow" style="display:none;"><span>Consultation Fee <em>(no services selected)</em></span><span id="billingConsultationFeeDisplay">₱0.00</span></div>
+                                        <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
+                                        <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
+                                        <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
                                     </div>
                                 </div>
-                                <div class="small text-muted mb-2" id="installmentDownPaymentNotice" style="display:none;">Patient pays today: ₱0.00</div>
 
-                                <hr class="my-2">
-                                <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="recordPaymentNow"><label class="form-check-label small fw-bold" for="recordPaymentNow">Record a payment now</label></div>
-                                <div id="paymentFields" style="display:none;">
-                                    <div class="mb-2">
-                                        <label class="form-label small mb-1">Amount Tendered</label>
-                                        <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="paymentAmountTendered" placeholder="0.00" style="font-size:0.82rem;">
+                                <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-calendar-week"></i> Installment Plan</div>
+                                    <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                                        <div class="form-check mb-0"><input class="form-check-input" type="checkbox" id="useInstallment"><label class="form-check-label small" for="useInstallment">Installment plan (50% down)</label></div>
+                                        <div id="installmentOptions" class="d-flex align-items-center gap-1" style="display:none;">
+                                            <input type="number" min="1" max="60" class="form-control form-control-sm" id="installmentTerms" value="6" placeholder="Terms" style="max-width:80px; font-size:0.82rem;">
+                                            <span class="small text-muted">monthly terms</span>
+                                        </div>
                                     </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small mb-1">Payment Method</label>
-                                        <select class="form-select form-select-sm" id="paymentMethod" style="font-size:0.82rem;">
-                                            <option value="cash">Cash</option>
-                                            <option value="gcash">GCash</option>
-                                            <option value="card">Card</option>
-                                            <option value="bank">Bank Transfer</option>
-                                        </select>
+                                    <div class="small text-muted mb-0" id="installmentDownPaymentNotice" style="display:none;">Patient pays today: ₱0.00</div>
+                                </div>
+
+                                <div class="pf-section mb-0">
+                                    <div class="pf-section__title"><i class="bi bi-cash-coin"></i> Payment</div>
+                                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="recordPaymentNow"><label class="form-check-label small fw-bold" for="recordPaymentNow">Record a payment now</label></div>
+                                    <div id="paymentFields" style="display:none;">
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1">Amount Tendered</label>
+                                            <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="paymentAmountTendered" placeholder="0.00" style="font-size:0.82rem;">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1">Payment Method</label>
+                                            <select class="form-select form-select-sm" id="paymentMethod" style="font-size:0.82rem;">
+                                                <option value="cash">Cash</option>
+                                                <option value="gcash">GCash</option>
+                                                <option value="card">Card</option>
+                                                <option value="bank">Bank Transfer</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1">OR Number <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control form-control-sm" id="paymentOrNumber" maxlength="50" placeholder="Official receipt number" style="font-size:0.82rem;">
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small mb-1">Notes</label>
+                                            <input type="text" class="form-control form-control-sm" id="paymentNotes" placeholder="Optional" style="font-size:0.82rem;">
+                                        </div>
+                                        <div class="p-2 bg-light border rounded small">
+                                            <div class="d-flex justify-content-between"><span>Amount Applied</span><span id="paymentAmountAppliedDisplay">₱0.00</span></div>
+                                            <div class="d-flex justify-content-between"><span>Change</span><span id="paymentChangeDisplay">₱0.00</span></div>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">A partial payment must be at least 50% of the Total Due, or leave this unchecked to bill later.</small>
                                     </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small mb-1">OR Number <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control form-control-sm" id="paymentOrNumber" maxlength="50" placeholder="Official receipt number" style="font-size:0.82rem;">
-                                    </div>
-                                    <div class="mb-2">
-                                        <label class="form-label small mb-1">Notes</label>
-                                        <input type="text" class="form-control form-control-sm" id="paymentNotes" placeholder="Optional" style="font-size:0.82rem;">
-                                    </div>
-                                    <div class="p-2 bg-light border rounded small">
-                                        <div class="d-flex justify-content-between"><span>Amount Applied</span><span id="paymentAmountAppliedDisplay">₱0.00</span></div>
-                                        <div class="d-flex justify-content-between"><span>Change</span><span id="paymentChangeDisplay">₱0.00</span></div>
-                                    </div>
-                                    <small class="text-muted d-block mt-1">A partial payment must be at least 50% of the Total Due, or leave this unchecked to bill later.</small>
                                 </div>
                             </div>
                         </div>
@@ -468,6 +545,113 @@ $csrf_token = security_generate_csrf_token();
 }
 [data-theme="dark"] .ehr-stepper__link.is-done .ehr-stepper__circle {
     background: rgba(22, 163, 74, 0.25);
+}
+
+/* Create Record tabs (Clinical Findings / Visit Summary / Billing): grouped sections +
+   pill selectors, mirroring the profiling step's decluttered layout. Charting is left
+   untouched — it's its own dedicated full-screen odontogram tool. */
+#secretaryRecordModal .pf-section {
+    background: #f8fafc;
+    border: 1px solid #e6ebf1;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.85rem;
+}
+#secretaryRecordModal .pf-section:last-child { margin-bottom: 0; }
+#secretaryRecordModal .pf-section__title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #16a34a;
+    margin-bottom: 0.65rem;
+}
+#secretaryRecordModal .pf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem 1rem;
+}
+#secretaryRecordModal .pf-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem 1rem;
+}
+@media (min-width: 768px) {
+    #secretaryRecordModal .pf-grid-2 { grid-template-columns: 1fr 1fr; }
+    #secretaryRecordModal .pf-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    #secretaryRecordModal .pf-grid-2 .pf-span-2,
+    #secretaryRecordModal .pf-grid-3 .pf-span-2 { grid-column: span 2; }
+    #secretaryRecordModal .pf-grid-3 .pf-span-3 { grid-column: 1 / -1; }
+}
+#secretaryRecordModal .pf-field { margin-bottom: 0.65rem; }
+#secretaryRecordModal .pf-field:last-child { margin-bottom: 0; }
+#secretaryRecordModal .pf-field > label {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.35rem;
+}
+#secretaryRecordModal .pf-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+#secretaryRecordModal .pf-pill-group input.pf-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+}
+#secretaryRecordModal .pf-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    user-select: none;
+    line-height: 1.3;
+}
+#secretaryRecordModal .pf-pill:hover {
+    border-color: #16a34a;
+    color: #16a34a;
+}
+#secretaryRecordModal .pf-check:checked + .pf-pill {
+    background: #16a34a;
+    border-color: #16a34a;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+}
+#secretaryRecordModal .pf-check:focus-visible + .pf-pill {
+    outline: 2px solid #16a34a;
+    outline-offset: 1px;
+}
+[data-theme="dark"] #secretaryRecordModal .pf-section {
+    background: #111c30;
+    border-color: #243044;
+}
+[data-theme="dark"] #secretaryRecordModal .pf-section__title {
+    color: #4ade80;
+}
+[data-theme="dark"] #secretaryRecordModal .pf-field > label {
+    color: #94a3b8;
+}
+[data-theme="dark"] #secretaryRecordModal .pf-pill {
+    background: #0f1b2e;
+    border-color: #2b3b53;
+    color: #cbd5e1;
+}
+[data-theme="dark"] #secretaryRecordModal .pf-pill:hover {
+    border-color: #4ade80;
+    color: #4ade80;
 }
 </style>
 
@@ -671,20 +855,21 @@ function generateAndPrintPrescription(rows, profile) {
     const clinicAddress = profile?.clinic_address || 'Metz Arcade, Cagayan de Oro City, Philippines';
     const clinicPhone = profile?.clinic_phone || '(088) 123 4567';
     
-    // Build license display
+    // Build license display — licenses are stored as a JSON array ({type, number} pairs)
+    // in the `licenses` column, not as flat license_type_N/license_number_N fields
+    // (those were dropped from the schema; see scripts/alter_licenses.php).
     let licenseHtml = '';
     if (profile) {
-        const licenses = [];
-        if (profile.license_type_1 && profile.license_number_1) {
-            licenses.push({ type: profile.license_type_1, number: profile.license_number_1 });
+        let licenses = [];
+        try {
+            const parsed = typeof profile.licenses === 'string' ? JSON.parse(profile.licenses) : profile.licenses;
+            if (Array.isArray(parsed)) {
+                licenses = parsed.filter(lic => lic && lic.type && lic.number);
+            }
+        } catch (e) {
+            licenses = [];
         }
-        if (profile.license_type_2 && profile.license_number_2) {
-            licenses.push({ type: profile.license_type_2, number: profile.license_number_2 });
-        }
-        if (profile.license_type_3 && profile.license_number_3) {
-            licenses.push({ type: profile.license_type_3, number: profile.license_number_3 });
-        }
-        
+
         if (licenses.length > 0) {
             licenses.forEach((lic, idx) => {
                 licenseHtml += `
@@ -712,14 +897,14 @@ function generateAndPrintPrescription(rows, profile) {
     if (profile?.signature_drawn) {
         signatureHtml = `
             <div style="text-align:center;width:230px;">
-                <img src="${esc(profile.signature_drawn)}" alt="Signature" style="max-width:100%; max-height:60px; border-top:1px solid #111; padding-top:4px;">
+                <img src="${esc(profile.signature_drawn)}" alt="Signature" style="max-width:100%; max-height:60px; padding-top:4px;">
                 <div style="font-size:0.82em;color:#666;margin-top:4px;">${esc(doctorName)}</div>
                 <div style="font-size:0.82em;color:#666;">${esc(professionalTitle)}</div>
             </div>`;
     } else if (profile?.signature_image) {
         signatureHtml = `
             <div style="text-align:center;width:230px;">
-                <img src="../${esc(profile.signature_image)}" alt="Signature" style="max-width:100%; max-height:60px; border-top:1px solid #111; padding-top:4px;">
+                <img src="../${esc(profile.signature_image)}" alt="Signature" style="max-width:100%; max-height:60px; padding-top:4px;">
                 <div style="font-size:0.82em;color:#666;margin-top:4px;">${esc(doctorName)}</div>
                 <div style="font-size:0.82em;color:#666;">${esc(professionalTitle)}</div>
             </div>`;
@@ -745,7 +930,7 @@ function generateAndPrintPrescription(rows, profile) {
     });
 
     const html = `
-        <div style="text-align:center;border-bottom:2px solid #16a34a;padding-bottom:10px;margin-bottom:14px;">
+        <div style="text-align:center;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:14px;">
             <img src="../assets/img/clinic-logo.png" style="height:48px;" onerror="this.style.display='none'">
             <div style="font-size:1.15em;font-weight:700;margin-top:4px;letter-spacing:0.02em;">${esc(clinicName)}</div>
             <div style="font-size:0.75em;color:#555;">${esc(clinicAddress)}</div>
@@ -918,7 +1103,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Populate patient header
         currentRecordPatientName = String(data.appointment?.patient_name || '').trim();
         currentRecordDoctorName = String(data.appointment?.doctor_name || '').trim();
-        currentRecordDoctorId = (int)(data.appointment?.doctor_id || 0);
+        currentRecordDoctorId = parseInt(data.appointment?.doctor_id || 0, 10) || 0;
         currentRecordPatientDob = data.appointment?.date_of_birth || '';
         if (patientNameEl) {
             patientNameEl.textContent = currentRecordPatientName || 'Create Clinical Record';

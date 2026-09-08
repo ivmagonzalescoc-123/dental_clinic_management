@@ -798,6 +798,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#bookingDetailsModal"
                                             onclick='openBookingDetailsModal(<?php echo htmlspecialchars(json_encode([
                                                 'booking_id' => (int)$gb['booking_id'],
+                                                'tracking_code' => (string)($gb['tracking_code'] ?? ''),
                                                 'name' => trim((string)$gb['first_name'] . ' ' . (string)$gb['last_name']),
                                                 'email' => (string)($gb['email'] ?? ''),
                                                 'phone_number' => (string)($gb['phone_number'] ?? ''),
@@ -982,7 +983,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                     <div>
                         <p class="dpp-name" id="bookingDetailsName"></p>
                         <div class="dpp-chips">
-                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="bookingDetailsRef"></span></span>
+                            <span class="dpp-chip"><i class="bi bi-upc-scan"></i> <span id="bookingDetailsRef"></span></span>
                             <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="bookingDetailsDate"></span></span>
                             <span class="dpp-chip"><i class="bi bi-clock"></i> <span id="bookingDetailsTime"></span></span>
                         </div>
@@ -1021,7 +1022,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
 
 <!-- Process Booking to Appointment Modal -->
 <div class="modal fade" id="convertBookingModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable" role="document">
+    <div class="modal-dialog modal-dialog-scrollable" id="convertModalDialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-success text-white py-2 px-3">
                 <h5 class="modal-title" style="font-size:0.9rem;">
@@ -1125,109 +1126,127 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                             New patient background/profiling — used by the doctor during the visit.
                         </div>
 
-                        <!-- Gender -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Gender</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_male" value="Male"><label class="form-check-label fw-semibold" for="pf_gender_male" style="font-size:0.82rem;color:#334155;">Male</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_female" value="Female"><label class="form-check-label fw-semibold" for="pf_gender_female" style="font-size:0.82rem;color:#334155;">Female</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_gender" id="pf_gender_other" value="Other"><label class="form-check-label fw-semibold" for="pf_gender_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
+                        <!-- Basic Profile -->
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-person-badge"></i> Basic Profile</div>
+                            <div class="pf-field">
+                                <label>Gender</label>
+                                <div class="pf-pill-group">
+                                    <input class="pf-check" type="radio" name="pf_gender" id="pf_gender_male" value="Male"><label class="pf-pill" for="pf_gender_male">Male</label>
+                                    <input class="pf-check" type="radio" name="pf_gender" id="pf_gender_female" value="Female"><label class="pf-pill" for="pf_gender_female">Female</label>
+                                    <input class="pf-check" type="radio" name="pf_gender" id="pf_gender_other" value="Other"><label class="pf-pill" for="pf_gender_other">Other</label>
+                                </div>
+                            </div>
+                            <div class="pf-field">
+                                <label>Race</label>
+                                <div class="pf-pill-group">
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_asian" value="Asian"><label class="pf-pill" for="pf_race_asian">Asian</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_caucasian" value="Caucasian"><label class="pf-pill" for="pf_race_caucasian">Caucasian</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_black" value="Black/African American"><label class="pf-pill" for="pf_race_black">Black</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_hispanic" value="Hispanic/Latino"><label class="pf-pill" for="pf_race_hispanic">Hispanic</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_native" value="Native American"><label class="pf-pill" for="pf_race_native">Native</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_pacific" value="Pacific Islander"><label class="pf-pill" for="pf_race_pacific">Pacific</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_mixed" value="Mixed"><label class="pf-pill" for="pf_race_mixed">Mixed</label>
+                                    <input class="pf-check" type="radio" name="pf_race" id="pf_race_other" value="Other"><label class="pf-pill" for="pf_race_other">Other</label>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Race -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Race</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_asian" value="Asian"><label class="form-check-label fw-semibold" for="pf_race_asian" style="font-size:0.82rem;color:#334155;">Asian</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_caucasian" value="Caucasian"><label class="form-check-label fw-semibold" for="pf_race_caucasian" style="font-size:0.82rem;color:#334155;">Caucasian</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_black" value="Black/African American"><label class="form-check-label fw-semibold" for="pf_race_black" style="font-size:0.82rem;color:#334155;">Black</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_hispanic" value="Hispanic/Latino"><label class="form-check-label fw-semibold" for="pf_race_hispanic" style="font-size:0.82rem;color:#334155;">Hispanic</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_native" value="Native American"><label class="form-check-label fw-semibold" for="pf_race_native" style="font-size:0.82rem;color:#334155;">Native</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_pacific" value="Pacific Islander"><label class="form-check-label fw-semibold" for="pf_race_pacific" style="font-size:0.82rem;color:#334155;">Pacific</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_mixed" value="Mixed"><label class="form-check-label fw-semibold" for="pf_race_mixed" style="font-size:0.82rem;color:#334155;">Mixed</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_race" id="pf_race_other" value="Other"><label class="form-check-label fw-semibold" for="pf_race_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
+                        <!-- Habits & Comfort -->
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-heart-pulse"></i> Habits &amp; Comfort</div>
+                            <div class="pf-grid-2">
+                                <div class="pf-field">
+                                    <label>Smoking</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check" type="radio" name="pf_smoking" id="pf_smoking_no" value="Non-smoker"><label class="pf-pill" for="pf_smoking_no">Non-smoker</label>
+                                        <input class="pf-check" type="radio" name="pf_smoking" id="pf_smoking_former" value="Former smoker"><label class="pf-pill" for="pf_smoking_former">Former</label>
+                                        <input class="pf-check" type="radio" name="pf_smoking" id="pf_smoking_current" value="Current smoker"><label class="pf-pill" for="pf_smoking_current">Current</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Alcohol</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check" type="radio" name="pf_alcohol" id="pf_alcohol_no" value="Non-drinker"><label class="pf-pill" for="pf_alcohol_no">Non-drinker</label>
+                                        <input class="pf-check" type="radio" name="pf_alcohol" id="pf_alcohol_social" value="Social drinker"><label class="pf-pill" for="pf_alcohol_social">Social</label>
+                                        <input class="pf-check" type="radio" name="pf_alcohol" id="pf_alcohol_regular" value="Regular drinker"><label class="pf-pill" for="pf_alcohol_regular">Regular</label>
+                                    </div>
+                                </div>
+                                <div class="pf-field pf-span-2">
+                                    <label>Dental Anxiety</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check" type="radio" name="pf_dental_anxiety" id="pf_anxiety_none" value="None"><label class="pf-pill" for="pf_anxiety_none">None</label>
+                                        <input class="pf-check" type="radio" name="pf_dental_anxiety" id="pf_anxiety_mild" value="Mild"><label class="pf-pill" for="pf_anxiety_mild">Mild</label>
+                                        <input class="pf-check" type="radio" name="pf_dental_anxiety" id="pf_anxiety_moderate" value="Moderate"><label class="pf-pill" for="pf_anxiety_moderate">Moderate</label>
+                                        <input class="pf-check" type="radio" name="pf_dental_anxiety" id="pf_anxiety_severe" value="Severe"><label class="pf-pill" for="pf_anxiety_severe">Severe</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Allergies (text) -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Allergies</label>
-                            <input type="text" id="pf_allergies" class="form-control" placeholder="e.g. Penicillin, Latex" style="padding:0.3rem 0.5rem;font-size:0.85rem;">
-                        </div>
-
-                        <!-- Smoking -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Smoking</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_no" value="Non-smoker"><label class="form-check-label fw-semibold" for="pf_smoking_no" style="font-size:0.82rem;color:#334155;">Non-smoker</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_former" value="Former smoker"><label class="form-check-label fw-semibold" for="pf_smoking_former" style="font-size:0.82rem;color:#334155;">Former</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_smoking" id="pf_smoking_current" value="Current smoker"><label class="form-check-label fw-semibold" for="pf_smoking_current" style="font-size:0.82rem;color:#334155;">Current</label></div>
+                        <!-- Medical Alerts -->
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-exclamation-triangle"></i> Medical Alerts</div>
+                            <div class="pf-field">
+                                <label>Conditions</label>
+                                <div class="pf-pill-group">
+                                    <input class="pf-check" type="checkbox" id="pf_hypertensive"><label class="pf-pill pf-pill--alert" for="pf_hypertensive">Hypertensive</label>
+                                    <input class="pf-check" type="checkbox" id="pf_diabetic"><label class="pf-pill pf-pill--alert" for="pf_diabetic">Diabetic</label>
+                                    <input class="pf-check" type="checkbox" id="pf_asthmatic"><label class="pf-pill pf-pill--alert" for="pf_asthmatic">Asthmatic</label>
+                                    <input class="pf-check" type="checkbox" id="pf_heart_disease"><label class="pf-pill pf-pill--alert" for="pf_heart_disease">Heart Disease</label>
+                                    <input class="pf-check" type="checkbox" id="pf_hiv_positive"><label class="pf-pill pf-pill--alert" for="pf_hiv_positive">HIV+</label>
+                                </div>
+                            </div>
+                            <div class="pf-grid-2">
+                                <div class="pf-field">
+                                    <label>Allergies</label>
+                                    <input type="text" id="pf_allergies" class="form-control form-control-sm" placeholder="e.g. Penicillin, Latex">
+                                </div>
+                                <div class="pf-field">
+                                    <label>Bleeding Disorder</label>
+                                    <div class="pf-pill-group">
+                                        <input class="pf-check" type="radio" name="pf_bleeding_disorder" id="pf_bleed_none" value="None"><label class="pf-pill" for="pf_bleed_none">None</label>
+                                        <input class="pf-check" type="radio" name="pf_bleeding_disorder" id="pf_bleed_hemophilia" value="Hemophilia"><label class="pf-pill" for="pf_bleed_hemophilia">Hemophilia</label>
+                                        <input class="pf-check" type="radio" name="pf_bleeding_disorder" id="pf_bleed_vonw" value="Von Willebrand"><label class="pf-pill" for="pf_bleed_vonw">Von Willebrand</label>
+                                        <input class="pf-check" type="radio" name="pf_bleeding_disorder" id="pf_bleed_thrombo" value="Thrombocytopenia"><label class="pf-pill" for="pf_bleed_thrombo">Thrombocytopenia</label>
+                                        <input class="pf-check" type="radio" name="pf_bleeding_disorder" id="pf_bleed_other" value="Other"><label class="pf-pill" for="pf_bleed_other">Other</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Pregnancy (female only) -->
+                            <div id="pf_pregnancy_wrapper" class="pf-field mt-2" style="display:none;">
+                                <label>Pregnancy</label>
+                                <div class="pf-pill-group">
+                                    <input class="pf-check" type="radio" name="pf_pregnancy_status" id="pf_preg_not" value="Not pregnant"><label class="pf-pill" for="pf_preg_not">Not pregnant</label>
+                                    <input class="pf-check" type="radio" name="pf_pregnancy_status" id="pf_preg_yes" value="Pregnant"><label class="pf-pill" for="pf_preg_yes">Pregnant</label>
+                                    <input class="pf-check" type="radio" name="pf_pregnancy_status" id="pf_preg_post" value="Postpartum"><label class="pf-pill" for="pf_preg_post">Postpartum</label>
+                                    <input class="pf-check" type="radio" name="pf_pregnancy_status" id="pf_preg_nursing" value="Nursing"><label class="pf-pill" for="pf_preg_nursing">Nursing</label>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Alcohol -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Alcohol</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_no" value="Non-drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_no" style="font-size:0.82rem;color:#334155;">Non-drinker</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_social" value="Social drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_social" style="font-size:0.82rem;color:#334155;">Social</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_alcohol" id="pf_alcohol_regular" value="Regular drinker"><label class="form-check-label fw-semibold" for="pf_alcohol_regular" style="font-size:0.82rem;color:#334155;">Regular</label></div>
+                        <!-- History & Notes -->
+                        <div class="pf-section mb-0">
+                            <div class="pf-section__title"><i class="bi bi-journal-medical"></i> History &amp; Notes</div>
+                            <div class="pf-grid-2">
+                                <div class="pf-field">
+                                    <label>Medical History</label>
+                                    <textarea id="pf_medical_history" class="form-control form-control-sm" rows="2" placeholder="Previous surgeries, chronic conditions..."></textarea>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Medications</label>
+                                    <textarea id="pf_medications" class="form-control form-control-sm" rows="2" placeholder="Current medications and dosages..."></textarea>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Previous Treatment</label>
+                                    <textarea id="pf_previous_dental_treatment" class="form-control form-control-sm" rows="2" placeholder="Previous dental procedures..."></textarea>
+                                </div>
+                                <div class="pf-field">
+                                    <label>Notes</label>
+                                    <textarea id="pf_background_notes" class="form-control form-control-sm" rows="2" placeholder="Additional notes..."></textarea>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Dental Anxiety -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Dental Anxiety</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_none" value="None"><label class="form-check-label fw-semibold" for="pf_anxiety_none" style="font-size:0.82rem;color:#334155;">None</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_mild" value="Mild"><label class="form-check-label fw-semibold" for="pf_anxiety_mild" style="font-size:0.82rem;color:#334155;">Mild</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_moderate" value="Moderate"><label class="form-check-label fw-semibold" for="pf_anxiety_moderate" style="font-size:0.82rem;color:#334155;">Moderate</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_dental_anxiety" id="pf_anxiety_severe" value="Severe"><label class="form-check-label fw-semibold" for="pf_anxiety_severe" style="font-size:0.82rem;color:#334155;">Severe</label></div>
-                            </div>
-                        </div>
-
-                        <!-- Bleeding Disorder -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Bleeding Disorder</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_none" value="None"><label class="form-check-label fw-semibold" for="pf_bleed_none" style="font-size:0.82rem;color:#334155;">None</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_hemophilia" value="Hemophilia"><label class="form-check-label fw-semibold" for="pf_bleed_hemophilia" style="font-size:0.82rem;color:#334155;">Hemophilia</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_vonw" value="Von Willebrand"><label class="form-check-label fw-semibold" for="pf_bleed_vonw" style="font-size:0.82rem;color:#334155;">Von Willebrand</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_thrombo" value="Thrombocytopenia"><label class="form-check-label fw-semibold" for="pf_bleed_thrombo" style="font-size:0.82rem;color:#334155;">Thrombocytopenia</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_bleeding_disorder" id="pf_bleed_other" value="Other"><label class="form-check-label fw-semibold" for="pf_bleed_other" style="font-size:0.82rem;color:#334155;">Other</label></div>
-                            </div>
-                        </div>
-
-                        <!-- Pregnancy (female only) -->
-                        <div id="pf_pregnancy_wrapper" class="mb-2" style="display:none;">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Pregnancy</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_not" value="Not pregnant"><label class="form-check-label fw-semibold" for="pf_preg_not" style="font-size:0.82rem;color:#334155;">Not pregnant</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_yes" value="Pregnant"><label class="form-check-label fw-semibold" for="pf_preg_yes" style="font-size:0.82rem;color:#334155;">Pregnant</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_post" value="Postpartum"><label class="form-check-label fw-semibold" for="pf_preg_post" style="font-size:0.82rem;color:#334155;">Postpartum</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="radio" name="pf_pregnancy_status" id="pf_preg_nursing" value="Nursing"><label class="form-check-label fw-semibold" for="pf_preg_nursing" style="font-size:0.82rem;color:#334155;">Nursing</label></div>
-                            </div>
-                        </div>
-
-                        <!-- Textareas -->
-                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medical History</label><textarea id="pf_medical_history" class="form-control" rows="1" placeholder="Previous surgeries, chronic conditions..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Medications</label><textarea id="pf_medications" class="form-control" rows="1" placeholder="Current medications and dosages..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Previous Treatment</label><textarea id="pf_previous_dental_treatment" class="form-control" rows="1" placeholder="Previous dental procedures..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
-
-                        <!-- Conditions (checkboxes) -->
-                        <div class="mb-2">
-                            <label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Conditions</label>
-                            <div class="d-flex flex-wrap gap-2">
-                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hypertensive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hypertensive" style="font-size:0.82rem;color:#334155;">Hypertensive</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_diabetic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_diabetic" style="font-size:0.82rem;color:#334155;">Diabetic</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_asthmatic" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_asthmatic" style="font-size:0.82rem;color:#334155;">Asthmatic</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_heart_disease" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_heart_disease" style="font-size:0.82rem;color:#334155;">Heart Disease</label></div>
-                                <div class="form-check m-0"><input class="form-check-input" type="checkbox" id="pf_hiv_positive" style="width:14px;height:14px;"><label class="form-check-label fw-semibold" for="pf_hiv_positive" style="font-size:0.82rem;color:#334155;">HIV+</label></div>
-                            </div>
-                        </div>
-
-                        <div class="mb-2"><label class="form-label fw-bold" style="font-size:0.82rem;color:#1e293b;">Notes</label><textarea id="pf_background_notes" class="form-control" rows="1" placeholder="Additional notes..." style="padding:0.3rem 0.5rem;font-size:0.85rem;"></textarea></div>
                     </div>
                 </div>
                 <div class="modal-footer py-2 px-3">
@@ -1256,7 +1275,7 @@ function openBookingDetailsModal(booking) {
     document.getElementById('bookingDetailsName').textContent = name;
     var initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map(function(w){ return w[0].toUpperCase(); }).join('') || '?';
     document.getElementById('bookingDetailsAvatar').textContent = initials;
-    setText('bookingDetailsRef', booking.booking_id ? ('#' + booking.booking_id) : '');
+    setText('bookingDetailsRef', booking.tracking_code ? booking.tracking_code : (booking.booking_id ? ('#' + booking.booking_id) : ''));
     setText('bookingDetailsDate', booking.preferred_date);
     setText('bookingDetailsTime', booking.preferred_time);
     setText('bookingDetailsEmail', booking.email);
@@ -1430,6 +1449,7 @@ function showConvertStep(step) {
     var badge1 = document.getElementById('convertStepBadge1');
     var badge2 = document.getElementById('convertStepBadge2');
     var trackFill = document.querySelector('#convertStepper .convert-stepper__track-fill');
+    var dialog = document.getElementById('convertModalDialog');
 
     if (step === 2) {
         step1.style.display = 'none';
@@ -1440,6 +1460,7 @@ function showConvertStep(step) {
         badge1.className = 'convert-stepper__step is-done';
         badge2.className = 'convert-stepper__step is-active';
         if (trackFill) trackFill.style.width = '100%';
+        if (dialog) dialog.classList.add('convert-modal--wide');
     } else {
         step1.style.display = '';
         step2.style.display = 'none';
@@ -1449,6 +1470,7 @@ function showConvertStep(step) {
         badge1.className = 'convert-stepper__step is-active';
         badge2.className = 'convert-stepper__step';
         if (trackFill) trackFill.style.width = '0%';
+        if (dialog) dialog.classList.remove('convert-modal--wide');
     }
 }
 
@@ -2302,6 +2324,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         max-width: 550px; /* ~10% wider than Bootstrap's default 500px */
     }
 }
+/* Step 2 (profiling) has a lot more ground to cover than step 1, so the dialog
+   widens while it's showing — gives the pill groups and paired fields room to
+   sit side-by-side instead of stacking into one long cluttered column. */
+@media (min-width: 768px) {
+    #convertBookingModal .modal-dialog.convert-modal--wide {
+        max-width: 700px;
+    }
+}
 #convertBookingModal .modal-content {
     max-height: 90vh;
     display: flex;
@@ -2422,6 +2452,108 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 }
 [data-theme="dark"] .convert-stepper__step.is-done .convert-stepper__circle {
     background: rgba(25, 135, 84, 0.25);
+}
+
+/* Profiling step (step 2): grouped sections + pill selectors, replacing the old
+   flat stack of individually-styled radio rows. */
+.pf-section {
+    background: #f8fafc;
+    border: 1px solid #e6ebf1;
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.75rem;
+}
+.pf-section__title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #0d9488;
+    margin-bottom: 0.65rem;
+}
+.pf-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem 1rem;
+}
+@media (min-width: 768px) {
+    .pf-grid-2 { grid-template-columns: 1fr 1fr; }
+    .pf-grid-2 .pf-span-2 { grid-column: 1 / -1; }
+}
+.pf-field { margin-bottom: 0.65rem; }
+.pf-field:last-child { margin-bottom: 0; }
+.pf-field > label {
+    display: block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 0.35rem;
+}
+.pf-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+.pf-pill-group input.pf-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+}
+.pf-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    user-select: none;
+    line-height: 1.3;
+}
+.pf-pill:hover {
+    border-color: #0d9488;
+    color: #0d9488;
+}
+.pf-check:checked + .pf-pill {
+    background: #0d9488;
+    border-color: #0d9488;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+}
+.pf-check:checked + .pf-pill.pf-pill--alert {
+    background: #dc2626;
+    border-color: #dc2626;
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+.pf-check:focus-visible + .pf-pill {
+    outline: 2px solid #0d9488;
+    outline-offset: 1px;
+}
+[data-theme="dark"] .pf-section {
+    background: #111c30;
+    border-color: #243044;
+}
+[data-theme="dark"] .pf-section__title {
+    color: #5eead4;
+}
+[data-theme="dark"] .pf-field > label {
+    color: #94a3b8;
+}
+[data-theme="dark"] .pf-pill {
+    background: #0f1b2e;
+    border-color: #2b3b53;
+    color: #cbd5e1;
+}
+[data-theme="dark"] .pf-pill:hover {
+    border-color: #2dd4bf;
+    color: #5eead4;
 }
 .secretary-booking-calendar {
     border: 1px solid #dbe7e4;

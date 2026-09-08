@@ -14,9 +14,14 @@ if (!$appointment_id) {
     $sql = "SELECT
                                 a.appointment_id,
                                 a.is_emergency,
+                                a.reason,
+                                a.notes,
+                                a.is_online_appointment,
                                 a.patient_id,
                                 p.first_name,
                                 p.last_name,
+                                p.email,
+                                p.phone_number,
                                 COALESCE(t.slot_date, a.appointment_date) AS appointment_date,
                                 CASE
                                     WHEN a.status = 'in_progress' THEN 'in_progress'
@@ -54,7 +59,7 @@ if (!$appointment_id) {
     }
 } else {
     // preload appointment when appointment_id provided
-    $stmt = $conn->prepare('SELECT a.*, p.first_name, p.last_name FROM appointments a JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?');
+    $stmt = $conn->prepare('SELECT a.*, p.first_name, p.last_name, p.email, p.phone_number FROM appointments a JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?');
     $stmt->bind_param('i', $appointment_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -62,7 +67,20 @@ if (!$appointment_id) {
     $stmt->close();
     if ($appt) {
         // populate a single queue-like item so UI can reuse the same dropdown/prefill logic
-        $queueItems[] = ['appointment_id' => $appt['appointment_id'], 'patient_id' => $appt['patient_id'], 'first_name' => $appt['first_name'], 'last_name' => $appt['last_name'], 'appointment_date' => $appt['appointment_date']];
+        $queueItems[] = [
+            'appointment_id' => $appt['appointment_id'],
+            'patient_id' => $appt['patient_id'],
+            'first_name' => $appt['first_name'],
+            'last_name' => $appt['last_name'],
+            'appointment_date' => $appt['appointment_date'],
+            'reason' => $appt['reason'] ?? '',
+            'notes' => $appt['notes'] ?? '',
+            'is_emergency' => $appt['is_emergency'] ?? 0,
+            'is_online_appointment' => $appt['is_online_appointment'] ?? 0,
+            'email' => $appt['email'] ?? '',
+            'phone_number' => $appt['phone_number'] ?? '',
+            'appointment_status' => $appt['status'] ?? '',
+        ];
     }
 }
 
@@ -94,8 +112,9 @@ if ($sstmt) {
                         $display = trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']);
                         if (!empty($qi['is_emergency'])) $display .= ' (EMERGENCY)';
                         if (!empty($qi['record_id'])) $display .= ' — Record';
+                        $qiStartTime = !empty($qi['start_time']) ? date('g:i A', strtotime($qi['start_time'])) : '';
                     ?>
-                    <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>" data-patient-id="<?php echo (int) $qi['patient_id']; ?>" data-patient-name="<?php echo htmlspecialchars(trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']), ENT_QUOTES); ?>">
+                    <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>" data-patient-id="<?php echo (int) $qi['patient_id']; ?>" data-patient-name="<?php echo htmlspecialchars(trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']), ENT_QUOTES); ?>" data-reason="<?php echo htmlspecialchars((string) ($qi['reason'] ?? ''), ENT_QUOTES); ?>" data-notes="<?php echo htmlspecialchars((string) ($qi['notes'] ?? ''), ENT_QUOTES); ?>" data-appt-date="<?php echo htmlspecialchars((string) ($qi['appointment_date'] ?? ''), ENT_QUOTES); ?>" data-appt-time="<?php echo htmlspecialchars($qiStartTime, ENT_QUOTES); ?>" data-email="<?php echo htmlspecialchars((string) ($qi['email'] ?? ''), ENT_QUOTES); ?>" data-phone="<?php echo htmlspecialchars((string) ($qi['phone_number'] ?? ''), ENT_QUOTES); ?>" data-online="<?php echo !empty($qi['is_online_appointment']) ? '1' : '0'; ?>" data-status="<?php echo htmlspecialchars((string) ($qi['appointment_status'] ?? ''), ENT_QUOTES); ?>">
                         <?php echo htmlspecialchars($display); ?>
                     </option>
                 <?php endforeach; ?>
@@ -123,6 +142,9 @@ if ($sstmt) {
             <i class="fas fa-camera"></i> Take Photo
         </button>
         <div class="ms-auto d-flex gap-2">
+            <button type="button" id="viewAppointmentBtn" class="btn btn-secondary btn-sm" disabled onclick="openEhrAppointmentDetailsModal()">
+                <i class="bi bi-calendar2-check"></i> Appointment
+            </button>
             <button type="button" id="viewPatientProfileBtn" class="btn btn-secondary btn-sm" disabled onclick="openDoctorPatientProfileModal()">
                 <i class="bi bi-person-badge"></i> Profile
             </button>
@@ -255,6 +277,66 @@ if ($sstmt) {
             </div>
             <div class="modal-body" id="doctorProfileModalBody">
                 <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Appointment Details Modal — ported from the secretary's "Booking Details" modal
+     (same dpp-header/chip/section layout), used identically across the doctor portal.
+     Since this is a confirmed appointment rather than a pending booking, the reference
+     chip shows the appointment number instead of a booking tracking code. -->
+<div class="modal fade" id="doctorAppointmentDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-calendar2-check"></i> Appointment Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="dpp-header">
+                    <div class="dpp-avatar" id="docApptDetailsAvatar">?</div>
+                    <div>
+                        <p class="dpp-name" id="docApptDetailsPatientName"></p>
+                        <div class="dpp-chips">
+                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="docApptDetailsRef"></span></span>
+                            <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="docApptDetailsDate"></span></span>
+                            <span class="dpp-chip" id="docApptDetailsTimeChip" style="display:none;"><i class="bi bi-clock"></i> <span id="docApptDetailsTime"></span></span>
+                            <span class="dpp-chip" id="docApptDetailsTypeChip"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="docApptDetailsStatusBox"></div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Visit Details</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Reason for Visit</div>
+                        <div class="dpp-field-value" id="docApptDetailsReason"></div>
+                    </div>
+                    <div class="dpp-field" id="docApptDetailsNotesWrap">
+                        <div class="dpp-field-label">Notes</div>
+                        <div class="dpp-field-value" id="docApptDetailsNotes"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section">
+                    <div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Email</div>
+                        <div class="dpp-field-value" id="docApptDetailsEmail"></div>
+                    </div>
+                    <div class="dpp-field">
+                        <div class="dpp-field-label">Phone</div>
+                        <div class="dpp-field-value" id="docApptDetailsPhone"></div>
+                    </div>
+                </div>
+
+                <div class="dpp-section" id="docApptDetailsServicesSection" style="display:none;">
+                    <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
+                    <div id="docApptDetailsServicesList"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -412,6 +494,8 @@ if ($sstmt) {
             }
             const profileBtn = document.getElementById('viewPatientProfileBtn');
             if (profileBtn) profileBtn.disabled = !apptId;
+            const apptBtn = document.getElementById('viewAppointmentBtn');
+            if (apptBtn) apptBtn.disabled = !apptId;
             if (apptId) {
                 prefillClinicalRecord(apptId).then(() => {
                     showOdontogram();
@@ -434,6 +518,8 @@ if ($sstmt) {
                 }
                 const profileBtn = document.getElementById('viewPatientProfileBtn');
                 if (profileBtn) profileBtn.disabled = false;
+                const apptBtn = document.getElementById('viewAppointmentBtn');
+                if (apptBtn) apptBtn.disabled = false;
                 prefillClinicalRecord(initialAppt).then(() => {
                     showOdontogram();
                     try { updateOdontogramToggle(); } catch (e) { }
@@ -577,6 +663,9 @@ if ($sstmt) {
 
         // Services management
         var ehrSelectedServices = [];
+        // Exposed so the (globally-scoped) Appointment Details modal can read the
+        // live list without duplicating state or re-fetching it.
+        window.getEhrSelectedServices = function() { return ehrSelectedServices; };
 
         function addEhrService() {
             var select = document.getElementById('ehrServiceSelect');
@@ -913,4 +1002,134 @@ function openDoctorPatientProfileModal() {
 
 // renderDoctorPatientProfile() now lives in assets/js/doctor-patient-profile.js
 // (shared with doctor's My Patients "Profile" popup and secretary's View Profiling).
+</script>
+
+<script>
+// Appointment Details modal — identical markup/renderer to the one in the doctor's
+// Appointments module ("docApptDetails*" ids, doctorAppointmentDetailsModal), so "view
+// appointment" looks and behaves the same everywhere in the doctor portal. Here it's
+// triggered from a single toolbar button rather than a per-row "View" button, so this
+// thin wrapper builds the same "appt" shape from the selected queue <option>'s dataset
+// (plus the live services list) before handing off to the shared renderer.
+function openEhrAppointmentDetailsModal() {
+    const sel = document.getElementById('queueSelector');
+    const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+    if (!opt || !opt.value) {
+        window.showToast('Select a patient first.', 'warning');
+        return;
+    }
+
+    const services = (typeof window.getEhrSelectedServices === 'function') ? window.getEhrSelectedServices() : [];
+
+    openDoctorAppointmentDetailsModal({
+        appointment_id: opt.value,
+        patient_name: opt.dataset.patientName || '',
+        email: opt.dataset.email || '',
+        phone_number: opt.dataset.phone || '',
+        reason: opt.dataset.reason || '',
+        notes: opt.dataset.notes || '',
+        cancellation_reason: '',
+        appointment_date: opt.dataset.apptDate || '',
+        appointment_time: opt.dataset.apptTime || '',
+        is_online_appointment: opt.dataset.online === '1',
+        status: opt.dataset.status || '',
+        services_rendered: services.map(function(s) { return s.name; }).filter(Boolean),
+    });
+}
+
+function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// Ported from the secretary's openBookingDetailsModal() — same chip/section layout
+// and status-box logic, adapted for confirmed appointments: the reference chip shows
+// the appointment number (appointments don't have a tracking code) and the "Booking
+// Request"/status vocabulary is swapped for appointment statuses.
+function openDoctorAppointmentDetailsModal(appt) {
+    const statusLabels = {
+        scheduled: 'Pending',
+        confirmed: 'Confirmed',
+        arrived: 'Arrived',
+        checked_in: 'Checked-In',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+        in_progress: 'In Progress',
+        no_show: 'No Show',
+        awaiting_secretary_records: 'Awaiting Records',
+        records_complete: 'Records Complete'
+    };
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
+    };
+
+    const patientName = appt.patient_name || 'Unknown';
+    document.getElementById('docApptDetailsPatientName').textContent = patientName;
+    const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+    document.getElementById('docApptDetailsAvatar').textContent = initials;
+
+    setText('docApptDetailsRef', appt.appointment_id ? ('#' + appt.appointment_id) : '');
+
+    let formattedDate = appt.appointment_date;
+    if (formattedDate) {
+        const d = new Date(String(formattedDate).replace(' ', 'T'));
+        if (!Number.isNaN(d.getTime())) {
+            formattedDate = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+    }
+    setText('docApptDetailsDate', formattedDate);
+
+    const timeChip = document.getElementById('docApptDetailsTimeChip');
+    const time = (appt.appointment_time || '').trim();
+    if (timeChip) timeChip.style.display = time ? '' : 'none';
+    setText('docApptDetailsTime', time);
+
+    const typeChip = document.getElementById('docApptDetailsTypeChip');
+    if (typeChip) {
+        typeChip.innerHTML = appt.is_online_appointment
+            ? '<i class="bi bi-laptop"></i> Online'
+            : '<i class="bi bi-building"></i> Walk-In';
+    }
+
+    setText('docApptDetailsReason', appt.reason);
+    const notesWrap = document.getElementById('docApptDetailsNotesWrap');
+    const notes = (appt.notes || '').trim();
+    if (notesWrap) notesWrap.classList.toggle('d-none', !notes);
+    setText('docApptDetailsNotes', notes);
+
+    setText('docApptDetailsEmail', appt.email);
+    setText('docApptDetailsPhone', appt.phone_number);
+
+    const statusBox = document.getElementById('docApptDetailsStatusBox');
+    const status = String(appt.status || '').toLowerCase();
+    const statusLabel = statusLabels[status] || (status || 'Pending');
+    if (status === 'cancelled') {
+        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Appointment Cancelled</div>'
+            + (appt.cancellation_reason ? '<span class="dpp-alert-tag">' + escapeHtml(appt.cancellation_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
+    } else if (status === 'no_show') {
+        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-exclamation-triangle-fill"></i> Marked as No-Show</div></div>';
+    } else if (['completed', 'records_complete'].includes(status)) {
+        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+    } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(status)) {
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+    } else {
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '.</div>';
+    }
+
+    const servicesSection = document.getElementById('docApptDetailsServicesSection');
+    const servicesList = document.getElementById('docApptDetailsServicesList');
+    const services = Array.isArray(appt.services_rendered) ? appt.services_rendered.filter(Boolean) : [];
+    if (services.length > 0) {
+        servicesList.innerHTML = services.map(function (s) {
+            return '<span class="dpp-chip">' + escapeHtml(s) + '</span>';
+        }).join(' ');
+        servicesSection.style.display = '';
+    } else {
+        servicesList.innerHTML = '';
+        servicesSection.style.display = 'none';
+    }
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('doctorAppointmentDetailsModal')).show();
+}
 </script>

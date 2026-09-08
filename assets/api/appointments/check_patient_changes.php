@@ -2,8 +2,8 @@
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
 
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../config/security.php';
+require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../config/security.php';
 
 security_start_session();
 

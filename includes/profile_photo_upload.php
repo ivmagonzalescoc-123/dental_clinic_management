@@ -18,7 +18,7 @@ $profile_avatar_markup = profile_render_avatar_markup($conn, '..', [
         </div>
         <div>
             <h6 class="mb-2">Profile Photo</h6>
-            <div id="profilePhotoForm" enctype="multipart/form-data">
+            <form id="profilePhotoForm" enctype="multipart/form-data" onsubmit="return false;">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <input
                     type="file"
@@ -31,7 +31,7 @@ $profile_avatar_markup = profile_render_avatar_markup($conn, '..', [
                 <button type="button" class="btn btn-primary btn-sm mt-2" id="profilePhotoSaveBtn" onclick="handleProfilePhotoSave()">
                     Save Photo
                 </button>
-            </div>
+            </form>
             <div id="profilePhotoAlert" class="small mt-2"></div>
         </div>
     </div>

@@ -12,14 +12,26 @@
             }
             radio.dataset.toggleRadioInit = '1';
 
-            radio.addEventListener('mousedown', function () {
-                this._wasCheckedBeforeClick = this.checked;
-            });
+            const captureBeforeState = function () {
+                radio.dataset.wasCheckedBeforeClick = radio.checked ? '1' : '';
+            };
+            radio.addEventListener('mousedown', captureBeforeState);
+
+            // Some layouts (e.g. pill-style selectors) visually hide the radio and let a
+            // <label for="..."> stand in for it — clicks land on the label, not the input,
+            // so mousedown never fires on the input itself. Listen on the label too so the
+            // toggle-to-clear behavior keeps working either way.
+            if (radio.id) {
+                const label = scope.querySelector('label[for="' + radio.id.replace(/"/g, '\\"') + '"]');
+                if (label) {
+                    label.addEventListener('mousedown', captureBeforeState);
+                }
+            }
 
             radio.addEventListener('click', function () {
-                if (this._wasCheckedBeforeClick) {
+                if (this.dataset.wasCheckedBeforeClick === '1') {
                     this.checked = false;
-                    this._wasCheckedBeforeClick = false;
+                    this.dataset.wasCheckedBeforeClick = '';
                 }
             });
         });

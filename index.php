@@ -462,6 +462,45 @@ $aboutPoints = [
             100% { transform: scaleX(1); }
         }
 
+        /* Booking tracker: card entrance + live-update affordances */
+        @keyframes trackCardIn {
+            0%   { opacity: 0; transform: translateY(10px) scale(0.985); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .track-card-in {
+            animation: trackCardIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        @keyframes trackStatusFlash {
+            0%   { box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
+            100% { box-shadow: 0 0 0 0 rgba(13,148,136,0); }
+        }
+        .track-status-flash {
+            animation: trackStatusFlash 0.9s ease-out;
+        }
+        .track-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            border-radius: 9999px;
+            padding: 0.3rem 0.75rem 0.3rem 0.6rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+        .track-status-badge .dot {
+            width: 6px; height: 6px; border-radius: 9999px; background: currentColor; flex-shrink: 0;
+        }
+        .track-spinner {
+            width: 14px; height: 14px; border-radius: 9999px;
+            border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+            animation: trackSpin 0.6s linear infinite;
+            display: inline-block;
+        }
+        @keyframes trackSpin {
+            to { transform: rotate(360deg); }
+        }
+
     </style>
 </head>
 <body class="font-sans antialiased text-foreground bg-background">
@@ -579,18 +618,21 @@ $aboutPoints = [
                             </span>
                             <input type="text" id="bookingTrackInput" placeholder="Enter appointment number (e.g. 1001)" class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
                         </div>
-                        <button type="button" id="bookingTrackBtn" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 whitespace-nowrap">
-                            Track
+                        <button type="button" id="bookingTrackBtn" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed">
+                            <span id="bookingTrackBtnLabel">Track</span>
                         </button>
                     </div>
 
                     <!-- Progress Steps (hidden by default) -->
                     <div id="bookingTrackResult" class="mt-6 hidden">
-                        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div class="flex items-center justify-between mb-1">
-                                <h3 class="text-sm font-bold text-slate-900">Appointment Tracking Code <span id="trackBookingId"></span></h3>
-                                <span id="trackBookingStatus" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"></span>
+                        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                <h3 class="text-xs font-semibold text-slate-500">
+                                    Tracking Code <span id="trackBookingId" class="ml-1 font-mono text-sm font-bold text-slate-900"></span>
+                                </h3>
+                                <span id="trackBookingStatus" class="track-status-badge"><span class="dot"></span><span id="trackBookingStatusText"></span></span>
                             </div>
+                            <p id="trackBookingDesc" class="mt-2.5 text-sm text-slate-600 leading-relaxed"></p>
                             <p id="trackBookingReason" class="mt-1 text-xs text-red-600 hidden"></p>
 
                             <!-- Steps -->
@@ -1421,19 +1463,41 @@ $aboutPoints = [
         (function() {
             const input = document.getElementById('bookingTrackInput');
             const btn = document.getElementById('bookingTrackBtn');
+            const btnLabel = document.getElementById('bookingTrackBtnLabel');
             const resultCard = document.getElementById('bookingTrackResult');
             const errorEl = document.getElementById('bookingTrackError');
 
             // Background auto-refresh state — once a booking is tracked, we keep polling
             // for it silently so newly-completed steps animate in on their own without the
-            // visitor having to press "Track" again.
+            // visitor having to press "Track" again. Interval is short (4s) so status
+            // changes made by the secretary/doctor feel near-real-time on the landing page.
             var pollTimer = null;
             var pollQuery = null; // { id, isNumeric }
             var prevSteps = { step1: false, step2: false, step3: false };
-            var POLL_INTERVAL_MS = 15000;
+            var POLL_INTERVAL_MS = 4000;
+            var activeController = null; // aborts a stale in-flight request when a newer one starts
+            var cardShown = false;
 
             function sleep(ms) {
                 return new Promise(function(resolve) { setTimeout(resolve, ms); });
+            }
+
+            function setBtnBusy(busy) {
+                if (!btn || !btnLabel) return;
+                btn.disabled = busy;
+                btnLabel.innerHTML = busy
+                    ? '<span class="track-spinner align-middle"></span> <span class="align-middle">Searching...</span>'
+                    : 'Track';
+            }
+
+            // Briefly rings the status badge when a silent background poll actually
+            // changes the status, so the update reads without needing a separate indicator.
+            function flashStatus() {
+                var statusEl = document.getElementById('trackBookingStatus');
+                if (!statusEl) return;
+                statusEl.classList.remove('track-status-flash');
+                void statusEl.offsetWidth;
+                statusEl.classList.add('track-status-flash');
             }
 
             function setStep(circleId, labelId, active, isError, animate) {
@@ -1534,24 +1598,36 @@ $aboutPoints = [
                 prevSteps = { step1: !!data.step1, step2: !!data.step2, step3: !!data.step3 };
             }
 
+            function showResultCard() {
+                if (cardShown) return;
+                resultCard.classList.remove('hidden');
+                resultCard.classList.remove('track-card-in');
+                void resultCard.offsetWidth;
+                resultCard.classList.add('track-card-in');
+                cardShown = true;
+            }
+
             function fetchTracking(id, isNumeric, opts) {
                 opts = opts || {};
                 var silent = !!opts.silent;
 
                 if (!silent) {
                     errorEl.classList.add('hidden');
-                    btn.textContent = 'Searching...';
-                    btn.disabled = true;
+                    setBtnBusy(true);
                 }
 
+                // Cancel any still-in-flight request (e.g. a fast double-click, or a manual
+                // search firing while a background poll is mid-request) so responses can't
+                // race and overwrite the UI out of order.
+                if (activeController) activeController.abort();
+                var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                activeController = controller;
+
                 var trackParam = isNumeric ? ('booking_id=' + encodeURIComponent(id)) : ('tracking_code=' + encodeURIComponent(id));
-                return fetch('assets/api/bookings/track_booking.php?' + trackParam)
+                return fetch('assets/api/bookings/track_booking.php?' + trackParam, { signal: controller ? controller.signal : undefined })
                     .then(function(r) { return r.json(); })
                     .then(async function(data) {
-                        if (!silent) {
-                            btn.textContent = 'Track';
-                            btn.disabled = false;
-                        }
+                        if (!silent) setBtnBusy(false);
                         if (!data.success) {
                             if (!silent) {
                                 errorEl.textContent = data.message || 'Booking not found.';
@@ -1563,14 +1639,24 @@ $aboutPoints = [
 
                         document.getElementById('trackBookingId').textContent = data.tracking_code || data.booking_id;
                         var statusEl = document.getElementById('trackBookingStatus');
+                        var statusTextEl = document.getElementById('trackBookingStatusText');
+                        var descEl = document.getElementById('trackBookingDesc');
                         var reasonEl = document.getElementById('trackBookingReason');
+                        var prevStatusText = statusTextEl.textContent;
                         reasonEl.textContent = '';
                         reasonEl.classList.add('hidden');
 
+                        // Badge = short state label, description = the fuller sentence.
+                        // Keeping the pill short avoids the stretched-oval look long text caused.
+                        function setBadge(label, desc, bg, fg) {
+                            statusTextEl.textContent = label;
+                            descEl.textContent = desc;
+                            statusEl.style.backgroundColor = bg;
+                            statusEl.style.color = fg;
+                        }
+
                         if (data.cancelled) {
-                            statusEl.textContent = 'Cancelled';
-                            statusEl.style.backgroundColor = '#fee2e2';
-                            statusEl.style.color = '#dc2626';
+                            setBadge('Cancelled', 'This booking was cancelled.', '#fee2e2', '#dc2626');
                             if (data.decline_reason) {
                                 reasonEl.textContent = 'Reason: ' + data.decline_reason;
                                 reasonEl.classList.remove('hidden');
@@ -1581,17 +1667,17 @@ $aboutPoints = [
                             setStep('step1Circle', 'step1Label', true, false, !silent);
                             setStep('step2Circle', 'step2Label', false, true, !silent);
                             setLineActive('line1', true, !silent);
-                            resultCard.classList.remove('hidden');
+                            showResultCard();
+                            if (silent && prevStatusText !== statusTextEl.textContent) flashStatus();
                             stopPolling(); // terminal state — nothing left to wait for
                             return;
                         }
 
                         if (data.no_show) {
-                            statusEl.textContent = 'No Show';
-                            statusEl.style.backgroundColor = '#fee2e2';
-                            statusEl.style.color = '#dc2626';
+                            setBadge('No Show', 'You were marked as a no-show for this appointment.', '#fee2e2', '#dc2626');
                             resetSteps();
-                            resultCard.classList.remove('hidden');
+                            showResultCard();
+                            if (silent && prevStatusText !== statusTextEl.textContent) flashStatus();
                             stopPolling(); // terminal state
                             return;
                         }
@@ -1599,19 +1685,14 @@ $aboutPoints = [
                         await animateStepsIn(data);
 
                         if (data.step3) {
-                            statusEl.textContent = 'Successfully visited the clinic';
-                            statusEl.style.backgroundColor = '#dcfce7';
-                            statusEl.style.color = '#166534';
+                            setBadge('Completed', 'Successfully visited the clinic.', '#dcfce7', '#166534');
                         } else if (data.step2) {
-                            statusEl.textContent = 'Booking confirmed, visit the clinic on the scheduled date';
-                            statusEl.style.backgroundColor = '#ccfbf1';
-                            statusEl.style.color = '#0d9488';
+                            setBadge('Confirmed', 'Booking confirmed — please visit the clinic on your scheduled date.', '#ccfbf1', '#0d9488');
                         } else {
-                            statusEl.textContent = 'Booking created, waiting for secretary approval';
-                            statusEl.style.backgroundColor = '#fef3c7';
-                            statusEl.style.color = '#92400e';
+                            setBadge('Pending Approval', 'Booking created, waiting for secretary approval.', '#fef3c7', '#92400e');
                         }
-                        resultCard.classList.remove('hidden');
+                        showResultCard();
+                        if (silent && prevStatusText !== statusTextEl.textContent) flashStatus();
 
                         if (data.step3) {
                             stopPolling(); // reached the final step — done
@@ -1620,10 +1701,10 @@ $aboutPoints = [
                             scheduleNextPoll();
                         }
                     })
-                    .catch(function() {
+                    .catch(function(err) {
+                        if (err && err.name === 'AbortError') return; // superseded by a newer request
                         if (!silent) {
-                            btn.textContent = 'Track';
-                            btn.disabled = false;
+                            setBtnBusy(false);
                             errorEl.textContent = 'Something went wrong. Please try again.';
                             errorEl.classList.remove('hidden');
                         }
@@ -1649,6 +1730,7 @@ $aboutPoints = [
                 resetSteps();
                 errorEl.classList.add('hidden');
                 resultCard.classList.add('hidden');
+                cardShown = false;
                 fetchTracking(id, isNumeric, { silent: false });
             }
 
@@ -1656,12 +1738,14 @@ $aboutPoints = [
             if (input) input.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doTrack(); } });
 
             // Stop background polling once the visitor navigates away from the page/tab
-            // to avoid burning requests for a result nobody is looking at.
+            // to avoid burning requests for a result nobody is looking at. Coming back
+            // triggers an immediate refresh (rather than waiting out the rest of the old
+            // interval) so the status is caught up right away.
             document.addEventListener('visibilitychange', function() {
                 if (document.hidden) {
                     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
                 } else if (pollQuery && !pollTimer) {
-                    scheduleNextPoll();
+                    fetchTracking(pollQuery.id, pollQuery.isNumeric, { silent: true });
                 }
             });
         })();
