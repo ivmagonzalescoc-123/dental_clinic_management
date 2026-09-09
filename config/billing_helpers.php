@@ -169,10 +169,15 @@ if (!function_exists('billing_ensure_tables')) {
             PRIMARY KEY (setting_key)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
-        // Seed consultation fee if not present
-        $checkFee = $conn->query("SELECT setting_key FROM clinic_settings WHERE setting_key = 'consultation_fee'");
-        if ($checkFee && $checkFee->num_rows === 0) {
-            $conn->query("INSERT INTO clinic_settings (setting_key, setting_value, description) VALUES ('consultation_fee', '500.00', 'Default consultation fee for consultation-only appointments')");
+        // Consultation used to be a hidden clinic_settings value that create_secretary_record.php
+        // auto-applied whenever nothing else was billed. It's now a normal selectable service
+        // (like any other item in the services list) so it has to be explicitly added during
+        // booking or the visit — seed it once as a real services row instead.
+        if (billing_table_exists($conn, 'services')) {
+            $checkSvc = $conn->query("SELECT service_id FROM services WHERE service_name = 'Consultation' LIMIT 1");
+            if ($checkSvc && $checkSvc->num_rows === 0) {
+                $conn->query("INSERT INTO services (service_name, initial_price, description, is_active) VALUES ('Consultation', 500.00, 'Standard consultation visit', 1)");
+            }
         }
     }
 }

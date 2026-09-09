@@ -120,7 +120,7 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
         if ($times) {
             $hours = date('g:i A', strtotime($times['start'])) . ' – ' . date('g:i A', strtotime($times['end']));
         } elseif ($status === 'available' && strtolower((string)$doc['work_type']) !== 'part_time') {
-            $hours = '8:00 AM – 5:00 PM';
+            $hours = '9:00 AM – 5:00 PM';
         }
         $dayDoctors[] = ['name' => 'Dr. ' . htmlspecialchars((string)$doc['last_name']), 'status' => $status, 'hours' => $hours, 'work_type' => (string)$doc['work_type']];
     }

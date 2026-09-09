@@ -842,7 +842,7 @@ $aboutPoints = [
                             </div>
                             <div>
                                 <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Clinic Hours</div>
-                                <div class="text-card-foreground text-sm" style="font-weight: 500;">Mon – Sat: 8:00 AM – 5:00 PM</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">Mon – Sat: 9:00 AM – 5:00 PM</div>
                             </div>
                         </div>
 
@@ -1101,14 +1101,14 @@ $aboutPoints = [
                     <div>
                         <label class="mb-1 block text-xs font-semibold text-slate-600">Time</label>
                         <div class="flex items-center gap-0">
-                            <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="8"
+                            <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="9"
                                 class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border border-slate-200 rounded-l-lg px-1 py-2.5 outline-none focus:border-primary transition-colors">
                             <span class="text-base font-bold text-slate-400 px-0.5">:</span>
                             <input type="text" id="book-minute" inputmode="numeric" maxlength="2" placeholder="00"
                                 class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border-y border-slate-200 px-1 py-2.5 outline-none focus:border-primary transition-colors">
                             <button type="button" id="btn-meridiem" class="px-3 py-2.5 text-xs font-bold bg-slate-50/80 text-primary border border-slate-200 rounded-r-lg cursor-pointer hover:bg-primary/5 transition-colors">AM</button>
                         </div>
-                        <input type="hidden" id="book-time" name="preferred_time" value="8:00 AM">
+                        <input type="hidden" id="book-time" name="preferred_time" value="9:00 AM">
                         <p class="auth-field-msg" id="book-time-error"></p>
                     </div>
                 </div>
@@ -2195,7 +2195,7 @@ $aboutPoints = [
             if (meridiem === 'AM' && h === 12) h24 = 0;
             else if (meridiem === 'PM' && h !== 12) h24 = h + 12;
             const mins = h24 * 60 + m;
-            if (mins < 480) { showFieldError('book-time', 'book-time-error', 'Earliest time is 8:00 AM.'); return false; }
+            if (mins < 540) { showFieldError('book-time', 'book-time-error', 'Earliest time is 9:00 AM.'); return false; }
             if (mins > 990) { showFieldError('book-time', 'book-time-error', 'Latest time is 4:30 PM (cut-off before 5 PM closing).'); return false; }
             clearFieldError('book-time', 'book-time-error');
             return true;
@@ -2311,7 +2311,7 @@ $aboutPoints = [
             const phone = document.getElementById('book-phone').value.trim();
             const dob = document.getElementById('book-dob').value;
             const prefDate = document.getElementById('book-pref-date').value;
-            const prefTime = document.getElementById('book-time')?.value || '8:00 AM';
+            const prefTime = document.getElementById('book-time')?.value || '9:00 AM';
             const checkedComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
             const reasonText = document.getElementById('book-reason').value.trim();
             const reason = checkedComplaints.length > 0
@@ -2471,7 +2471,7 @@ $aboutPoints = [
                 fd.append('phone_number', document.getElementById('book-phone-code').value + document.getElementById('book-phone').value.trim().replace(/\D/g, ''));
                 fd.append('date_of_birth', document.getElementById('book-dob').value);
                 fd.append('preferred_date', document.getElementById('book-pref-date').value);
-                fd.append('preferred_time', document.getElementById('book-time')?.value || '8:00 AM');
+                fd.append('preferred_time', document.getElementById('book-time')?.value || '9:00 AM');
                 const resendComplaints = Array.from(document.querySelectorAll('.complaint-check:checked')).map(function(cb) { return cb.value; });
                 const resendReasonText = document.getElementById('book-reason').value.trim();
                 const resendReason = resendComplaints.length > 0

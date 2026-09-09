@@ -130,7 +130,7 @@ if (!function_exists('wf_notify_doctor_leave_conflicts')) {
         $title = 'Doctor leave conflicts with existing appointments';
         $body = 'Dr. ' . $doctorName . ' was approved for leave (' . $leaveStart . ' to ' . $leaveEnd . '), which conflicts with '
             . $count . ' existing appointment' . ($count === 1 ? '' : 's') . '. Please reschedule or reassign affected patients.';
-        wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=appointments&view=all');
+        wf_notify_secretaries($conn, $title, $body, 'secretary.php?page=appointments&view=needs_reassignment');
 
         foreach ($conflicts as $c) {
             $appointmentId = (int)($c['appointment_id'] ?? 0);

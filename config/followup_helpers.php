@@ -152,6 +152,16 @@ if (!function_exists('workflow_create_recurring_followup_appointments')) {
                 ? date('Y-m-d', strtotime($firstVisitDateYmd . ' +' . $monthsOut . ' months'))
                 : $firstVisitDateYmd;
 
+            // The clinic is closed Sundays (see appt_doctor_has_schedule_on_date), which a
+            // fixed "+1 month" projection will land on every few visits by pure chance of the
+            // calendar. Bumping to the next day keeps the visit close to its intended monthly
+            // date instead of dropping that month's adjustment entirely — a missed visit is
+            // worse for a running treatment plan (and its clinical record trail) than a
+            // same-week shift.
+            if ((int)date('w', strtotime($visitDate)) === 0) {
+                $visitDate = date('Y-m-d', strtotime($visitDate . ' +1 day'));
+            }
+
             try {
                 $apptId = workflow_create_followup_appointment($conn, $sourceAppointmentId, $patientId, $doctorId, $visitDate);
                 if ($apptId !== null) {

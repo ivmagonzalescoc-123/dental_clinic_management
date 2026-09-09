@@ -11,7 +11,7 @@ $conn->query(
         availability_id INT(11) NOT NULL AUTO_INCREMENT,
         user_id INT(11) NOT NULL,
         weekday TINYINT(4) NOT NULL COMMENT '0=Sun..6=Sat',
-        start_time TIME NOT NULL DEFAULT '08:00:00',
+        start_time TIME NOT NULL DEFAULT '09:00:00',
         end_time TIME NOT NULL DEFAULT '17:00:00',
         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (availability_id),
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $del->close();
 
                     if ($workType === 'part_time') {
-                        $ins = $conn->prepare('INSERT INTO doctor_availability (user_id, weekday, start_time, end_time) VALUES (?, ?, "08:00:00", "17:00:00")');
+                        $ins = $conn->prepare('INSERT INTO doctor_availability (user_id, weekday, start_time, end_time) VALUES (?, ?, "09:00:00", "17:00:00")');
                         if (!$ins) {
                             throw new Exception('Failed to save worktype');
                         }

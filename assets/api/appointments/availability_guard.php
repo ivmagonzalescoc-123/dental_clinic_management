@@ -111,10 +111,13 @@ function appt_ensure_standard_timeslots_for_doctor_date(mysqli $conn, $doctorId,
         return;
     }
 
-    // 10-minute slots, lunch break 12:00-13:00, clinic hours 08:00-17:00.
+    // 10-minute slots, lunch break 12:00-13:00, clinic hours 09:00-17:00. The last bookable
+    // slot must START by 16:30 (4:30 PM cut-off) even though the clinic itself stays open
+    // until 17:00 (5:00 PM) — so the afternoon window extends 10 minutes past the cut-off to
+    // 16:40 to include that final 16:30-16:40 slot as a valid starting time.
     $windows = [
-        ['08:00:00', '12:00:00'],
-        ['13:00:00', '17:00:00'],
+        ['09:00:00', '12:00:00'],
+        ['13:00:00', '16:40:00'],
     ];
     $slotSeconds = APPT_BASE_SLOT_MINUTES * 60;
 
@@ -219,6 +222,9 @@ function appt_validate_reason($reason)
     $reason = is_string($reason) ? trim($reason) : '';
     if ($reason !== '' && mb_strlen($reason) > 500) {
         return [false, 'Reason must be 500 characters or less.'];
+    }
+    if ($reason === '') {
+        $reason = 'N/A';
     }
     return [true, $reason];
 }

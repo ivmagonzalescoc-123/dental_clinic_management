@@ -31,7 +31,7 @@ if ($page === 'manage_users' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_arra
     exit;
 }
 
-if ($page === 'services' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['add', 'edit', 'archive', 'restore', 'save_time', 'delete_time', 'update_consultation_fee'], true)) {
+if ($page === 'services' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['add', 'edit', 'archive', 'restore', 'save_time', 'delete_time'], true)) {
     include 'admin_modules/services.php';
     exit;
 }

@@ -43,7 +43,7 @@ try {
     $phone      = trim($_POST['phone_number'] ?? '');
     $dob        = trim($_POST['date_of_birth'] ?? '');
     $prefDate   = trim($_POST['preferred_date'] ?? '');
-    $prefTime   = trim($_POST['preferred_time'] ?? '8:00 AM');
+    $prefTime   = trim($_POST['preferred_time'] ?? '9:00 AM');
     $reason     = trim($_POST['reason'] ?? '');
     $termsAccepted = ($_POST['terms_accepted'] ?? '') === '1';
 
@@ -84,7 +84,7 @@ try {
             throw new Exception('Birthdate cannot be in the future.');
         }
     }
-    // Validate exact time (matches the frontend picker: H:MM AM/PM, 8:00 AM - 4:30 PM)
+    // Validate exact time (matches the frontend picker: H:MM AM/PM, 9:00 AM - 4:30 PM)
     if (!preg_match('/^(\d{1,2}):([0-5]\d)\s*(AM|PM)$/i', $prefTime, $timeMatch)) {
         throw new Exception('Please select a valid preferred time.');
     }
@@ -97,8 +97,8 @@ try {
     $prefHour24 = $prefHour % 12;
     if ($prefMeridiem === 'PM') $prefHour24 += 12;
     $prefMinutesOfDay = $prefHour24 * 60 + $prefMinute;
-    if ($prefMinutesOfDay < 480) {
-        throw new Exception('Earliest preferred time is 8:00 AM.');
+    if ($prefMinutesOfDay < 540) {
+        throw new Exception('Earliest preferred time is 9:00 AM.');
     }
     if ($prefMinutesOfDay > 990) {
         throw new Exception('Latest preferred time is 4:30 PM.');
@@ -185,7 +185,7 @@ try {
         'date_of_birth' => $dob !== '' ? $dob : null,
         'preferred_date'=> $prefDate,
         'preferred_time'=> $prefTime,
-        'reason'        => $reason !== '' ? $reason : null,
+        'reason'        => $reason !== '' ? $reason : 'N/A',
         'otp_hash'      => $otpHash,
         'otp_expires_at'=> $otpExpires,
         'created_at'    => date('Y-m-d H:i:s'),

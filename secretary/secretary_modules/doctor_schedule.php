@@ -89,7 +89,7 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
         $hasSched = secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
         $times = $availabilityByDoctor[$uid][$weekday] ?? null;
         $status = $isApproved ? 'leave' : ($isPending ? 'pending' : ($hasSched ? 'available' : 'none'));
-        $hours = $times ? date('g:i A', strtotime($times['start'])) . ' – ' . date('g:i A', strtotime($times['end'])) : ($status === 'available' && strtolower((string)$doc['work_type']) !== 'part_time' ? '8:00 AM – 5:00 PM' : '');
+        $hours = $times ? date('g:i A', strtotime($times['start'])) . ' – ' . date('g:i A', strtotime($times['end'])) : ($status === 'available' && strtolower((string)$doc['work_type']) !== 'part_time' ? '9:00 AM – 5:00 PM' : '');
         $dayDoctors[] = ['name' => 'Dr. ' . htmlspecialchars((string)$doc['last_name']), 'status' => $status, 'hours' => $hours, 'work_type' => (string)$doc['work_type']];
     }
     $dayData[$d] = $dayDoctors;

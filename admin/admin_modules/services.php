@@ -4,14 +4,14 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 if (!function_exists('services_redirect')) {
     function services_redirect($tab = 'services')
     {
-        $safeTab = in_array($tab, ['services', 'archived', 'timeslot', 'consultation'], true) ? $tab : 'services';
+        $safeTab = in_array($tab, ['services', 'archived', 'timeslot'], true) ? $tab : 'services';
         header('Location: admin.php?page=services&tab=' . rawurlencode($safeTab));
         exit;
     }
 }
 
 $tab = $_GET['tab'] ?? 'services';
-if (!in_array($tab, ['services', 'archived', 'timeslot', 'consultation'], true)) {
+if (!in_array($tab, ['services', 'archived', 'timeslot'], true)) {
     $tab = 'services';
 }
 
@@ -295,41 +295,6 @@ if ($action === 'delete_time' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     services_redirect('timeslot');
 }
 
-// Read current consultation fee
-$consultationFee = '500.00';
-$consultationDesc = '';
-$cfeeRes = $conn->query("SELECT setting_value, description FROM clinic_settings WHERE setting_key = 'consultation_fee' LIMIT 1");
-if ($cfeeRes && $cfeeRow = $cfeeRes->fetch_assoc()) {
-    $consultationFee = $cfeeRow['setting_value'] ?? '500.00';
-    $consultationDesc = $cfeeRow['description'] ?? '';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_consultation_fee') {
-    $fee = (float)($_POST['consultation_fee'] ?? 0);
-    $fee = max(0, round($fee, 2));
-    $desc = trim((string)($_POST['setting_description'] ?? ''));
-    if ($desc === '') $desc = 'Default consultation fee for consultation-only appointments';
-
-    $check = $conn->query("SELECT setting_key FROM clinic_settings WHERE setting_key = 'consultation_fee'");
-    if ($check && $check->num_rows > 0) {
-        $stmt = $conn->prepare('UPDATE clinic_settings SET setting_value = ?, description = ? WHERE setting_key = ?');
-        $feeStr = number_format($fee, 2, '.', '');
-        $settingKey = 'consultation_fee';
-        $stmt->bind_param('sss', $feeStr, $desc, $settingKey);
-    } else {
-        $stmt = $conn->prepare('INSERT INTO clinic_settings (setting_key, setting_value, description) VALUES (?, ?, ?)');
-        $feeStr = number_format($fee, 2, '.', '');
-        $key = 'consultation_fee';
-        $stmt->bind_param('sss', $key, $feeStr, $desc);
-    }
-    $stmt->execute();
-    $stmt->close();
-
-    $_SESSION['message'] = 'Consultation fee updated to ₱' . number_format($fee, 2) . '.';
-    $_SESSION['message_type'] = 'success';
-    services_redirect('consultation');
-}
-
 // Fetch archived services list
 $archivedServices = [];
 if ($hasIsActive) {
@@ -397,8 +362,6 @@ if ($tsRes) {
             <span class="module-page-header__sep">&gt;</span> Archived
         <?php elseif ($tab === 'timeslot'): ?>
             <span class="module-page-header__sep">&gt;</span> Service Time
-        <?php elseif ($tab === 'consultation'): ?>
-            <span class="module-page-header__sep">&gt;</span> Consultation Fee
         <?php endif; ?>
     </h4>
 </div>
@@ -438,9 +401,6 @@ if ($tsRes) {
             <?php endif; ?>
             <li class="nav-item">
                 <a class="nav-link <?php echo $tab === 'timeslot' ? 'active' : ''; ?>" href="admin.php?page=services&tab=timeslot">Service Time</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?php echo $tab === 'consultation' ? 'active' : ''; ?>" href="admin.php?page=services&tab=consultation">Consultation Fee</a>
             </li>
         </ul>
     </div>
@@ -687,26 +647,6 @@ if ($tsRes) {
         </div>
     </div>
 </div>
-
-<?php if ($tab === 'consultation'): ?>
-<h2 class="card-title mb-3">Consultation Fee Configuration</h2>
-<form method="POST" action="admin.php?page=services&tab=consultation">
-    <input type="hidden" name="action" value="update_consultation_fee">
-    <div class="row g-3 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label fw-semibold">Consultation Fee (₱)</label>
-            <input type="number" name="consultation_fee" class="form-control" step="0.01" min="0" value="<?php echo htmlspecialchars($consultationFee); ?>" required>
-        </div>
-        <div class="col-md-5">
-            <label class="form-label fw-semibold">Description</label>
-            <input type="text" name="setting_description" class="form-control readonly-muted-field" value="Default consultation fee for consultation-only appointments" readonly>
-        </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check-circle me-1"></i>Update</button>
-        </div>
-    </div>
-</form>
-<?php endif; ?>
 
 <script>
     function openEditServiceModal(service) {

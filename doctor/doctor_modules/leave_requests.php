@@ -368,7 +368,7 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
                                     $endLabel = date('g:i A', strtotime($availabilityTimes[$weekday]['end']));
                                     $marksHtml .= $startLabel . ' - ' . $endLabel;
                                 } else {
-                                    $marksHtml .= '8:00 AM - 5:00 PM';
+                                    $marksHtml .= '9:00 AM - 5:00 PM';
                                 }
                                 $marksHtml .= '</div>';
                             } else {

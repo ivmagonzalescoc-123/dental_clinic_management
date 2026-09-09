@@ -31,7 +31,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
 $action = $_GET['action'] ?? '';
-$view = $_GET['view'] ?? 'all'; // 'all' | 'today' | 'tomorrow' | 'one_hour' | 'missed' | 'no_show' | 'reschedule'
+$view = $_GET['view'] ?? 'all'; // 'all' | 'today' | 'tomorrow' | 'one_hour' | 'missed' | 'no_show' | 'reschedule' | 'needs_reassignment'
 $search = $_GET['search'] ?? '';
 
 function appointment_can_transition_secretary(string $from, string $to): bool
@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action !== '') {
 
 $today = date('Y-m-d');
 $tomorrow = date('Y-m-d', strtotime('+1 day'));
-if (!in_array($view, ['all', 'today', 'tomorrow', 'one_hour', 'missed', 'no_show', 'reschedule'], true)) {
+if (!in_array($view, ['all', 'today', 'tomorrow', 'one_hour', 'missed', 'no_show', 'reschedule', 'needs_reassignment'], true)) {
     $view = 'all';
 }
 
@@ -450,6 +450,7 @@ $tomorrowCount = 0;
 $oneHourCount = 0;
 $missedCount = 0;
 $noShowCount = 0;
+$needsReassignmentCount = 0;
 
 $countResult = $conn->query('SELECT COUNT(*) AS c FROM appointments');
 if ($countResult && ($r = $countResult->fetch_assoc())) {
@@ -503,6 +504,11 @@ if ($missedRes && ($r = $missedRes->fetch_assoc())) {
 $noShowRes = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE status = 'no_show'");
 if ($noShowRes && ($r = $noShowRes->fetch_assoc())) {
     $noShowCount = (int)($r['c'] ?? 0);
+}
+
+$needsReassignmentRes = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE needs_reassignment = 1 AND status NOT IN ('completed', 'cancelled', 'no_show')");
+if ($needsReassignmentRes && ($r = $needsReassignmentRes->fetch_assoc())) {
+    $needsReassignmentCount = (int)($r['c'] ?? 0);
 }
 
 // Fetch appointments - ALL APPOINTMENTS (no filtering)
@@ -563,6 +569,8 @@ if ($view === 'today') {
         ) ";
 } elseif ($view === 'no_show') {
     $appointments_sql .= " WHERE a.status = 'no_show' ";
+} elseif ($view === 'needs_reassignment') {
+    $appointments_sql .= " WHERE a.needs_reassignment = 1 AND a.status NOT IN ('completed', 'cancelled', 'no_show') ";
 }
 // Fetch doctors for the booking dropdown (role_id = 2)
 $doctors = [];
@@ -588,7 +596,7 @@ if ($pat_stmt) {
     $pat_stmt->close();
 }
 
-$appointments_sql .= in_array($view, ['today', 'tomorrow', 'one_hour', 'missed'], true)
+$appointments_sql .= in_array($view, ['today', 'tomorrow', 'one_hour', 'missed', 'needs_reassignment'], true)
     ? " ORDER BY a.appointment_date ASC, a.created_at DESC"
     : " ORDER BY a.created_at DESC";
 
@@ -631,6 +639,7 @@ $appointmentsTitleMap = [
     'missed' => 'Missed Appointments',
     'no_show' => 'No-Show Appointments',
     'reschedule' => 'Reschedule Requests',
+    'needs_reassignment' => 'Needs Reassignment (Doctor on Leave)',
 ];
 $appointmentsTitle = $appointmentsTitleMap[$view] ?? 'Appointments';
 
@@ -642,6 +651,7 @@ $appointmentsViewFilters = [
     'missed' => ['label' => 'Missed', 'count' => $missedCount],
     'no_show' => ['label' => 'No-Show', 'count' => $noShowCount],
     'reschedule' => ['label' => 'Reschedule Requests', 'count' => $pendingReqCount],
+    'needs_reassignment' => ['label' => 'Needs Reassignment', 'count' => $needsReassignmentCount],
 ];
 
 // Top-level section tabs
@@ -1090,7 +1100,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                     <tbody id="processServicesBody">
                                         <tr id="processNoServicesRow">
                                             <td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">
-                                                Consultation Only — No additional services
+                                                No services selected — add Consultation or another service if this visit should be billed
                                             </td>
                                         </tr>
                                     </tbody>
@@ -1863,7 +1873,7 @@ function renderProcessServicesTable() {
     tbody.innerHTML = '';
 
     if (processSelectedServices.length === 0) {
-        tbody.innerHTML = '<tr id="processNoServicesRow"><td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">Consultation Only — No additional services</td></tr>';
+        tbody.innerHTML = '<tr id="processNoServicesRow"><td colspan="4" class="text-center text-muted py-2" style="font-size:0.8rem;">No services selected — add Consultation or another service if this visit should be billed</td></tr>';
         tfoot.style.display = 'none';
         totalTimeEl.textContent = 'Estimated: 0 minutes';
         return;
@@ -2043,6 +2053,9 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         <?php echo htmlspecialchars($filterOpt['label']); ?>
                         <?php if ($filterKey === 'reschedule' && (int)$pendingReqCount > 0): ?>
                             <span class="nav-dot is-active" id="dotReschedule" data-count="<?php echo (int)$pendingReqCount; ?>"></span>
+                        <?php endif; ?>
+                        <?php if ($filterKey === 'needs_reassignment' && (int)$needsReassignmentCount > 0): ?>
+                            <span class="nav-dot is-active" id="dotNeedsReassignment" data-count="<?php echo (int)$needsReassignmentCount; ?>"></span>
                         <?php endif; ?>
                     </a>
                 </li>
@@ -3750,7 +3763,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         data.slots.forEach(slot => {
                             const opt = document.createElement('option');
                             opt.value = slot.timeslot_id;
-                            // Display the label which shows the time range (e.g., "8:00 AM – 11:00 AM")
+                            // Display the label which shows the time range (e.g., "9:00 AM – 11:00 AM")
                             opt.textContent = String(slot.label || 'Time Slot');
                             select.appendChild(opt);
                         });

@@ -365,19 +365,10 @@ try {
     // real installment amount).
     $installmentCoveredNoCharge = ($installmentFollowUp !== null && empty($lineItems));
 
-    // Auto-add consultation fee if no line items (and not an installment-covered follow-up)
-    if (empty($lineItems) && !$installmentCoveredNoCharge) {
-        $consultationFee = get_clinical_setting($conn, 'consultation_fee', 0);
-        if ($consultationFee > 0) {
-            $lineItems[] = [
-                'description' => 'Consultation Fee',
-                'amount' => $consultationFee,
-                'item_type' => 'fee',
-            ];
-            $subtotal = $consultationFee;
-        }
-    }
-
+    // Consultation is now a regular selectable service (see billing_ensure_tables' seed of a
+    // "Consultation" row) — it must be explicitly added during booking or by the doctor/secretary
+    // during the visit, never auto-applied here. A visit with genuinely nothing billed is simply
+    // a ₱0 total.
     $subtotal = round($subtotal, 2);
     if ($discountType === 'custom' && $discountNotes === '') {
         $discountNotes = 'Doctor-approved custom discount';
