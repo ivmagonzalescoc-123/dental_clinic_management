@@ -144,6 +144,10 @@ if (isset($record['record_id']) && $record['record_id']) {
 }
 $record['odontogram'] = $odontogram;
 
+if ($record && !empty($record['record_id'])) {
+    $record['clinical_findings'] = get_clinical_findings_by_record($conn, (int)$record['record_id']);
+}
+
 if ($record && isset($record['patient_id']) && $record['patient_id']) {
     // record_id IS NULL = the patient's one master background-profiling row (managed by
     // assets/api/patients/save_profiling.php). Per-record snapshot rows (record_id set)

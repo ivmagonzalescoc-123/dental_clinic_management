@@ -28,10 +28,11 @@
         return true;
     }
 
-    function renderDoctorPatientProfile(patient, profiling, fallbackName) {
+    // Age/gender/phone chip row shared by the inline .dpp-header (below) and by pages
+    // that show that identity strip in their own persistent header instead (e.g. the
+    // EHR session's Patient Details modal) — see computePatientHeaderInfo().
+    function computePatientHeaderInfo(patient, fallbackName) {
         patient = patient || {};
-        profiling = profiling || {};
-
         const fullName = [patient.first_name, patient.middle_name, patient.last_name].filter(Boolean).join(' ').trim() || fallbackName || 'Unknown Patient';
         const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('') || '?';
 
@@ -43,16 +44,34 @@
             }
         }
 
-        // --- Header ---
-        let html = '<div class="dpp-header">';
-        html += '<div class="dpp-avatar">' + esc(initials) + '</div>';
-        html += '<div>';
-        html += '<p class="dpp-name">' + esc(fullName) + '</p>';
-        html += '<div class="dpp-chips">';
-        html += '<span class="dpp-chip"><i class="bi bi-cake2"></i> Age ' + esc(ageText) + '</span>';
-        if (val(patient.gender)) html += '<span class="dpp-chip"><i class="bi bi-gender-ambiguous"></i> ' + esc(patient.gender) + '</span>';
-        if (val(patient.phone_number)) html += '<span class="dpp-chip"><i class="bi bi-telephone"></i> ' + esc(patient.phone_number) + '</span>';
-        html += '</div></div></div>';
+        const chips = ['<span class="dpp-chip"><i class="bi bi-cake2"></i> Age ' + esc(ageText) + '</span>'];
+        if (val(patient.gender)) chips.push('<span class="dpp-chip"><i class="bi bi-gender-ambiguous"></i> ' + esc(patient.gender) + '</span>');
+        if (val(patient.phone_number)) chips.push('<span class="dpp-chip"><i class="bi bi-telephone"></i> ' + esc(patient.phone_number) + '</span>');
+
+        return { fullName: fullName, initials: initials, ageText: ageText, chipsHtml: chips.join('') };
+    }
+
+    function renderDoctorPatientProfile(patient, profiling, fallbackName, options) {
+        patient = patient || {};
+        profiling = profiling || {};
+        options = options || {};
+        const showHeader = options.showHeader !== false;
+
+        const info = computePatientHeaderInfo(patient, fallbackName);
+        const fullName = info.fullName;
+
+        // --- Header --- (skippable via {showHeader:false} for callers that show this
+        // name/age/gender/phone strip in their own persistent header instead, so it
+        // isn't duplicated inside the profile content itself)
+        let html = '';
+        if (showHeader) {
+            html += '<div class="dpp-header">';
+            html += '<div class="dpp-avatar">' + esc(info.initials) + '</div>';
+            html += '<div>';
+            html += '<p class="dpp-name">' + esc(fullName) + '</p>';
+            html += '<div class="dpp-chips">' + info.chipsHtml + '</div>';
+            html += '</div></div>';
+        }
 
         // --- Medical alerts (the part a doctor needs to see first) ---
         const alerts = [];
@@ -133,4 +152,5 @@
     }
 
     global.renderDoctorPatientProfile = renderDoctorPatientProfile;
+    global.computePatientHeaderInfo = computePatientHeaderInfo;
 })(window);

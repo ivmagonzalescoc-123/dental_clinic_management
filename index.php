@@ -49,12 +49,6 @@ $services = [
         'duration' => '60 min',
     ],
     [
-        'title' => 'Dental Implants',
-        'desc' => 'Restore missing teeth with permanent, natural-looking implants that blend seamlessly with your existing smile.',
-        'icon' => 'shield',
-        'duration' => '2–3 sessions',
-    ],
-    [
         'title' => 'Orthodontics',
         'desc' => 'Straighten your teeth with modern braces or clear aligners. We create custom treatment plans for every patient.',
         'icon' => 'zap',
@@ -67,8 +61,8 @@ $services = [
         'duration' => '45 min',
     ],
     [
-        'title' => 'Porcelain Veneers',
-        'desc' => 'Transform your smile with ultra-thin porcelain veneers that correct chips, gaps, stains, and misshapen teeth.',
+        'title' => 'Veneers',
+        'desc' => 'Transform your smile with ultra-thin veneers that correct chips, gaps, stains, and misshapen teeth.',
         'icon' => 'award',
         'duration' => '2 sessions',
     ],

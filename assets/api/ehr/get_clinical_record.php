@@ -54,7 +54,25 @@ if (!$rec && $appointment_id > 0) {
 }
 
 if (!$rec) {
-    echo json_encode(['success'=>true,'record'=>null]);
+    // No clinical_records row yet (common for a brand-new appointment the doctor hasn't
+    // started charting for) — still surface whatever the secretary already selected for
+    // this appointment at booking/arrival time, so the doctor's session isn't empty.
+    $selectedSvcs = [];
+    if ($appointment_id > 0) {
+        $ssStmt = $conn->prepare('SELECT ss.service_id, s.service_name, s.initial_price FROM selected_services ss INNER JOIN services s ON s.service_id = ss.service_id WHERE ss.appointment_id = ?');
+        $ssStmt->bind_param('i', $appointment_id);
+        $ssStmt->execute();
+        $ssRes = $ssStmt->get_result();
+        while ($ssRow = $ssRes->fetch_assoc()) {
+            $selectedSvcs[] = [
+                'service_id' => (int)$ssRow['service_id'],
+                'service_name' => $ssRow['service_name'],
+                'initial_price' => (float)$ssRow['initial_price'],
+            ];
+        }
+        $ssStmt->close();
+    }
+    echo json_encode(['success'=>true,'record'=>null,'selected_services'=>$selectedSvcs]);
     exit;
 }
 

@@ -128,6 +128,18 @@ $csrf_token = security_generate_csrf_token();
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <div class="pf-section">
+                                    <div class="pf-section__title"><i class="bi bi-journal-check"></i> Visit Wrap-up</div>
+                                    <div class="pf-field">
+                                        <label>Doctor's Notes</label>
+                                        <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
+                                    </div>
+                                    <div class="pf-field">
+                                        <label>Clinical Summary</label>
+                                        <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="pf-section mb-0">
                                     <div class="pf-section__title"><i class="bi bi-chat-square-text"></i> Reason for Visit</div>
                                     <div class="pf-grid-2">
                                         <div class="pf-field">
@@ -138,18 +150,6 @@ $csrf_token = security_generate_csrf_token();
                                             <label>Case History</label>
                                             <textarea class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history" style="font-size:0.85rem;"></textarea>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div class="pf-section mb-0">
-                                    <div class="pf-section__title"><i class="bi bi-journal-check"></i> Visit Wrap-up</div>
-                                    <div class="pf-field">
-                                        <label>Doctor's Notes</label>
-                                        <div id="doctorNotesDisplay" class="border rounded p-2 bg-white" style="min-height: 60px; max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;"></div>
-                                    </div>
-                                    <div class="pf-field">
-                                        <label>Clinical Summary</label>
-                                        <textarea id="recordSummary" class="form-control form-control-sm" rows="2" placeholder="Treatment results, findings, recommendations..." style="font-size: 0.85rem;"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -182,7 +182,21 @@ $csrf_token = security_generate_csrf_token();
                     <!-- Clinical Assessment -->
                     <div class="tab-pane fade show active" id="tabClinical" role="tabpanel">
                         <div class="pf-section">
-                            <div class="pf-section__title"><i class="bi bi-clipboard2-pulse"></i> Clinical Assessment</div>
+                            <div class="pf-section__title"><i class="bi bi-diagram-3"></i> Occlusal Classification</div>
+                            <div class="pf-grid-3">
+                                <div class="pf-field"><label>Occlusion</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="occlusion" placeholder="e.g. Angle Class I" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. I Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_i_type" placeholder="Normal" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_division" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. II Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_type" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. III Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_division" style="font-size:0.82rem;"></div>
+                                <div class="pf-field"><label>Cl. III SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_subdivision" style="font-size:0.82rem;"></div>
+                                <div class="pf-field pf-span-2"><label>Operation if any</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="operation_if_any" style="font-size:0.82rem;"></div>
+                            </div>
+                        </div>
+
+                        <div class="pf-section">
+                            <div class="pf-section__title"><i class="bi bi-clipboard2-pulse"></i> Clinical Assessment <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span></div>
                             <div class="pf-grid-3">
                                 <div class="pf-field">
                                     <label>Gingiva Consistency</label>
@@ -225,21 +239,7 @@ $csrf_token = security_generate_csrf_token();
                         </div>
 
                         <div class="pf-section">
-                            <div class="pf-section__title"><i class="bi bi-diagram-3"></i> Occlusal Classification</div>
-                            <div class="pf-grid-3">
-                                <div class="pf-field"><label>Occlusion</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="occlusion" placeholder="e.g. Angle Class I" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. I Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_i_type" placeholder="Normal" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. II Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_division" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. II SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_subdivision" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. II Type</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_ii_type" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. III Division</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_division" style="font-size:0.82rem;"></div>
-                                <div class="pf-field"><label>Cl. III SubDivision</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="cl_iii_subdivision" style="font-size:0.82rem;"></div>
-                                <div class="pf-field pf-span-2"><label>Operation if any</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="operation_if_any" style="font-size:0.82rem;"></div>
-                            </div>
-                        </div>
-
-                        <div class="pf-section">
-                            <div class="pf-section__title"><i class="bi bi-heart-pulse"></i> Vitals &amp; Lab Findings</div>
+                            <div class="pf-section__title"><i class="bi bi-heart-pulse"></i> Vitals &amp; Lab Findings <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span></div>
                             <div class="pf-grid-3">
                                 <div class="pf-field"><label>Blood Sugar</label><input type="text" class="form-control form-control-sm visit-clinical-field" name="blood_sugar" placeholder="Value" style="font-size:0.82rem;"></div>
                                 <div class="pf-field">

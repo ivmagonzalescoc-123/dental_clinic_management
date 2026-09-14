@@ -200,6 +200,8 @@ try {
     }
 
     if ($clinicalRecordId > 0) {
+        save_clinical_findings($conn, $clinicalRecordId, $patientId, $visitClinicalData);
+
         if (!empty($odontogramData)) {
             $conn->query("DELETE FROM tooth_status WHERE record_id = $clinicalRecordId");
 

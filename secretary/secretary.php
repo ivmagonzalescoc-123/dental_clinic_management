@@ -266,6 +266,12 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="secretary.php?page=records" data-tooltip="Records" title="Records">
+                    <i class="bi bi-folder2-open"></i>
+                    <span>Records</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=billing" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-receipt"></i>
                     <span>Billing</span>
@@ -333,6 +339,9 @@ switch ($role_key) {
                                         break;
                                     case "ehr_queue":
                                         include "secretary_modules/ehr_queue.php";
+                                        break;
+                                    case "records":
+                                        include "secretary_modules/records.php";
                                         break;
                                     case "notifications":
                                         include "secretary_modules/notifications.php";

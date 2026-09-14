@@ -122,15 +122,7 @@ try {
             $tpStmt->close();
             $treatmentPlan = empty($tpItems) ? null : $tpItems;
 
-            $pfStmt = $conn->prepare('SELECT * FROM patient_profiling WHERE patient_id = ? ORDER BY profiling_id DESC LIMIT 1');
-            if ($pfStmt) {
-                $pfStmt->bind_param('i', $appointment['patient_id']);
-                $pfStmt->execute();
-                $pfRes = $pfStmt->get_result();
-                $pfRow = $pfRes ? $pfRes->fetch_assoc() : null;
-                $pfStmt->close();
-                if ($pfRow) $visitClinical = $pfRow;
-            }
+            $visitClinical = get_clinical_findings_by_record($conn, $recId);
         }
     }
 

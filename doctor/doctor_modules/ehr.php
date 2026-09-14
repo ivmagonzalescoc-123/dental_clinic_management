@@ -22,6 +22,7 @@ if (!$appointment_id) {
                                 p.last_name,
                                 p.email,
                                 p.phone_number,
+                                p.profile_image,
                                 COALESCE(t.slot_date, a.appointment_date) AS appointment_date,
                                 CASE
                                     WHEN a.status = 'in_progress' THEN 'in_progress'
@@ -59,7 +60,7 @@ if (!$appointment_id) {
     }
 } else {
     // preload appointment when appointment_id provided
-    $stmt = $conn->prepare('SELECT a.*, p.first_name, p.last_name, p.email, p.phone_number FROM appointments a JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?');
+    $stmt = $conn->prepare('SELECT a.*, p.first_name, p.last_name, p.email, p.phone_number, p.profile_image FROM appointments a JOIN patients p ON a.patient_id = p.patient_id WHERE a.appointment_id = ?');
     $stmt->bind_param('i', $appointment_id);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -79,6 +80,7 @@ if (!$appointment_id) {
             'is_online_appointment' => $appt['is_online_appointment'] ?? 0,
             'email' => $appt['email'] ?? '',
             'phone_number' => $appt['phone_number'] ?? '',
+            'profile_image' => $appt['profile_image'] ?? '',
             'appointment_status' => $appt['status'] ?? '',
         ];
     }
@@ -101,9 +103,11 @@ if ($sstmt) {
     <input type="hidden" name="schedule_id" id="schedule_id_hidden"
         value="<?php echo isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : ''; ?>">
 
-    <!-- Row 1: Patient Selector | Patient Info | Clinical Notes -->
-    <div class="row g-2 mb-3">
-        <div class="col-md-4">
+    <!-- Patient bar: queue selector + a compact patient card once someone is picked.
+         The card's avatar/name are a single "open full details" affordance (with a
+         explicit labeled button alongside so it's discoverable without a hover hint). -->
+    <div class="ehr-patient-bar mb-3">
+        <div class="ehr-patient-select">
             <label class="form-label fw-bold" style="font-size:0.8rem;">Select Patient</label>
             <select id="queueSelector" class="form-select form-select-sm" style="font-size:0.82rem;">
                 <option value="">-- Select patient --</option>
@@ -114,42 +118,47 @@ if ($sstmt) {
                         if (!empty($qi['record_id'])) $display .= ' — Record';
                         $qiStartTime = !empty($qi['start_time']) ? date('g:i A', strtotime($qi['start_time'])) : '';
                     ?>
-                    <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>" data-patient-id="<?php echo (int) $qi['patient_id']; ?>" data-patient-name="<?php echo htmlspecialchars(trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']), ENT_QUOTES); ?>" data-reason="<?php echo htmlspecialchars((string) ($qi['reason'] ?? ''), ENT_QUOTES); ?>" data-notes="<?php echo htmlspecialchars((string) ($qi['notes'] ?? ''), ENT_QUOTES); ?>" data-appt-date="<?php echo htmlspecialchars((string) ($qi['appointment_date'] ?? ''), ENT_QUOTES); ?>" data-appt-time="<?php echo htmlspecialchars($qiStartTime, ENT_QUOTES); ?>" data-email="<?php echo htmlspecialchars((string) ($qi['email'] ?? ''), ENT_QUOTES); ?>" data-phone="<?php echo htmlspecialchars((string) ($qi['phone_number'] ?? ''), ENT_QUOTES); ?>" data-online="<?php echo !empty($qi['is_online_appointment']) ? '1' : '0'; ?>" data-status="<?php echo htmlspecialchars((string) ($qi['appointment_status'] ?? ''), ENT_QUOTES); ?>">
+                    <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>" data-patient-id="<?php echo (int) $qi['patient_id']; ?>" data-patient-name="<?php echo htmlspecialchars(trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) ? $qi['middle_name'] . ' ' : '') . $qi['last_name']), ENT_QUOTES); ?>" data-reason="<?php echo htmlspecialchars((string) ($qi['reason'] ?? ''), ENT_QUOTES); ?>" data-notes="<?php echo htmlspecialchars((string) ($qi['notes'] ?? ''), ENT_QUOTES); ?>" data-appt-date="<?php echo htmlspecialchars((string) ($qi['appointment_date'] ?? ''), ENT_QUOTES); ?>" data-appt-time="<?php echo htmlspecialchars($qiStartTime, ENT_QUOTES); ?>" data-email="<?php echo htmlspecialchars((string) ($qi['email'] ?? ''), ENT_QUOTES); ?>" data-phone="<?php echo htmlspecialchars((string) ($qi['phone_number'] ?? ''), ENT_QUOTES); ?>" data-online="<?php echo !empty($qi['is_online_appointment']) ? '1' : '0'; ?>" data-status="<?php echo htmlspecialchars((string) ($qi['appointment_status'] ?? ''), ENT_QUOTES); ?>" data-profile-image="<?php echo htmlspecialchars((string) ($qi['profile_image'] ?? ''), ENT_QUOTES); ?>">
                         <?php echo htmlspecialchars($display); ?>
                     </option>
                 <?php endforeach; ?>
             </select>
         </div>
-        <div class="col-md-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem;">Selected Patient</label>
-            <div id="apptInfo" class="form-control form-control-sm bg-light" style="font-size:0.8rem;min-height:38px;display:flex;align-items:center;">
-                <span class="text-muted">No patient selected</span>
+
+        <div class="ehr-patient-card" id="ehrPatientCard" style="display:none;">
+            <button type="button" class="ehr-patient-avatar" id="ehrPatientAvatarBtn" title="View full patient details" onclick="openDoctorPatientDetailsModal()">
+                <img id="ehrPatientAvatarImg" alt="" style="display:none;">
+                <i class="bi bi-person-fill" id="ehrPatientAvatarIcon"></i>
+            </button>
+            <div class="ehr-patient-meta">
+                <div class="ehr-patient-name" id="ehrPatientName">—</div>
+                <div class="ehr-patient-chips" id="ehrPatientChips"></div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label fw-bold" style="font-size:0.8rem;">Clinical Notes</label>
-            <textarea id="doctor_notes" class="form-control form-control-sm" rows="1" placeholder="Notes..." style="font-size:0.82rem;resize:vertical;"></textarea>
+            <button type="button" class="btn btn-outline-secondary btn-sm ehr-patient-details-btn" onclick="openDoctorPatientDetailsModal()">
+                <i class="bi bi-person-lines-fill"></i> Patient Details
+            </button>
         </div>
     </div>
 
-    <!-- Row 2: Photos + Actions -->
-    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
-        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('finishPhotoUpload').click()">
-            <i class="fas fa-upload"></i> Upload
-        </button>
-        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#cameraModal">
-            <i class="fas fa-camera"></i> Take Photo
-        </button>
-        <div class="ms-auto d-flex gap-2">
-            <button type="button" id="viewAppointmentBtn" class="btn btn-secondary btn-sm" disabled onclick="openEhrAppointmentDetailsModal()">
-                <i class="bi bi-calendar2-check"></i> Appointment
+    <!-- Session toolbar: grouped by purpose (photos vs. charting/findings) instead of
+         one flat row of lookalike buttons. -->
+    <div class="ehr-toolbar mb-3">
+        <div class="ehr-toolbar-group">
+            <span class="ehr-toolbar-label">Photos</span>
+            <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('finishPhotoUpload').click()" title="Upload photo">
+                <i class="fas fa-upload"></i> Upload
             </button>
-            <button type="button" id="viewPatientProfileBtn" class="btn btn-secondary btn-sm" disabled onclick="openDoctorPatientProfileModal()">
-                <i class="bi bi-person-badge"></i> Profile
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#cameraModal" title="Take a photo">
+                <i class="fas fa-camera"></i> Camera
             </button>
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#chartingSection">
+        </div>
+        <div class="ehr-toolbar-group ms-auto">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#chartingSection">
                 <i class="bi bi-tooth"></i> Charting
+            </button>
+            <button type="button" id="viewClinicalFindingsBtn" class="btn btn-primary btn-sm" disabled onclick="openDoctorClinicalFindingsModal()">
+                <i class="bi bi-clipboard2-pulse"></i> Clinical Findings
             </button>
         </div>
     </div>
@@ -267,75 +276,84 @@ if ($sstmt) {
     </div>
 </div>
 
-<!-- Patient Profile Modal -->
-<div class="modal fade" id="doctorPatientProfileModal" tabindex="-1" aria-hidden="true">
+<!-- Clinical Findings Modal — the doctor inputs clinical findings here during their own
+     session (Occlusal Classification is what's actually used day-to-day, so it's shown
+     first; Clinical Assessment / Vitals & Lab are optional), pre-filled with whatever the
+     secretary already captured during Create Record if any, plus the doctor's own notes. -->
+<div class="modal fade" id="doctorClinicalFindingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header py-2">
-                <h5 class="modal-title" style="font-size:1rem;"><i class="bi bi-person-badge"></i> Patient Profiling</h5>
+                <h5 class="modal-title" style="font-size:1rem;"><i class="bi bi-clipboard2-pulse"></i> Clinical Findings</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="doctorProfileModalBody">
-                <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
+            <div class="modal-body">
+                <div id="doctorFindingsBody">
+                    <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
+                </div>
+                <div class="pf-section mb-0 mt-3">
+                    <div class="pf-section__title"><i class="bi bi-journal-medical"></i> Doctor's Notes</div>
+                    <textarea id="doctor_notes" class="form-control form-control-sm" rows="3" placeholder="Notes..." style="font-size:0.82rem;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" id="saveClinicalFindingsBtn" class="btn btn-primary btn-sm">
+                    <i class="bi bi-save"></i> Save Findings
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Appointment Details Modal — ported from the secretary's "Booking Details" modal
-     (same dpp-header/chip/section layout), used identically across the doctor portal.
-     Since this is a confirmed appointment rather than a pending booking, the reference
-     chip shows the appointment number instead of a booking tracking code. -->
-<div class="modal fade" id="doctorAppointmentDetailsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+<!-- Patient Details Modal — one place for everything about the currently selected
+     patient, opened from the patient card's avatar/"Patient Details" button. Tabs let
+     the doctor page through Profile, this Appointment, and past Records without
+     juggling several separate popups. -->
+<div class="modal fade" id="doctorPatientDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-calendar2-check"></i> Appointment Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header py-2">
+                <h5 class="modal-title" style="font-size:1rem;"><i class="bi bi-person-lines-fill"></i> Patient Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <div class="dpp-header">
-                    <div class="dpp-avatar" id="docApptDetailsAvatar">?</div>
-                    <div>
-                        <p class="dpp-name" id="docApptDetailsPatientName"></p>
-                        <div class="dpp-chips">
-                            <span class="dpp-chip"><i class="bi bi-hash"></i> <span id="docApptDetailsRef"></span></span>
-                            <span class="dpp-chip"><i class="bi bi-calendar-event"></i> <span id="docApptDetailsDate"></span></span>
-                            <span class="dpp-chip" id="docApptDetailsTimeChip" style="display:none;"><i class="bi bi-clock"></i> <span id="docApptDetailsTime"></span></span>
-                            <span class="dpp-chip" id="docApptDetailsTypeChip"></span>
+            <!-- Identity strip (photo + name + age/gender/phone) — shown once here for all
+                 three tabs instead of being repeated inside the Profile tab's content. -->
+            <div class="pd-header-bar" id="pdHeaderBar">
+                <div class="pd-header-avatar" id="pdHeaderAvatar">
+                    <img id="pdHeaderAvatarImg" alt="" style="display:none;">
+                    <i class="bi bi-person-fill" id="pdHeaderAvatarIcon"></i>
+                </div>
+                <div class="pd-header-meta">
+                    <div class="pd-header-name" id="pdHeaderName">—</div>
+                    <div class="dpp-chips" id="pdHeaderChips"></div>
+                </div>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="nav nav-tabs px-3 pt-2" id="pdTabsNav" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="pdTabProfileBtn" data-bs-toggle="tab" data-bs-target="#pdTabProfile" type="button" role="tab">Profile</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pdTabAppointmentBtn" data-bs-toggle="tab" data-bs-target="#pdTabAppointment" type="button" role="tab">Appointment</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pdTabRecordsBtn" data-bs-toggle="tab" data-bs-target="#pdTabRecords" type="button" role="tab">Records</button>
+                    </li>
+                </ul>
+                <div class="tab-content p-3">
+                    <div class="tab-pane fade show active" id="pdTabProfile" role="tabpanel">
+                        <div id="pdProfileBody">
+                            <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
                         </div>
                     </div>
-                </div>
-
-                <div id="docApptDetailsStatusBox"></div>
-
-                <div class="dpp-section">
-                    <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Visit Details</div>
-                    <div class="dpp-field">
-                        <div class="dpp-field-label">Reason for Visit</div>
-                        <div class="dpp-field-value" id="docApptDetailsReason"></div>
+                    <div class="tab-pane fade" id="pdTabAppointment" role="tabpanel">
+                        <div id="pdAppointmentBody"></div>
                     </div>
-                    <div class="dpp-field" id="docApptDetailsNotesWrap">
-                        <div class="dpp-field-label">Notes</div>
-                        <div class="dpp-field-value" id="docApptDetailsNotes"></div>
+                    <div class="tab-pane fade" id="pdTabRecords" role="tabpanel">
+                        <div class="small text-muted mb-2">Past visits for this patient — pick one to view its details.</div>
+                        <div class="d-flex flex-wrap gap-2 mb-3" id="pdRecordsVisitPicker"></div>
+                        <div id="pdRecordsBody"><span class="text-muted small">No visit selected.</span></div>
                     </div>
-                </div>
-
-                <div class="dpp-section">
-                    <div class="dpp-section-title"><i class="bi bi-person-lines-fill"></i> Contact Info</div>
-                    <div class="dpp-field">
-                        <div class="dpp-field-label">Email</div>
-                        <div class="dpp-field-value" id="docApptDetailsEmail"></div>
-                    </div>
-                    <div class="dpp-field">
-                        <div class="dpp-field-label">Phone</div>
-                        <div class="dpp-field-value" id="docApptDetailsPhone"></div>
-                    </div>
-                </div>
-
-                <div class="dpp-section" id="docApptDetailsServicesSection" style="display:none;">
-                    <div class="dpp-section-title"><i class="bi bi-clipboard2-check"></i> Services</div>
-                    <div id="docApptDetailsServicesList"></div>
                 </div>
             </div>
         </div>
@@ -355,6 +373,243 @@ if ($sstmt) {
 [data-theme="dark"] .ehr-services-total-row {
     background: #1c2c47;
     color: #e2e8f0;
+}
+
+/* Patient bar: queue selector + compact avatar/name/chips card, replacing the old
+   "Selected Patient: ..." read-only box with something that also opens Patient Details. */
+.ehr-patient-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.ehr-patient-select {
+    flex: 1 1 260px;
+    min-width: 220px;
+}
+.ehr-patient-card {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex: 2 1 380px;
+    min-width: 280px;
+    background: #f8fafc;
+    border: 1px solid #e6ebf1;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+}
+.ehr-patient-avatar {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid #0d9488;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0;
+    cursor: pointer;
+    transition: box-shadow .15s ease;
+}
+.ehr-patient-avatar:hover {
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+}
+.ehr-patient-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.ehr-patient-avatar i {
+    font-size: 1.3rem;
+    color: #94a3b8;
+}
+.ehr-patient-meta {
+    flex: 1;
+    min-width: 0;
+}
+.ehr-patient-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ehr-patient-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.2rem;
+}
+.ehr-patient-details-btn {
+    flex-shrink: 0;
+}
+[data-theme="dark"] .ehr-patient-card {
+    background: #111c30;
+    border-color: #243044;
+}
+[data-theme="dark"] .ehr-patient-name {
+    color: #e2e8f0;
+}
+[data-theme="dark"] .ehr-patient-avatar {
+    background: #1c2c47;
+}
+.dpp-chip.ehr-chip--alert {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+[data-theme="dark"] .dpp-chip.ehr-chip--alert {
+    background: rgba(220, 38, 38, 0.18);
+    color: #fca5a5;
+}
+
+/* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
+   for all three tabs instead of being repeated inside the Profile tab's content. */
+.pd-header-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid #e6ebf1;
+}
+.pd-header-avatar {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2px solid #0d9488;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.pd-header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.pd-header-avatar i {
+    font-size: 1.5rem;
+    color: #94a3b8;
+}
+.pd-header-name {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #0f172a;
+}
+[data-theme="dark"] .pd-header-bar {
+    border-color: #243044;
+}
+[data-theme="dark"] .pd-header-avatar {
+    background: #1c2c47;
+}
+[data-theme="dark"] .pd-header-name {
+    color: #e2e8f0;
+}
+
+/* Session toolbar: grouped buttons with a small caption per group instead of one flat
+   row of lookalike buttons. */
+.ehr-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+.ehr-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.ehr-toolbar-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-right: 0.15rem;
+}
+
+/* Clinical Findings & Patient Details modals (.pf-* classes) — same grouped-section/
+   pill-selector look the secretary's Create Record form uses, scoped to these modals. */
+#doctorClinicalFindingsModal .pf-section,
+#doctorPatientDetailsModal .pf-section {
+    background: #f8fafc;
+    border: 1px solid #e6ebf1;
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.75rem;
+}
+#doctorClinicalFindingsModal .pf-section__title,
+#doctorPatientDetailsModal .pf-section__title {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #0d9488;
+    margin-bottom: 0.65rem;
+}
+#doctorClinicalFindingsModal .pf-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+#doctorClinicalFindingsModal .pf-pill-group input.pf-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+}
+#doctorClinicalFindingsModal .pf-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    user-select: none;
+    line-height: 1.3;
+}
+#doctorClinicalFindingsModal .pf-pill:hover {
+    border-color: #0d9488;
+    color: #0d9488;
+}
+#doctorClinicalFindingsModal .pf-check:checked + .pf-pill {
+    background: #0d9488;
+    border-color: #0d9488;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+}
+#doctorClinicalFindingsModal .pf-check:focus-visible + .pf-pill {
+    outline: 2px solid #0d9488;
+    outline-offset: 1px;
+}
+[data-theme="dark"] #doctorClinicalFindingsModal .pf-section,
+[data-theme="dark"] #doctorPatientDetailsModal .pf-section {
+    background: #111c30;
+    border-color: #243044;
+}
+[data-theme="dark"] #doctorClinicalFindingsModal .pf-section__title,
+[data-theme="dark"] #doctorPatientDetailsModal .pf-section__title {
+    color: #5eead4;
+}
+[data-theme="dark"] #doctorClinicalFindingsModal .pf-pill {
+    background: #0f1b2e;
+    border-color: #2b3b53;
+    color: #cbd5e1;
+}
+[data-theme="dark"] #doctorClinicalFindingsModal .pf-pill:hover {
+    border-color: #2dd4bf;
+    color: #5eead4;
 }
 
 .odontogram-viewport {
@@ -425,8 +680,8 @@ if ($sstmt) {
             try {
                 const r = await fetch('../assets/api/ehr/get_clinical_record.php?appointment_id=' + encodeURIComponent(appointmentId));
                 const data = await r.json();
-                if (!data || !data.record) return;
-                const rec = data.record;
+                if (!data) return;
+                const rec = data.record || {};
 
                 if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
 
@@ -436,9 +691,15 @@ if ($sstmt) {
                 }
                 syncOdontogramFrame();
 
-                // Pre-load selected services from secretary/arrival
-                if (Array.isArray(rec.selected_services) && rec.selected_services.length > 0) {
-                    ehrSelectedServices = rec.selected_services.map(function(s) {
+                // Pre-load services selected by the secretary at booking/arrival — present
+                // either on the clinical record (rec.selected_services, once a record exists)
+                // or at the top level (data.selected_services, when the doctor hasn't started
+                // charting yet and no clinical_records row exists for this appointment).
+                const preSelectedServices = (Array.isArray(rec.selected_services) && rec.selected_services.length > 0)
+                    ? rec.selected_services
+                    : (Array.isArray(data.selected_services) ? data.selected_services : []);
+                if (preSelectedServices.length > 0) {
+                    ehrSelectedServices = preSelectedServices.map(function(s) {
                         return {
                             service_id: s.service_id,
                             name: s.service_name,
@@ -478,24 +739,54 @@ if ($sstmt) {
             return (val && val !== '{}' && val !== 'null') ? val : '';
         }
 
+        // Patient card: avatar + name + quick chips, shown once a patient is picked.
+        // Clicking the avatar (or the "Patient Details" button next to it) opens the
+        // combined Profile/Appointment/Records modal — see openDoctorPatientDetailsModal().
+        function updateEhrPatientCard(opt) {
+            const card = document.getElementById('ehrPatientCard');
+            if (!card) return;
+            if (!opt || !opt.value) {
+                card.style.display = 'none';
+                return;
+            }
+            card.style.display = 'flex';
+            document.getElementById('ehrPatientName').textContent = opt.dataset.patientName || 'Unknown patient';
+
+            const imgEl = document.getElementById('ehrPatientAvatarImg');
+            const iconEl = document.getElementById('ehrPatientAvatarIcon');
+            const imgPath = (opt.dataset.profileImage || '').trim();
+            if (imgPath && imgEl && iconEl) {
+                imgEl.src = /^https?:\/\//i.test(imgPath) ? imgPath : '../' + imgPath.replace(/^\/+/, '');
+                imgEl.style.display = 'block';
+                iconEl.style.display = 'none';
+            } else if (imgEl && iconEl) {
+                imgEl.style.display = 'none';
+                iconEl.style.display = '';
+            }
+
+            const chips = [];
+            if (opt.dataset.apptDate) {
+                let dateLabel = opt.dataset.apptDate;
+                const d = new Date(String(dateLabel).replace(' ', 'T'));
+                if (!Number.isNaN(d.getTime())) dateLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                chips.push('<span class="dpp-chip"><i class="bi bi-calendar-event"></i> ' + escapeHtmlEhr(dateLabel) + (opt.dataset.apptTime ? ' &middot; ' + escapeHtmlEhr(opt.dataset.apptTime) : '') + '</span>');
+            }
+            if (opt.dataset.emergency === '1') {
+                chips.push('<span class="dpp-chip ehr-chip--alert"><i class="bi bi-exclamation-triangle-fill"></i> Emergency</span>');
+            }
+            chips.push(opt.dataset.online === '1'
+                ? '<span class="dpp-chip"><i class="bi bi-laptop"></i> Online</span>'
+                : '<span class="dpp-chip"><i class="bi bi-building"></i> Walk-In</span>');
+            document.getElementById('ehrPatientChips').innerHTML = chips.join('');
+        }
+
         // Wire queue selector
         document.getElementById('queueSelector')?.addEventListener('change', function () {
             const apptId = parseInt(this.value || '0', 10);
             document.getElementById('appointment_id_hidden').value = apptId;
-            const apptInfoDiv = document.getElementById('apptInfo');
-            if (apptInfoDiv) {
-                if (apptId) {
-                    const label = this.options[this.selectedIndex]?.text || 'Selected';
-                    apptInfoDiv.innerHTML = `<strong>Selected Patient:</strong> ${label}`;
-                    apptInfoDiv.style.display = 'block';
-                } else {
-                    apptInfoDiv.style.display = 'none';
-                }
-            }
-            const profileBtn = document.getElementById('viewPatientProfileBtn');
-            if (profileBtn) profileBtn.disabled = !apptId;
-            const apptBtn = document.getElementById('viewAppointmentBtn');
-            if (apptBtn) apptBtn.disabled = !apptId;
+            updateEhrPatientCard(apptId ? this.options[this.selectedIndex] : null);
+            const findingsBtn = document.getElementById('viewClinicalFindingsBtn');
+            if (findingsBtn) findingsBtn.disabled = !apptId;
             if (apptId) {
                 prefillClinicalRecord(apptId).then(() => {
                     showOdontogram();
@@ -510,16 +801,9 @@ if ($sstmt) {
             if (initialAppt) {
                 const sel = document.getElementById('queueSelector');
                 if (sel) for (let i = 0; i < sel.options.length; i++) if (parseInt(sel.options[i].value || '0', 10) === initialAppt) { sel.selectedIndex = i; break; }
-                const apptInfoDiv = document.getElementById('apptInfo');
-                if (apptInfoDiv) {
-                    const chosenText = sel ? (sel.options[sel.selectedIndex]?.text || initialAppt) : initialAppt;
-                    apptInfoDiv.innerHTML = `<strong>Selected Patient:</strong> ${chosenText}`;
-                    apptInfoDiv.style.display = 'block';
-                }
-                const profileBtn = document.getElementById('viewPatientProfileBtn');
-                if (profileBtn) profileBtn.disabled = false;
-                const apptBtn = document.getElementById('viewAppointmentBtn');
-                if (apptBtn) apptBtn.disabled = false;
+                updateEhrPatientCard(sel ? sel.options[sel.selectedIndex] : null);
+                const findingsBtn = document.getElementById('viewClinicalFindingsBtn');
+                if (findingsBtn) findingsBtn.disabled = false;
                 prefillClinicalRecord(initialAppt).then(() => {
                     showOdontogram();
                     try { updateOdontogramToggle(); } catch (e) { }
@@ -966,52 +1250,18 @@ if ($sstmt) {
 </script>
 
 <script>
-// Patient Profile modal — reads the currently selected queue option (no separate
-// patient_id lookup needed; data-patient-id/data-patient-name were added to each option).
-function openDoctorPatientProfileModal() {
-    const sel = document.getElementById('queueSelector');
-    const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-    const patientId = opt ? parseInt(opt.dataset.patientId || '0', 10) : 0;
-    const patientName = opt ? (opt.dataset.patientName || '') : '';
+// Patient Details modal — one popup with Profile / Appointment / Records tabs for the
+// currently selected queue option, replacing the old separate "Profile" and
+// "Appointment" toolbar buttons. data-patient-id/data-patient-name/etc. were already
+// added to each <option>, so no extra lookup is needed to know who's selected.
+let pdCurrentPatientId = 0;
 
-    if (!patientId) {
-        window.showToast('Select a patient first.', 'warning');
-        return;
-    }
-
-    const modalEl = document.getElementById('doctorPatientProfileModal');
-    const bodyEl = document.getElementById('doctorProfileModalBody');
-    if (!modalEl || !bodyEl) return;
-    const modal = new bootstrap.Modal(modalEl);
-    bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
-    modal.show();
-
-    fetch('../assets/api/patients/get_profiling.php?patient_id=' + encodeURIComponent(patientId))
-        .then(r => r.json())
-        .then(data => {
-            if (!data || !data.success) {
-                bodyEl.innerHTML = '<div class="text-muted text-center py-4">Unable to load patient profile.</div>';
-                return;
-            }
-            bodyEl.innerHTML = renderDoctorPatientProfile(data.patient || {}, data.profiling || {}, patientName);
-        })
-        .catch(() => {
-            bodyEl.innerHTML = '<div class="text-muted text-center py-4">Error loading patient profile.</div>';
-        });
+function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
-// renderDoctorPatientProfile() now lives in assets/js/doctor-patient-profile.js
-// (shared with doctor's My Patients "Profile" popup and secretary's View Profiling).
-</script>
-
-<script>
-// Appointment Details modal — identical markup/renderer to the one in the doctor's
-// Appointments module ("docApptDetails*" ids, doctorAppointmentDetailsModal), so "view
-// appointment" looks and behaves the same everywhere in the doctor portal. Here it's
-// triggered from a single toolbar button rather than a per-row "View" button, so this
-// thin wrapper builds the same "appt" shape from the selected queue <option>'s dataset
-// (plus the live services list) before handing off to the shared renderer.
-function openEhrAppointmentDetailsModal() {
+function openDoctorPatientDetailsModal() {
     const sel = document.getElementById('queueSelector');
     const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
     if (!opt || !opt.value) {
@@ -1019,117 +1269,342 @@ function openEhrAppointmentDetailsModal() {
         return;
     }
 
+    pdCurrentPatientId = parseInt(opt.dataset.patientId || '0', 10);
+
+    // Show the photo + name right away from the already-on-page dataset (no flicker);
+    // age/gender get filled in once the profile fetch below resolves.
+    populatePdHeader({ profile_image: opt.dataset.profileImage, phone_number: opt.dataset.phone }, opt.dataset.patientName || '');
+    loadPdProfileTab(pdCurrentPatientId, opt.dataset.patientName || '');
+    renderPdAppointmentTab(opt);
+    resetPdRecordsTab();
+
+    const modalEl = document.getElementById('doctorPatientDetailsModal');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+    // Always land back on the Profile tab when reopened for a (possibly different) patient.
+    const profileTabBtn = document.getElementById('pdTabProfileBtn');
+    if (profileTabBtn && window.bootstrap?.Tab) bootstrap.Tab.getOrCreateInstance(profileTabBtn).show();
+}
+
+// Identity strip at the top of the modal (photo, name, Age/Gender/Phone chips) — shared
+// across all three tabs instead of being repeated inside the Profile tab's own content
+// (computePatientHeaderInfo() lives in assets/js/doctor-patient-profile.js).
+function populatePdHeader(patient, fallbackName) {
+    patient = patient || {};
+    const info = (typeof computePatientHeaderInfo === 'function')
+        ? computePatientHeaderInfo(patient, fallbackName)
+        : { fullName: fallbackName || 'Unknown Patient', chipsHtml: '' };
+
+    const nameEl = document.getElementById('pdHeaderName');
+    if (nameEl) nameEl.textContent = info.fullName;
+    const chipsEl = document.getElementById('pdHeaderChips');
+    if (chipsEl) chipsEl.innerHTML = info.chipsHtml;
+
+    const imgEl = document.getElementById('pdHeaderAvatarImg');
+    const iconEl = document.getElementById('pdHeaderAvatarIcon');
+    const imgPath = String(patient.profile_image || '').trim();
+    if (imgPath && imgEl && iconEl) {
+        imgEl.src = /^https?:\/\//i.test(imgPath) ? imgPath : '../' + imgPath.replace(/^\/+/, '');
+        imgEl.style.display = 'block';
+        iconEl.style.display = 'none';
+    } else if (imgEl && iconEl) {
+        imgEl.style.display = 'none';
+        iconEl.style.display = '';
+    }
+}
+
+function loadPdProfileTab(patientId, patientName) {
+    const bodyEl = document.getElementById('pdProfileBody');
+    if (!bodyEl) return;
+    if (!patientId) {
+        bodyEl.innerHTML = '<div class="text-muted text-center py-4">No patient selected.</div>';
+        return;
+    }
+    bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
+    fetch('../assets/api/patients/get_profiling.php?patient_id=' + encodeURIComponent(patientId))
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.success) {
+                bodyEl.innerHTML = '<div class="text-muted text-center py-4">Unable to load patient profile.</div>';
+                return;
+            }
+            populatePdHeader(data.patient || {}, patientName);
+            // renderDoctorPatientProfile() lives in assets/js/doctor-patient-profile.js
+            // (shared with doctor's My Patients "Profile" popup and secretary's View
+            // Profiling) — showHeader:false since the name/age/gender/phone strip is
+            // already shown once in this modal's own persistent header above the tabs.
+            bodyEl.innerHTML = renderDoctorPatientProfile(data.patient || {}, data.profiling || {}, patientName, { showHeader: false });
+        })
+        .catch(() => {
+            bodyEl.innerHTML = '<div class="text-muted text-center py-4">Error loading patient profile.</div>';
+        });
+}
+
+const PD_STATUS_LABELS = {
+    scheduled: 'Pending', confirmed: 'Confirmed', arrived: 'Arrived', checked_in: 'Checked-In',
+    completed: 'Completed', cancelled: 'Cancelled', in_progress: 'In Progress', no_show: 'No Show',
+    awaiting_secretary_records: 'Awaiting Records', records_complete: 'Records Complete',
+};
+
+// Built straight from the selected <option>'s dataset (plus the live "Services
+// Performed" list) — no extra fetch needed since that data is already on the page.
+function renderPdAppointmentTab(opt) {
+    const bodyEl = document.getElementById('pdAppointmentBody');
+    if (!bodyEl) return;
+
     const services = (typeof window.getEhrSelectedServices === 'function') ? window.getEhrSelectedServices() : [];
+    const status = String(opt.dataset.status || '').toLowerCase();
+    const statusLabel = PD_STATUS_LABELS[status] || (status || 'Pending');
 
-    openDoctorAppointmentDetailsModal({
-        appointment_id: opt.value,
-        patient_name: opt.dataset.patientName || '',
-        email: opt.dataset.email || '',
-        phone_number: opt.dataset.phone || '',
-        reason: opt.dataset.reason || '',
-        notes: opt.dataset.notes || '',
-        cancellation_reason: '',
-        appointment_date: opt.dataset.apptDate || '',
-        appointment_time: opt.dataset.apptTime || '',
-        is_online_appointment: opt.dataset.online === '1',
-        status: opt.dataset.status || '',
-        services_rendered: services.map(function(s) { return s.name; }).filter(Boolean),
-    });
+    let dateLabel = opt.dataset.apptDate || '';
+    const d = new Date(String(dateLabel).replace(' ', 'T'));
+    if (!Number.isNaN(d.getTime())) dateLabel = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+
+    const servicesHtml = services.length > 0
+        ? services.map(function(s) { return '<span class="dpp-chip">' + escapeHtml(s.name || '') + '</span>'; }).join(' ')
+        : '<span class="text-muted small">None recorded yet</span>';
+
+    bodyEl.innerHTML =
+        '<div class="dpp-field"><div class="dpp-field-label">Status</div><div class="dpp-field-value">' + escapeHtml(statusLabel) + '</div></div>' +
+        '<div class="dpp-field"><div class="dpp-field-label">Date &amp; Time</div><div class="dpp-field-value">' + escapeHtml(dateLabel) + (opt.dataset.apptTime ? ' &middot; ' + escapeHtml(opt.dataset.apptTime) : '') + '</div></div>' +
+        '<div class="dpp-field"><div class="dpp-field-label">Type</div><div class="dpp-field-value">' + (opt.dataset.online === '1' ? 'Online' : 'Walk-In') + '</div></div>' +
+        '<div class="dpp-field"><div class="dpp-field-label">Reason for Visit</div><div class="dpp-field-value">' + escapeHtml(opt.dataset.reason || '—') + '</div></div>' +
+        (opt.dataset.notes ? '<div class="dpp-field"><div class="dpp-field-label">Notes</div><div class="dpp-field-value">' + escapeHtml(opt.dataset.notes) + '</div></div>' : '') +
+        '<div class="dpp-field"><div class="dpp-field-label">Email</div><div class="dpp-field-value">' + escapeHtml(opt.dataset.email || '—') + '</div></div>' +
+        '<div class="dpp-field"><div class="dpp-field-label">Phone</div><div class="dpp-field-value">' + escapeHtml(opt.dataset.phone || '—') + '</div></div>' +
+        '<div class="dpp-field"><div class="dpp-field-label">Services (this visit)</div><div class="dpp-field-value">' + servicesHtml + '</div></div>';
 }
 
-function escapeHtml(text) {
-    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-    return String(text).replace(/[&<>"']/g, m => map[m]);
+// Records tab — lists this patient's past finalized visits as switchable buttons
+// (assets/api/ehr/get_patient_record_summaries.php), loading the first one's full
+// detail (assets/api/ehr/get_records_by_appointment_detailed.php?record_id=...) so the
+// doctor can page through history without leaving this modal.
+function resetPdRecordsTab() {
+    const picker = document.getElementById('pdRecordsVisitPicker');
+    const body = document.getElementById('pdRecordsBody');
+    if (!picker || !body) return;
+    if (!pdCurrentPatientId) {
+        picker.innerHTML = '';
+        body.innerHTML = '<span class="text-muted small">No patient selected.</span>';
+        return;
+    }
+    picker.innerHTML = '<span class="text-muted small">Loading visit history...</span>';
+    body.innerHTML = '';
+    fetch('../assets/api/ehr/get_patient_record_summaries.php?patient_id=' + encodeURIComponent(pdCurrentPatientId))
+        .then(r => r.json())
+        .then(data => {
+            const visits = (data && data.success && Array.isArray(data.visits)) ? data.visits : [];
+            if (visits.length === 0) {
+                picker.innerHTML = '<span class="text-muted small">No past records for this patient.</span>';
+                return;
+            }
+            picker.innerHTML = visits.map(function(v, idx) {
+                let label = v.submitted_at || v.appointment_date || ('Visit #' + v.record_id);
+                const vd = new Date(String(label).replace(' ', 'T'));
+                if (!Number.isNaN(vd.getTime())) label = vd.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                return '<button type="button" class="btn btn-sm ' + (idx === 0 ? 'btn-primary' : 'btn-outline-secondary') + ' pd-visit-btn" data-record-id="' + v.record_id + '">' + escapeHtml(label) + '</button>';
+            }).join('');
+            picker.querySelectorAll('.pd-visit-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    picker.querySelectorAll('.pd-visit-btn').forEach(function(b) {
+                        b.classList.remove('btn-primary');
+                        b.classList.add('btn-outline-secondary');
+                    });
+                    this.classList.remove('btn-outline-secondary');
+                    this.classList.add('btn-primary');
+                    loadPdRecordDetail(parseInt(this.dataset.recordId, 10));
+                });
+            });
+            loadPdRecordDetail(visits[0].record_id);
+        })
+        .catch(() => {
+            picker.innerHTML = '<span class="text-muted small">Error loading visit history.</span>';
+        });
 }
 
-// Ported from the secretary's openBookingDetailsModal() — same chip/section layout
-// and status-box logic, adapted for confirmed appointments: the reference chip shows
-// the appointment number (appointments don't have a tracking code) and the "Booking
-// Request"/status vocabulary is swapped for appointment statuses.
-function openDoctorAppointmentDetailsModal(appt) {
-    const statusLabels = {
-        scheduled: 'Pending',
-        confirmed: 'Confirmed',
-        arrived: 'Arrived',
-        checked_in: 'Checked-In',
-        completed: 'Completed',
-        cancelled: 'Cancelled',
-        in_progress: 'In Progress',
-        no_show: 'No Show',
-        awaiting_secretary_records: 'Awaiting Records',
-        records_complete: 'Records Complete'
-    };
-    const setText = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value && String(value).trim() !== '' ? value : '—';
-    };
+function loadPdRecordDetail(recordId) {
+    const body = document.getElementById('pdRecordsBody');
+    if (!body || !recordId) return;
+    body.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-hourglass-split"></i> Loading...</div>';
+    fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?record_id=' + encodeURIComponent(recordId))
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.success || !data.record) {
+                body.innerHTML = '<div class="text-muted small">Could not load this record.</div>';
+                return;
+            }
+            const rec = data.record;
+            const servicesAvailed = Array.isArray(data.services_availed) ? data.services_availed : [];
+            const servicesHtml = servicesAvailed.length > 0
+                ? servicesAvailed.map(function(s) { return '<span class="dpp-chip">' + escapeHtml(s.description || '') + '</span>'; }).join(' ')
+                : '<span class="text-muted small">None recorded</span>';
 
-    const patientName = appt.patient_name || 'Unknown';
-    document.getElementById('docApptDetailsPatientName').textContent = patientName;
-    const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
-    document.getElementById('docApptDetailsAvatar').textContent = initials;
+            body.innerHTML =
+                '<div class="pf-section mb-2">' +
+                    '<div class="pf-section__title"><i class="bi bi-info-circle"></i> Visit Summary</div>' +
+                    '<div class="dpp-field"><div class="dpp-field-label">Status</div><div class="dpp-field-value">' + escapeHtml(rec.status || '—') + '</div></div>' +
+                    '<div class="dpp-field"><div class="dpp-field-label">Doctor\'s Notes</div><div class="dpp-field-value">' + escapeHtml(rec.doctor_notes || '—') + '</div></div>' +
+                    '<div class="dpp-field"><div class="dpp-field-label">Services</div><div class="dpp-field-value">' + servicesHtml + '</div></div>' +
+                '</div>' +
+                '<div id="pdRecordFindings"></div>';
 
-    setText('docApptDetailsRef', appt.appointment_id ? ('#' + appt.appointment_id) : '');
-
-    let formattedDate = appt.appointment_date;
-    if (formattedDate) {
-        const d = new Date(String(formattedDate).replace(' ', 'T'));
-        if (!Number.isNaN(d.getTime())) {
-            formattedDate = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-        }
-    }
-    setText('docApptDetailsDate', formattedDate);
-
-    const timeChip = document.getElementById('docApptDetailsTimeChip');
-    const time = (appt.appointment_time || '').trim();
-    if (timeChip) timeChip.style.display = time ? '' : 'none';
-    setText('docApptDetailsTime', time);
-
-    const typeChip = document.getElementById('docApptDetailsTypeChip');
-    if (typeChip) {
-        typeChip.innerHTML = appt.is_online_appointment
-            ? '<i class="bi bi-laptop"></i> Online'
-            : '<i class="bi bi-building"></i> Walk-In';
-    }
-
-    setText('docApptDetailsReason', appt.reason);
-    const notesWrap = document.getElementById('docApptDetailsNotesWrap');
-    const notes = (appt.notes || '').trim();
-    if (notesWrap) notesWrap.classList.toggle('d-none', !notes);
-    setText('docApptDetailsNotes', notes);
-
-    setText('docApptDetailsEmail', appt.email);
-    setText('docApptDetailsPhone', appt.phone_number);
-
-    const statusBox = document.getElementById('docApptDetailsStatusBox');
-    const status = String(appt.status || '').toLowerCase();
-    const statusLabel = statusLabels[status] || (status || 'Pending');
-    if (status === 'cancelled') {
-        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-x-circle-fill"></i> Appointment Cancelled</div>'
-            + (appt.cancellation_reason ? '<span class="dpp-alert-tag">' + escapeHtml(appt.cancellation_reason) + '</span>' : '<span class="text-muted small">No reason provided.</span>') + '</div>';
-    } else if (status === 'no_show') {
-        statusBox.innerHTML = '<div class="dpp-alert-box"><div class="dpp-alert-title"><i class="bi bi-exclamation-triangle-fill"></i> Marked as No-Show</div></div>';
-    } else if (['completed', 'records_complete'].includes(status)) {
-        statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
-    } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(status)) {
-        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
-    } else {
-        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '.</div>';
-    }
-
-    const servicesSection = document.getElementById('docApptDetailsServicesSection');
-    const servicesList = document.getElementById('docApptDetailsServicesList');
-    const services = Array.isArray(appt.services_rendered) ? appt.services_rendered.filter(Boolean) : [];
-    if (services.length > 0) {
-        servicesList.innerHTML = services.map(function (s) {
-            return '<span class="dpp-chip">' + escapeHtml(s) + '</span>';
-        }).join(' ');
-        servicesSection.style.display = '';
-    } else {
-        servicesList.innerHTML = '';
-        servicesSection.style.display = 'none';
-    }
-
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('doctorAppointmentDetailsModal')).show();
+            const findingsEl = document.getElementById('pdRecordFindings');
+            if (findingsEl && typeof renderVisitClinicalFields === 'function') {
+                findingsEl.innerHTML = '<div class="pf-section mb-0"><div class="pf-section__title"><i class="bi bi-clipboard2-pulse"></i> Clinical Findings</div>' + renderVisitClinicalFields(rec.clinical_findings || {}) + '</div>';
+            }
+        })
+        .catch(() => {
+            body.innerHTML = '<div class="text-muted small">Error loading this record.</div>';
+        });
 }
 </script>
+
+<script>
+// Clinical Findings modal — the doctor inputs/edits clinical findings here during their own
+// session (pre-filled with whatever the secretary already captured in Create Record, if
+// any). Mirrors the Create Record tab's field order/widgets: Occlusal Classification first
+// (what's actually used), then the optional groups. Saved via
+// assets/api/ehr/save_clinical_findings.php, collected with the shared
+// collectVisitClinicalData() helper (assets/js/clinical-assessment-fields.js) using the
+// same 'visit-clinical-field' convention the secretary's Create Record form uses.
+const CLINICAL_FINDINGS_GROUPS = [
+    {
+        title: 'Occlusal Classification',
+        optional: false,
+        fields: [
+            ['occlusion', 'Occlusion', 'text'], ['cl_i_type', 'Cl. I Type', 'text'],
+            ['cl_ii_division', 'Cl. II Division', 'text'], ['cl_ii_subdivision', 'Cl. II SubDivision', 'text'],
+            ['cl_ii_type', 'Cl. II Type', 'text'], ['cl_iii_division', 'Cl. III Division', 'text'],
+            ['cl_iii_subdivision', 'Cl. III SubDivision', 'text'], ['operation_if_any', 'Operation if any', 'text'],
+        ],
+    },
+    {
+        title: 'Clinical Assessment',
+        optional: true,
+        fields: [
+            ['gingiva_consistency', 'Consistency Gingiva', 'radio', ['Firm', 'Hyper plastic', 'Smooth']],
+            ['oral_hygiene', 'Oral Hygiene', 'radio', ['Good', 'Fair', 'Bad']],
+            ['gingival_color', 'Gingival Color', 'radio', ['Pink', 'Bright red']],
+            ['lymph_nodes', 'Lymph Nodes', 'radio', ['Not palpable', 'Palpable']],
+            ['tongue', 'Tongue', 'radio', ['Normal', 'Coated']],
+        ],
+    },
+    {
+        title: 'Vitals & Lab Findings',
+        optional: true,
+        fields: [
+            ['blood_sugar', 'Blood Sugar', 'text'],
+            ['blood_sugar_normal', 'Blood Sugar: Normal', 'checkbox'],
+            ['blood_sugar_high_low', 'Blood Sugar: High/Low', 'checkbox'],
+            ['blood_pressure', 'B.P.', 'text'],
+            ['bleeding_time', 'Bleeding Time', 'text'], ['clotting_time', 'Clotting Time', 'text'],
+            ['fainting', 'Fainting', 'text'], ['allergy_notes', 'Allergy', 'text'],
+            ['blood_diseases', 'Blood Diseases', 'text'],
+        ],
+    },
+    {
+        title: 'Radiographic Interpretation',
+        optional: true,
+        fields: [['radiographic_interpretation', 'Radiographic Interpretation', 'textarea']],
+    },
+];
+
+function renderClinicalFindingsHtml(findings) {
+    findings = findings || {};
+    let idSeq = 0;
+    return CLINICAL_FINDINGS_GROUPS.map(function(group) {
+        const rows = group.fields.map(function(f) {
+            const key = f[0], label = f[1], kind = f[2] || 'text';
+            const value = findings[key];
+            let control;
+            let colClass = 'col-sm-6 col-lg-4';
+            if (kind === 'radio') {
+                const pills = (f[3] || []).map(function(opt) {
+                    const id = 'df_' + key + '_' + (idSeq++);
+                    const checked = String(value || '') === opt ? ' checked' : '';
+                    return '<input class="pf-check visit-clinical-field" type="radio" name="' + key + '" value="' + escapeHtml(opt) + '" id="' + id + '"' + checked + '><label class="pf-pill" for="' + id + '">' + escapeHtml(opt) + '</label>';
+                }).join('');
+                control = '<div class="pf-pill-group">' + pills + '</div>';
+            } else if (kind === 'checkbox') {
+                const id = 'df_' + key;
+                const checked = (value === true || value === '1' || value === 1) ? ' checked' : '';
+                control = '<div class="pf-pill-group"><input class="pf-check visit-clinical-field" type="checkbox" name="' + key + '" id="' + id + '"' + checked + '><label class="pf-pill" for="' + id + '">Yes</label></div>';
+            } else if (kind === 'textarea') {
+                colClass = 'col-12';
+                control = '<textarea class="form-control form-control-sm visit-clinical-field" name="' + key + '" rows="2" style="font-size:0.82rem;">' + escapeHtml(value || '') + '</textarea>';
+            } else {
+                control = '<input type="text" class="form-control form-control-sm visit-clinical-field" name="' + key + '" value="' + escapeHtml(value || '') + '" style="font-size:0.82rem;">';
+            }
+            return '<div class="' + colClass + ' mb-2"><div class="small text-muted mb-1">' + escapeHtml(label) + '</div>' + control + '</div>';
+        }).join('');
+        return '<div class="pf-section mb-2"><div class="pf-section__title">' + escapeHtml(group.title) +
+            (group.optional ? ' <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span>' : '') +
+            '</div><div class="row g-1">' + rows + '</div></div>';
+    }).join('');
+}
+
+let doctorFindingsApptId = 0;
+
+function openDoctorClinicalFindingsModal() {
+    const sel = document.getElementById('queueSelector');
+    const apptId = sel ? parseInt(sel.value || document.getElementById('appointment_id_hidden')?.value || '0', 10) : parseInt(document.getElementById('appointment_id_hidden')?.value || '0', 10);
+    if (!apptId) {
+        window.showToast('Select a patient first.', 'warning');
+        return;
+    }
+    doctorFindingsApptId = apptId;
+
+    const modalEl = document.getElementById('doctorClinicalFindingsModal');
+    const bodyEl = document.getElementById('doctorFindingsBody');
+    if (!modalEl || !bodyEl) return;
+    const modal = new bootstrap.Modal(modalEl);
+    bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
+    modal.show();
+
+    fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(apptId))
+        .then(r => r.json())
+        .then(data => {
+            const findings = (data && data.success && data.record) ? (data.record.clinical_findings || {}) : {};
+            bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
+            if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+        })
+        .catch(() => {
+            bodyEl.innerHTML = renderClinicalFindingsHtml({});
+            if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+        });
+}
+
+document.getElementById('saveClinicalFindingsBtn')?.addEventListener('click', async function() {
+    if (!doctorFindingsApptId) {
+        window.showToast('Select a patient first.', 'warning');
+        return;
+    }
+    const findings = typeof collectVisitClinicalData === 'function'
+        ? collectVisitClinicalData('#doctorFindingsBody')
+        : {};
+
+    const btnText = this.innerHTML;
+    this.disabled = true;
+    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    try {
+        const fd = new FormData();
+        fd.append('appointment_id', doctorFindingsApptId);
+        fd.append('clinical_findings', JSON.stringify(findings));
+        fd.append('csrf_token', doctorCsrfToken);
+        const res = await fetch('../assets/api/ehr/save_clinical_findings.php', { method: 'POST', body: fd });
+        const json = await res.json();
+        if (!json.success) {
+            window.showToast(json.message || 'Failed to save clinical findings', 'danger');
+        } else {
+            window.showToast('Clinical findings saved', 'success');
+        }
+    } catch (e) {
+        console.error(e);
+        window.showToast('Error saving clinical findings', 'danger');
+    } finally {
+        this.disabled = false;
+        this.innerHTML = btnText;
+    }
+});
+</script>
+

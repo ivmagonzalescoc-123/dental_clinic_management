@@ -139,6 +139,76 @@ if (!function_exists('ensure_clinical_records_profiling_column')) {
     }
 }
 
+if (!function_exists('ensure_clinical_findings_table')) {
+    function ensure_clinical_findings_table($conn): void
+    {
+        $conn->query("CREATE TABLE IF NOT EXISTS clinical_findings (
+            finding_id INT AUTO_INCREMENT PRIMARY KEY,
+            record_id INT NOT NULL,
+            patient_id INT NOT NULL,
+            findings_json TEXT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uniq_cf_record (record_id),
+            KEY idx_cf_patient (patient_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
+    }
+}
+
+if (!function_exists('save_clinical_findings')) {
+    function save_clinical_findings($conn, int $recordId, int $patientId, array $visitClinicalData): void
+    {
+        ensure_clinical_findings_table($conn);
+        $json = json_encode($visitClinicalData);
+        $stmt = $conn->prepare('INSERT INTO clinical_findings (record_id, patient_id, findings_json) VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE patient_id = VALUES(patient_id), findings_json = VALUES(findings_json)');
+        if ($stmt) {
+            $stmt->bind_param('iis', $recordId, $patientId, $json);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
+
+if (!function_exists('get_clinical_findings_by_record')) {
+    function get_clinical_findings_by_record($conn, int $recordId): array
+    {
+        ensure_clinical_findings_table($conn);
+        $stmt = $conn->prepare('SELECT findings_json FROM clinical_findings WHERE record_id = ? LIMIT 1');
+        if (!$stmt) return [];
+        $stmt->bind_param('i', $recordId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row || empty($row['findings_json'])) return [];
+        $decoded = json_decode($row['findings_json'], true);
+        return is_array($decoded) ? $decoded : [];
+    }
+}
+
+// Fields the doctor actually relies on day-to-day; shown first / promoted in the UI.
+// The rest (Clinical Assessment, Vitals & Lab Findings) are optional and render as N/A when blank.
+if (!function_exists('occlusal_classification_field_keys')) {
+    function occlusal_classification_field_keys(): array
+    {
+        return [
+            'occlusion', 'cl_i_type', 'cl_ii_division', 'cl_ii_subdivision', 'cl_ii_type',
+            'cl_iii_division', 'cl_iii_subdivision', 'operation_if_any',
+        ];
+    }
+}
+
+if (!function_exists('format_visit_clinical_value_for_display')) {
+    function format_visit_clinical_value_for_display($value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'Yes' : 'N/A';
+        }
+        $value = trim((string)($value ?? ''));
+        return $value === '' ? 'N/A' : $value;
+    }
+}
+
 if (!function_exists('format_profiling_value_display')) {
     function format_profiling_value_display($value): string
     {

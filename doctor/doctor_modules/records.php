@@ -6,17 +6,21 @@ check_session(['doctor']);
 
 $doctor_id = $_SESSION['user_id'] ?? 0;
 
+// One row per patient — a patient's clinical records used to list once per appointment,
+// forcing staff to hunt for the right visit. The History modal now shows every visit for
+// the patient (see openPatientHistory() below), so the list itself only needs to say who
+// has records and when they were last seen.
 $records = [];
     $sql = "
-    SELECT cr.record_id, cr.appointment_id, cr.status, cr.submitted_at, a.appointment_date, p.first_name, p.last_name,
-    -- latest follow-up schedule summary for the appointment
-    (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = cr.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_start,
-    (SELECT s.status FROM patient_schedules s WHERE s.appointment_id = cr.appointment_id ORDER BY COALESCE(s.scheduled_start, s.created_at) DESC LIMIT 1) AS schedule_status
+    SELECT p.patient_id, p.first_name, p.last_name,
+    COUNT(cr.record_id) AS record_count,
+    MAX(COALESCE(cr.submitted_at, a.appointment_date)) AS last_visit
     FROM clinical_records cr
     INNER JOIN appointments a ON cr.appointment_id = a.appointment_id
     INNER JOIN patients p ON cr.patient_id = p.patient_id
     WHERE cr.doctor_id = ? OR a.user_id = ?
-    ORDER BY COALESCE(cr.submitted_at, a.appointment_date) DESC
+    GROUP BY p.patient_id, p.first_name, p.last_name
+    ORDER BY last_visit DESC
 ";
 $stmt = $conn->prepare($sql);
 if ($stmt) {
@@ -43,37 +47,23 @@ if ($stmt) {
             <table class="table table-hover datatable" id="doctorRecordsTable" data-skip-datatable="1">
                 <thead>
                     <tr>
-                        <th>Record #</th>
-                        <th>Appointment</th>
                         <th>Patient</th>
-                        <th>Submitted At</th>
-                        <th>Status</th>
+                        <th>Total Visits</th>
+                        <th>Last Visit</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($records)): ?>
-                        <tr><td colspan="6" class="text-center text-muted">No clinical records found.</td></tr>
+                        <tr><td colspan="4" class="text-center text-muted">No clinical records found.</td></tr>
                     <?php else: ?>
                         <?php foreach ($records as $rec): ?>
                             <tr>
-                                <td>#<?php echo htmlspecialchars($rec['record_id']); ?></td>
-                                <td>
-                                    <?php echo htmlspecialchars($rec['appointment_date']); ?> (ID <?php echo (int)$rec['appointment_id']; ?>)
-                                    <?php if (!empty($rec['schedule_status'])): ?>
-                                        <div class="small mt-1">
-                                            <span class="badge bg-<?php echo ($rec['schedule_status'] === 'scheduled' ? 'primary' : ($rec['schedule_status'] === 'completed' ? 'success' : 'secondary')); ?>"><?php echo ($rec['schedule_status'] === 'scheduled') ? 'Follow-up' : htmlspecialchars(ucfirst($rec['schedule_status'])); ?></span>
-                                            <?php if (!empty($rec['schedule_start'])): ?>
-                                                <span class="text-muted"><?php echo htmlspecialchars($rec['schedule_start']); ?></span>
-                                            <?php endif; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </td>
                                 <td><?php echo htmlspecialchars($rec['first_name'] . ' ' . $rec['last_name']); ?></td>
-                                <td><?php echo htmlspecialchars($rec['submitted_at'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars(ucfirst($rec['status'] ?? 'in_progress')); ?></td>
+                                <td><?php echo (int)$rec['record_count']; ?></td>
+                                <td><?php echo htmlspecialchars($rec['last_visit'] ?? '-'); ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="openHistoryByRecord(<?php echo (int)$rec['record_id']; ?>)">History</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="openPatientHistory(<?php echo (int)$rec['patient_id']; ?>)">History</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -95,6 +85,10 @@ if ($stmt) {
                         </div>
                     </div>
                     <div class="modal-body" style="max-height:75vh; overflow:auto;">
+                        <!-- Visit sub-nav: one pill per appointment date, since a patient's full
+                             history now lives behind a single History button instead of one row
+                             per appointment. -->
+                        <div id="histVisitTabsRec" class="d-flex flex-wrap gap-1 mb-3"></div>
                         <div id="histContentRec">
                             <!-- Patient Header: Avatar + Name + Details -->
                             <div class="d-flex align-items-center gap-3 mb-3 p-2 hist-patient-header">
@@ -124,6 +118,13 @@ if ($stmt) {
                                 <div class="hist-section">
                                     <span class="hist-section-title">Clinical Notes</span>
                                     <pre id="histNotesRec" class="hist-pre"></pre>
+                                </div>
+                            </div>
+                            <!-- Row 3b: Clinical Findings (Occlusal Classification, etc.) -->
+                            <div class="mb-2">
+                                <div class="hist-section">
+                                    <span class="hist-section-title">Clinical Findings</span>
+                                    <div id="histFindingsRec" class="small"></div>
                                 </div>
                             </div>
                             <!-- Row 4: Services Availed -->
@@ -365,6 +366,30 @@ if ($stmt) {
             return div.innerHTML;
         }
 
+        // Occlusal Classification first (what's actually used day-to-day); the rest render
+        // N/A when blank, mirroring the Create Record tab order.
+        var CLINICAL_FINDINGS_LABELS_REC = [
+            ['occlusion', 'Occlusion'], ['cl_i_type', 'Cl. I Type'], ['cl_ii_division', 'Cl. II Division'],
+            ['cl_ii_subdivision', 'Cl. II SubDivision'], ['cl_ii_type', 'Cl. II Type'],
+            ['cl_iii_division', 'Cl. III Division'], ['cl_iii_subdivision', 'Cl. III SubDivision'],
+            ['operation_if_any', 'Operation if any'],
+            ['gingiva_consistency', 'Consistency Gingiva'], ['oral_hygiene', 'Oral Hygiene'],
+            ['gingival_color', 'Gingival Color'], ['lymph_nodes', 'Lymph Nodes'], ['tongue', 'Tongue'],
+            ['blood_sugar', 'Blood Sugar'], ['blood_pressure', 'B.P.'], ['bleeding_time', 'Bleeding Time'],
+            ['clotting_time', 'Clotting Time'], ['fainting', 'Fainting'], ['allergy_notes', 'Allergy'],
+            ['blood_diseases', 'Blood Diseases'], ['radiographic_interpretation', 'Radiographic Interpretation'],
+        ];
+
+        function renderClinicalFindingsCompactRec(findings) {
+            findings = findings || {};
+            var rows = CLINICAL_FINDINGS_LABELS_REC.map(function (f) {
+                var raw = findings[f[0]];
+                var val = (raw === true) ? 'Yes' : (raw === null || raw === undefined || String(raw).trim() === '') ? 'N/A' : escapeHtml(String(raw));
+                return '<div class="col-6 col-md-4 mb-1"><span class="text-muted">' + escapeHtml(f[1]) + ':</span> ' + val + '</div>';
+            }).join('');
+            return '<div class="row g-0">' + rows + '</div>';
+        }
+
         function populateServicesAvailedListRec(listEl, services) {
             if (!listEl) return;
             listEl.innerHTML = '';
@@ -467,10 +492,54 @@ if ($stmt) {
         syncHistoryOdontogramFullscreenUIRec();
 
         window.currentHistoryRecordDataRec = null;
+        window.currentHistoryPatientIdRec = null;
 
-        async function openHistoryByRecord(recordId) {
+        // Opens the modal for a patient and loads their most recent visit. Called from the
+        // one-row-per-patient table's History button.
+        async function openPatientHistory(patientId) {
+            currentHistoryPatientIdRec = patientId;
             const modalEl = document.getElementById('historyModalRecords');
             const bs = new bootstrap.Modal(modalEl);
+            const tabsEl = document.getElementById('histVisitTabsRec');
+            if (tabsEl) tabsEl.innerHTML = '<span class="text-muted small">Loading visits...</span>';
+            bs.show();
+
+            try {
+                const res = await fetch('../assets/api/ehr/get_patient_record_summaries.php?patient_id=' + encodeURIComponent(patientId));
+                const j = await res.json();
+                if (!j.success || !Array.isArray(j.visits) || !j.visits.length) {
+                    if (tabsEl) tabsEl.innerHTML = '';
+                    notifyDoctorRecord('No visit history found for this patient', 'warning');
+                    return;
+                }
+                renderHistoryVisitTabsRec(j.visits, j.visits[0].record_id);
+                await loadHistoryRecordContent(j.visits[0].record_id);
+            } catch (e) {
+                console.error(e);
+                if (tabsEl) tabsEl.innerHTML = '';
+                notifyDoctorRecord('Unable to load patient visit history', 'danger');
+            }
+        }
+
+        function renderHistoryVisitTabsRec(visits, activeRecordId) {
+            const tabsEl = document.getElementById('histVisitTabsRec');
+            if (!tabsEl) return;
+            tabsEl.innerHTML = '';
+            visits.forEach(function (v) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm ' + (v.record_id === activeRecordId ? 'btn-primary' : 'btn-outline-secondary');
+                const dateLabel = (v.appointment_date || v.submitted_at || '').toString().split(' ')[0] || ('Record #' + v.record_id);
+                btn.textContent = dateLabel + (v.doctor_name ? ' — Dr. ' + v.doctor_name : '');
+                btn.addEventListener('click', function () {
+                    renderHistoryVisitTabsRec(visits, v.record_id);
+                    loadHistoryRecordContent(v.record_id);
+                });
+                tabsEl.appendChild(btn);
+            });
+        }
+
+        async function loadHistoryRecordContent(recordId) {
             currentHistoryRecordDataRec = null;
             document.getElementById('histPatientNameRec').textContent = '';
             document.getElementById('histSubmittedAtRec').textContent = '';
@@ -506,6 +575,9 @@ if ($stmt) {
                     detailsRecEl.textContent = parts.join(' | ') || '';
                 }
                 document.getElementById('histNotesRec').textContent = rec.doctor_notes || '';
+
+                const findingsEl = document.getElementById('histFindingsRec');
+                if (findingsEl) findingsEl.innerHTML = renderClinicalFindingsCompactRec(rec.clinical_findings || {});
 
                 const backgroundEl = document.getElementById('histBackgroundRecContent');
                 if (backgroundEl && typeof renderBackgroundProfilingFields === 'function') {
@@ -563,8 +635,6 @@ if ($stmt) {
                 postHistoryOdontogramRec(rec.odontogram || null);
 
                 currentHistoryRecordDataRec = rec;
-
-                bs.show();
             } catch (e) { console.error(e); notifyDoctorRecord('Error loading record', 'danger'); }
         }
 

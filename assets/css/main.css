@@ -642,6 +642,12 @@ body {
     transition: width 0.3s ease;
 }
 
+/* justify-content stays flex-end in both states (no collapsed override) —
+   like the nav-link icons, a justify-content flip can't be transitioned, so
+   toggling it used to snap the button from the right edge to dead-center
+   the instant the class landed, before #sidebar had even started shrinking.
+   Keeping it constant means the button just rides the right edge in as the
+   rail narrows, instead of jumping ahead of it. */
 .sidebar-toggle-area {
     display: flex;
     align-items: center;
@@ -650,11 +656,6 @@ body {
     height: 60px;
     padding: 0 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-}
-
-body.toggle-sidebar .sidebar-toggle-area {
-    justify-content: center;
-    padding: 0;
 }
 
 /* Teal-on-teal doesn't read — use a translucent white surface instead of
@@ -673,7 +674,8 @@ body.toggle-sidebar .sidebar-toggle-area {
     color: #ffffff;
     font-size: 20px;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    transition: background-color 0.2s ease, color 0.2s ease, width 0.3s ease, height 0.3s ease;
 }
 
 .sidebar-toggle-area .toggle-sidebar-btn:hover {
@@ -681,26 +683,36 @@ body.toggle-sidebar .sidebar-toggle-area {
     color: #ffffff;
 }
 
+/* Both chevrons sit stacked in the same spot (absolute, centered on the
+   button) and crossfade + rotate between each other, instead of the old
+   display:none/inline-flex swap — display can't be transitioned, so that
+   version snapped instantly with no animation playing at all. */
 .toggle-icon-open,
 .toggle-icon-closed {
-    transition: transform 0.3s ease, opacity 0.2s ease;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(0deg);
+    transition: transform 0.3s ease, opacity 0.3s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    opacity: 1;
 }
 
 .toggle-icon-closed {
-    display: none;
-    transform: rotate(-180deg);
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-180deg);
 }
 
 body.toggle-sidebar .toggle-icon-open {
-    display: none;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(180deg);
 }
 
 body.toggle-sidebar .toggle-icon-closed {
-    display: inline-flex;
-    transform: rotate(0deg);
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg);
 }
 
 /* Sidebar toggle state for desktop */
@@ -735,11 +747,16 @@ body.toggle-sidebar .footer {
 /* Collapsed sidebar: icon-only nav links.
    Same connected shape as expanded mode — flush to the right edge, square
    right corners — so the active icon still reads as touching the teal
-   #main background instead of floating as an inset pill. */
+   #main background instead of floating as an inset pill.
+   justify-content is deliberately left alone here (still flex-start, same
+   as expanded) — flipping it to "center" can't be transitioned by the
+   browser, so it used to snap the icon sideways the instant the toggle
+   class landed, before the width/text animation even started. Padding-left
+   stays fixed too, only padding-right collapses (covered by the "padding"
+   entry in .nav-link's own transition list) — that keeps the icon pinned
+   at the same x-position throughout the glide instead of jumping. */
 body.toggle-sidebar .sidebar-nav .nav-link {
-    justify-content: center;
-    padding: 12px 0 !important;
-    margin: 2px 0 2px 6px !important;
+    padding-right: 0 !important;
     border-radius: 8px !important;
     border-top-right-radius: 0 !important;
     border-bottom-right-radius: 0 !important;
@@ -752,8 +769,11 @@ body.toggle-sidebar .sidebar-nav .nav-link i {
     flex-shrink: 0;
 }
 
+/* max-width (not display:none) so this is a real, transitionable property —
+   the label glides shut in step with #sidebar's own width transition and
+   glides back open the same way, instead of vanishing/appearing instantly. */
 body.toggle-sidebar .sidebar-nav .nav-link span {
-    display: none;
+    max-width: 0;
 }
 
 body.toggle-sidebar .sidebar-nav .nav-link .badge {
@@ -886,6 +906,7 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
     width: 20px;
     text-align: center;
     flex-shrink: 0;
+    transition: margin-right 0.3s ease;
 }
 
 .sidebar-nav .nav-link span {
@@ -893,7 +914,13 @@ body.toggle-sidebar .sidebar-nav .nav-link.active::after {
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
+    /* clip, not ellipsis — an ellipsis has to keep recalculating where the
+       "…" lands as max-width shrinks/grows every animation frame, which
+       reads as flicker. A hard clip lets the text stay fully rendered and
+       simply glide out of / into view as the box's own width animates. */
+    text-overflow: clip;
+    max-width: 180px;
+    transition: max-width 0.3s ease;
 }
 
 /* Red dot indicator for pending items */
@@ -2205,6 +2232,7 @@ table a:hover {
     }
     body.toggle-sidebar .sidebar-nav .nav-link span {
         display: inline !important;
+        max-width: none !important;
     }
     body.toggle-sidebar .sidebar-nav .nav-link .nav-dot:not(.is-active) {
         display: none !important;
