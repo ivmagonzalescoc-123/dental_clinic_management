@@ -816,7 +816,7 @@ $aboutPoints = [
                             </div>
                             <div>
                                 <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Phone</div>
-                                <div class="text-card-foreground text-sm" style="font-weight: 500;">+63 (88) 000 0000</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">0917 984 3031</div>
                             </div>
                         </div>
 
@@ -826,7 +826,7 @@ $aboutPoints = [
                             </div>
                             <div>
                                 <div class="text-muted-foreground text-xs uppercase tracking-wider mb-0.5" style="font-weight: 600;">Email</div>
-                                <div class="text-card-foreground text-sm" style="font-weight: 500;">info@azucenadental.ph</div>
+                                <div class="text-card-foreground text-sm" style="font-weight: 500;">azucenasdentalclinic@gmail.com</div>
                             </div>
                         </div>
 

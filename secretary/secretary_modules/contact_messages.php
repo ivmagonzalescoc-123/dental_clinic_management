@@ -6,9 +6,14 @@ contact_messages_ensure_table($conn);
     <div>
         <h5 class="card-title mb-1">Contact Us Inquiries</h5>
     </div>
-    <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshContactMessagesBtn">
-        Refresh
-    </button>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-sm btn-outline-primary" id="syncGmailMessagesBtn">
+            <i class="bi bi-envelope-arrow-down"></i> Check Gmail
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshContactMessagesBtn">
+            Refresh
+        </button>
+    </div>
 </div>
 
 <nav class="module-section-nav" aria-label="Inquiry status">
@@ -50,13 +55,14 @@ contact_messages_ensure_table($conn);
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Message</th>
+                <th>Source</th>
                 <th>Status</th>
                 <th class="text-end">Actions</th>
             </tr>
         </thead>
         <tbody id="contactMessagesBody">
             <tr id="contactMessagesLoadingRow">
-                <td colspan="7" class="text-center py-4 text-muted">Loading contact messages...</td>
+                <td colspan="8" class="text-center py-4 text-muted">Loading contact messages...</td>
             </tr>
         </tbody>
     </table>
@@ -109,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const newCountBadge = document.getElementById('contactNewCountBadge');
     const sidebarDot = document.getElementById('secretaryContactDot');
     const refreshBtn = document.getElementById('refreshContactMessagesBtn');
+    const syncGmailBtn = document.getElementById('syncGmailMessagesBtn');
     const tabs = document.querySelectorAll('#contactMessageTabs .nav-link');
     const modalEl = document.getElementById('contactMessageModal');
     const markReadBtn = document.getElementById('contactModalMarkReadBtn');
@@ -143,6 +150,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!value) return '-';
         const dt = new Date(value.replace(' ', 'T'));
         return Number.isNaN(dt.getTime()) ? value : dt.toLocaleString();
+    }
+
+    function sourceBadge(source) {
+        const key = String(source || 'form').toLowerCase();
+        if (key === 'gmail') {
+            return '<span class="badge bg-light text-dark border"><i class="bi bi-envelope"></i> Gmail</span>';
+        }
+        return '<span class="badge bg-light text-dark border"><i class="bi bi-globe"></i> Website</span>';
     }
 
     function statusBadge(status) {
@@ -240,6 +255,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<td><a href="mailto:' + escapeHtml(row.email) + '">' + escapeHtml(row.email) + '</a></td>' +
                 '<td>' + formatPhoneLink(row.phone_number) + '</td>' +
                 '<td class="text-truncate" style="max-width:280px;">' + escapeHtml(row.message) + '</td>' +
+                '<td>' + sourceBadge(row.source) + '</td>' +
                 '<td>' + statusBadge(row.status) + '</td>' +
                 '<td class="text-end">' +
                     '<button type="button" class="btn btn-sm btn-outline-primary me-1 contact-view-btn" data-id="' + row.message_id + '">View</button>' +
@@ -257,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadMessages() {
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Loading contact messages...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Loading contact messages...</td></tr>';
         }
 
         try {
@@ -274,7 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderMessages();
         } catch (err) {
             if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">' + escapeHtml(err.message || 'Failed to load messages.') + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">' + escapeHtml(err.message || 'Failed to load messages.') + '</td></tr>';
             }
         }
     }
@@ -365,6 +381,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', loadMessages);
+    }
+
+    if (syncGmailBtn) {
+        syncGmailBtn.addEventListener('click', async function() {
+            syncGmailBtn.disabled = true;
+            const originalHtml = syncGmailBtn.innerHTML;
+            syncGmailBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Checking...';
+            try {
+                const resp = await fetch('../assets/api/contact/sync_gmail_messages.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ csrf_token: secretaryCsrfToken })
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.message || 'Unable to check Gmail.');
+                }
+                showAlert(data.message || 'Gmail checked.', data.imported > 0 ? 'success' : 'info');
+                updateBadges(Number(data.new_count || 0));
+                await loadMessages();
+            } catch (err) {
+                showAlert(err.message || 'Unable to check Gmail.', 'danger');
+            } finally {
+                syncGmailBtn.disabled = false;
+                syncGmailBtn.innerHTML = originalHtml;
+            }
+        });
     }
 
     if (tbody) {

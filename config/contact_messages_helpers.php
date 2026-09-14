@@ -18,6 +18,9 @@ if (!function_exists('contact_messages_ensure_table')) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
 
         $conn->query("ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS phone_number VARCHAR(30) DEFAULT NULL AFTER email");
+        $conn->query("ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'form' AFTER status");
+        $conn->query("ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS gmail_uid VARCHAR(255) NULL AFTER source");
+        $conn->query("CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_gmail_uid ON contact_messages (gmail_uid)");
     }
 }
 

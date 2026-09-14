@@ -18,7 +18,7 @@ if ($method === 'GET') {
         $status = 'all';
     }
 
-    $sql = 'SELECT message_id, full_name, email, phone_number, message, status, read_by, read_at, created_at
+    $sql = 'SELECT message_id, full_name, email, phone_number, message, status, source, read_by, read_at, created_at
             FROM contact_messages';
     if ($status !== 'all') {
         $sql .= ' WHERE status = ?';
