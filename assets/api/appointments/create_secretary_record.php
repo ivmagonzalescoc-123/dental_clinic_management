@@ -545,6 +545,7 @@ try {
     $conn->commit();
 
     wf_notify_record_submitted($conn, $appointmentId, $patientId, $doctorId, $billingId, $grandTotal);
+    wf_notify_feedback_request($conn, $patientId);
 
     $response = [
         'success' => true,

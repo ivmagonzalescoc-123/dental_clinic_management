@@ -247,6 +247,23 @@ if (!function_exists('wf_notify_record_submitted')) {
     }
 }
 
+if (!function_exists('wf_notify_feedback_request')) {
+    function wf_notify_feedback_request($conn, $patientId)
+    {
+        include_once __DIR__ . '/feedback_helpers.php';
+        if (feedback_patient_has_reviewed($conn, $patientId)) {
+            return;
+        }
+        wf_notify_patient(
+            $conn,
+            $patientId,
+            'How was your visit?',
+            'Sharing a review of the clinic is optional and takes less than a minute.',
+            'patient.php?page=dashboard'
+        );
+    }
+}
+
 if (!function_exists('wf_lookup_patient_name')) {
     function wf_lookup_patient_name($conn, $patientId)
     {

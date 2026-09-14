@@ -1,5 +1,7 @@
 <?php
 require_once 'config/security.php';
+require_once 'config/database.php';
+require_once 'config/feedback_helpers.php';
 security_start_session();
 
 // Google Identity Services' OAuth popup flow polls window.closed on the popup it opens;
@@ -74,36 +76,20 @@ $services = [
     ],
 ];
 
-$testimonials = [
-    [
-        'name' => 'Maria Santos',
-        'role' => 'Patient since 2019',
-        'avatar' => 'MS',
-        'rating' => 5,
-        'text' => 'Dr. Azucena and her team are absolutely amazing. I used to be terrified of the dentist, but they made me feel so comfortable. My smile has never looked better!',
-    ],
-    [
-        'name' => 'Jose Reyes',
-        'role' => 'Patient since 2021',
-        'avatar' => 'JR',
-        'rating' => 5,
-        'text' => 'Got my braces here and the entire process was smooth. The team is professional, friendly, and always ready to answer my questions. Highly recommend!',
-    ],
-    [
-        'name' => 'Ana Villanueva',
-        'role' => 'Patient since 2020',
-        'avatar' => 'AV',
-        'rating' => 5,
-        'text' => 'The teeth whitening treatment gave me incredible results. The clinic is spotless, modern, and the staff is so warm and welcoming. 10/10 experience.',
-    ],
-    [
-        'name' => 'Carlos Mendoza',
-        'role' => 'Patient since 2022',
-        'avatar' => 'CM',
-        'rating' => 5,
-        'text' => 'I brought my whole family here and everyone loves it. The pediatric care for my kids is gentle and fun. We won\'t go anywhere else!',
-    ],
-];
+$testimonials = [];
+foreach (feedback_get_landing_testimonials($conn) as $row) {
+    $firstName = trim((string)$row['first_name']);
+    $lastInitial = trim((string)$row['last_name']) !== '' ? strtoupper(substr(trim((string)$row['last_name']), 0, 1)) . '.' : '';
+    $sinceYear = !empty($row['patient_since']) ? date('Y', strtotime((string)$row['patient_since'])) : '';
+
+    $testimonials[] = [
+        'name' => trim($firstName . ' ' . $lastInitial),
+        'role' => $sinceYear !== '' ? ('Patient since ' . $sinceYear) : 'Verified Patient',
+        'avatar' => strtoupper(substr($firstName, 0, 1) . substr($lastInitial, 0, 1)),
+        'rating' => (int)$row['rating'],
+        'text' => (string)($row['comment'] ?? ''),
+    ];
+}
 
 $aboutPoints = [
     'Gentle, patient-first approach',
@@ -519,7 +505,7 @@ $aboutPoints = [
                 <li><a href="#track-booking" class="nav-link transition-colors duration-200">Track Appointment</a></li>
                 <li><a href="#services" class="nav-link transition-colors duration-200">Services</a></li>
                 <li><a href="#about" class="nav-link transition-colors duration-200">About</a></li>
-                <li><a href="#testimonials" class="nav-link transition-colors duration-200">Testimonials</a></li>
+                <?php if (!empty($testimonials)): ?><li><a href="#testimonials" class="nav-link transition-colors duration-200">Testimonials</a></li><?php endif; ?>
                 <li><a href="#contact" class="nav-link transition-colors duration-200">Contact</a></li>
             </ul>
 
@@ -546,7 +532,7 @@ $aboutPoints = [
                 <li><a href="#track-booking" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Track Appointment</a></li>
                 <li><a href="#services" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Services</a></li>
                 <li><a href="#about" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">About</a></li>
-                <li><a href="#testimonials" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Testimonials</a></li>
+                <?php if (!empty($testimonials)): ?><li><a href="#testimonials" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Testimonials</a></li><?php endif; ?>
                 <li><a href="#contact" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Contact</a></li>
                 <li>
                     <button type="button" data-auth-open="login" class="mobile-nav-link block w-full text-center bg-primary text-white px-5 py-3 rounded-full text-sm" style="font-weight: 600;">Login</button>
@@ -755,6 +741,7 @@ $aboutPoints = [
         </section>
 
         <!-- Testimonials -->
+        <?php if (!empty($testimonials)): ?>
         <section id="testimonials" class="py-24 bg-background">
             <div class="mx-auto max-w-6xl px-6">
                 <div class="reveal mx-auto max-w-2xl text-center">
@@ -787,6 +774,7 @@ $aboutPoints = [
                 </div>
             </div>
         </section>
+        <?php endif; ?>
 
         <!-- Contact -->
         <section id="contact" class="py-24 bg-background">

@@ -2,8 +2,10 @@
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/dashboard_helpers.php';
 include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/feedback_helpers.php';
 
 billing_ensure_tables($conn);
+feedback_ensure_table($conn);
 
 $patientId = (int)($_SESSION['patient_id'] ?? 0);
 if ($patientId <= 0 && !empty($_SESSION['user_id'])) {
@@ -18,6 +20,10 @@ if ($patientId <= 0 && !empty($_SESSION['user_id'])) {
         $stmt->close();
     }
 }
+
+$showReviewPrompt = $patientId > 0
+    && feedback_patient_is_eligible($conn, $patientId)
+    && !feedback_patient_has_reviewed($conn, $patientId);
 
 $today = date('Y-m-d');
 $upcoming = 0;
@@ -125,6 +131,25 @@ if ($patientId > 0) {
         <span class="dental-chip">Care Overview</span>
     </div>
 
+    <?php if ($showReviewPrompt): ?>
+    <div class="card dental-surface-card patient-review-prompt-card mb-3" id="patientReviewPromptCard">
+        <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="patient-review-prompt-icon"><i class="bi bi-star"></i></div>
+                <div>
+                    <h5 class="mb-1">How has your care been so far?</h5>
+                    <div class="text-muted small">Optional — share a quick review of the clinic. It only takes a minute.</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#patientReviewModal">
+                    <i class="bi bi-star"></i> Leave a Review
+                </button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="row g-3">
         <div class="col-md-6 col-xl-3">
             <?php dashboard_render_kpi_card('Upcoming Appointments', (string)(int)$upcoming, 'bi-calendar-check'); ?>
@@ -223,3 +248,157 @@ if ($patientId > 0) {
 </div>
 
 <?php dashboard_render_appt_chart_script('patientAppt7Chart', $chartLabels, $seriesValues, '#0d9488', 'area'); ?>
+
+<?php if ($showReviewPrompt): ?>
+<style>
+.patient-review-prompt-card {
+    border-left: 4px solid #0d9488;
+}
+.patient-review-prompt-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #ccfbf1;
+    color: #0d9488;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+.patient-review-stars {
+    font-size: 1.8rem;
+    display: inline-flex;
+    gap: 6px;
+    cursor: pointer;
+}
+.patient-review-star {
+    color: #cbd5e1;
+    transition: color 0.15s ease;
+}
+.patient-review-star.active {
+    color: #f59e0b;
+}
+[data-theme="dark"] .patient-review-star {
+    color: #475569;
+}
+</style>
+
+<div class="modal fade" id="patientReviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-star"></i> Review the Clinic</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Optional — this is a one-time review of your overall experience with us. Our team may feature it on our website if selected.</p>
+
+                <div class="mb-3 text-center">
+                    <label class="form-label d-block">Your Rating</label>
+                    <div class="patient-review-stars" id="patientReviewStars">
+                        <i class="bi bi-star patient-review-star" data-value="1"></i>
+                        <i class="bi bi-star patient-review-star" data-value="2"></i>
+                        <i class="bi bi-star patient-review-star" data-value="3"></i>
+                        <i class="bi bi-star patient-review-star" data-value="4"></i>
+                        <i class="bi bi-star patient-review-star" data-value="5"></i>
+                    </div>
+                    <input type="hidden" id="patientReviewRating" value="0">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label">Comments (optional)</label>
+                    <textarea id="patientReviewComment" class="form-control" rows="3" maxlength="1000" placeholder="Tell us about your experience..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Not Now</button>
+                <button type="button" class="btn btn-primary" id="submitPatientReviewBtn">Submit Review</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dashboardCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+    const promptCard = document.getElementById('patientReviewPromptCard');
+    const reviewModalEl = document.getElementById('patientReviewModal');
+    const ratingEl = document.getElementById('patientReviewRating');
+    const commentEl = document.getElementById('patientReviewComment');
+    const starsWrap = document.getElementById('patientReviewStars');
+    const stars = starsWrap ? Array.from(starsWrap.querySelectorAll('.patient-review-star')) : [];
+    const submitBtn = document.getElementById('submitPatientReviewBtn');
+    let reviewModal = null;
+
+    if (typeof bootstrap !== 'undefined' && reviewModalEl) {
+        reviewModal = bootstrap.Modal.getOrCreateInstance(reviewModalEl);
+    }
+
+    function setRating(value) {
+        if (ratingEl) ratingEl.value = value;
+        stars.forEach(function(star) {
+            const starValue = parseInt(star.getAttribute('data-value'), 10);
+            star.classList.toggle('active', starValue <= value);
+            star.classList.toggle('bi-star', starValue > value);
+            star.classList.toggle('bi-star-fill', starValue <= value);
+        });
+    }
+
+    stars.forEach(function(star) {
+        star.addEventListener('click', function() {
+            setRating(parseInt(star.getAttribute('data-value'), 10));
+        });
+    });
+
+    function toast(message, type) {
+        if (typeof window.showAppToast === 'function') {
+            window.showAppToast(message, type);
+        }
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async function() {
+            const rating = ratingEl ? String(ratingEl.value || '0').trim() : '0';
+            const comment = commentEl ? String(commentEl.value || '').trim() : '';
+
+            if (parseInt(rating, 10) < 1) {
+                toast('Please select a star rating before submitting.', 'warning');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            const originalLabel = submitBtn.innerHTML;
+            submitBtn.innerHTML = 'Submitting...';
+            try {
+                const fd = new FormData();
+                fd.append('rating', rating);
+                fd.append('comment', comment);
+                fd.append('csrf_token', dashboardCsrfToken);
+
+                const r = await fetch('../assets/api/appointments/submit_feedback.php', {
+                    method: 'POST',
+                    body: fd
+                });
+                const j = await r.json();
+
+                if (!j.success) {
+                    toast(j.message || 'Failed to submit review.', 'danger');
+                    return;
+                }
+
+                if (reviewModal) reviewModal.hide();
+                toast(j.message || 'Thank you for your feedback!', 'success');
+                if (promptCard) promptCard.remove();
+            } catch (err) {
+                console.error(err);
+                toast('Server error while submitting review.', 'danger');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalLabel;
+            }
+        });
+    }
+});
+</script>
+<?php endif; ?>

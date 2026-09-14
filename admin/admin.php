@@ -36,6 +36,11 @@ if ($page === 'services' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($a
     exit;
 }
 
+if ($page === 'reviews' && $_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['feature', 'unfeature', 'delete'], true)) {
+    include 'admin_modules/reviews.php';
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'ai_chat') {
     header('Content-Type: application/json');
     include 'admin_modules/ai_chat_handler.php';
@@ -186,6 +191,12 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=reviews" data-tooltip="Reviews" title="Reviews">
+                    <i class="bi bi-star"></i>
+                    <span>Reviews</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=billing" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-receipt"></i>
                     <span>Billing</span>
@@ -250,6 +261,9 @@ switch ($role_key) {
                                     break;
                                 case "services":
                                     include "admin_modules/services.php";
+                                    break;
+                                case "reviews":
+                                    include "admin_modules/reviews.php";
                                     break;
                                 case "billing":
                                     include "admin_modules/billing.php";
@@ -356,6 +370,7 @@ switch ($role_key) {
                     doctor_leaves: ['leave', 'vacation', 'absence'],
                     doctor_deployment: ['deployment', 'assignment'],
                     services: ['procedures', 'pricing', 'clinic services'],
+                    reviews: ['testimonials', 'feedback', 'ratings'],
                     system_logs: ['logs', 'audit', 'history'],
                     settings: ['preferences', 'configuration'],
                     profile: ['account', 'my profile']
