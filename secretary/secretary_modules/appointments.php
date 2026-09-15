@@ -2788,7 +2788,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             <select id="bookPatientSelect" name="patient_id" class="form-select form-select-sm" required>
                                 <option value="">-- Select Patient --</option>
                                 <?php foreach ($patients as $p): ?>
-                                    <?php $fullname = trim($p['first_name'] . ' ' . ($p['middle_name'] ? $p['middle_name'] . ' ' : '') . $p['last_name']); ?>
+                                    <?php $apMiddle = trim((string)($p['middle_name'] ?? '')); ?>
+                                    <?php $fullname = trim($p['first_name'] . ' ' . (($apMiddle !== '' && strtoupper($apMiddle) !== 'N/A') ? $apMiddle . ' ' : '') . $p['last_name']); ?>
                                     <?php $dob = $p['date_of_birth'] ? date('M j, Y', strtotime($p['date_of_birth'])) : ''; ?>
                                     <option value="<?php echo htmlspecialchars($p['patient_id']); ?>"><?php echo htmlspecialchars($fullname . ($dob ? ' | ' . $dob : '')); ?></option>
                                 <?php endforeach; ?>

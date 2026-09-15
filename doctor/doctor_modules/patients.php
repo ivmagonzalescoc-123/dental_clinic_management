@@ -139,7 +139,7 @@ if ($result) {
 function format_patient_name($patient)
 {
     $middle = trim((string)($patient['middle_name'] ?? ''));
-    $middleInitial = $middle !== '' ? ' ' . strtoupper(substr($middle, 0, 1)) . '.' : '';
+    $middleInitial = ($middle !== '' && strtoupper($middle) !== 'N/A') ? ' ' . strtoupper(substr($middle, 0, 1)) . '.' : '';
     return trim($patient['first_name'] . $middleInitial . ' ' . $patient['last_name']);
 }
 

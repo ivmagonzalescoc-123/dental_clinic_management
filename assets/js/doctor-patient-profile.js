@@ -33,7 +33,9 @@
     // EHR session's Patient Details modal) — see computePatientHeaderInfo().
     function computePatientHeaderInfo(patient, fallbackName) {
         patient = patient || {};
-        const fullName = [patient.first_name, patient.middle_name, patient.last_name].filter(Boolean).join(' ').trim() || fallbackName || 'Unknown Patient';
+        const fullName = [patient.first_name, patient.middle_name, patient.last_name]
+            .filter(function (v) { return v && String(v).trim() && String(v).trim().toUpperCase() !== 'N/A'; })
+            .join(' ').trim() || fallbackName || 'Unknown Patient';
         const initials = fullName.split(/\s+/).filter(Boolean).slice(0, 2).map(function (w) { return w[0].toUpperCase(); }).join('') || '?';
 
         let ageText = 'N/A';

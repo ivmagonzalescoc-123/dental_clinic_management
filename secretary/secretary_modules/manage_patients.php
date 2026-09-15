@@ -429,7 +429,9 @@ function notifySecretaryPatients(message, type) {
 }
 
 function patientDisplayName(patient) {
-    return [patient.first_name, patient.middle_name, patient.last_name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    return [patient.first_name, patient.middle_name, patient.last_name]
+        .filter(function (v) { return v && String(v).trim() && String(v).trim().toUpperCase() !== 'N/A'; })
+        .join(' ').replace(/\s+/g, ' ').trim();
 }
 
 function formatDateTime(value) {

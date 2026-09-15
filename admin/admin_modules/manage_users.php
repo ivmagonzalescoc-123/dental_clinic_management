@@ -534,7 +534,11 @@ foreach ($roles as $roleRow) {
                             <td>
                                 <?php echo $patientAvatar; ?>
                                 <div class="d-inline-block align-middle">
-                                    <div class="fw-semibold"><?php echo htmlspecialchars(trim(($patient['first_name'] ?? '') . ' ' . ($patient['middle_name'] ?? '') . ' ' . ($patient['last_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <?php
+                                        $puiMiddle = trim((string)($patient['middle_name'] ?? ''));
+                                        $puiMiddle = ($puiMiddle !== '' && strtoupper($puiMiddle) !== 'N/A') ? $puiMiddle . ' ' : '';
+                                    ?>
+                                    <div class="fw-semibold"><?php echo htmlspecialchars(trim(($patient['first_name'] ?? '') . ' ' . $puiMiddle . ($patient['last_name'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></div>
                                     <div class="small text-muted"><?php echo htmlspecialchars((string)($patient['email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></div>
                                 </div>
                             </td>
@@ -1044,7 +1048,9 @@ function viewUser(user) {
         avatarEl.innerHTML = '<i class="bi bi-person-fill" style="font-size: 2rem; opacity: 0.5;"></i>';
     }
 
-    document.getElementById('view_user_name').textContent = [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ');
+    document.getElementById('view_user_name').textContent = [user.first_name, user.middle_name, user.last_name]
+        .filter(function (v) { return v && String(v).trim() && String(v).trim().toUpperCase() !== 'N/A'; })
+        .join(' ');
     document.getElementById('view_user_status_badge').innerHTML = (Number(user.is_active) === 1)
         ? '<span class="badge bg-success">Active</span>'
         : '<span class="badge bg-warning">Inactive</span>';
@@ -1196,7 +1202,9 @@ function notifyAdminPatients(message, type) {
 }
 
 function patientDisplayName(patient) {
-    return [patient.first_name, patient.middle_name, patient.last_name].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+    return [patient.first_name, patient.middle_name, patient.last_name]
+        .filter(function (v) { return v && String(v).trim() && String(v).trim().toUpperCase() !== 'N/A'; })
+        .join(' ').replace(/\s+/g, ' ').trim();
 }
 
 function formatPatientDateTime(value) {
