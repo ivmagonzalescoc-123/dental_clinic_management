@@ -2607,6 +2607,35 @@ table a:hover {
     animation-delay: 0.32s;
 }
 
+/* ===== Table skeleton loading (shimmer placeholder rows, Facebook-comments style) =====
+   Shown in a <tbody> while real data is being fetched, so the table's shape is visible
+   immediately instead of a bare spinner. See assets/js/dental-ui.js DentalUI.showSkeleton(). */
+.skeleton-row td {
+    padding-top: 13px;
+    padding-bottom: 13px;
+}
+.skeleton-bar {
+    display: block;
+    height: 14px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #e7ebf0 25%, #f3f5f8 37%, #e7ebf0 63%);
+    background-size: 400% 100%;
+    animation: skeletonShimmer 1.4s ease infinite;
+}
+.skeleton-bar--circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+@keyframes skeletonShimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+}
+[data-theme="dark"] .skeleton-bar {
+    background: linear-gradient(90deg, var(--dark-surface) 25%, var(--dark-surface-alt) 37%, var(--dark-surface) 63%);
+    background-size: 400% 100%;
+}
+
 /* ========================================
    UNIFIED MODULE CONTENT BUTTONS & TYPOGRAPHY
    Matches landing page professional style

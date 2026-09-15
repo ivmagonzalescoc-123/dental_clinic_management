@@ -47,6 +47,9 @@ $isPartialUpdate = isset($_POST['gender']) && !isset($_POST['first_name']);
 if ($isPartialUpdate) {
     // Partial update - only update provided fields
     $gender = security_clean_string($_POST['gender'] ?? '', 20);
+    if ($gender === '') {
+        $gender = 'N/A'; // keep the column's convention consistent — never store a blank string
+    }
     $sql = 'UPDATE patients SET gender=? WHERE patient_id=?';
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
@@ -68,10 +71,16 @@ if ($isPartialUpdate) {
 // Full update - validate all required fields
 $first_name = security_clean_string($_POST['first_name'] ?? '', 100);
 $middle_name = security_clean_string($_POST['middle_name'] ?? '', 100);
+if ($middle_name === '') {
+    $middle_name = 'N/A'; // keep the column's convention consistent — never store a blank string
+}
 $last_name = security_clean_string($_POST['last_name'] ?? '', 100);
 $email = security_clean_string($_POST['email'] ?? '', 150);
 $date_of_birth = security_clean_string($_POST['date_of_birth'] ?? '', 20);
 $gender = security_clean_string($_POST['gender'] ?? '', 20);
+if ($gender === '') {
+    $gender = 'N/A'; // keep the column's convention consistent — never store a blank string
+}
 $phone_number = security_clean_string($_POST['phone_number'] ?? '', 30);
 $address = security_clean_string($_POST['address'] ?? '', 500);
 $occupation = security_clean_string($_POST['occupation'] ?? '', 150);

@@ -43,6 +43,7 @@ if (!security_validate_csrf_token($csrfToken)) {
 
 $bookingId = isset($_POST['booking_id']) ? (int)$_POST['booking_id'] : 0;
 $reason = trim($_POST['decline_reason'] ?? '');
+if ($reason === '') { $reason = 'N/A'; }
 if ($bookingId <= 0) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Invalid booking ID.']);

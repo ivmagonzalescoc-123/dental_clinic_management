@@ -286,8 +286,11 @@ try {
                     continue;
                 }
                 $dosage = trim((string)($rx['dosage'] ?? ''));
+                if ($dosage === '') { $dosage = 'N/A'; }
                 $brand = trim((string)($rx['medicine_brand'] ?? ''));
+                if ($brand === '') { $brand = 'N/A'; }
                 $duration = trim((string)($rx['duration'] ?? ''));
+                if ($duration === '') { $duration = 'N/A'; }
                 $notes = trim((string)($rx['notes'] ?? ''));
                 $rxIns->bind_param('isssss', $appointmentId, $med, $dosage, $brand, $duration, $notes);
                 $rxIns->execute();

@@ -272,7 +272,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function loadMessages() {
-        if (tbody) {
+        if (tbody && typeof DentalUI !== 'undefined' && DentalUI.showSkeleton) {
+            DentalUI.showSkeleton(tbody, 6, 8);
+        } else if (tbody) {
             tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">Loading contact messages...</td></tr>';
         }
 

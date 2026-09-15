@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $startDate = trim((string)($_POST['leave_start_date'] ?? ''));
         $endDate = trim((string)($_POST['leave_end_date'] ?? ''));
         $reasonInput = trim((string)($_POST['reason'] ?? ''));
+        if ($reasonInput === '') { $reasonInput = 'N/A'; }
         $startOk = DateTime::createFromFormat('Y-m-d', $startDate);
         $endOk = DateTime::createFromFormat('Y-m-d', $endDate);
 

@@ -191,12 +191,6 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="admin.php?page=reviews" data-tooltip="Reviews" title="Reviews">
-                    <i class="bi bi-star"></i>
-                    <span>Reviews</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=billing" data-tooltip="Billing" title="Billing">
                     <i class="bi bi-receipt"></i>
                     <span>Billing</span>
@@ -212,6 +206,12 @@ switch ($role_key) {
                 <a class="nav-link collapsed" href="admin.php?page=reports" data-tooltip="Reports" title="Reports">
                     <i class="bi bi-bar-chart-line"></i>
                     <span>Reports</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=reviews" data-tooltip="Reviews" title="Reviews">
+                    <i class="bi bi-star"></i>
+                    <span>Reviews</span>
                 </a>
             </li>
             <li class="nav-item">

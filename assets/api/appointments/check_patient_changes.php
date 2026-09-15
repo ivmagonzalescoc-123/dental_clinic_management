@@ -16,21 +16,10 @@ if ($patientId <= 0) {
 
 $lastKnown = trim((string)($_GET['last'] ?? ''));
 
-$conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
-    request_id INT AUTO_INCREMENT PRIMARY KEY,
-    appointment_id INT NOT NULL,
-    patient_id INT NOT NULL,
-    requested_doctor_id INT NULL,
-    requested_date DATE NOT NULL,
-    requested_timeslot_id INT NOT NULL,
-    request_note VARCHAR(500) NULL,
-    status ENUM('pending','approved','rejected','cancelled') NOT NULL DEFAULT 'pending',
-    reviewed_by INT NULL,
-    review_note VARCHAR(500) NULL,
-    reviewed_at DATETIME NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
+// This endpoint is polled every few seconds — table creation is owned by the
+// write path (request_reschedule.php) instead of re-running DDL on every poll.
+// If the table doesn't exist yet, prepare() below returns false and the
+// existing fallback (changed => true) handles it gracefully.
 $stmt = $conn->prepare(
     "SELECT CONCAT(
         COALESCE((SELECT MAX(appointment_id) FROM appointments WHERE patient_id = ?), 0), ':',

@@ -27,9 +27,11 @@ try {
 
     $first_name = trim($_POST['first_name'] ?? '');
     $middle_name = trim($_POST['middle_name'] ?? '');
+    if ($middle_name === '') { $middle_name = 'N/A'; }
     $last_name = trim($_POST['last_name'] ?? '');
     $date_of_birth = trim($_POST['date_of_birth'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
+    if ($gender === '') { $gender = 'N/A'; }
     $phone_number = trim($_POST['phone_number'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $address = trim($_POST['address'] ?? '');

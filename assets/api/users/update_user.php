@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $middle_name = $middle_name_raw !== '' ? $middle_name_raw : 'N/A';
     $phone_number = $phone_number_raw !== '' ? $phone_number_raw : null;
     $date_of_birth = $date_of_birth_raw !== '' ? $date_of_birth_raw : null;
-    $gender = $gender_raw !== '' ? $gender_raw : null;
+    $gender = $gender_raw !== '' ? $gender_raw : 'N/A';
     $address = $address_raw !== '' ? $address_raw : null;
 
     $doctor_role_id = 0;

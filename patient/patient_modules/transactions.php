@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchMeta = document.getElementById('patientTransactionSearchMeta');
     let allTransactions = [];
 
-    accordion.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2 text-muted small">Loading billing records...</p></div>';
+    accordion.innerHTML = buildTransactionSkeleton(4);
 
     fetch('../assets/api/billing/get_transactions.php')
         .then(async (response) => {
@@ -129,6 +129,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         searchMeta.textContent = 'Showing ' + visibleCount + ' of ' + totalCount + ' billing records';
+    }
+
+    function buildTransactionSkeleton(count) {
+        var html = '';
+        for (var i = 0; i < count; i++) {
+            html += '<div class="card shadow mb-3 patient-transaction-card">' +
+                '<div class="card-header d-flex justify-content-between align-items-center gap-3">' +
+                '<span class="skeleton-bar" style="width:150px;height:16px;"></span>' +
+                '<span class="skeleton-bar" style="width:90px;height:16px;"></span>' +
+                '</div>' +
+                '</div>';
+        }
+        return html;
     }
 
     function renderTransactions(transactions) {

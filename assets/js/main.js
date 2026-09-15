@@ -1514,9 +1514,28 @@
   // must never leave the overlay on screen indefinitely.
   window.addEventListener('load', removeGlobalLoadingOverlay);
   setTimeout(removeGlobalLoadingOverlay, 4000);
-  // start polling notifications every 30s
-  setInterval(fetchNotifications, 30000);
-  // update displayed notification times every 5s
+  // Poll notifications every 30s, but only while this tab is visible — a
+  // backgrounded/idle tab shouldn't keep hitting the server indefinitely.
+  var notifPollTimer = null;
+  function startNotifPolling() {
+    if (notifPollTimer) return;
+    notifPollTimer = setInterval(fetchNotifications, 30000);
+  }
+  function stopNotifPolling() {
+    if (!notifPollTimer) return;
+    clearInterval(notifPollTimer);
+    notifPollTimer = null;
+  }
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopNotifPolling();
+    } else {
+      fetchNotifications();
+      startNotifPolling();
+    }
+  });
+  if (!document.hidden) startNotifPolling();
+  // update displayed notification times every 5s (cheap, DOM-only — no need to pause)
   setInterval(function() {
     document.querySelectorAll('.notification-dropdown-item__time').forEach(function(el) {
       var created = el.dataset.createdAt;

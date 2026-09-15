@@ -30,10 +30,15 @@ $doctor_id = (int)($_SESSION['user_id'] ?? 0);
 </nav>
 
 <div id="docArrContainer">
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
-        <p class="mt-2">Loading your schedule...</p>
-    </div>
+    <div class="table-responsive"><table class="table table-hover align-middle table-sm">
+        <thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Service</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+            <tr class="skeleton-row"><td><span class="skeleton-bar" style="width:70%"></span></td><td><span class="skeleton-bar" style="width:80%"></span></td><td><span class="skeleton-bar" style="width:60%"></span></td><td><span class="skeleton-bar" style="width:50%"></span></td><td><span class="skeleton-bar" style="width:65%"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton-bar" style="width:55%"></span></td><td><span class="skeleton-bar" style="width:75%"></span></td><td><span class="skeleton-bar" style="width:65%"></span></td><td><span class="skeleton-bar" style="width:45%"></span></td><td><span class="skeleton-bar" style="width:60%"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton-bar" style="width:65%"></span></td><td><span class="skeleton-bar" style="width:85%"></span></td><td><span class="skeleton-bar" style="width:55%"></span></td><td><span class="skeleton-bar" style="width:50%"></span></td><td><span class="skeleton-bar" style="width:70%"></span></td></tr>
+            <tr class="skeleton-row"><td><span class="skeleton-bar" style="width:60%"></span></td><td><span class="skeleton-bar" style="width:70%"></span></td><td><span class="skeleton-bar" style="width:75%"></span></td><td><span class="skeleton-bar" style="width:40%"></span></td><td><span class="skeleton-bar" style="width:55%"></span></td></tr>
+        </tbody>
+    </table></div>
 </div>
 
 <script>
@@ -54,9 +59,27 @@ function switchDocTab(t) {
     loadDocArrival(currentDocDate);
 }
 
+function docArrSkeletonHtml(isToday) {
+    const cols = isToday ? 5 : 4;
+    let rows = '';
+    for (let i = 0; i < 4; i++) {
+        rows += '<tr class="skeleton-row">';
+        for (let c = 0; c < cols; c++) {
+            const w = 45 + Math.floor(Math.random() * 45);
+            rows += '<td><span class="skeleton-bar" style="width:' + w + '%"></span></td>';
+        }
+        rows += '</tr>';
+    }
+    let h = '<div class="table-responsive"><table class="table table-hover align-middle table-sm">';
+    h += '<thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Service</th><th>Status</th>';
+    if (isToday) h += '<th>Action</th>';
+    h += '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    return h;
+}
+
 async function loadDocArrival(date) {
     const c = document.getElementById('docArrContainer');
-    c.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-hourglass-split"></i> Loading...</div>';
+    c.innerHTML = docArrSkeletonHtml(date === DOC_TODAY);
     try {
         const url  = '../assets/api/arrivals/get_today_schedule.php?date=' + encodeURIComponent(date) + '&doctor_id=' + DOC_UID;
         const resp = await fetch(url, { cache: 'no-store' });

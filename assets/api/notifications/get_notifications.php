@@ -18,18 +18,10 @@ $rows = [];
 $unread = 0;
 try {
     if ($isPatient) {
-        $conn->query("CREATE TABLE IF NOT EXISTS patient_notifications (
-            patient_notification_id INT AUTO_INCREMENT PRIMARY KEY,
-            patient_id INT NOT NULL,
-            title VARCHAR(255) NOT NULL,
-            body TEXT NOT NULL,
-            link VARCHAR(255) DEFAULT NULL,
-            is_read TINYINT(1) NOT NULL DEFAULT 0,
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            KEY idx_patient_notifications_patient (patient_id),
-            KEY idx_patient_notifications_read (is_read)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
+        // This endpoint is polled every 30s site-wide — table creation is owned by
+        // the write path (config/reminders.php) instead of re-running DDL on every
+        // poll. If the table doesn't exist yet, table_exists() below returns false
+        // and notifications simply stay empty until a reminder creates the table.
         if (function_exists('table_exists') && table_exists($conn, 'patient_notifications')) {
             $stmt = $conn->prepare('SELECT patient_notification_id AS notification_id, title, body, link, is_read, created_at FROM patient_notifications WHERE patient_id = ? ORDER BY created_at DESC LIMIT 50');
             if ($stmt) {

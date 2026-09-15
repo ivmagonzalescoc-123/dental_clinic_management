@@ -25,6 +25,7 @@ if (!security_validate_csrf_token($csrfToken)) {
 
 $firstName = security_clean_string($input['first_name'] ?? '', 100);
 $middleName = security_clean_string($input['middle_name'] ?? '', 100);
+if ($middleName === '') { $middleName = 'N/A'; }
 $lastName = security_clean_string($input['last_name'] ?? '', 100);
 $email = security_clean_string($input['email'] ?? '', 150);
 $phone = security_clean_string($input['phone_number'] ?? '', 30);
@@ -79,7 +80,7 @@ if ($isPatient) {
     }
 
     $dobValue = $dob !== '' ? $dob : null;
-    $genderValue = $gender !== '' ? $gender : null;
+    $genderValue = $gender !== '' ? $gender : 'N/A';
     $phoneValue = $phone !== '' ? $phone : null;
     $addressValue = $address !== '' ? $address : null;
 
@@ -147,7 +148,7 @@ if ($exists) {
 }
 
 $dobValue = $dob !== '' ? $dob : null;
-$genderValue = $gender !== '' ? $gender : null;
+$genderValue = $gender !== '' ? $gender : 'N/A';
 $phoneValue = $phone !== '' ? $phone : null;
 $addressValue = $address !== '' ? $address : null;
 

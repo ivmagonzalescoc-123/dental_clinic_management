@@ -697,6 +697,7 @@ if (!function_exists('billing_create_or_update')) {
         $discountType = billing_normalize_discount_type($discountOptions['discount_type'] ?? 'none');
         $customPercent = $discountOptions['discount_percent'] ?? null;
         $discountNotes = trim((string)($discountOptions['discount_notes'] ?? ''));
+        if ($discountNotes === '') { $discountNotes = 'N/A'; }
 
         $totals = billing_apply_discount($subtotalAmount, $discountType, $customPercent);
         $subtotalAmount = $totals['subtotal_amount'];
@@ -1138,6 +1139,8 @@ if (!function_exists('billing_record_payment')) {
         $billingId = (int)$billingId;
         $amount = (float)$amount;
         $orNumber = trim((string)$orNumber);
+        $notes = trim((string)($notes ?? ''));
+        if ($notes === '') { $notes = 'N/A'; }
         if ($billingId <= 0 || $amount <= 0 || $orNumber === '') {
             return false;
         }

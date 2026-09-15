@@ -157,7 +157,7 @@ if ($res) {
                                             <i class="bi bi-x-lg"></i> Close
                                         </button>
                                         <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
-                                            <iframe id="histOdontoFrameRec" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
+                                            <iframe id="histOdontoFrameRec" data-src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
                                         </div>
                                     </div>
                                 </div>
@@ -419,6 +419,11 @@ if ($res) {
         function postHistoryOdontogramRec(odontogramData) {
             const odf = document.getElementById('histOdontoFrameRec');
             if (!odf) return;
+            // Lazy-load: the ~43MB of 3D tooth models only fetches the first time a
+            // secretary actually opens this history view, not on every records page load.
+            if (!odf.getAttribute('src') && odf.dataset.src) {
+                odf.src = odf.dataset.src;
+            }
             const payload = { type: 'load_odontogram', toothState: odontogramData || {}, readonly: true };
             const send = function() {
                 try {
@@ -494,6 +499,8 @@ if ($res) {
             const bs = new bootstrap.Modal(modalEl);
             const tabsEl = document.getElementById('histVisitTabsRec');
             if (tabsEl) tabsEl.innerHTML = '<span class="text-muted small">Loading visits...</span>';
+            const presBodyRecInit = document.querySelector('#histPrescriptionsRec tbody');
+            if (presBodyRecInit && typeof DentalUI !== 'undefined') DentalUI.showSkeleton(presBodyRecInit, 3);
             bs.show();
 
             try {

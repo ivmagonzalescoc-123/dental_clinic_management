@@ -550,6 +550,8 @@ function fillProfileForm(patient) {
 
     function runSearch(query) {
         statusEl.textContent = 'Searching...';
+        showResultsView();
+        DentalUI.showSkeleton(resultsBody, 5);
         fetch('../assets/api/patients/search_patients.php?q=' + encodeURIComponent(query))
             .then(function (r) { return r.json(); })
             .then(function (data) {

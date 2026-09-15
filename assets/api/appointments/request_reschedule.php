@@ -43,6 +43,7 @@ try {
     $requestedDate = trim((string)($_POST['requested_date'] ?? ''));
     $requestedTimeslotId = (int)($_POST['requested_timeslot_id'] ?? 0);
     $requestNote = trim((string)($_POST['request_note'] ?? ''));
+    if ($requestNote === '') { $requestNote = 'N/A'; }
 
     if ($appointmentId <= 0 || $requestedDoctorId <= 0 || $requestedTimeslotId <= 0 || $requestedDate === '') {
         echo json_encode(['success' => false, 'message' => 'Missing required request details.']);

@@ -1433,6 +1433,8 @@ async function openHistoryModal(appointmentId) {
     document.getElementById('histNotes').textContent = '';
     document.getElementById('histServices').innerHTML = '';
     currentHistoryRecordData = null;
+    const histPresBodyEl = document.querySelector('#histPrescriptions tbody');
+    if (histPresBodyEl && typeof DentalUI !== 'undefined') DentalUI.showSkeleton(histPresBodyEl, 3);
     const workflowBannerReset = document.getElementById('histWorkflowBanner');
     if (workflowBannerReset) {
         workflowBannerReset.style.display = 'none';

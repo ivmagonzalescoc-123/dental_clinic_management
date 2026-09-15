@@ -40,20 +40,28 @@ window.DentalUI = (function() {
         btn.innerHTML = btn.dataset.originalText || btn.innerHTML;
     }
 
-    // Show skeleton loading in a container
-    function showSkeleton(container, rows, cols) {
-        if (!container) return;
+    // Show shimmering skeleton placeholder rows in a <tbody> while real data loads
+    // (Facebook-comments-style: shows the table's shape immediately, not just a spinner).
+    // cols is auto-detected from the table's <thead> when omitted.
+    function showSkeleton(tbody, rows, cols) {
+        if (!tbody) return;
         rows = rows || 5;
-        cols = cols || 4;
+        if (!cols) {
+            var table = tbody.closest ? tbody.closest('table') : null;
+            var headRow = table ? table.querySelector('thead tr') : null;
+            cols = headRow ? headRow.children.length : 4;
+        }
         var html = '';
         for (var r = 0; r < rows; r++) {
-            html += '<tr>';
+            html += '<tr class="skeleton-row">';
             for (var c = 0; c < cols; c++) {
-                html += '<td><div class="placeholder-glow"><span class="placeholder col-' + (6 + Math.floor(Math.random() * 5)) + '"></span></div></td>';
+                var w = 45 + Math.floor(Math.random() * 45);
+                html += '<td><span class="skeleton-bar" style="width:' + w + '%"></span></td>';
             }
             html += '</tr>';
         }
-        container.innerHTML = html;
+        tbody.innerHTML = html;
+        tbody.setAttribute('aria-busy', 'true');
     }
 
     // Inline spinner overlay

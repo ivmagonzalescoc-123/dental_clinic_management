@@ -34,9 +34,11 @@ if ($docRes) { while ($r = $docRes->fetch_assoc()) $doctors_list[] = $r; }
 </nav>
 
 <div id="arrivalContainer">
-    <div class="text-center py-5 text-muted">
-        <i class="bi bi-hourglass-split" style="font-size:2rem;"></i>
-        <p class="mt-2">Loading schedule...</p>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle table-sm">
+            <thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Doctor</th><th>Service</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="arrInitialSkeletonBody"></tbody>
+        </table>
     </div>
 </div>
 
@@ -56,7 +58,10 @@ function switchArrivalTab(t) {
 
 async function loadArrivalSchedule(date) {
     const c = document.getElementById('arrivalContainer');
-    c.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-hourglass-split"></i> Loading...</div>';
+    c.innerHTML = '<div class="table-responsive"><table class="table table-hover align-middle table-sm"><thead class="table-light"><tr><th>Time</th><th>Patient</th><th>Doctor</th><th>Service</th><th>Status</th><th>Actions</th></tr></thead><tbody id="arrSkeletonBody"></tbody></table></div>';
+    if (typeof DentalUI !== 'undefined' && DentalUI.showSkeleton) {
+        DentalUI.showSkeleton(document.getElementById('arrSkeletonBody'), 5, 6);
+    }
     try {
         const resp = await fetch('../assets/api/arrivals/get_today_schedule.php?date=' + encodeURIComponent(date), { cache: 'no-store' });
         const data = await resp.json();
