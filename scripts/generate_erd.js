@@ -70,7 +70,7 @@ const role = addTable('t_role', 'role', 40, 40, [
   { name: 'description', dtype: 'TEXT' },
 ], C.user);
 
-const users = addTable('t_users', 'users', 40, 180, [
+const users = addTable('t_users', 'users', 40, 185, [
   { name: 'user_id', type: 'PK', dtype: 'INT' },
   { name: 'first_name', dtype: 'VARCHAR' },
   { name: 'last_name', dtype: 'VARCHAR' },
@@ -87,21 +87,24 @@ const users = addTable('t_users', 'users', 40, 180, [
   { name: 'work_type', dtype: 'ENUM' },
   { name: 'profile_image', dtype: 'VARCHAR' },
   { name: 'must_change_password', dtype: 'TINYINT' },
+  { name: 'password_updated_at', dtype: 'DATETIME' },
   { name: 'failed_login_attempts', dtype: 'INT' },
   { name: 'locked_until', dtype: 'DATETIME' },
   { name: 'last_login_at', dtype: 'DATETIME' },
+  { name: 'created_at', dtype: 'DATETIME' },
 ], C.user, 210);
 
-const user_logs = addTable('t_ulog', 'user_logs', 40, 730, [
+const user_logs = addTable('t_ulog', 'user_logs', 40, 780, [
   { name: 'user_log_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'login_time', dtype: 'DATETIME' },
   { name: 'last_activity', dtype: 'DATETIME' },
   { name: 'logout_time', dtype: 'DATETIME' },
   { name: 'ip_address', dtype: 'VARCHAR' },
+  { name: 'user_agent', dtype: 'VARCHAR' },
 ], C.user);
 
-const password_resets = addTable('t_pwr', 'password_resets', 40, 950, [
+const password_resets = addTable('t_pwr', 'password_resets', 40, 1025, [
   { name: 'reset_id', type: 'PK', dtype: 'INT' },
   { name: 'user_type', dtype: 'ENUM' },
   { name: 'user_id', dtype: 'INT' },
@@ -114,7 +117,7 @@ const password_resets = addTable('t_pwr', 'password_resets', 40, 950, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.user);
 
-const system_logs = addTable('t_slog', 'system_logs', 40, 1270, [
+const system_logs = addTable('t_slog', 'system_logs', 40, 1345, [
   { name: 'system_log_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'action', dtype: 'VARCHAR' },
@@ -126,7 +129,7 @@ const system_logs = addTable('t_slog', 'system_logs', 40, 1270, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.other);
 
-const backup = addTable('t_bk', 'backup', 40, 1540, [
+const backup = addTable('t_bk', 'backup', 40, 1640, [
   { name: 'backup_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'backup_date', dtype: 'DATETIME' },
@@ -143,18 +146,25 @@ const patients = addTable('t_pat', 'patients', 300, 40, [
   { name: 'middle_name', dtype: 'VARCHAR' },
   { name: 'email', dtype: 'VARCHAR' },
   { name: 'password_hash', dtype: 'VARCHAR' },
+  { name: 'google_id', dtype: 'VARCHAR UQ' },
+  { name: 'google_picture', dtype: 'VARCHAR' },
   { name: 'phone_number', dtype: 'VARCHAR' },
   { name: 'date_of_birth', dtype: 'DATE' },
   { name: 'gender', dtype: 'VARCHAR' },
   { name: 'address', dtype: 'TEXT' },
+  { name: 'occupation', dtype: 'VARCHAR' },
   { name: 'added_by', type: 'FK', dtype: 'INT' },
   { name: 'is_active', dtype: 'TINYINT' },
   { name: 'profile_image', dtype: 'VARCHAR' },
   { name: 'must_change_password', dtype: 'TINYINT' },
+  { name: 'password_updated_at', dtype: 'DATETIME' },
+  { name: 'failed_login_attempts', dtype: 'INT' },
+  { name: 'locked_until', dtype: 'DATETIME' },
+  { name: 'last_login_at', dtype: 'DATETIME' },
   { name: 'created_at', dtype: 'DATETIME' },
-], C.patient);
+], C.patient, 210);
 
-const patient_profiling = addTable('t_pp', 'patient_profiling', 300, 480, [
+const patient_profiling = addTable('t_pp', 'patient_profiling', 300, 660, [
   { name: 'profiling_id', type: 'PK', dtype: 'INT' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
@@ -181,16 +191,17 @@ const patient_profiling = addTable('t_pp', 'patient_profiling', 300, 480, [
   { name: 'updated_at', dtype: 'DATETIME' },
 ], C.patient, 210);
 
-const patient_logs = addTable('t_plog', 'patient_logs', 300, 1100, [
+const patient_logs = addTable('t_plog', 'patient_logs', 300, 1330, [
   { name: 'patient_log_id', type: 'PK', dtype: 'INT' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
   { name: 'login_time', dtype: 'DATETIME' },
   { name: 'last_activity', dtype: 'DATETIME' },
   { name: 'logout_time', dtype: 'DATETIME' },
   { name: 'ip_address', dtype: 'VARCHAR' },
+  { name: 'user_agent', dtype: 'VARCHAR' },
 ], C.patient);
 
-const patient_notifications = addTable('t_pn', 'patient_notifications', 300, 1320, [
+const patient_notifications = addTable('t_pn', 'patient_notifications', 300, 1575, [
   { name: 'patient_notification_id', type: 'PK', dtype: 'INT' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
   { name: 'title', dtype: 'VARCHAR' },
@@ -200,6 +211,18 @@ const patient_notifications = addTable('t_pn', 'patient_notifications', 300, 132
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.patient);
 
+const patient_feedback = addTable('t_pfb', 'patient_feedback', 300, 1820, [
+  { name: 'feedback_id', type: 'PK', dtype: 'INT' },
+  { name: 'patient_id', type: 'FK', dtype: 'INT UQ' },
+  { name: 'appointment_id', type: 'FK', dtype: 'INT' },
+  { name: 'doctor_id', type: 'FK', dtype: 'INT' },
+  { name: 'rating', dtype: 'TINYINT' },
+  { name: 'comment', dtype: 'TEXT' },
+  { name: 'is_featured', dtype: 'TINYINT' },
+  { name: 'created_at', dtype: 'DATETIME' },
+  { name: 'updated_at', dtype: 'DATETIME' },
+], C.patient, 220);
+
 // Col 3: Doctor Management (x=560)
 const specialization = addTable('t_spec', 'specialization', 560, 40, [
   { name: 'specialization_id', type: 'PK', dtype: 'INT' },
@@ -207,14 +230,14 @@ const specialization = addTable('t_spec', 'specialization', 560, 40, [
   { name: 'description', dtype: 'TEXT' },
 ], C.doctor);
 
-const dentist_specialization = addTable('t_dspec', 'dentist_specialization', 560, 180, [
+const dentist_specialization = addTable('t_dspec', 'dentist_specialization', 560, 185, [
   { name: 'doctor_specialized_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'specialization_id', type: 'FK', dtype: 'INT' },
   { name: 'UQ', dtype: '(user_id, spec_id)', },
 ], C.doctor, 210);
 
-const doctor_availability = addTable('t_dav', 'doctor_availability', 560, 380, [
+const doctor_availability = addTable('t_dav', 'doctor_availability', 560, 355, [
   { name: 'availability_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'weekday', dtype: 'TINYINT' },
@@ -224,7 +247,7 @@ const doctor_availability = addTable('t_dav', 'doctor_availability', 560, 380, [
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.doctor);
 
-const doctor_leaves = addTable('t_dlv', 'doctor_leaves', 560, 620, [
+const doctor_leaves = addTable('t_dlv', 'doctor_leaves', 560, 600, [
   { name: 'leave_id', type: 'PK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
   { name: 'leave_start_date', dtype: 'DATE' },
@@ -233,6 +256,21 @@ const doctor_leaves = addTable('t_dlv', 'doctor_leaves', 560, 620, [
   { name: 'status', dtype: 'ENUM' },
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.doctor);
+
+const doctor_prescription_profiles = addTable('t_dpp', 'doctor_prescription_profiles', 560, 845, [
+  { name: 'profile_id', type: 'PK', dtype: 'INT' },
+  { name: 'user_id', type: 'FK', dtype: 'INT UQ' },
+  { name: 'full_name', dtype: 'VARCHAR' },
+  { name: 'professional_title', dtype: 'VARCHAR' },
+  { name: 'licenses', dtype: 'LONGTEXT' },
+  { name: 'signature_image', dtype: 'VARCHAR' },
+  { name: 'signature_drawn', dtype: 'LONGTEXT' },
+  { name: 'clinic_name', dtype: 'VARCHAR' },
+  { name: 'clinic_address', dtype: 'VARCHAR' },
+  { name: 'clinic_phone', dtype: 'VARCHAR' },
+  { name: 'created_at', dtype: 'DATETIME' },
+  { name: 'updated_at', dtype: 'DATETIME' },
+], C.doctor, 250);
 
 // Col 4: Services & Scheduling (x=820)
 const services = addTable('t_svc', 'services', 820, 40, [
@@ -244,9 +282,10 @@ const services = addTable('t_svc', 'services', 820, 40, [
   { name: 'is_active', dtype: 'TINYINT' },
   { name: 'requires_schedule', dtype: 'TINYINT' },
   { name: 'default_duration_minutes', dtype: 'INT' },
+  { name: 'created_at', dtype: 'DATETIME' },
 ], C.service);
 
-const timeslot = addTable('t_slot', 'timeslot', 820, 310, [
+const timeslot = addTable('t_slot', 'timeslot', 820, 335, [
   { name: 'timeslot_id', type: 'PK', dtype: 'INT' },
   { name: 'doctor_id', type: 'FK', dtype: 'INT' },
   { name: 'slot_date', dtype: 'DATE' },
@@ -254,9 +293,10 @@ const timeslot = addTable('t_slot', 'timeslot', 820, 310, [
   { name: 'end_time', dtype: 'TIME' },
   { name: 'status', dtype: 'ENUM' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
+  { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.service);
 
-const timeslot_service = addTable('t_tsvc', 'timeslot_service', 820, 550, [
+const timeslot_service = addTable('t_tsvc', 'timeslot_service', 820, 605, [
   { name: 'id', type: 'PK', dtype: 'INT' },
   { name: 'service_id', type: 'FK', dtype: 'INT' },
   { name: 'duration_minutes', dtype: 'INT' },
@@ -279,12 +319,14 @@ const bookings = addTable('t_bk2', 'bookings', 1080, 40, [
   { name: 'otp_hash', dtype: 'CHAR(64)' },
   { name: 'otp_expires_at', dtype: 'DATETIME' },
   { name: 'status', dtype: 'ENUM' },
+  { name: 'decline_reason', dtype: 'VARCHAR' },
   { name: 'converted_to_appointment_id', dtype: 'INT' },
   { name: 'converted_to_patient_id', dtype: 'INT' },
+  { name: 'tracking_code', dtype: 'VARCHAR UQ' },
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.appt, 250);
 
-const appointments = addTable('t_apt', 'appointments', 1080, 430, [
+const appointments = addTable('t_apt', 'appointments', 1080, 535, [
   { name: 'appointment_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_date', dtype: 'DATE' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
@@ -296,14 +338,16 @@ const appointments = addTable('t_apt', 'appointments', 1080, 430, [
   { name: 'status', dtype: 'ENUM' },
   { name: 'is_online_appointment', dtype: 'TINYINT' },
   { name: 'is_emergency', dtype: 'TINYINT' },
+  { name: 'needs_reassignment', dtype: 'TINYINT' },
   { name: 'notes', dtype: 'TEXT' },
+  { name: 'cancellation_reason', dtype: 'VARCHAR' },
   { name: 'completed_by_doctor_at', dtype: 'DATETIME' },
   { name: 'session_started_at', dtype: 'DATETIME' },
   { name: 'secretary_records_completed_at', dtype: 'DATETIME' },
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.appt, 250);
 
-const arr = addTable('t_arr', 'appointment_reschedule_requests', 1080, 880, [
+const arr = addTable('t_arr', 'appointment_reschedule_requests', 1080, 1055, [
   { name: 'request_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
@@ -318,7 +362,7 @@ const arr = addTable('t_arr', 'appointment_reschedule_requests', 1080, 880, [
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.appt, 250);
 
-const selected_services = addTable('t_ss', 'selected_services', 1080, 1260, [
+const selected_services = addTable('t_ss', 'selected_services', 1080, 1425, [
   { name: 'selected_service_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'service_id', type: 'FK', dtype: 'INT' },
@@ -326,7 +370,7 @@ const selected_services = addTable('t_ss', 'selected_services', 1080, 1260, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.appt, 250);
 
-const appointment_media = addTable('t_am', 'appointment_media', 1080, 1460, [
+const appointment_media = addTable('t_am', 'appointment_media', 1080, 1620, [
   { name: 'media_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'file_name', dtype: 'VARCHAR' },
@@ -340,7 +384,7 @@ const appointment_media = addTable('t_am', 'appointment_media', 1080, 1460, [
   { name: 'uploaded_at', dtype: 'DATETIME' },
 ], C.appt, 250);
 
-const appointment_doctor_notes = addTable('t_adn', 'appointment_doctor_notes', 1080, 1790, [
+const appointment_doctor_notes = addTable('t_adn', 'appointment_doctor_notes', 1080, 1965, [
   { name: 'note_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'doctor_id', type: 'FK', dtype: 'INT' },
@@ -349,7 +393,7 @@ const appointment_doctor_notes = addTable('t_adn', 'appointment_doctor_notes', 1
   { name: 'updated_at', dtype: 'DATETIME' },
 ], C.appt, 250);
 
-const patient_schedules = addTable('t_ps', 'patient_schedules', 1080, 2020, [
+const patient_schedules = addTable('t_ps', 'patient_schedules', 1080, 2185, [
   { name: 'schedule_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },
@@ -361,7 +405,7 @@ const patient_schedules = addTable('t_ps', 'patient_schedules', 1080, 2020, [
   { name: 'updated_at', dtype: 'TIMESTAMP' },
 ], C.appt, 250);
 
-const schedule_reminders = addTable('t_sr', 'schedule_reminders', 1080, 2320, [
+const schedule_reminders = addTable('t_sr', 'schedule_reminders', 1080, 2480, [
   { name: 'reminder_id', type: 'PK', dtype: 'INT' },
   { name: 'patient_schedule_id', type: 'FK', dtype: 'INT' },
   { name: 'remind_at', dtype: 'DATETIME' },
@@ -385,7 +429,7 @@ const clinical_records = addTable('t_cr', 'clinical_records', 1390, 40, [
   { name: 'primary_image', dtype: 'VARCHAR' },
 ], C.clinical, 220);
 
-const clinical_record_images = addTable('t_cri', 'clinical_record_images', 1390, 370, [
+const clinical_record_images = addTable('t_cri', 'clinical_record_images', 1390, 385, [
   { name: 'image_id', type: 'PK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
   { name: 'file_path', dtype: 'VARCHAR' },
@@ -395,14 +439,14 @@ const clinical_record_images = addTable('t_cri', 'clinical_record_images', 1390,
   { name: 'uploaded_at', dtype: 'DATETIME' },
 ], C.clinical, 220);
 
-const clinical_record_services = addTable('t_crs', 'clinical_record_services', 1390, 610, [
+const clinical_record_services = addTable('t_crs', 'clinical_record_services', 1390, 630, [
   { name: 'id', type: 'PK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
   { name: 'service_id', type: 'FK', dtype: 'INT' },
   { name: 'notes', dtype: 'TEXT' },
 ], C.clinical, 220);
 
-const treatment_plans = addTable('t_tp', 'treatment_plans', 1390, 780, [
+const treatment_plans = addTable('t_tp', 'treatment_plans', 1390, 800, [
   { name: 'treatment_id', type: 'PK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
   { name: 'service_id', type: 'FK', dtype: 'INT' },
@@ -413,7 +457,7 @@ const treatment_plans = addTable('t_tp', 'treatment_plans', 1390, 780, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.clinical, 220);
 
-const treatment_materials = addTable('t_tm', 'treatment_materials', 1390, 1030, [
+const treatment_materials = addTable('t_tm', 'treatment_materials', 1390, 1070, [
   { name: 'material_id', type: 'PK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
   { name: 'material_name', dtype: 'VARCHAR' },
@@ -423,7 +467,7 @@ const treatment_materials = addTable('t_tm', 'treatment_materials', 1390, 1030, 
   { name: 'notes', dtype: 'TEXT' },
 ], C.clinical, 220);
 
-const prescriptions = addTable('t_rx', 'prescriptions', 1390, 1280, [
+const prescriptions = addTable('t_rx', 'prescriptions', 1390, 1315, [
   { name: 'prescription_id', type: 'PK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
   { name: 'prescription_date', dtype: 'DATE' },
@@ -434,6 +478,15 @@ const prescriptions = addTable('t_rx', 'prescriptions', 1390, 1280, [
   { name: 'notes', dtype: 'TEXT' },
 ], C.clinical, 220);
 
+const clinical_findings = addTable('t_cf', 'clinical_findings', 1390, 1585, [
+  { name: 'finding_id', type: 'PK', dtype: 'INT' },
+  { name: 'record_id', type: 'FK', dtype: 'INT UQ' },
+  { name: 'patient_id', type: 'FK', dtype: 'INT' },
+  { name: 'findings_json', dtype: 'TEXT' },
+  { name: 'created_at', dtype: 'TIMESTAMP' },
+  { name: 'updated_at', dtype: 'TIMESTAMP' },
+], C.clinical, 220);
+
 // Col 7: Odontogram (x=1660)
 const tooth = addTable('t_tooth', 'tooth', 1660, 40, [
   { name: 'tooth_id', type: 'PK', dtype: 'INT' },
@@ -441,7 +494,7 @@ const tooth = addTable('t_tooth', 'tooth', 1660, 40, [
   { name: 'upper_lower', dtype: 'TINYINT' },
 ], C.odonto);
 
-const tooth_status_type = addTable('t_tst', 'tooth_status_type', 1660, 180, [
+const tooth_status_type = addTable('t_tst', 'tooth_status_type', 1660, 185, [
   { name: 'status_type_id', type: 'PK', dtype: 'INT' },
   { name: 'label', dtype: 'VARCHAR' },
   { name: 'category', dtype: 'ENUM' },
@@ -449,7 +502,7 @@ const tooth_status_type = addTable('t_tst', 'tooth_status_type', 1660, 180, [
   { name: 'description', dtype: 'VARCHAR' },
 ], C.odonto);
 
-const tooth_status = addTable('t_ts', 'tooth_status', 1660, 390, [
+const tooth_status = addTable('t_ts', 'tooth_status', 1660, 380, [
   { name: 'tooth_status_id', type: 'PK', dtype: 'INT' },
   { name: 'record_id', type: 'FK', dtype: 'INT' },
   { name: 'tooth_selected', type: 'FK', dtype: 'INT' },
@@ -476,7 +529,7 @@ const billing = addTable('t_bill', 'billing', 1920, 40, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.billing, 210);
 
-const billing_line_items = addTable('t_bli', 'billing_line_items', 1920, 420, [
+const billing_line_items = addTable('t_bli', 'billing_line_items', 1920, 435, [
   { name: 'item_id', type: 'PK', dtype: 'INT' },
   { name: 'billing_id', type: 'FK', dtype: 'INT' },
   { name: 'appointment_id', type: 'FK', dtype: 'INT' },
@@ -487,7 +540,7 @@ const billing_line_items = addTable('t_bli', 'billing_line_items', 1920, 420, [
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.billing, 210);
 
-const billing_installments = addTable('t_bi', 'billing_installments', 1920, 680, [
+const billing_installments = addTable('t_bi', 'billing_installments', 1920, 705, [
   { name: 'installment_id', type: 'PK', dtype: 'INT' },
   { name: 'billing_id', type: 'FK', dtype: 'INT' },
   { name: 'total_amount', dtype: 'DECIMAL' },
@@ -497,19 +550,20 @@ const billing_installments = addTable('t_bi', 'billing_installments', 1920, 680,
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.billing, 210);
 
-const billing_installment_terms = addTable('t_bit', 'billing_installment_terms', 1920, 920, [
+const billing_installment_terms = addTable('t_bit', 'billing_installment_terms', 1920, 950, [
   { name: 'term_id', type: 'PK', dtype: 'INT' },
   { name: 'installment_id', type: 'FK', dtype: 'INT' },
   { name: 'term_number', dtype: 'INT' },
   { name: 'due_date', dtype: 'DATE' },
   { name: 'amount', dtype: 'DECIMAL' },
+  { name: 'paid_amount', dtype: 'DECIMAL' },
   { name: 'status', dtype: 'ENUM' },
   { name: 'paid_at', dtype: 'DATETIME' },
   { name: 'due_soon_reminder_sent_at', dtype: 'DATETIME' },
   { name: 'overdue_reminder_sent_at', dtype: 'DATETIME' },
 ], C.billing, 210);
 
-const payments = addTable('t_pay', 'payments', 1920, 1220, [
+const payments = addTable('t_pay', 'payments', 1920, 1270, [
   { name: 'payment_id', type: 'PK', dtype: 'INT' },
   { name: 'billing_id', type: 'FK', dtype: 'INT' },
   { name: 'amount', dtype: 'DECIMAL' },
@@ -520,7 +574,7 @@ const payments = addTable('t_pay', 'payments', 1920, 1220, [
   { name: 'paid_at', dtype: 'DATETIME' },
 ], C.billing, 210);
 
-const invoices = addTable('t_inv', 'invoices', 1920, 1490, [
+const invoices = addTable('t_inv', 'invoices', 1920, 1540, [
   { name: 'invoice_id', type: 'PK', dtype: 'INT' },
   { name: 'billing_id', type: 'FK', dtype: 'INT' },
   { name: 'invoice_number', dtype: 'VARCHAR UQ' },
@@ -539,24 +593,33 @@ const notifications = addTable('t_notif', 'notifications', 2190, 40, [
   { name: 'created_at', dtype: 'DATETIME' },
 ], C.other);
 
-const contact_messages = addTable('t_cm', 'contact_messages', 2190, 280, [
+const contact_messages = addTable('t_cm', 'contact_messages', 2190, 285, [
   { name: 'message_id', type: 'PK', dtype: 'INT' },
   { name: 'full_name', dtype: 'VARCHAR' },
   { name: 'email', dtype: 'VARCHAR' },
   { name: 'phone_number', dtype: 'VARCHAR' },
   { name: 'message', dtype: 'TEXT' },
   { name: 'status', dtype: 'ENUM' },
+  { name: 'source', dtype: 'VARCHAR' },
+  { name: 'gmail_uid', dtype: 'VARCHAR' },
   { name: 'read_by', type: 'FK', dtype: 'INT' },
   { name: 'read_at', dtype: 'DATETIME' },
   { name: 'created_at', dtype: 'TIMESTAMP' },
-], C.other);
+], C.other, 210);
 
-const clinic_settings = addTable('t_cs', 'clinic_settings', 2190, 570, [
+const clinic_settings = addTable('t_cs', 'clinic_settings', 2190, 630, [
   { name: 'setting_key', type: 'PK', dtype: 'VARCHAR' },
   { name: 'setting_value', dtype: 'TEXT' },
   { name: 'description', dtype: 'VARCHAR' },
   { name: 'updated_at', dtype: 'DATETIME' },
 ], C.other);
+
+const rate_limit_hits = addTable('t_rlh', 'rate_limit_hits', 2190, 800, [
+  { name: 'hit_id', type: 'PK', dtype: 'INT' },
+  { name: 'bucket', dtype: 'VARCHAR' },
+  { name: 'identifier', dtype: 'VARCHAR' },
+  { name: 'created_at', dtype: 'DATETIME' },
+], C.other, 210);
 
 // ========================================
 // RELATIONSHIPS (Edges)
@@ -638,6 +701,14 @@ addEdge('e91', users.user_id, contact_messages.read_by, '1:N', '#cbd5e1');
 // Prescription -> appointments
 addEdge('e92', appointments.appointment_id, prescriptions.appointment_id, '1:N', '#c4b5fd');
 
+// New tables (patient_feedback, doctor_prescription_profiles, clinical_findings, rate_limit_hits)
+addEdge('e93', patients.patient_id, patient_feedback.patient_id, '1:1', '#86efac');
+addEdge('e94', appointments.appointment_id, patient_feedback.appointment_id, '1:N', '#86efac');
+addEdge('e95', users.user_id, patient_feedback.doctor_id, '1:N', '#86efac');
+addEdge('e96', users.user_id, doctor_prescription_profiles.user_id, '1:1', '#5eead4');
+addEdge('e97', clinical_records.record_id, clinical_findings.record_id, '1:1', '#c4b5fd');
+addEdge('e98', patients.patient_id, clinical_findings.patient_id, '1:N', '#c4b5fd');
+
 // Timeslot -> appointment_id (already shown via appointments FK)
 
 // ========================================
@@ -657,15 +728,15 @@ let xml = `<?xml version="1.0" encoding="UTF-8"?>
 
 // Add group labels (background boxes)
 const groups = [
-  { label: 'USERS & AUTH', x: 20, y: 10, w: 230, h: 1750, color: '#dbeafe' },
-  { label: 'PATIENTS', x: 280, y: 10, w: 230, h: 1540, color: '#dcfce7' },
-  { label: 'DOCTOR MANAGEMENT', x: 540, y: 10, w: 240, h: 840, color: '#ccfbf1' },
-  { label: 'SERVICES & SCHEDULING', x: 800, y: 10, w: 240, h: 750, color: '#e0f2fe' },
-  { label: 'APPOINTMENTS', x: 1060, y: 10, w: 270, h: 2520, color: '#fce7f3' },
-  { label: 'CLINICAL RECORDS', x: 1370, y: 10, w: 240, h: 1510, color: '#f3e8ff' },
-  { label: 'ODONTOGRAM', x: 1640, y: 10, w: 220, h: 610, color: '#fef3c7' },
-  { label: 'BILLING', x: 1900, y: 10, w: 230, h: 1730, color: '#fee2e2' },
-  { label: 'OTHER', x: 2170, y: 10, w: 230, h: 800, color: '#f1f5f9' },
+  { label: 'USERS & AUTH', x: 20, y: 10, w: 230, h: 1840, color: '#dbeafe' },
+  { label: 'PATIENTS', x: 280, y: 10, w: 230, h: 2095, color: '#dcfce7' },
+  { label: 'DOCTOR MANAGEMENT', x: 540, y: 10, w: 240, h: 1195, color: '#ccfbf1' },
+  { label: 'SERVICES & SCHEDULING', x: 800, y: 10, w: 240, h: 805, color: '#e0f2fe' },
+  { label: 'APPOINTMENTS', x: 1060, y: 10, w: 270, h: 2680, color: '#fce7f3' },
+  { label: 'CLINICAL RECORDS', x: 1370, y: 10, w: 240, h: 1785, color: '#f3e8ff' },
+  { label: 'ODONTOGRAM', x: 1640, y: 10, w: 220, h: 605, color: '#fef3c7' },
+  { label: 'BILLING', x: 1900, y: 10, w: 230, h: 1715, color: '#fee2e2' },
+  { label: 'OTHER', x: 2170, y: 10, w: 230, h: 950, color: '#f1f5f9' },
 ];
 
 groups.forEach(g => {

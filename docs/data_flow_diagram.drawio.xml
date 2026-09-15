@@ -35,6 +35,9 @@
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-10" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="6.0&#xa;Reporting &amp; Analytics" vertex="1">
           <mxGeometry height="80" width="260" x="340" y="630" as="geometry" />
         </mxCell>
+        <mxCell id="feedback-proc-1" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="7.0&#xa;Reviews &amp; Feedback&#xa;Management" vertex="1">
+          <mxGeometry height="80" width="260" x="340" y="750" as="geometry" />
+        </mxCell>
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-11" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="D1  Users" vertex="1">
           <mxGeometry height="60" width="220" x="740" y="20" as="geometry" />
         </mxCell>
@@ -55,6 +58,9 @@
         </mxCell>
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-17" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="D7  System Logs" vertex="1">
           <mxGeometry height="60" width="220" x="740" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="feedback-store-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="D8  Patient Feedback / Reviews" vertex="1">
+          <mxGeometry height="60" width="220" x="740" y="580" as="geometry" />
         </mxCell>
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-18" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=1;exitY=0.25;exitDx=0;exitDy=0;entryX=0;entryY=0.2;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-5" value="login credentials">
           <mxGeometry relative="1" x="0.061" y="6" as="geometry">
@@ -263,6 +269,38 @@
               <mxPoint x="-60" y="70" />
             </Array>
             <mxPoint x="70" y="70" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resched-dfd-1" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;entryX=0;entryY=0.7;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-6" value="reschedule request">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="450" />
+              <mxPoint x="300" y="210" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="feedback-edge-1" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="feedback-proc-1" value="submit review/rating">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="200" y="460" />
+              <mxPoint x="200" y="790" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="feedback-edge-2" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="feedback-proc-1" value="feature/curate reviews">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="110" y="70" />
+              <mxPoint x="110" y="770" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="feedback-edge-3" edge="1" parent="1" source="feedback-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="feedback-store-1" value="store / read reviews">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="670" y="790" />
+              <mxPoint x="670" y="610" />
+            </Array>
           </mxGeometry>
         </mxCell>
       </root>

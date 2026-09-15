@@ -59,6 +59,12 @@
         <mxCell id="yRwlljrILqDDostc0-zi-18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="On appointment date:&#xa;Secretary marks arrival" vertex="1">
           <mxGeometry height="60" width="220" x="380" y="1280" as="geometry" />
         </mxCell>
+        <mxCell id="resched-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Patient requests&#xa;reschedule? (optional,&#xa;any time before visit)" vertex="1">
+          <mxGeometry height="70" width="240" x="740" y="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="resched-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Secretary/Doctor reviews&#xa;reschedule request&#xa;(approve new slot / reject)" vertex="1">
+          <mxGeometry height="70" width="240" x="740" y="1270" as="geometry" />
+        </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-19" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Patient arrived?" vertex="1">
           <mxGeometry height="80" width="240" x="370" y="1370" as="geometry" />
         </mxCell>
@@ -188,6 +194,23 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-55" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-24" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="yRwlljrILqDDostc0-zi-25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="resched-edge-1" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-17" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="resched-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="resched-edge-2" edge="1" parent="1" source="resched-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="yRwlljrILqDDostc0-zi-18" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1020" y="1215" />
+              <mxPoint x="1020" y="1310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resched-edge-3" edge="1" parent="1" source="resched-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="resched-2" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="resched-edge-4" edge="1" parent="1" source="resched-2" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" target="yRwlljrILqDDostc0-zi-18" value="resolved (new slot kept or original kept)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
