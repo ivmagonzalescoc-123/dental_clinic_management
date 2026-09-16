@@ -792,7 +792,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                 <td><?php echo htmlspecialchars(trim($gb['first_name'] . ' ' . $gb['last_name'])); ?></td>
                                 <td><span class="badge bg-primary"><?php echo date('M j, Y', strtotime($gb['preferred_date'])); ?></span></td>
                                 <td><?php echo htmlspecialchars($gb['preferred_time'] ?? '—'); ?></td>
-                                <td>
+                                <td class="booking-status-cell">
                                     <?php if ($isDeclined): ?>
                                         <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelled</span>
                                     <?php elseif ($isConverted): ?>
@@ -803,7 +803,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                         <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Pending</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td class="booking-actions-cell">
                                     <div class="d-flex gap-1 flex-wrap">
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#bookingDetailsModal"
                                             onclick='openBookingDetailsModal(<?php echo htmlspecialchars(json_encode([
@@ -821,24 +821,27 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
                                             ]), ENT_QUOTES, 'UTF-8'); ?>)' title="View details">
                                             <i class="bi bi-eye"></i>
                                         </button>
+                                        <?php
+                                            $gbBookingJson = htmlspecialchars(json_encode([
+                                                'booking_id' => (int)$gb['booking_id'],
+                                                'first_name' => $gb['first_name'],
+                                                'last_name' => $gb['last_name'],
+                                                'email' => $gb['email'],
+                                                'phone_number' => $gb['phone_number'] ?? '',
+                                                'date_of_birth' => $gb['date_of_birth'] ?? '',
+                                                'preferred_date' => $gb['preferred_date'],
+                                                'preferred_time' => $gb['preferred_time'],
+                                                'reason' => $gb['reason'] ?? '',
+                                            ]), ENT_QUOTES, 'UTF-8');
+                                        ?>
                                         <?php if (!$isConverted && !$isDeclined): ?>
                                             <?php if ($gb['status'] !== 'approved'): ?>
-                                                <button type="button" class="btn btn-sm btn-primary" onclick="approveBooking(<?php echo (int)$gb['booking_id']; ?>)">
+                                                <button type="button" class="btn btn-sm btn-primary" onclick='approveBooking(<?php echo (int)$gb['booking_id']; ?>, this, <?php echo $gbBookingJson; ?>)'>
                                                     <i class="bi bi-check2-square"></i> Approve
                                                 </button>
                                             <?php else: ?>
                                                 <button type="button" class="btn btn-sm btn-success"
-                                                    onclick='openConvertBookingModal(<?php echo htmlspecialchars(json_encode([
-                                                        'booking_id' => (int)$gb['booking_id'],
-                                                        'first_name' => $gb['first_name'],
-                                                        'last_name' => $gb['last_name'],
-                                                        'email' => $gb['email'],
-                                                        'phone_number' => $gb['phone_number'] ?? '',
-                                                        'date_of_birth' => $gb['date_of_birth'] ?? '',
-                                                        'preferred_date' => $gb['preferred_date'],
-                                                        'preferred_time' => $gb['preferred_time'],
-                                                        'reason' => $gb['reason'] ?? '',
-                                                    ]), ENT_QUOTES, 'UTF-8'); ?>)'>
+                                                    onclick='openConvertBookingModal(<?php echo $gbBookingJson; ?>)'>
                                                     <i class="bi bi-arrow-right-circle"></i> Process
                                                 </button>
                                             <?php endif; ?>
@@ -1556,7 +1559,9 @@ function getTodayDateStringSecretary() {
 }
 
 // Approve a booking
-async function approveBooking(bookingId) {
+async function approveBooking(bookingId, btn, bookingData) {
+    if (btn && btn.disabled) return; // guard against double-submit while already processing
+
     if (typeof showConfirmModal === 'function') {
         if (!(await showConfirmModal({
             title: 'Approve Booking',
@@ -1564,6 +1569,8 @@ async function approveBooking(bookingId) {
             confirmText: 'Approve'
         }))) return;
     }
+
+    if (btn) DentalUI.btnLoading(btn, 'Approving...');
 
     try {
         const resp = await fetch('../assets/api/bookings/approve_booking.php?booking_id=' + bookingId, {
@@ -1578,13 +1585,35 @@ async function approveBooking(bookingId) {
             } else if (typeof showToast === 'function') {
                 showToast('Booking approved.', 'success');
             }
-            location.reload();
+            // Update the row in place instead of reloading the page — the secretary stays
+            // exactly where they were, no navigation/flicker while processing new bookings.
+            var row = btn ? btn.closest('tr') : null;
+            if (row) {
+                row.dataset.status = 'approved';
+                var statusCell = row.querySelector('.booking-status-cell');
+                if (statusCell) {
+                    statusCell.innerHTML = '<span class="badge bg-info"><i class="bi bi-check-circle"></i> Approved</span>';
+                }
+                var reschedBtn = row.querySelector('[onclick^="openRescheduleBookingModal"]');
+                if (reschedBtn) reschedBtn.remove();
+                if (btn) {
+                    var processBtn = document.createElement('button');
+                    processBtn.type = 'button';
+                    processBtn.className = 'btn btn-sm btn-success';
+                    processBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Process';
+                    processBtn.addEventListener('click', function() { openConvertBookingModal(bookingData); });
+                    btn.replaceWith(processBtn);
+                }
+            } else {
+                location.reload();
+            }
         } else {
             if (typeof showArrToast === 'function') {
                 showArrToast(data.message || 'Failed to approve.', 'danger');
             } else if (typeof showToast === 'function') {
                 showToast(data.message || 'Failed to approve.', 'danger');
             }
+            if (btn) DentalUI.btnRestore(btn);
         }
     } catch(e) {
         if (typeof showArrToast === 'function') {
@@ -1592,6 +1621,7 @@ async function approveBooking(bookingId) {
         } else if (typeof showToast === 'function') {
             showToast('Error: ' + e.message, 'danger');
         }
+        if (btn) DentalUI.btnRestore(btn);
     }
 }
 

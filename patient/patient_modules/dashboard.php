@@ -388,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 if (reviewModal) reviewModal.hide();
-                toast(j.message || 'Thank you for your feedback!', 'success');
+                toast(j.message || 'Thank you for your review!', 'success');
                 if (promptCard) promptCard.remove();
             } catch (err) {
                 console.error(err);

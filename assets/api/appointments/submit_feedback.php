@@ -86,9 +86,9 @@ try {
     }
     $insert->close();
 
-    echo json_encode(['success' => true, 'message' => 'Thank you for your feedback!']);
+    echo json_encode(['success' => true, 'message' => 'Thank you for your review!']);
 } catch (Throwable $e) {
     error_log('submit_feedback.php error: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Server error while submitting feedback.']);
+    echo json_encode(['success' => false, 'message' => 'Server error while submitting review.']);
 }

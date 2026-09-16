@@ -166,8 +166,6 @@ if ($record && isset($record['patient_id']) && $record['patient_id']) {
     }
 }
 
-if ($record && $role === 'secretary') unset($record['odontogram']);
-
 $prescriptions = [];
 $p_stmt = $conn->prepare('SELECT * FROM prescriptions WHERE appointment_id = ?');
 if ($p_stmt) {
