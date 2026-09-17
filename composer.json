@@ -2,6 +2,7 @@
     "name": "azucena-dental/capstone",
     "require": {
         "php": "^8.2",
-        "dompdf/dompdf": "^2.0"
+        "dompdf/dompdf": "^2.0",
+        "webklex/php-imap": "^6.2"
     }
 }
