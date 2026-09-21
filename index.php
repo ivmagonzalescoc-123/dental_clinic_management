@@ -32,6 +32,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['patient_id'])) {
 $year = date('Y');
 $csrf_token = security_generate_csrf_token();
 $googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
+$turnstileSiteKey = (string)env('TURNSTILE_SITE_KEY', '');
 $clinicLogo = 'assets/img/clinic-logo.png';
 $pageBackgroundImage = 'assets/img/landing-background.jpg';
 
@@ -116,6 +117,9 @@ $aboutPoints = [
     <script src="https://cdn.tailwindcss.com"></script>
     <?php if ($googleClientId !== ''): ?>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <?php endif; ?>
+    <?php if ($turnstileSiteKey !== ''): ?>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <script>
         tailwind.config = {
@@ -949,12 +953,11 @@ $aboutPoints = [
                 </div>
 
                 <div class="space-y-2">
-                    <div class="flex items-center gap-2">
-                        <span id="loginCaptchaQuestion" class="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700" style="min-width:140px;max-width:140px;text-align:center;">Loading...</span>
-                        <button type="button" id="refreshLoginCaptchaBtn" class="shrink-0 text-sm font-semibold text-primary hover:text-primary">Refresh</button>
-                        <input type="text" id="loginCaptchaAnswer" name="captcha" inputmode="numeric" pattern="-?[0-9]+" required placeholder="Answer"
-                            class="auth-field min-w-0 rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 px-4 text-sm text-slate-900 placeholder:text-slate-400" style="width:900px;max-width:90px;">
-                    </div>
+                    <?php if ($turnstileSiteKey !== ''): ?>
+                    <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileSiteKey, ENT_QUOTES); ?>" data-theme="light" id="loginTurnstile"></div>
+                    <?php else: ?>
+                    <p class="text-xs text-red-600">Bot verification is not configured (missing TURNSTILE_SITE_KEY).</p>
+                    <?php endif; ?>
                 </div>
 
                 <button type="submit" class="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -1158,6 +1161,8 @@ $aboutPoints = [
                     </div>
                 </div>
 
+                <p class="text-xs text-slate-500">Your verification code will be sent by email. An SMS option is offered after you request your code.</p>
+
                 <div>
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" id="reg-terms" required class="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/40">
@@ -1185,7 +1190,7 @@ $aboutPoints = [
                 <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
                     <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                 </div>
-                <h3 class="text-base font-bold text-slate-900">Check Your Email</h3>
+                <h3 class="text-base font-bold text-slate-900" id="otp-channel-heading">Check Your Email</h3>
                 <p class="mt-1 text-sm text-slate-500">Code sent to <strong id="otp-email-display"></strong></p>
 
                 <div class="mt-4">
@@ -1206,9 +1211,15 @@ $aboutPoints = [
                     Confirm Appointment
                 </button>
 
-                <button type="button" id="resend-otp-btn" class="mt-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-                    Resend code
-                </button>
+                <div class="mt-2 flex items-center justify-center gap-3 text-sm">
+                    <button type="button" id="resend-otp-btn" class="font-medium text-primary hover:text-primary/80 transition-colors">
+                        Resend code
+                    </button>
+                    <span class="text-slate-300">|</span>
+                    <button type="button" id="resend-otp-sms-btn" class="font-medium text-primary hover:text-primary/80 transition-colors">
+                        Send via SMS
+                    </button>
+                </div>
 
                 <p class="mt-4 text-xs text-slate-400">Already have a booking, or need a different date? Contact the clinic directly at <strong class="text-slate-500">+63 (88) 000 0000</strong> instead of submitting a new request.</p>
             </div>
@@ -1792,8 +1803,6 @@ $aboutPoints = [
             booking: document.getElementById('authPanelBooking'),
             forgot: document.getElementById('authPanelForgot')
         };
-        let loginCaptchaLoaded = false;
-
         function openAuthModal(name) {
             if (!authModal || !authPanels[name]) return;
             Object.keys(authPanels).forEach(function(key) {
@@ -1802,11 +1811,6 @@ $aboutPoints = [
             authModal.classList.add('open');
             authModal.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
-
-            if (name === 'login' && !loginCaptchaLoaded) {
-                loginCaptchaLoaded = true;
-                refreshLoginCaptcha();
-            }
 
             const firstInput = authPanels[name].querySelector('input');
             if (firstInput) setTimeout(function() { firstInput.focus(); }, 80);
@@ -1920,38 +1924,19 @@ $aboutPoints = [
             });
         });
 
-        // ----- Login captcha -----
-        function setLoginCaptchaQuestion(question) {
-            const questionEl = document.getElementById('loginCaptchaQuestion');
-            if (questionEl) {
-                questionEl.textContent = question || 'Unavailable';
+        // ----- Login captcha (Cloudflare Turnstile) -----
+        function resetLoginTurnstile() {
+            if (window.turnstile && document.getElementById('loginTurnstile')) {
+                try { window.turnstile.reset('#loginTurnstile'); } catch (error) { /* widget not ready yet */ }
             }
         }
 
-        async function refreshLoginCaptcha() {
-            const answerInput = document.getElementById('loginCaptchaAnswer');
-            try {
-                const response = await fetch('assets/api/auth/get_login_captcha.php', {
-                    method: 'GET',
-                    cache: 'no-store'
-                });
-                const data = await response.json();
-                if (data.success) {
-                    setLoginCaptchaQuestion(data.question || '');
-                    if (answerInput) answerInput.value = '';
-                    return;
-                }
-            } catch (error) {
-                console.error('Captcha refresh failed:', error);
+        function getLoginTurnstileToken() {
+            if (window.turnstile && document.getElementById('loginTurnstile')) {
+                return window.turnstile.getResponse('#loginTurnstile') || '';
             }
-
-            setLoginCaptchaQuestion('Refresh to generate captcha');
-            if (answerInput) answerInput.value = '';
+            return '';
         }
-
-        document.getElementById('refreshLoginCaptchaBtn')?.addEventListener('click', function() {
-            refreshLoginCaptcha();
-        });
 
         // ----- Login -----
         function validateLoginEmail() {
@@ -1969,10 +1954,10 @@ $aboutPoints = [
 
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
-            const captchaAnswer = document.getElementById('loginCaptchaAnswer').value.trim();
+            const turnstileToken = getLoginTurnstileToken();
 
-            if (!captchaAnswer) {
-                setAlert('Please solve the captcha before logging in.', 'warning');
+            if (!turnstileToken) {
+                setAlert('Please complete the verification before logging in.', 'warning');
                 return;
             }
 
@@ -1980,7 +1965,7 @@ $aboutPoints = [
                 const response = await fetch('assets/api/auth/login_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, captcha_answer: captchaAnswer, csrf_token: csrfToken })
+                    body: JSON.stringify({ email, password, turnstile_token: turnstileToken, csrf_token: csrfToken })
                 });
 
                 const data = await response.json();
@@ -2006,13 +1991,7 @@ $aboutPoints = [
                         window.location.href = redirectUrl;
                     }, 1400);
                 } else {
-                    if (data.captcha && data.captcha.question) {
-                        setLoginCaptchaQuestion(data.captcha.question);
-                        const ans = document.getElementById('loginCaptchaAnswer');
-                        if (ans) ans.value = '';
-                    } else {
-                        await refreshLoginCaptcha();
-                    }
+                    resetLoginTurnstile();
                     const passwordEl = document.getElementById('login-password');
                     if (passwordEl) {
                         passwordEl.value = '';
@@ -2021,7 +2000,7 @@ $aboutPoints = [
                     setAlert(data.message || 'Login failed', 'error');
                 }
             } catch (error) {
-                await refreshLoginCaptcha();
+                resetLoginTurnstile();
                 setAlert('An error occurred. Please try again.', 'error');
                 console.error('Error:', error);
             }
@@ -2337,6 +2316,7 @@ $aboutPoints = [
                 fd.append('preferred_time', prefTime);
                 fd.append('reason', reason);
                 fd.append('terms_accepted', regTermsCheckbox && regTermsCheckbox.checked ? '1' : '0');
+                fd.append('otp_channel', 'email');
                 fd.append('csrf_token', csrfToken);
 
                 const response = await fetch('assets/api/bookings/create_booking.php', {
@@ -2347,6 +2327,8 @@ $aboutPoints = [
 
                 if (data.success) {
                     bookingEmail = email;
+                    bookingOtpChannel = 'email';
+                    updateOtpChannelHeading();
                     // Show OTP section
                     document.getElementById('booking-form').classList.add('hidden');
                     document.getElementById('booking-otp-section').classList.remove('hidden');
@@ -2439,11 +2421,20 @@ $aboutPoints = [
             }
         });
 
-        // Resend OTP
-        document.getElementById('resend-otp-btn')?.addEventListener('click', async function() {
-            const btn = this;
+        // Resend OTP — channel is sticky: once SMS is picked, plain "Resend code" keeps using it too.
+        let bookingOtpChannel = 'email';
+
+        function updateOtpChannelHeading() {
+            const heading = document.getElementById('otp-channel-heading');
+            if (heading) heading.textContent = bookingOtpChannel === 'sms' ? 'Check Your SMS' : 'Check Your Email';
+        }
+
+        async function resendBookingOtp(channel, btn) {
+            const originalLabel = btn.textContent;
             btn.disabled = true;
             btn.textContent = 'Sending...';
+            bookingOtpChannel = channel;
+            updateOtpChannelHeading();
 
             try {
                 const fd = new FormData();
@@ -2460,21 +2451,40 @@ $aboutPoints = [
                     ? (resendReasonText ? resendComplaints.join(', ') + ' — ' + resendReasonText : resendComplaints.join(', '))
                     : resendReasonText;
                 fd.append('reason', resendReason);
+                fd.append('otp_channel', bookingOtpChannel);
+                fd.append('terms_accepted', regTermsCheckbox && regTermsCheckbox.checked ? '1' : '0');
                 fd.append('csrf_token', csrfToken);
 
-                await fetch('assets/api/bookings/create_booking.php', { method: 'POST', body: fd });
+                const response = await fetch('assets/api/bookings/create_booking.php', { method: 'POST', body: fd });
+                const data = await response.json();
                 const otpAlert = document.getElementById('otp-alert');
                 if (otpAlert) {
-                    otpAlert.className = 'mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700';
-                    otpAlert.textContent = 'New code sent. Check your email.';
+                    const ok = !!data.success;
+                    otpAlert.className = 'mt-4 rounded-xl border px-4 py-3 text-sm ' + (ok ? 'border-green-200 bg-green-50 text-green-700' : 'border-red-200 bg-red-50 text-red-700');
+                    otpAlert.textContent = data.message || (ok ? ('New code sent via ' + (bookingOtpChannel === 'sms' ? 'SMS.' : 'email.')) : 'Could not resend code.');
                     otpAlert.classList.remove('hidden');
+                }
+                if (data.code === 'sms_unavailable') {
+                    bookingOtpChannel = 'email';
+                    updateOtpChannelHeading();
+                    if (typeof showToast === 'function') {
+                        showToast('SMS is not available yet — this requires a paid SMS plan. Please use email instead.', 'warning');
+                    }
                 }
             } catch (e) {
                 // silent
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Resend code';
+                btn.textContent = originalLabel;
             }
+        }
+
+        document.getElementById('resend-otp-btn')?.addEventListener('click', function() {
+            resendBookingOtp(bookingOtpChannel, this);
+        });
+
+        document.getElementById('resend-otp-sms-btn')?.addEventListener('click', function() {
+            resendBookingOtp('sms', this);
         });
 
         // ----- Password recovery -----

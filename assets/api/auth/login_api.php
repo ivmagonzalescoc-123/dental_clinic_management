@@ -9,40 +9,44 @@ include_once '../../../config/login_activity_helpers.php';
 security_start_session();
 security_ensure_auth_columns($conn);
 
-function auth_generate_login_captcha_payload(): array
+function auth_verify_turnstile(string $token): bool
 {
-    $left = random_int(2, 12);
-    $right = random_int(1, 9);
-    $useSubtraction = (bool)random_int(0, 1);
-    if ($useSubtraction && $right > $left) {
-        $tmp = $left;
-        $left = $right;
-        $right = $tmp;
+    $secret = trim((string)(function_exists('env') ? env('TURNSTILE_SECRET_KEY', '') : ''));
+    if ($secret === '' || $token === '' || !function_exists('curl_init')) {
+        return false;
     }
 
-    $operator = $useSubtraction ? '-' : '+';
-    $answer = $useSubtraction ? ($left - $right) : ($left + $right);
+    $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => http_build_query([
+            'secret' => $secret,
+            'response' => $token,
+            'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '',
+        ]),
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 10,
+    ]);
+    $response = curl_exec($ch);
+    if (PHP_VERSION_ID < 80500) {
+        curl_close($ch);
+    }
 
-    $_SESSION['login_captcha_answer'] = (string)$answer;
-    $_SESSION['login_captcha_expires_at'] = time() + 300;
+    if ($response === false) {
+        return false;
+    }
 
-    return [
-        'question' => $left . ' ' . $operator . ' ' . $right,
-        'expires_in' => 300,
-    ];
+    $data = json_decode($response, true);
+    return is_array($data) && ($data['success'] ?? false) === true;
 }
 
-function auth_fail($message = 'Invalid email or password', $code = 401, $regenerateCaptcha = false)
+function auth_fail($message = 'Invalid email or password', $code = 401)
 {
     http_response_code($code);
-    $payload = [
+    echo json_encode([
         'success' => false,
         'message' => $message,
-    ];
-    if ($regenerateCaptcha) {
-        $payload['captcha'] = auth_generate_login_captcha_payload();
-    }
-    echo json_encode($payload);
+    ]);
     exit;
 }
 
@@ -176,15 +180,10 @@ if (!security_validate_csrf_token($csrfToken)) {
     auth_fail('Security token is invalid. Please refresh and try again.', 403);
 }
 
-$captchaAnswer = trim((string)($input['captcha_answer'] ?? ''));
-$captchaExpected = (string)($_SESSION['login_captcha_answer'] ?? '');
-$captchaExpiresAt = (int)($_SESSION['login_captcha_expires_at'] ?? 0);
-
-if ($captchaAnswer === '' || $captchaExpected === '' || ($captchaExpiresAt > 0 && time() > $captchaExpiresAt) || !hash_equals($captchaExpected, $captchaAnswer)) {
-    auth_fail('Captcha verification failed. Please try again.', 400, true);
+$turnstileToken = trim((string)($input['turnstile_token'] ?? ''));
+if (!auth_verify_turnstile($turnstileToken)) {
+    auth_fail('Verification failed. Please try again.', 400);
 }
-
-unset($_SESSION['login_captcha_answer'], $_SESSION['login_captcha_expires_at']);
 
 $email = security_clean_string($input['email'] ?? '', 150);
 $password = (string)($input['password'] ?? '');

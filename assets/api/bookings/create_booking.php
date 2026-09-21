@@ -46,6 +46,10 @@ try {
     $prefTime   = trim($_POST['preferred_time'] ?? '9:00 AM');
     $reason     = trim($_POST['reason'] ?? '');
     $termsAccepted = ($_POST['terms_accepted'] ?? '') === '1';
+    $otpChannel = trim($_POST['otp_channel'] ?? 'email');
+    if (!in_array($otpChannel, ['email', 'sms'], true)) {
+        throw new Exception('That verification method is not available. Please choose email or SMS.');
+    }
 
     // Validation
     if (!$termsAccepted) {
@@ -191,17 +195,40 @@ try {
         'created_at'    => date('Y-m-d H:i:s'),
     ];
 
-    // Send OTP email
+    // Send OTP via the chosen channel
     $patientName = trim($firstName . ' ' . $lastName);
-    $subject = 'Booking Verification - ' . email_clinic_name();
-    $textContent = 'Your verification code is: ' . $otp . '. It expires in 10 minutes.';
-    $htmlContent = email_booking_otp_html($otp, $patientName);
+    $emailSent = false;
 
-    $emailSent = reminder_send_email($email, $subject, $textContent, $htmlContent);
+    if ($otpChannel === 'sms') {
+        if ($phone === '') {
+            throw new Exception('A phone number is required to receive the code via SMS.');
+        }
+        $smsMessage = 'Your Azucena\'s Dental Clinic verification code is: ' . $otp . '. It expires in 10 minutes.';
+        $emailSent = reminder_send_sms($phone, $smsMessage);
+
+        if (!$emailSent && reminder_sms_needs_paid_plan()) {
+            // Keep the existing pending_booking (and its still-valid OTP/hash) intact so the
+            // user can fall back to email or retry — don't strand them mid-verification.
+            echo json_encode([
+                'success' => false,
+                'message' => 'SMS is not available yet — this requires a paid SMS plan. Please use email to receive your code.',
+                'code'    => 'sms_unavailable',
+            ]);
+            exit;
+        }
+
+        $otpMessage = 'Code sent via SMS. Please verify to complete your booking.';
+    } else {
+        $subject = 'Booking Verification - ' . email_clinic_name();
+        $textContent = 'Your verification code is: ' . $otp . '. It expires in 10 minutes.';
+        $htmlContent = email_booking_otp_html($otp, $patientName);
+        $emailSent = reminder_send_email($email, $subject, $textContent, $htmlContent);
+        $otpMessage = 'OTP sent to your email. Please verify to complete your booking.';
+    }
 
     echo json_encode([
         'success'    => true,
-        'message'    => 'OTP sent to your email. Please verify to complete your booking.',
+        'message'    => $otpMessage,
         'email_sent' => $emailSent,
     ]);
 

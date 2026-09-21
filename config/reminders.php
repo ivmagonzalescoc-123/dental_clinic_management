@@ -25,7 +25,7 @@ if (!function_exists('reminder_normalize_channel')) {
         if ($c === 'in_app') {
             return 'push';
         }
-        if (!in_array($c, ['email', 'sms', 'push'], true)) {
+        if (!in_array($c, ['email', 'sms', 'whatsapp', 'push'], true)) {
             return 'push';
         }
         return $c;
@@ -121,8 +121,8 @@ if (!function_exists('reminder_queue_missed_pack')) {
         $queued = 0;
         $missedAt = (clone $start)->modify('+5 minutes');
 
-        // 5 minutes after missed slot: SMS only (patient)
-        if (reminder_queue_once($conn, (int)$scheduleId, $missedAt->format('Y-m-d H:i:s'), 'sms', $basePayload + ['template' => 'appt_missed_patient'])) {
+        // 5 minutes after missed slot: email only (patient)
+        if (reminder_queue_once($conn, (int)$scheduleId, $missedAt->format('Y-m-d H:i:s'), 'email', $basePayload + ['template' => 'appt_missed_patient'])) {
             $queued++;
         }
 
@@ -152,11 +152,8 @@ if (!function_exists('reminder_queue_no_show_followup_pack')) {
         }
         $noShowAtStr = $noShowAt->format('Y-m-d H:i:s');
 
-        // No-show follow-up: email + SMS (patient)
+        // No-show follow-up: email only (patient)
         if (reminder_queue_once($conn, (int)$scheduleId, $noShowAtStr, 'email', $basePayload + ['template' => 'appt_no_show_patient'])) {
-            $queued++;
-        }
-        if (reminder_queue_once($conn, (int)$scheduleId, $noShowAtStr, 'sms', $basePayload + ['template' => 'appt_no_show_patient'])) {
             $queued++;
         }
 
@@ -586,9 +583,18 @@ if (!function_exists('reminder_send_email_smtp')) {
     }
 }
 
+if (!function_exists('reminder_sms_needs_paid_plan')) {
+    function reminder_sms_needs_paid_plan()
+    {
+        return (bool)($GLOBALS['_reminder_sms_needs_paid_plan'] ?? false);
+    }
+}
+
 if (!function_exists('reminder_send_sms')) {
     function reminder_send_sms($phoneNumber, $message)
     {
+        $GLOBALS['_reminder_sms_needs_paid_plan'] = false;
+
         $to = reminder_normalize_phone($phoneNumber);
         if ($to === '') {
             return false;
@@ -603,6 +609,7 @@ if (!function_exists('reminder_send_sms')) {
         if ($mode === 'semaphore') {
             $apiKey = trim((string)(function_exists('env') ? env('SEMAPHORE_API_KEY', '') : ''));
             if ($apiKey === '' || !function_exists('curl_init')) {
+                $GLOBALS['_reminder_sms_needs_paid_plan'] = true;
                 return false;
             }
 
@@ -631,7 +638,15 @@ if (!function_exists('reminder_send_sms')) {
                 return true;
             }
 
-            error_log('REMINDER_SMS(semaphore): http=' . $http . ' response=' . (string)$response);
+            // Semaphore returns 4xx with wording like "not enough credit(s)/balance/load"
+            // or "not yet been approved... top-up your account" when there's no paid
+            // credit on the account — surface that as a distinct case.
+            $responseStr = (string)$response;
+            if (preg_match('/credit|balance|\bload\b|insufficient|pending|approv|top-?up/i', $responseStr)) {
+                $GLOBALS['_reminder_sms_needs_paid_plan'] = true;
+            }
+
+            error_log('REMINDER_SMS(semaphore): http=' . $http . ' response=' . $responseStr);
             return false;
         }
 
@@ -664,6 +679,121 @@ if (!function_exists('reminder_send_sms')) {
 
         error_log('REMINDER_SMS(log): to=' . $to . ' message=' . $message);
         return true;
+    }
+}
+
+if (!function_exists('reminder_normalize_phone_whatsapp')) {
+    function reminder_normalize_phone_whatsapp($phoneNumber)
+    {
+        // WhatsApp Cloud API wants E.164 digits without the leading '+' (e.g. 639171234567).
+        return reminder_normalize_phone_brevo($phoneNumber);
+    }
+}
+
+if (!function_exists('reminder_whatsapp_last_error')) {
+    function reminder_whatsapp_last_error()
+    {
+        return $GLOBALS['_reminder_whatsapp_last_error'] ?? '';
+    }
+}
+
+if (!function_exists('reminder_send_whatsapp_template')) {
+    function reminder_send_whatsapp_template($phoneNumber, $templateName, array $bodyParams = [], $languageCode = null)
+    {
+        $GLOBALS['_reminder_whatsapp_last_error'] = '';
+
+        $to = reminder_normalize_phone_whatsapp($phoneNumber);
+        if ($to === '' || !function_exists('curl_init')) {
+            $GLOBALS['_reminder_whatsapp_last_error'] = 'invalid phone number or missing curl extension';
+            return false;
+        }
+
+        $token = trim((string)(function_exists('env') ? env('WHATSAPP_ACCESS_TOKEN', '') : ''));
+        $phoneNumberId = trim((string)(function_exists('env') ? env('WHATSAPP_PHONE_NUMBER_ID', '') : ''));
+        if ($token === '' || $phoneNumberId === '') {
+            $GLOBALS['_reminder_whatsapp_last_error'] = 'missing WHATSAPP_ACCESS_TOKEN or WHATSAPP_PHONE_NUMBER_ID';
+            error_log('REMINDER_WHATSAPP: ' . $GLOBALS['_reminder_whatsapp_last_error']);
+            return false;
+        }
+
+        $apiVersion = trim((string)(function_exists('env') ? env('WHATSAPP_API_VERSION', 'v21.0') : 'v21.0'));
+        if ($languageCode === null) {
+            $languageCode = trim((string)(function_exists('env') ? env('WHATSAPP_TEMPLATE_LANG', 'en_US') : 'en_US'));
+        }
+
+        $components = [];
+        if ($bodyParams !== []) {
+            $components[] = [
+                'type' => 'body',
+                'parameters' => array_map(static function ($param) {
+                    return ['type' => 'text', 'text' => (string)$param];
+                }, $bodyParams),
+            ];
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $to,
+            'type' => 'template',
+            'template' => [
+                'name' => $templateName,
+                'language' => ['code' => $languageCode],
+            ],
+        ];
+        if ($components !== []) {
+            $payload['template']['components'] = $components;
+        }
+
+        $url = 'https://graph.facebook.com/' . rawurlencode($apiVersion) . '/' . rawurlencode($phoneNumberId) . '/messages';
+        $ch = curl_init($url);
+        if (!$ch) {
+            return false;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token,
+            ],
+        ]);
+        reminder_curl_apply_ssl_options($ch);
+
+        $response = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $http = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if (PHP_VERSION_ID < 80500) {
+            curl_close($ch);
+        }
+
+        if ($http >= 200 && $http < 300) {
+            return true;
+        }
+
+        $GLOBALS['_reminder_whatsapp_last_error'] = $response !== false ? (string)$response : $curlError;
+        error_log('REMINDER_WHATSAPP: http=' . $http . ' response=' . (string)$response . ' curl=' . $curlError);
+        return false;
+    }
+}
+
+if (!function_exists('reminder_send_whatsapp_otp')) {
+    function reminder_send_whatsapp_otp($phoneNumber, $otp)
+    {
+        $templateName = trim((string)(function_exists('env') ? env('WHATSAPP_OTP_TEMPLATE_NAME', 'otp_code') : 'otp_code'));
+        $languageCode = trim((string)(function_exists('env') ? env('WHATSAPP_OTP_TEMPLATE_LANG', 'en_US') : 'en_US'));
+        return reminder_send_whatsapp_template($phoneNumber, $templateName, [(string)$otp], $languageCode);
+    }
+}
+
+if (!function_exists('reminder_send_whatsapp_reminder')) {
+    function reminder_send_whatsapp_reminder($phoneNumber, $message)
+    {
+        $templateName = trim((string)(function_exists('env') ? env('WHATSAPP_REMINDER_TEMPLATE_NAME', 'appointment_reminder') : 'appointment_reminder'));
+        $languageCode = trim((string)(function_exists('env') ? env('WHATSAPP_REMINDER_TEMPLATE_LANG', 'en_US') : 'en_US'));
+        return reminder_send_whatsapp_template($phoneNumber, $templateName, [(string)$message], $languageCode);
     }
 }
 
