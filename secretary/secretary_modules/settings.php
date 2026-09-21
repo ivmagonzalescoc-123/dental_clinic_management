@@ -3,9 +3,13 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
 ?>
 
 <div class="row g-3">
-<div class="col-lg-7">
-<h5 class="card-title mb-0">Account Settings</h5>
-    <?php if ($forceChange): ?>
+<div class="col-lg-5">
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-header">
+        <h5 class="card-title mb-0"><i class="bi bi-shield-lock me-1"></i>Account Settings</h5>
+    </div>
+    <div class="card-body">
+        <?php if ($forceChange): ?>
             <div class="alert alert-warning">For security, you must change your default password before using other pages.</div>
         <?php endif; ?>
         <div id="passwordChangeAlert" class="mt-3"></div>
@@ -36,9 +40,11 @@ $forceChange = isset($_GET['force_password_change']) ? 1 : 0;
             ?>
             <button type="submit" class="btn btn-primary"><i class="bi bi-shield-lock me-1"></i>Update Password</button>
         </form>
+    </div>
+</div>
 </div>
 
-<div class="col-lg-5">
+<div class="col-lg-7">
 <?php
 $loginActivityTable = 'user_logs';
 $loginActivityIdColumn = 'user_id';

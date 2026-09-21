@@ -32,7 +32,7 @@ if (!function_exists('login_activity_format_time')) {
     }
 }
 ?>
-<div class="card border-0 shadow-sm">
+<div class="card border-0 shadow-sm h-100">
     <div class="card-header">
         <h5 class="card-title mb-0"><i class="bi bi-shield-check me-1"></i>Device &amp; Login Activity</h5>
     </div>

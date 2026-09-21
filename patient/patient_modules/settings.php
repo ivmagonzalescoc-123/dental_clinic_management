@@ -15,10 +15,10 @@ if ($_settingsPatientId > 0 && isset($conn)) {
 }
 ?>
 <div class="row g-3">
-<div class="col-lg-7">
-<div class="card border-0 shadow-sm">
+<div class="col-lg-5">
+<div class="card border-0 shadow-sm h-100">
     <div class="card-header">
-        <h5 class="card-title mb-0">Account Settings</h5>
+        <h5 class="card-title mb-0"><i class="bi bi-shield-lock me-1"></i>Account Settings</h5>
     </div>
     <div class="card-body">
         <?php if ($_settingsIsGoogleAccount): ?>
@@ -60,7 +60,7 @@ if ($_settingsPatientId > 0 && isset($conn)) {
 </div>
 </div>
 
-<div class="col-lg-5">
+<div class="col-lg-7">
 <?php
 $loginActivityTable = 'patient_logs';
 $loginActivityIdColumn = 'patient_id';
