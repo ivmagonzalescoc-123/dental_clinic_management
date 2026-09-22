@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net">
   <diagram name="Flowchart - Appointment Lifecycle" id="urtinPkUhrZnrWxoLU_g">
-    <mxGraphModel dx="2457" dy="1351" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2457" dy="1351" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1950" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -11,7 +11,7 @@
         <mxCell id="yRwlljrILqDDostc0-zi-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Patient logs into portal&#xa;(index.php)" vertex="1">
           <mxGeometry height="60" width="220" x="380" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Credentials valid &amp;&#xa;session OK?" vertex="1">
+        <mxCell id="yRwlljrILqDDostc0-zi-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Cloudflare Turnstile passed,&#xa;credentials valid &amp;&#xa;session OK?" vertex="1">
           <mxGeometry height="80" width="240" x="370" y="200" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" value="Show error message,&#xa;allow retry" vertex="1">
@@ -29,7 +29,7 @@
         <mxCell id="yRwlljrILqDDostc0-zi-8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Enter booking details&#xa;&amp; submit" vertex="1">
           <mxGeometry height="60" width="220" x="380" y="590" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="System generates OTP&#xa;&amp; sends to patient" vertex="1">
+        <mxCell id="yRwlljrILqDDostc0-zi-9" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="System generates OTP;&#xa;sends via patient's chosen&#xa;channel (Email or SMS)" vertex="1">
           <mxGeometry height="60" width="220" x="380" y="680" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-10" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="OTP verified?" vertex="1">
@@ -89,7 +89,7 @@
         <mxCell id="yRwlljrILqDDostc0-zi-26" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" value="End&#xa;(Cancelled / Rejected / No-Show)" vertex="1">
           <mxGeometry height="70" width="220" x="740" y="1600" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-27" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="yRwlljrILqDDostc0-zi-2">
+        <mxCell id="yRwlljrILqDDostc0-zi-27" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="channel-1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-28" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-2" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="yRwlljrILqDDostc0-zi-3">
@@ -211,6 +211,64 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="resched-edge-4" edge="1" parent="1" source="resched-2" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=1;entryY=0.7;entryDx=0;entryDy=0;" target="yRwlljrILqDDostc0-zi-18" value="resolved (new slot kept or original kept)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="channel-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Booking channel?" vertex="1">
+          <mxGeometry height="60" width="200" x="650" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="channel-edge-1" edge="1" parent="1" source="channel-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="yRwlljrILqDDostc0-zi-2" value="Online (Guest)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="channel-edge-2" edge="1" parent="1" source="channel-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="walkin-start-1" value="Walk-in (Secretary)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-start-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Secretary opens Walk-in&#xa;Registration" vertex="1">
+          <mxGeometry height="60" width="220" x="960" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-details-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Secretary selects patient,&#xa;service, doctor &amp; timeslot" vertex="1">
+          <mxGeometry height="60" width="220" x="960" y="110" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-created-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Walk-in appointment created&#xa;directly (status: confirmed,&#xa;no OTP/approval step)" vertex="1">
+          <mxGeometry height="70" width="220" x="960" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-edge-1" edge="1" parent="1" source="walkin-start-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="walkin-details-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-edge-2" edge="1" parent="1" source="walkin-details-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="walkin-created-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="walkin-edge-3" edge="1" parent="1" source="walkin-created-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="yRwlljrILqDDostc0-zi-17" value="merges into confirmed flow">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1070" y="1220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="sms-decision-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;" value="SMS chosen &amp; credits&#xa;available (Semaphore)?" vertex="1">
+          <mxGeometry height="70" width="220" x="740" y="585" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-decision-1" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-9" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="sms-decision-1" value="if SMS chosen">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-fallback-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8cecc;strokeColor=#b85450;" value="Toast shown: SMS unavailable&#xa;(paid plan required);&#xa;falls back to email" vertex="1">
+          <mxGeometry height="60" width="220" x="740" y="685" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-1" edge="1" parent="1" source="sms-decision-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="sms-fallback-1" value="No">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-2" edge="1" parent="1" source="sms-decision-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="yRwlljrILqDDostc0-zi-10" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-3" edge="1" parent="1" source="sms-fallback-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="yRwlljrILqDDostc0-zi-10" value="continue (email OTP)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="auto-reminder-note-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;" value="Note: reminders also auto-fire&#xa;via cron worker — missed&#xa;(+5min after slot) &amp; end-of-day&#xa;no-show emails, independent&#xa;of secretary action" vertex="1">
+          <mxGeometry height="90" width="220" x="1020" y="1360" as="geometry" />
+        </mxCell>
+        <mxCell id="auto-reminder-edge-1" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-20" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="auto-reminder-note-1" value="parallel automated path">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>

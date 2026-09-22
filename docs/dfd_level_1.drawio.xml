@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net">
   <diagram name="Data Flow Diagram (Level 1)" id="X-GUm9Ukb3dpLPcPQkE9">
-    <mxGraphModel dx="2283" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="2283" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="1120" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -103,14 +103,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="y7RDD6oIbTO2tjrjBdHo-24" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-4" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-6" value="booking request (service, timeslot)">
-          <mxGeometry relative="1" x="-0.7409" y="10" as="geometry">
-            <mxPoint as="offset" />
-            <Array as="points">
-              <mxPoint x="320.03" y="420" />
-              <mxPoint x="320.03" y="174" />
-            </Array>
-          </mxGeometry>
+        <mxCell id="y7RDD6oIbTO2tjrjBdHo-24" edge="1" parent="1" source="guest-actor-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="booking-proc-1" value="booking request (service, timeslot, OTP channel)">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-25" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-6" value="schedule management">
           <mxGeometry relative="1" x="-0.5968" as="geometry">
@@ -192,6 +186,14 @@
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-37" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-8" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.7;entryY=0;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-9" value="payment confirmation">
           <mxGeometry relative="1" x="0.5211" y="10" as="geometry">
             <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="billing-followup-1" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;exitX=0;exitY=0.2;exitDx=0;exitDy=0;entryX=0;entryY=0.9;entryDx=0;entryDy=0;" source="y7RDD6oIbTO2tjrjBdHo-8" target="y7RDD6oIbTO2tjrjBdHo-6" value="schedule follow-up appointment (installment plan)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="300" y="400" />
+              <mxPoint x="300" y="220" />
+            </Array>
           </mxGeometry>
         </mxCell>
         <mxCell id="y7RDD6oIbTO2tjrjBdHo-38" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-9" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="y7RDD6oIbTO2tjrjBdHo-16" value="log notification">
@@ -302,6 +304,97 @@
               <mxPoint x="670" y="610" />
             </Array>
           </mxGeometry>
+        </mxCell>
+
+        <mxCell id="guest-actor-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#b1ddf0;strokeColor=#10739e;" value="Guest / Public Visitor" vertex="1">
+          <mxGeometry height="60" width="180" x="20" y="520" as="geometry" />
+        </mxCell>
+
+        <mxCell id="booking-proc-1" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="8.0&#xa;Booking &amp; OTP&#xa;Verification (Guest)" vertex="1">
+          <mxGeometry height="80" width="260" x="340" y="870" as="geometry" />
+        </mxCell>
+        <mxCell id="contact-proc-1" parent="1" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="9.0&#xa;Contact / Inquiry&#xa;Management" vertex="1">
+          <mxGeometry height="80" width="260" x="340" y="990" as="geometry" />
+        </mxCell>
+
+        <mxCell id="booking-store-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="D9  Bookings (pending / verified)" vertex="1">
+          <mxGeometry height="60" width="220" x="740" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="contact-store-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" value="D10  Contact Messages" vertex="1">
+          <mxGeometry height="60" width="220" x="740" y="740" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ext-oauth-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" value="Google OAuth 2.0" vertex="1">
+          <mxGeometry height="60" width="200" x="1040" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-turnstile-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" value="Cloudflare Turnstile" vertex="1">
+          <mxGeometry height="60" width="200" x="1040" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-sms-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" value="SMS Gateway&#xa;(Semaphore / Brevo)" vertex="1">
+          <mxGeometry height="60" width="200" x="1040" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-cron-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#d0d0d0;strokeColor=#666666;" value="External Cron Scheduler" vertex="1">
+          <mxGeometry height="60" width="200" x="1040" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="ext-gmail-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f5f5f5;strokeColor=#666666;" value="Gmail Inbox&#xa;(IMAP sync)" vertex="1">
+          <mxGeometry height="60" width="200" x="1040" y="340" as="geometry" />
+        </mxCell>
+
+        <mxCell id="oauth-edge-1" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-5" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="ext-oauth-1" value="OAuth request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="oauth-edge-2" edge="1" parent="1" source="ext-oauth-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="y7RDD6oIbTO2tjrjBdHo-5" value="identity token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-edge-1" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-5" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="ext-turnstile-1" value="bot-verification token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-edge-2" edge="1" parent="1" source="ext-turnstile-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="y7RDD6oIbTO2tjrjBdHo-5" value="pass / fail">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="booking-edge-1" edge="1" parent="1" source="booking-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="booking-store-1" value="store booking record">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-2" edge="1" parent="1" source="booking-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="guest-actor-1" value="OTP challenge / booking confirmation / tracking status">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-3" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="booking-proc-1" value="approve / decline / convert booking">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-4" edge="1" parent="1" source="booking-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="y7RDD6oIbTO2tjrjBdHo-3" value="new booking notification">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-5" edge="1" parent="1" source="booking-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="y7RDD6oIbTO2tjrjBdHo-6" value="convert to appointment (on approval)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-6" edge="1" parent="1" source="booking-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="ext-sms-1" value="OTP SMS request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="booking-edge-7" edge="1" parent="1" source="ext-sms-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="booking-proc-1" value="delivery status (or no-credit failure)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="reminder-sms-edge-1" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-9" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="ext-sms-1" value="reminder SMS (capability present; email used today)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cron-edge-1" edge="1" parent="1" source="ext-cron-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="y7RDD6oIbTO2tjrjBdHo-9" value="trigger reminder run">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cron-edge-2" edge="1" parent="1" source="ext-cron-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="y7RDD6oIbTO2tjrjBdHo-10" value="trigger backup run">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="contact-edge-1" edge="1" parent="1" source="guest-actor-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="contact-proc-1" value="submit contact message">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="contact-edge-2" edge="1" parent="1" source="ext-gmail-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="contact-proc-1" value="incoming messages (Gmail sync)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="contact-edge-3" edge="1" parent="1" source="contact-proc-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="contact-store-1" value="store contact message">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="contact-edge-4" edge="1" parent="1" source="y7RDD6oIbTO2tjrjBdHo-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="contact-proc-1" value="read / reply / archive">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

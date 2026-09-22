@@ -6,7 +6,7 @@
         <mxCell id="1" parent="0" />
 
         <mxCell id="boundary" value="Dental Clinic Management System" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=center;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;spacingTop=10;" vertex="1" parent="1">
-          <mxGeometry x="550" y="40" width="380" height="2970" as="geometry" />
+          <mxGeometry x="550" y="40" width="380" height="3680" as="geometry" />
         </mxCell>
 
         <mxCell id="actAdmin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
@@ -125,6 +125,31 @@
           <mxGeometry x="570" y="2870" width="340" height="60" as="geometry" />
         </mxCell>
 
+        <mxCell id="uc33" value="Track Booking Status" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="570" y="2960" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc34" value="Submit Contact Message" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3050" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc35" value="Request Reschedule" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3140" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc36" value="Approve / Decline Reschedule Request" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3230" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc37" value="Submit Review / Feedback" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3320" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc38" value="Feature / Curate Reviews" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3410" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc39" value="Check Gmail (Sync Inbox)" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3500" width="340" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="uc40" value="Verify Bot Check (Cloudflare Turnstile)" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3590" width="340" height="60" as="geometry" />
+        </mxCell>
+
         <mxCell id="e_a_uc1" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_a_uc2" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc2"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_a_uc3" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc3"><mxGeometry relative="1" as="geometry" /></mxCell>
@@ -169,15 +194,27 @@
         <mxCell id="e_p_uc2" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc2"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc3" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc3"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc4" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc4"><mxGeometry relative="1" as="geometry" /></mxCell>
-        <mxCell id="e_p_uc25" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc25"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc26" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc26"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc27" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc27"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc28" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc28"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_p_uc29" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc29"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_p_uc35" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc35"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_p_uc37" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc37"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_p_uc25" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc25"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_p_uc33" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc33"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_p_uc34" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actPatient" target="uc34"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_s_uc36" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actSecretary" target="uc36"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_d_uc36" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actDoctor" target="uc36"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_uc39" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actSecretary" target="uc39"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_a_uc38" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc38"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <mxCell id="e_inc_otp" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc25" target="uc30"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_ext_oauth" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc31" target="uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_ext_email" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc32" target="uc4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ext_turnstile" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc40" target="uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_inc_gmail" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc24" target="uc39"><mxGeometry relative="1" as="geometry" /></mxCell>
 
       </root>
     </mxGraphModel>

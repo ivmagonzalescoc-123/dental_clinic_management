@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net">
   <diagram name="Context Diagram (DFD Level 0)" id="Oseii94fp1cOrkMZu0xu">
-    <mxGraphModel dx="662" dy="364" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+    <mxGraphModel dx="662" dy="364" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="1600" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -29,7 +29,7 @@
         <mxCell id="Ky4QepfbDMXns8cKBMpW-32" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#b0e3e6;strokeColor=#0b8080;" value="MySQL Database&#xa;(capstone_dental)" vertex="1">
           <mxGeometry height="70" width="180" x="860" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="Ky4QepfbDMXns8cKBMpW-33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="AI Chat Handler" vertex="1">
+        <mxCell id="Ky4QepfbDMXns8cKBMpW-33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Groq LLM API&#xa;(AI chat assistant)" vertex="1">
           <mxGeometry height="70" width="180" x="860" y="660" as="geometry" />
         </mxCell>
         <mxCell id="gmail-ext-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Gmail Inbox&#xa;(contact messages)" vertex="1">
@@ -73,7 +73,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="Ky4QepfbDMXns8cKBMpW-40" edge="1" parent="1" source="Ky4QepfbDMXns8cKBMpW-28" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0.232;entryY=0.928;entryDx=0;entryDy=0;entryPerimeter=0;" target="Ky4QepfbDMXns8cKBMpW-29" value="booking requests, OTP, payments, profile updates">
+        <mxCell id="Ky4QepfbDMXns8cKBMpW-40" edge="1" parent="1" source="Ky4QepfbDMXns8cKBMpW-28" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;entryX=0.232;entryY=0.928;entryDx=0;entryDy=0;entryPerimeter=0;" target="Ky4QepfbDMXns8cKBMpW-29" value="reschedule requests, payments, profile updates, reviews">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="438.5" y="700" />
@@ -142,6 +142,41 @@
               <mxPoint x="790" y="493" />
             </Array>
           </mxGeometry>
+        </mxCell>
+
+        <mxCell id="guest-ext-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#b1ddf0;strokeColor=#10739e;" value="Guest / Public Visitor" vertex="1">
+          <mxGeometry height="70" width="160" x="40" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-ext-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="Cloudflare Turnstile&#xa;(bot verification)" vertex="1">
+          <mxGeometry height="70" width="180" x="860" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-ext-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;" value="SMS Gateway&#xa;(Semaphore / Brevo)" vertex="1">
+          <mxGeometry height="70" width="180" x="860" y="1260" as="geometry" />
+        </mxCell>
+        <mxCell id="cron-ext-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d0d0d0;strokeColor=#666666;" value="External Cron Scheduler&#xa;(cron-job.org / Task Scheduler)" vertex="1">
+          <mxGeometry height="70" width="180" x="860" y="1460" as="geometry" />
+        </mxCell>
+
+        <mxCell id="guest-edge-1" edge="1" parent="1" source="guest-ext-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="Ky4QepfbDMXns8cKBMpW-29" value="booking requests, OTP entry, contact messages, booking tracking">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="guest-edge-2" edge="1" parent="1" source="Ky4QepfbDMXns8cKBMpW-29" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="guest-ext-1" value="OTP challenge, booking confirmation, status updates">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-edge-1" edge="1" parent="1" source="Ky4QepfbDMXns8cKBMpW-29" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="turnstile-ext-1" value="bot-verification token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-edge-2" edge="1" parent="1" source="turnstile-ext-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="Ky4QepfbDMXns8cKBMpW-29" value="pass / fail result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-1" edge="1" parent="1" source="Ky4QepfbDMXns8cKBMpW-29" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="sms-ext-1" value="OTP / reminder SMS request">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-edge-2" edge="1" parent="1" source="sms-ext-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="Ky4QepfbDMXns8cKBMpW-29" value="delivery status (or no-credit failure)">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cron-edge-1" edge="1" parent="1" source="cron-ext-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="Ky4QepfbDMXns8cKBMpW-29" value="triggers reminder run / backup run (secret-keyed HTTP hit)">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

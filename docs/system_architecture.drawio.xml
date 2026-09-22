@@ -71,8 +71,8 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=8;fillColor=#e1d5e7;strokeColor=#9673a6;" value="config/: session_check.php (role-based access control &amp; idle timeout), security.php, env.php (.env loader), billing_helper, email_templates, followup_helper, idempotency, odontogram_helper, profiling_helper, reminders_helper, system_logs_helper, workflow_notifications  |  includes/: header (clock/search), notifications dropdown, profile dropdown/photo upload, password field" vertex="1">
           <mxGeometry height="60" width="1240" x="60" y="590" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Auth API&lt;div&gt;&lt;br&gt;login_api, logout_api, register_api,&lt;br&gt;forgot/reset_password, google_oauth_api,&lt;br&gt;get_login_captcha, session_ping&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="220" x="60" y="710" as="geometry" />
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Auth API&lt;div&gt;&lt;br&gt;login_api (+ Cloudflare Turnstile check),&lt;br&gt;logout_api, forgot/reset_password,&lt;br&gt;change_password_api, google_oauth_api,&lt;br&gt;update_profile_api, upload_profile_image_api,&lt;br&gt;session_ping&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="220" x="60" y="710" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Appointments API&lt;div&gt;&lt;br&gt;create, update, confirm, reschedule,&lt;br&gt;smart_schedule, timeslots&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="220" x="320" y="710" as="geometry" />
@@ -80,8 +80,8 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-25" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Arrivals API&lt;div&gt;&lt;br&gt;mark_arrived, mark_no_show,&lt;br&gt;start_session&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="220" x="580" y="710" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Bookings API&lt;div&gt;&lt;br&gt;booking creation with&lt;br&gt;OTP verification&lt;/div&gt;" vertex="1">
-          <mxGeometry height="70" width="220" x="840" y="710" as="geometry" />
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Bookings API (Guest)&lt;div&gt;&lt;br&gt;create_booking (OTP: email/SMS),&lt;br&gt;verify_booking_otp, track_booking,&lt;br&gt;approve/decline/convert_booking,&lt;br&gt;reschedule_booking, get_bookings&lt;/div&gt;" vertex="1">
+          <mxGeometry height="90" width="220" x="840" y="710" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Billing API&lt;div&gt;&lt;br&gt;invoices, payments,&lt;br&gt;installments&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="200" x="1100" y="710" as="geometry" />
@@ -128,7 +128,7 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-41" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="SMTP / Email Service&#xa;(appointment &amp; billing notices)" vertex="1">
           <mxGeometry height="60" width="220" x="320" y="1270" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-42" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="AI Chat Handler&#xa;assets/ai/analytics_chat.php" vertex="1">
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-42" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="Groq LLM API (external)&#xa;called via assets/ai/analytics_chat.php" vertex="1">
           <mxGeometry height="60" width="220" x="580" y="1270" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-43" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="Backups Storage&#xa;backups/" vertex="1">
@@ -137,7 +137,7 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-44" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="System Logs Storage&#xa;logs/" vertex="1">
           <mxGeometry height="60" width="200" x="1100" y="1270" as="geometry" />
         </mxCell>
-        <mxCell id="odo-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Odontogram Viewer (shared)&#xa;odontogram/ — 3D tooth chart&#xa;editor embedded via iframe +&#xa;postMessage in doctor/secretary/&#xa;patient portals" vertex="1">
+        <mxCell id="odo-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Odontogram Viewer (shared)&#xa;odontogram/ — 2D/3D hybrid tooth&#xa;chart embedded via iframe +&#xa;postMessage; client-cached 1yr,&#xa;loaded only on odontogram click" vertex="1">
           <mxGeometry height="165" width="220" x="60" y="350" as="geometry" />
         </mxCell>
         <mxCell id="rev-api-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Reviews/Feedback API&lt;div&gt;&lt;br&gt;submit_feedback,&lt;br&gt;admin feature/unfeature reviews&lt;/div&gt;" vertex="1">
@@ -145,6 +145,15 @@
         </mxCell>
         <mxCell id="gmail-sync-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="Gmail Inbox Sync&#xa;(inbound contact messages)" vertex="1">
           <mxGeometry height="60" width="220" x="60" y="1350" as="geometry" />
+        </mxCell>
+        <mxCell id="turnstile-arch-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="Cloudflare Turnstile&#xa;(login bot verification)" vertex="1">
+          <mxGeometry height="60" width="220" x="320" y="1350" as="geometry" />
+        </mxCell>
+        <mxCell id="sms-arch-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#f5f5f5;strokeColor=#666666;" value="SMS Gateway&#xa;(Semaphore / Brevo — booking OTP)" vertex="1">
+          <mxGeometry height="60" width="220" x="580" y="1350" as="geometry" />
+        </mxCell>
+        <mxCell id="cron-arch-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;fillColor=#d0d0d0;strokeColor=#666666;" value="External Cron Scheduler&#xa;(scripts/cron_reminders.php,&#xa;scripts/cron_backup.php)" vertex="1">
+          <mxGeometry height="60" width="220" x="840" y="1350" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-45" edge="1" parent="1" source="JLcDgtsmxZjL6ryiYy6h-8" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="JLcDgtsmxZjL6ryiYy6h-13">
           <mxGeometry relative="1" as="geometry" />
@@ -259,6 +268,35 @@
               <mxPoint x="170" y="1350" />
               <mxPoint x="170" y="870" />
               <mxPoint x="1200" y="870" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="turnstile-edge-arch-1" edge="1" parent="1" source="JLcDgtsmxZjL6ryiYy6h-23" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="turnstile-arch-1" value="bot-verification token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170" y="810" />
+              <mxPoint x="170" y="1240" />
+              <mxPoint x="430" y="1240" />
+              <mxPoint x="430" y="1300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="sms-edge-arch-1" edge="1" parent="1" source="JLcDgtsmxZjL6ryiYy6h-26" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="sms-arch-1" value="OTP SMS request">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="950" y="800" />
+              <mxPoint x="950" y="1240" />
+              <mxPoint x="690" y="1240" />
+              <mxPoint x="690" y="1300" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="cron-edge-arch-1" edge="1" parent="1" source="cron-arch-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="JLcDgtsmxZjL6ryiYy6h-29" value="trigger reminder/backup run">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1200" y="1300" />
+              <mxPoint x="1200" y="835" />
+              <mxPoint x="540" y="835" />
             </Array>
           </mxGeometry>
         </mxCell>
