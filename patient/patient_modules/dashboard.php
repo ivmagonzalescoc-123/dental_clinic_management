@@ -219,7 +219,7 @@ if ($patientId > 0) {
                 <div class="card-body">
                     <h5 class="card-title mb-0">Upcoming Appointments</h5>
                     <?php if (empty($upcomingList)): ?>
-                        <div class="text-muted mt-3">No upcoming appointments. <a href="patient.php?page=appointments">Book one now</a>.</div>
+                        <?php dashboard_render_empty_state('No upcoming appointments yet.', 'bi-calendar-plus', 'Book one now', 'patient.php?page=appointments'); ?>
                     <?php else: ?>
                         <ul class="list-group list-group-flush mt-3">
                             <?php foreach ($upcomingList as $appt): ?>
@@ -278,11 +278,7 @@ if ($patientId > 0) {
 }
 .patient-review-star.active {
     color: #f59e0b;
-}
-[data-theme="dark"] .patient-review-star {
-    color: #475569;
-}
-</style>
+}</style>
 
 <div class="modal fade" id="patientReviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen-sm-down">

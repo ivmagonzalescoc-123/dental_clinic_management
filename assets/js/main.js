@@ -357,27 +357,22 @@
       return false
     }
 
-    var pageLoadingSafetyTimer = null
-    function setPageLoading(active) {
-      var overlay = document.getElementById('globalLoadingOverlay')
-      if (!overlay) {
-        // Create overlay if it doesn't exist
-        overlay = document.createElement('div')
-        overlay.id = 'globalLoadingOverlay'
-        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;'
-        overlay.innerHTML = '<div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#1d6fd8;border-radius:50%;animation:spin 0.8s linear infinite;"></div>'
-        document.body.appendChild(overlay)
-      }
-      overlay.style.display = active ? 'flex' : 'none'
-
-      // Safety net: if the fetch this was shown for stalls (dropped
-      // connection, unresponsive server) and never reaches its .then/.catch,
-      // don't leave the spinner on screen forever.
-      if (pageLoadingSafetyTimer) clearTimeout(pageLoadingSafetyTimer)
-      if (active) {
-        pageLoadingSafetyTimer = setTimeout(function () { overlay.style.display = 'none' }, 8000)
-      }
-    }
+    // Generic content-shaped placeholder shown in #main while an AJAX nav
+    // fetch is in flight. Doesn't match every module's real layout, but a
+    // hero + KPI row + panel skeleton approximates the common dashboard
+    // shape far better than a blocking full-screen spinner did.
+    var SKELETON_MAIN_HTML =
+      '<div class="dental-skeleton-block dental-skeleton-hero"></div>' +
+      '<div class="dental-skeleton-kpi-row">' +
+        '<div class="dental-skeleton-block dental-skeleton-kpi"></div>' +
+        '<div class="dental-skeleton-block dental-skeleton-kpi"></div>' +
+        '<div class="dental-skeleton-block dental-skeleton-kpi"></div>' +
+        '<div class="dental-skeleton-block dental-skeleton-kpi"></div>' +
+      '</div>' +
+      '<div class="dental-skeleton-panels">' +
+        '<div class="dental-skeleton-block dental-skeleton-panel"></div>' +
+        '<div class="dental-skeleton-block dental-skeleton-panel"></div>' +
+      '</div>'
 
     function cleanupModalState() {
       if (window.__fcInstances && window.__fcInstances.length) {
@@ -439,7 +434,11 @@
       currentAbort = new AbortController()
       isNavigating = true
       cleanupModalState()
-      setPageLoading(true)
+
+      var skeletonTarget = document.querySelector('#main')
+      if (skeletonTarget) {
+        skeletonTarget.innerHTML = SKELETON_MAIN_HTML
+      }
 
       fetch(url, { credentials: 'same-origin', signal: currentAbort.signal })
         .then(function(r) { return r.text() })
@@ -449,7 +448,6 @@
           // instead of letting it overwrite what the newer click just loaded.
           if (myToken !== navToken) return
 
-          setPageLoading(false)
           currentAbort = null
 
           // Destroy all FullCalendar/flatpickr instances BEFORE swapping DOM
@@ -479,7 +477,6 @@
         .catch(function(err) {
           if (err.name === 'AbortError') return
           if (myToken !== navToken) return
-          setPageLoading(false)
           destroyAllFullCalendars()
           destroyAllFlatpickrs()
           cleanupModalState()

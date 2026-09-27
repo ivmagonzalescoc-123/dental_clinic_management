@@ -682,6 +682,7 @@ if ($stmt) {
                                             <div id="histOdontogramWrap" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
                                                 <iframe id="histOdontoFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
                                             </div>
+                                            <?php odontogram_render_rotate_prompt(); ?>
                                         </div>
                                     </div>
                                 </div>
@@ -944,55 +945,7 @@ if ($stmt) {
     background: #f8fafc;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
-}
-
-/* ---- Dark mode ---- */
-[data-theme="dark"] .hist-field,
-[data-theme="dark"] .hist-section,
-[data-theme="dark"] .hist-patient-header {
-    background: #16223a;
-    border-color: #2f3d52;
-}
-[data-theme="dark"] .hist-label {
-    color: #94a3b8;
-}
-[data-theme="dark"] .hist-value {
-    color: #e2e8f0;
-}
-[data-theme="dark"] .hist-section-title {
-    color: #cbd5e1;
-}
-[data-theme="dark"] .hist-pre {
-    background: #1c2c47;
-    border-color: #2f3d52;
-    color: #e2e8f0;
-}
-[data-theme="dark"] .doctor-booking-count {
-    background: #263449;
-    color: #cbd5e1;
-}
-[data-theme="dark"] .doctor-booking-count.type-appointment {
-    background: rgba(22, 163, 74, 0.22);
-    color: #4ade80;
-}
-[data-theme="dark"] .doctor-booking-count.type-followup {
-    background: rgba(29, 78, 216, 0.28);
-    color: #93c5fd;
-}
-[data-theme="dark"] .doctor-record-btn-disabled,
-[data-theme="dark"] .doctor-record-btn-disabled:hover,
-[data-theme="dark"] .doctor-record-btn-disabled:focus {
-    border-color: #475569;
-    color: #64748b;
-    background-color: #1a2436;
-}
-[data-theme="dark"] #histPatientName {
-    color: #e2e8f0 !important;
-}
-[data-theme="dark"] #histPatientDetails {
-    color: #94a3b8 !important;
-}
-</style>
+}</style>
 
 <script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
@@ -1276,25 +1229,20 @@ function postHistoryOdontogram(odontogramData) {
     }
 }
 
-function getHistoryOdontogramFullscreenElement() {
-    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
-}
-
 function isHistoryOdontogramFullscreen() {
     const viewport = document.getElementById('histOdontogramViewport');
-    return !!viewport && getHistoryOdontogramFullscreenElement() === viewport;
+    return !!viewport && window.OdontogramFullscreen.isActive(viewport);
 }
 
 function requestHistoryOdontogramFullscreen() {
     const viewport = document.getElementById('histOdontogramViewport');
     if (!viewport) return;
-    const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
-    if (requestFn) requestFn.call(viewport);
+    window.OdontogramFullscreen.request(viewport);
 }
 
 function exitHistoryOdontogramFullscreen() {
-    const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if (exitFn) exitFn.call(document);
+    const viewport = document.getElementById('histOdontogramViewport');
+    window.OdontogramFullscreen.exit(viewport);
 }
 
 function syncHistoryOdontogramFullscreenUI() {
@@ -1315,6 +1263,9 @@ document.getElementById('histOdontogramFullscreenBtn')?.addEventListener('click'
 document.getElementById('histOdontogramFullscreenCloseBtn')?.addEventListener('click', exitHistoryOdontogramFullscreen);
 document.addEventListener('fullscreenchange', syncHistoryOdontogramFullscreenUI);
 document.addEventListener('webkitfullscreenchange', syncHistoryOdontogramFullscreenUI);
+document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
+    if (e.target.id === 'histOdontogramViewport') syncHistoryOdontogramFullscreenUI();
+});
 document.getElementById('historyModal')?.addEventListener('hidden.bs.modal', exitHistoryOdontogramFullscreen);
 syncHistoryOdontogramFullscreenUI();
 

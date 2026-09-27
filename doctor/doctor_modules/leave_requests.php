@@ -576,39 +576,4 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
     .dr-cal-day { font-size: 0.8rem; }
     .dr-appt-chip { font-size: 0.56rem; padding: 1px 4px; }
     .dr-cal-hours { font-size: 0.6rem; }
-}
-
-/* ---- Dark mode ---- */
-[data-theme="dark"] .dr-cal-table th {
-    background: #1c2c47;
-    color: #94a3b8;
-}
-[data-theme="dark"] .dr-cal-cell {
-    background: #16223a;
-}
-[data-theme="dark"] .dr-cal-cell:hover {
-    background: #1c2c47;
-}
-[data-theme="dark"] .dr-cal-today {
-    background: rgba(45, 212, 191, 0.14) !important;
-    box-shadow: inset 0 0 0 2px #2dd4bf;
-}
-[data-theme="dark"] .dr-cal-today:hover {
-    background: rgba(45, 212, 191, 0.2) !important;
-}
-[data-theme="dark"] .dr-cal-closed { background: #1a2436; }
-[data-theme="dark"] .dr-cal-leave { background: rgba(220, 38, 38, 0.12); }
-[data-theme="dark"] .dr-cal-pending { background: rgba(217, 119, 6, 0.14); }
-[data-theme="dark"] .dr-cal-nosched,
-[data-theme="dark"] .dr-cal-empty { background: #16223a; }
-[data-theme="dark"] .dr-cal-day {
-    color: #e2e8f0;
-}
-[data-theme="dark"] .dr-cal-hours {
-    background: rgba(45, 212, 191, 0.14);
-    color: #5eead4;
-}
-[data-theme="dark"] .schedule-stat-available { background: rgba(22, 163, 74, 0.18); color: #4ade80; }
-[data-theme="dark"] .schedule-stat-leave { background: rgba(220, 38, 38, 0.18); color: #f87171; }
-[data-theme="dark"] .schedule-stat-pending { background: rgba(217, 119, 6, 0.22); color: #fbbf24; }
-</style>
+}</style>

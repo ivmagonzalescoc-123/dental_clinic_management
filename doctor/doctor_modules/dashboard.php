@@ -121,7 +121,7 @@ if ($userId > 0) {
                         <a class="card-link-action" href="doctor.php?page=appointments">View all</a>
                     </div>
                     <?php if (empty($nextAppts)): ?>
-                        <div class="text-muted mt-3">No upcoming appointments.</div>
+                        <?php dashboard_render_empty_state('No upcoming appointments.', 'bi-calendar-check'); ?>
                     <?php else: ?>
                         <ul class="list-group list-group-flush mt-3">
                             <?php foreach ($nextAppts as $na): ?>

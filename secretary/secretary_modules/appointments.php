@@ -2411,20 +2411,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     bottom: 0;
     background: #fff;
     z-index: 2;
-}
-[data-theme="dark"] #convertBookingModal .modal-body::-webkit-scrollbar-thumb {
-    background: #3a4a63;
-}
-[data-theme="dark"] #convertBookingModal .modal-footer {
-    background: #16223a;
-}
-[data-theme="dark"] #convertWalkInNote {
-    background: rgba(45, 212, 191, 0.14) !important;
-    border-color: rgba(45, 212, 191, 0.3) !important;
-    color: #5eead4 !important;
-}
-
-/* Process Booking wizard stepper */
+}/* Process Booking wizard stepper */
 .convert-stepper {
     display: flex;
     align-items: center;
@@ -2488,26 +2475,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 }
 .convert-stepper__step.is-done .convert-stepper__label {
     color: #198754;
-}
-[data-theme="dark"] .convert-stepper__circle {
-    background: #1c2a3f;
-    border-color: #2c3d57;
-    color: #7d8ba3;
-}
-[data-theme="dark"] .convert-stepper__label {
-    color: #7d8ba3;
-}
-[data-theme="dark"] .convert-stepper__track {
-    background: #2c3d57;
-}
-[data-theme="dark"] .convert-stepper__step.is-active .convert-stepper__circle {
-    box-shadow: 0 0 0 4px rgba(45, 212, 145, 0.18);
-}
-[data-theme="dark"] .convert-stepper__step.is-done .convert-stepper__circle {
-    background: rgba(25, 135, 84, 0.25);
-}
-
-/* Profiling step (step 2): grouped sections + pill selectors, replacing the old
+}/* Profiling step (step 2): grouped sections + pill selectors, replacing the old
    flat stack of individually-styled radio rows. */
 .pf-section {
     background: #f8fafc;
@@ -2588,27 +2556,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 .pf-check:focus-visible + .pf-pill {
     outline: 2px solid #0d9488;
     outline-offset: 1px;
-}
-[data-theme="dark"] .pf-section {
-    background: #111c30;
-    border-color: #243044;
-}
-[data-theme="dark"] .pf-section__title {
-    color: #5eead4;
-}
-[data-theme="dark"] .pf-field > label {
-    color: #94a3b8;
-}
-[data-theme="dark"] .pf-pill {
-    background: #0f1b2e;
-    border-color: #2b3b53;
-    color: #cbd5e1;
-}
-[data-theme="dark"] .pf-pill:hover {
-    border-color: #2dd4bf;
-    color: #5eead4;
-}
-.secretary-booking-calendar {
+}.secretary-booking-calendar {
     border: 1px solid #dbe7e4;
     border-radius: 14px;
     background: #f4f8ff;
@@ -2709,68 +2657,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 }
 #bookCalendar .book-day-badge.state-closed {
     color: #991b1b;
-}
-
-/* Dark mode — the booking calendar, legend chip, and day tints above are hardcoded
-   light colors with no theme-aware variant, so they stay glaringly bright against
-   the dark sidebar/page otherwise. */
-[data-theme="dark"] .secretary-booking-calendar {
-    border-color: #2f3d52;
-    background: #16223a;
-}
-[data-theme="dark"] .secretary-booking-calendar .selected-date-chip {
-    background: rgba(45, 212, 191, 0.16);
-    color: #5eead4;
-}
-[data-theme="dark"] .secretary-booking-calendar .calendar-legend {
-    color: #94a3b8;
-}
-[data-theme="dark"] #bookCalendar .fc-toolbar-title {
-    color: #e2e8f0;
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day-number {
-    color: #cbd5e1;
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame {
-    background: rgba(22, 163, 74, 0.18);
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
-    background: rgba(245, 158, 11, 0.18);
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-closed .fc-daygrid-day-frame,
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-disabled .fc-daygrid-day-frame {
-    background: rgba(220, 38, 38, 0.18);
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-selected {
-    box-shadow: inset 0 0 0 2px #2dd4bf;
-}
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-open:hover,
-[data-theme="dark"] #bookCalendar .fc-daygrid-day.book-day-busy:hover {
-    box-shadow: inset 0 0 0 2px rgba(45, 212, 191, 0.45);
-}
-[data-theme="dark"] #bookCalendar .book-day-badge.state-open {
-    color: #4ade80;
-}
-[data-theme="dark"] #bookCalendar .book-day-badge.state-busy {
-    color: #fbbf24;
-}
-[data-theme="dark"] #bookCalendar .book-day-badge.state-closed {
-    color: #f87171;
-}
-[data-theme="dark"] #bookCalendar .fc-scrollgrid,
-[data-theme="dark"] #bookCalendar table {
-    border-color: #2f3d52 !important;
-}
-[data-theme="dark"] #bookCalendar .fc-col-header-cell {
-    background: #1c2c47;
-    color: #94a3b8;
-}
-[data-theme="dark"] #bookCalendar td,
-[data-theme="dark"] #bookCalendar th {
-    border-color: #2f3d52 !important;
-}
-
-.appointments-actions-cell {
+}.appointments-actions-cell {
     width: auto;
     min-width: 160px;
 }

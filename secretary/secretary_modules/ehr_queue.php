@@ -275,6 +275,7 @@ $csrf_token = security_generate_csrf_token();
                             <div id="secretaryOdontogramContainer" class="secretary-odontogram-container">
                                 <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"></iframe>
                             </div>
+                            <?php odontogram_render_rotate_prompt(); ?>
                         </div>
                     </div>
 
@@ -531,32 +532,7 @@ $csrf_token = security_generate_csrf_token();
     .secretary-odontogram-container {
         height: 440px;
     }
-}
-
-/* ---- Dark mode ---- */
-[data-theme="dark"] #recordTabs.ehr-stepper {
-    background: #16223a !important;
-    border-bottom-color: #26344d;
-}
-[data-theme="dark"] .ehr-stepper__circle {
-    background: #1c2a3f;
-    border-color: #2c3d57;
-    color: #7d8ba3;
-}
-[data-theme="dark"] .ehr-stepper__label {
-    color: #7d8ba3;
-}
-[data-theme="dark"] .ehr-stepper__track {
-    background: #2c3d57;
-}
-[data-theme="dark"] .ehr-stepper__link.is-active .ehr-stepper__circle {
-    box-shadow: 0 0 0 4px rgba(45, 212, 145, 0.18);
-}
-[data-theme="dark"] .ehr-stepper__link.is-done .ehr-stepper__circle {
-    background: rgba(22, 163, 74, 0.25);
-}
-
-/* Create Record tabs (Clinical Findings / Visit Summary / Billing): grouped sections +
+}/* Create Record tabs (Clinical Findings / Visit Summary / Billing): grouped sections +
    pill selectors, mirroring the profiling step's decluttered layout. Charting is left
    untouched — it's its own dedicated full-screen odontogram tool. */
 #secretaryRecordModal .pf-section {
@@ -642,27 +618,7 @@ $csrf_token = security_generate_csrf_token();
 #secretaryRecordModal .pf-check:focus-visible + .pf-pill {
     outline: 2px solid #16a34a;
     outline-offset: 1px;
-}
-[data-theme="dark"] #secretaryRecordModal .pf-section {
-    background: #111c30;
-    border-color: #243044;
-}
-[data-theme="dark"] #secretaryRecordModal .pf-section__title {
-    color: #4ade80;
-}
-[data-theme="dark"] #secretaryRecordModal .pf-field > label {
-    color: #94a3b8;
-}
-[data-theme="dark"] #secretaryRecordModal .pf-pill {
-    background: #0f1b2e;
-    border-color: #2b3b53;
-    color: #cbd5e1;
-}
-[data-theme="dark"] #secretaryRecordModal .pf-pill:hover {
-    border-color: #4ade80;
-    color: #4ade80;
-}
-</style>
+}</style>
 
 <script>
 window.currentRecordAppointmentId = null;
@@ -999,25 +955,20 @@ function postOdontogramToSecretaryFrame(data) {
     frame.contentWindow.postMessage({ type: 'load_odontogram', toothState: data || {}, readonly: false }, '*');
 }
 
-function getSecretaryOdontogramFullscreenElement() {
-    return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
-}
-
 function isSecretaryOdontogramFullscreen() {
     const viewport = document.getElementById('secretaryOdontogramViewport');
-    return !!viewport && getSecretaryOdontogramFullscreenElement() === viewport;
+    return !!viewport && window.OdontogramFullscreen.isActive(viewport);
 }
 
 function requestSecretaryOdontogramFullscreen() {
     const viewport = document.getElementById('secretaryOdontogramViewport');
     if (!viewport) return;
-    const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
-    if (requestFn) requestFn.call(viewport);
+    window.OdontogramFullscreen.request(viewport);
 }
 
 function exitSecretaryOdontogramFullscreen() {
-    const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if (exitFn) exitFn.call(document);
+    const viewport = document.getElementById('secretaryOdontogramViewport');
+    window.OdontogramFullscreen.exit(viewport);
 }
 
 function notifySecretaryOdontogramResize() {
@@ -1057,6 +1008,9 @@ document.getElementById('closeSecretaryOdontogramFullscreenBtn')?.addEventListen
 
 document.addEventListener('fullscreenchange', syncSecretaryOdontogramFullscreenUI);
 document.addEventListener('webkitfullscreenchange', syncSecretaryOdontogramFullscreenUI);
+document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
+    if (e.target.id === 'secretaryOdontogramViewport') syncSecretaryOdontogramFullscreenUI();
+});
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && isSecretaryOdontogramFullscreen()) {
         exitSecretaryOdontogramFullscreen();

@@ -32,6 +32,7 @@ body.admin-portal {
     }
 
     .mobile-sidebar-toggle {
+        position: relative;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -507,29 +508,4 @@ body.admin-portal {
         width: 100% !important;
         max-width: 420px;
     }
-}
-
-/* ---- Dark mode ----
-   This file has no theme awareness at all; the pale-blue header search box
-   (#f8fbff / #c9deef) is hardcoded with !important and out-specifies the
-   generic dark override in main.css, so it stays light even in dark mode. */
-[data-theme="dark"] body.patient-portal .header-search-wrap,
-[data-theme="dark"] body.doctor-portal .header-search-wrap,
-[data-theme="dark"] body.secretary-portal .header-search-wrap,
-[data-theme="dark"] body.admin-portal .header-search-wrap {
-    background: #1c2c47;
-    border: 1px solid #334155;
-}
-
-[data-theme="dark"] body.patient-portal .header-search .header-search-input,
-[data-theme="dark"] body.patient-portal .header-search .unified-table-search-input,
-[data-theme="dark"] body.doctor-portal .header-search .header-search-input,
-[data-theme="dark"] body.doctor-portal .header-search .unified-table-search-input,
-[data-theme="dark"] body.secretary-portal .header-search .header-search-input,
-[data-theme="dark"] body.secretary-portal .header-search .unified-table-search-input,
-[data-theme="dark"] body.admin-portal .header-search .header-search-input,
-[data-theme="dark"] body.admin-portal .header-search .unified-table-search-input {
-    border: 1px solid #334155 !important;
-    background: #1c2c47 !important;
-    color: #e2e8f0 !important;
 }

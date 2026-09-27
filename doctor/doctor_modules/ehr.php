@@ -185,6 +185,7 @@ if ($sstmt) {
                     <i class="bi bi-x-lg"></i> Close
                 </button>
                 <div id="odontogramContainer"></div>
+                <?php odontogram_render_rotate_prompt(); ?>
             </div>
             <input type="hidden" id="odontogram_data" name="odontogram">
             <small class="text-muted d-block mt-1">Save Chart stores this odontogram immediately so it is not lost, no matter which screen is used to finish the appointment.</small>
@@ -370,11 +371,6 @@ if ($sstmt) {
 .ehr-services-total-row {
     background: #f8f9fa;
 }
-[data-theme="dark"] .ehr-services-total-row {
-    background: #1c2c47;
-    color: #e2e8f0;
-}
-
 /* Patient bar: queue selector + compact avatar/name/chips card, replacing the old
    "Selected Patient: ..." read-only box with something that also opens Patient Details. */
 .ehr-patient-bar {
@@ -445,26 +441,10 @@ if ($sstmt) {
 }
 .ehr-patient-details-btn {
     flex-shrink: 0;
-}
-[data-theme="dark"] .ehr-patient-card {
-    background: #111c30;
-    border-color: #243044;
-}
-[data-theme="dark"] .ehr-patient-name {
-    color: #e2e8f0;
-}
-[data-theme="dark"] .ehr-patient-avatar {
-    background: #1c2c47;
-}
-.dpp-chip.ehr-chip--alert {
+}.dpp-chip.ehr-chip--alert {
     background: #fef2f2;
     color: #b91c1c;
 }
-[data-theme="dark"] .dpp-chip.ehr-chip--alert {
-    background: rgba(220, 38, 38, 0.18);
-    color: #fca5a5;
-}
-
 /* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
    for all three tabs instead of being repeated inside the Profile tab's content. */
 .pd-header-bar {
@@ -499,18 +479,7 @@ if ($sstmt) {
     font-weight: 700;
     font-size: 1.05rem;
     color: #0f172a;
-}
-[data-theme="dark"] .pd-header-bar {
-    border-color: #243044;
-}
-[data-theme="dark"] .pd-header-avatar {
-    background: #1c2c47;
-}
-[data-theme="dark"] .pd-header-name {
-    color: #e2e8f0;
-}
-
-/* Session toolbar: grouped buttons with a small caption per group instead of one flat
+}/* Session toolbar: grouped buttons with a small caption per group instead of one flat
    row of lookalike buttons. */
 .ehr-toolbar {
     display: flex;
@@ -592,27 +561,7 @@ if ($sstmt) {
 #doctorClinicalFindingsModal .pf-check:focus-visible + .pf-pill {
     outline: 2px solid #0d9488;
     outline-offset: 1px;
-}
-[data-theme="dark"] #doctorClinicalFindingsModal .pf-section,
-[data-theme="dark"] #doctorPatientDetailsModal .pf-section {
-    background: #111c30;
-    border-color: #243044;
-}
-[data-theme="dark"] #doctorClinicalFindingsModal .pf-section__title,
-[data-theme="dark"] #doctorPatientDetailsModal .pf-section__title {
-    color: #5eead4;
-}
-[data-theme="dark"] #doctorClinicalFindingsModal .pf-pill {
-    background: #0f1b2e;
-    border-color: #2b3b53;
-    color: #cbd5e1;
-}
-[data-theme="dark"] #doctorClinicalFindingsModal .pf-pill:hover {
-    border-color: #2dd4bf;
-    color: #5eead4;
-}
-
-.odontogram-viewport {
+}.odontogram-viewport {
     position: relative;
     width: 100%;
 }
@@ -876,13 +825,9 @@ if ($sstmt) {
             // no-op: charting section is now a collapse toggle
         }
 
-        function getOdontogramFullscreenElement() {
-            return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
-        }
-
         function isOdontogramFullscreen() {
             const viewport = document.getElementById('odontogramViewport');
-            return !!viewport && getOdontogramFullscreenElement() === viewport;
+            return !!viewport && window.OdontogramFullscreen.isActive(viewport);
         }
 
         function requestOdontogramFullscreen() {
@@ -890,14 +835,12 @@ if ($sstmt) {
             if (!viewport) return;
 
             showOdontogram();
-
-            const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
-            if (requestFn) requestFn.call(viewport);
+            window.OdontogramFullscreen.request(viewport);
         }
 
         function exitOdontogramFullscreen() {
-            const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-            if (exitFn) exitFn.call(document);
+            const viewport = document.getElementById('odontogramViewport');
+            window.OdontogramFullscreen.exit(viewport);
         }
 
         function notifyOdontogramResize() {
@@ -937,6 +880,9 @@ if ($sstmt) {
 
         document.addEventListener('fullscreenchange', syncOdontogramFullscreenUI);
         document.addEventListener('webkitfullscreenchange', syncOdontogramFullscreenUI);
+        document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
+            if (e.target.id === 'odontogramViewport') syncOdontogramFullscreenUI();
+        });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && isOdontogramFullscreen()) {
                 exitOdontogramFullscreen();

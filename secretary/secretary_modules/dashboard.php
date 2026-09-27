@@ -104,7 +104,7 @@ if ($stmt) {
                         <a class="card-link-action" href="secretary.php?page=appointments">View all</a>
                     </div>
                     <?php if (empty($todayAppointments)): ?>
-                        <div class="alert alert-info mb-0 mt-3">No appointments scheduled for today.</div>
+                        <?php dashboard_render_empty_state('No appointments scheduled for today.', 'bi-calendar2-week'); ?>
                     <?php else: ?>
                         <div class="table-responsive mt-3">
                             <table class="table table-sm table-hover align-middle mb-0">

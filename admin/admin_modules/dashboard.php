@@ -162,7 +162,7 @@ if ($res) {
 				</div>
 
 				<?php if (empty($todayAppointments)): ?>
-					<div class="alert alert-info mb-0">No appointments today.</div>
+					<?php dashboard_render_empty_state('No appointments today.', 'bi-calendar2-week'); ?>
 				<?php else: ?>
 					<div class="table-responsive">
 						<table class="table table-sm table-hover align-middle mb-0">
@@ -222,7 +222,7 @@ if ($res) {
 				</div>
 
 				<?php if (empty($recentUserLogs)): ?>
-					<div class="alert alert-info mb-0">No logs yet.</div>
+					<?php dashboard_render_empty_state('No logs yet.', 'bi-journal-text'); ?>
 				<?php else: ?>
 					<div class="table-responsive">
 						<table class="table table-sm table-hover align-middle mb-0">

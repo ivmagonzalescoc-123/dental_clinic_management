@@ -139,3 +139,27 @@ if (!function_exists('odontogram_embed_height_px')) {
         return 820;
     }
 }
+
+if (!function_exists('odontogram_render_rotate_prompt')) {
+    /**
+     * Overlay shown inside a .odontogram-viewport while it's fullscreen (native
+     * or the iOS pseudo-fullscreen fallback — see assets/js/main.js) on a
+     * touch device held in portrait. Visibility is pure CSS (see
+     * assets/css/odontogram-rotate-prompt.css); this just emits the markup.
+     */
+    function odontogram_render_rotate_prompt(): void
+    {
+        ?>
+        <div class="odontogram-rotate-prompt" role="status">
+            <div class="odontogram-rotate-prompt__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="2" width="12" height="20" rx="2.5"></rect>
+                    <line x1="11" y1="18.4" x2="13" y2="18.4"></line>
+                </svg>
+            </div>
+            <p class="odontogram-rotate-prompt__text">Rotate your device for a better view of the chart</p>
+            <button type="button" class="odontogram-rotate-prompt__dismiss" data-odontogram-rotate-dismiss>Continue in portrait</button>
+        </div>
+        <?php
+    }
+}

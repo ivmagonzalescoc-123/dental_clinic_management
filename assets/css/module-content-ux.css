@@ -705,117 +705,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   background: #fdecec !important;
   color: #b02f2f !important;
   border-color: #f3c2c2 !important;
-}
-
-/* ---- Dark mode: table status badges ----
-   All the rules above are !important + high specificity, so they force a pale
-   pastel background with dark text on every status badge in every table across
-   every portal in dark mode unless matched here. */
-[data-theme="dark"] #main table td .badge.table-badge-neutral,
-[data-theme="dark"] #main .table td .badge.table-badge-neutral,
-[data-theme="dark"] #main table td .badge.bg-light,
-[data-theme="dark"] #main .table td .badge.bg-light,
-[data-theme="dark"] #main table td .badge.text-bg-light,
-[data-theme="dark"] #main .table td .badge.text-bg-light,
-[data-theme="dark"] #main table td .badge.bg-secondary,
-[data-theme="dark"] #main .table td .badge.bg-secondary,
-[data-theme="dark"] #main table td .badge.text-bg-secondary,
-[data-theme="dark"] #main .table td .badge.text-bg-secondary {
-  background: #263449 !important;
-  color: #cbd5e1 !important;
-  border-color: #3a4a63 !important;
-}
-
-[data-theme="dark"] #main table td .badge.bg-primary,
-[data-theme="dark"] #main .table td .badge.bg-primary,
-[data-theme="dark"] #main table td .badge.text-bg-primary,
-[data-theme="dark"] #main .table td .badge.text-bg-primary,
-[data-theme="dark"] #main table td .badge.bg-info,
-[data-theme="dark"] #main .table td .badge.bg-info,
-[data-theme="dark"] #main table td .badge.text-bg-info,
-[data-theme="dark"] #main .table td .badge.text-bg-info {
-  background: rgba(45, 212, 191, 0.16) !important;
-  color: #5eead4 !important;
-  border-color: rgba(45, 212, 191, 0.3) !important;
-}
-
-[data-theme="dark"] #main table td .badge.bg-success,
-[data-theme="dark"] #main .table td .badge.bg-success,
-[data-theme="dark"] #main table td .badge.text-bg-success,
-[data-theme="dark"] #main .table td .badge.text-bg-success {
-  background: rgba(22, 163, 74, 0.18) !important;
-  color: #4ade80 !important;
-  border-color: rgba(22, 163, 74, 0.35) !important;
-}
-
-[data-theme="dark"] #main table td .badge.bg-warning,
-[data-theme="dark"] #main .table td .badge.bg-warning,
-[data-theme="dark"] #main table td .badge.text-bg-warning,
-[data-theme="dark"] #main .table td .badge.text-bg-warning {
-  background: rgba(217, 119, 6, 0.2) !important;
-  color: #fbbf24 !important;
-  border-color: rgba(217, 119, 6, 0.35) !important;
-}
-
-[data-theme="dark"] #main table td .badge.bg-danger,
-[data-theme="dark"] #main .table td .badge.bg-danger,
-[data-theme="dark"] #main table td .badge.text-bg-danger,
-[data-theme="dark"] #main .table td .badge.text-bg-danger {
-  background: rgba(220, 38, 38, 0.2) !important;
-  color: #f87171 !important;
-  border-color: rgba(220, 38, 38, 0.35) !important;
-}
-
-/* ---- Dark mode: generic Bootstrap bg-light / bg-white utility boxes ----
-   Used everywhere (info tiles, summary boxes, modal body sections) as a "light
-   card" pattern with no theme awareness — force them to the dark surface color. */
-[data-theme="dark"] #main .bg-light {
-  background-color: #16223a !important;
-  color: #e2e8f0;
-}
-[data-theme="dark"] #main .bg-white {
-  background-color: #16223a !important;
-}
-/* Note: .text-dark is intentionally left untouched — it's frequently paired with a
-   light semantic background (e.g. .bg-warning.text-dark) that stays light on purpose
-   in both themes, so forcing it light-on-dark here would break that contrast pairing. */
-
-/* Standalone badges (outside table cells, e.g. "badge bg-light text-dark border"
-   summary chips) — the table-scoped badge dark rules above don't reach these, and
-   Bootstrap's own .text-dark !important would otherwise keep dark text sitting on
-   the now-dark .bg-light background, making it unreadable either way. */
-[data-theme="dark"] #main .badge.bg-light,
-[data-theme="dark"] #main .badge.text-bg-light {
-  background-color: #263449 !important;
-  color: #cbd5e1 !important;
-  border-color: #3a4a63 !important;
-}
-
-/* Selected/highlighted table row (Bootstrap .table-primary) stayed pale blue with
-   near-white text sitting on it, making the row unreadable when selected. */
-[data-theme="dark"] #main .table-primary,
-[data-theme="dark"] #main .table-primary > * {
-  --bs-table-bg: rgba(45, 212, 191, 0.14);
-  background-color: rgba(45, 212, 191, 0.14) !important;
-  color: #e2e8f0 !important;
-  border-color: var(--ux-border) !important;
-}
-
-/* Plain Bootstrap .list-group-item (e.g. patient appointment timeline entries)
-   keeps its default white background with no dark override anywhere. */
-[data-theme="dark"] #main .list-group-item {
-  background-color: var(--ux-surface);
-  color: var(--ux-text);
-  border-color: var(--ux-border-soft);
-}
-
-[data-theme="dark"] #main .alert-light {
-  background-color: #16223a;
-  border-color: var(--ux-border);
-  color: var(--ux-text);
-}
-
-@media (max-width: 991.98px) {
+}@media (max-width: 991.98px) {
   #main .ux-form-grid {
     grid-template-columns: 1fr;
   }
@@ -928,7 +818,22 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   min-height: 132px;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Most KPI cards are static stats, but a few (e.g. secretary's "New Patient
+   Bookings") are wrapped in a link. Only give those the lift + stronger
+   shadow, so the affordance matches which cards are actually clickable. */
+#main a:hover > .dental-kpi-card,
+#main a:focus-visible > .dental-kpi-card {
+  transform: translateY(-3px);
+  border-color: #cfe8e4;
+  box-shadow: 0 10px 24px rgba(13, 148, 136, 0.14), 0 4px 10px rgba(15, 35, 60, 0.06);
+}
+
+#main a:focus-visible > .dental-kpi-card {
+  outline: 2px solid rgba(13, 148, 136, 0.45);
+  outline-offset: 2px;
 }
 
 #main .dental-kpi-card__inner {
@@ -1072,6 +977,96 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   text-decoration: underline;
 }
 
+/* ---- Empty state (used in place of bare "No X yet." text) ---- */
+#main .dental-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  gap: 0.35rem;
+}
+
+#main .dental-empty-state__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f0fdfa;
+  color: #0d9488;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 0.15rem;
+}
+
+#main .dental-empty-state__message {
+  color: #5d6f85;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+#main .dental-empty-state__cta {
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0d9488;
+  text-decoration: none;
+}
+
+#main .dental-empty-state__cta:hover {
+  color: #0f766e;
+  text-decoration: underline;
+}/* ---- Skeleton loader (shown in #main during AJAX nav, replacing the old
+   full-screen blocking spinner with a content-shaped placeholder) ---- */
+@keyframes dental-skeleton-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+#main .dental-skeleton-block {
+  border-radius: 10px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7fafc 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: dental-skeleton-shimmer 1.4s ease infinite;
+}
+
+#main .dental-skeleton-hero {
+  height: 92px;
+  border-radius: 14px;
+  margin-bottom: 1rem;
+}
+
+#main .dental-skeleton-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+#main .dental-skeleton-kpi {
+  height: 132px;
+}
+
+#main .dental-skeleton-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+#main .dental-skeleton-panel {
+  height: 220px;
+}
+
+@media (max-width: 991.98px) {
+  #main .dental-skeleton-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  #main .dental-skeleton-panels {
+    grid-template-columns: 1fr;
+  }
+}
 #main .dental-dashboard-shell .progress {
   height: 10px;
   border-radius: 999px;
@@ -1938,278 +1933,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   font-size: 1.3rem;
-}
-
-/* ========== DARK MODE (module content) ========== */
-[data-theme="dark"] #main {
-  --ux-bg: #0f172a;
-  --ux-surface: #16223a;
-  --ux-border: #2f3d52;
-  --ux-border-soft: #263449;
-  --ux-text: #e2e8f0;
-  --ux-muted: #94a3b8;
-  --ux-accent: #2dd4bf;
-  --ux-accent-soft: rgba(45, 212, 191, 0.12);
-}
-
-[data-theme="dark"] #main .card .card-header {
-  background: linear-gradient(180deg, #16223a 0%, #131e33 100%);
-  border-bottom: 1px solid var(--ux-border-soft);
-}
-
-[data-theme="dark"] #main .module-search-toolbar,
-[data-theme="dark"] #main .unified-table-search-toolbar,
-[data-theme="dark"] #main .datatable-top,
-[data-theme="dark"] #main .dataTable-top,
-[data-theme="dark"] #main .datatable-bottom,
-[data-theme="dark"] #main .dataTable-bottom {
-  background: #16223a;
-  border-color: #2f3d52;
-}
-
-[data-theme="dark"] #main .module-search-toolbar.appointments-filter-toolbar,
-[data-theme="dark"] #main .appointments-filter-toolbar {
-  background: #16223a;
-  border-color: #2f3d52;
-}
-
-[data-theme="dark"] #main .table-responsive,
-[data-theme="dark"] #main .history-table-wrap.table-responsive {
-  background: var(--ux-surface);
-  border-color: var(--ux-border);
-}
-
-[data-theme="dark"] #main .table thead th,
-[data-theme="dark"] #main .dataTable-table thead th {
-  background: #1c2c47;
-  color: #94a3b8;
-  border-bottom: 1px solid var(--ux-border);
-}
-
-[data-theme="dark"] #main .table,
-[data-theme="dark"] #main .dataTable-table {
-  --bs-table-striped-bg: #182437;
-  --bs-table-hover-bg: rgba(45, 212, 191, 0.06);
-  --bs-table-border-color: var(--ux-border);
-}
-
-[data-theme="dark"] #main .table tbody td,
-[data-theme="dark"] #main .dataTable-table tbody td {
-  border-top: 1px solid var(--ux-border);
-}
-
-[data-theme="dark"] #main .table-hover tbody tr:hover,
-[data-theme="dark"] #main .dataTable-table tbody tr:hover {
-  background: rgba(45, 212, 191, 0.06);
-}
-
-/* Plain <table> markup without the .table-hover class (e.g. EHR "Services
-   Performed" table) still gets a row hover via the unthemed global rule in
-   main.css (`table tbody tr:hover`), which has no dark counterpart and always
-   paints rows near-white. */
-[data-theme="dark"] #main table tbody tr:hover {
-  background-color: rgba(45, 212, 191, 0.06);
-}
-
-/* Bootstrap's .table-light (used on plain-table <thead> rows, e.g. EHR services
-   table, secretary process-services table) sets its own --bs-table-bg via a
-   utility class with no dark-mode counterpart anywhere in the project. */
-[data-theme="dark"] #main .table-light {
-  --bs-table-bg: #1c2c47;
-  --bs-table-color: #e2e8f0;
-  background-color: #1c2c47;
-  color: #e2e8f0;
-  border-color: var(--ux-border);
-}
-
-[data-theme="dark"] #main .table-striped > tbody > tr:nth-of-type(odd) > * {
-  background-color: #182437;
-}
-
-[data-theme="dark"] #main .table-striped > tbody > tr:nth-of-type(even) > * {
-  background-color: transparent;
-}
-
-[data-theme="dark"] #main .table tbody td a:not(.btn):not(.dropdown-item) {
-  color: #2dd4bf;
-}
-
-[data-theme="dark"] #main .table tbody td a:not(.btn):not(.dropdown-item):hover {
-  color: #5eead4;
-}
-
-[data-theme="dark"] #main .dental-kpi-card,
-[data-theme="dark"] #main .dental-surface-card,
-[data-theme="dark"] #main .dental-chart-card,
-[data-theme="dark"] #main .dental-chart-frame {
-  background: #16223a;
-  border-color: #2f3d52;
-}
-
-[data-theme="dark"] #main .dental-kpi-icon {
-  background: rgba(45, 212, 191, 0.12);
-  color: #2dd4bf;
-  border-color: rgba(45, 212, 191, 0.2);
-}
-
-[data-theme="dark"] #main .dental-kpi-card__label {
-  color: #94a3b8;
-}
-
-[data-theme="dark"] #main .dental-kpi-card__value {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] #main .card-header .btn-outline-secondary,
-[data-theme="dark"] #main .module-search-toolbar .btn-outline-secondary,
-[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-secondary {
-  background: transparent;
-  border-color: #475569;
-  color: #cbd5e1;
-}
-
-[data-theme="dark"] #main .card-header .btn-group,
-[data-theme="dark"] #main .module-search-toolbar .btn-group,
-[data-theme="dark"] #main .module-section-nav__track {
-  background: #1c2c47;
-  border-color: #2f3d52;
-}
-
-[data-theme="dark"] #main .card-header .btn-group > .btn.btn-primary,
-[data-theme="dark"] #main .card-header .btn-group > .btn.active,
-[data-theme="dark"] #main .module-search-toolbar .btn-group > .btn.btn-primary,
-[data-theme="dark"] #main .module-search-toolbar .btn-group > .btn.active,
-[data-theme="dark"] #main .module-section-nav .nav-link.active,
-[data-theme="dark"] #main .module-section-nav .btn-group > .btn.active {
-  background: #263449 !important;
-  color: #2dd4bf !important;
-}
-
-/* Toolbar filter selects/dropdowns (Ref#/status filters, datatable-top selects, etc.) —
-   these use hardcoded light colors that beat the generic dark .form-select rule on
-   specificity, so they need their own dark-mode override. */
-[data-theme="dark"] #main .module-search-toolbar .form-select,
-[data-theme="dark"] #main .unified-table-search-toolbar .form-select,
-[data-theme="dark"] #main .appointments-view-filter,
-[data-theme="dark"] #main .datatable-top .form-select,
-[data-theme="dark"] #main .dataTable-top .form-select {
-  background: #1c2c47;
-  border-color: #334155;
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] #main .module-search-toolbar .form-select:focus,
-[data-theme="dark"] #main .unified-table-search-toolbar .form-select:focus,
-[data-theme="dark"] #main .appointments-view-filter:focus,
-[data-theme="dark"] #main .datatable-top .form-select:focus,
-[data-theme="dark"] #main .dataTable-top .form-select:focus {
-  border-color: #2dd4bf;
-  box-shadow: none;
-  outline: none;
-}
-
-[data-theme="dark"] #main .module-search-toolbar .dropdown-menu,
-[data-theme="dark"] #main .card-header .dropdown-menu {
-  background: #16223a;
-  border-color: #2f3d52;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] #main .card-header .btn-outline-primary,
-[data-theme="dark"] #main .module-search-toolbar .btn-outline-primary,
-[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-primary,
-[data-theme="dark"] #main .datatable-top .btn-outline-primary,
-[data-theme="dark"] #main .dataTable-top .btn-outline-primary {
-  background: transparent;
-  border-color: rgba(45, 212, 191, 0.4);
-  color: #2dd4bf;
-}
-
-[data-theme="dark"] #main .card-header .btn-outline-primary:hover,
-[data-theme="dark"] #main .module-search-toolbar .btn-outline-primary:hover,
-[data-theme="dark"] #main .unified-table-search-toolbar .btn-outline-primary:hover,
-[data-theme="dark"] #main .datatable-top .btn-outline-primary:hover,
-[data-theme="dark"] #main .dataTable-top .btn-outline-primary:hover {
-  background: rgba(45, 212, 191, 0.12);
-  border-color: #2dd4bf;
-  color: #5eead4;
-  box-shadow: none;
-}
-
-/* Modal/popup backgrounds — #main .modal-content and friends above hardcode a
-   light background, which beats the generic dark override in main.css on both
-   specificity and load order. Re-assert dark backgrounds here so every modal
-   across all roles (admin/secretary/doctor/patient) follows the theme. */
-[data-theme="dark"] #main .modal-content {
-  background: var(--ux-surface);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--ux-border);
-}
-
-[data-theme="dark"] #main .modal-body {
-  color: var(--ux-text);
-}
-
-[data-theme="dark"] #main .modal-footer {
-  background: var(--ux-surface);
-  border-color: var(--ux-border-soft);
-}
-
-[data-theme="dark"] .dental-chart-modal .modal-body {
-  background: var(--ux-surface, #16223a);
-  color: var(--ux-text, #e2e8f0);
-}
-
-[data-theme="dark"] .app-confirm-modal .modal-body {
-  color: var(--ux-text, #e2e8f0);
-}
-
-[data-theme="dark"] .app-confirm-modal .modal-footer {
-  border-top-color: var(--ux-border-soft, #263449);
-}
-
-/* Top-level section tabs (e.g. "Appointments / New Patients" page-switch tabs) —
-   plain Bootstrap .nav-tabs, not wrapped in .module-section-nav, so it was never
-   covered by the dark overrides above and stayed white when active. */
-[data-theme="dark"] #main .nav-tabs {
-  border-bottom-color: var(--ux-border);
-}
-
-[data-theme="dark"] #main .nav-tabs .nav-link {
-  color: var(--ux-muted);
-}
-
-[data-theme="dark"] #main .nav-tabs .nav-link:hover {
-  color: var(--ux-accent);
-  background: rgba(45, 212, 191, 0.08);
-}
-
-[data-theme="dark"] #main .nav-tabs .nav-link.active {
-  background: var(--ux-surface);
-  color: var(--ux-accent);
-  border-color: var(--ux-border) var(--ux-border) var(--ux-surface);
-  box-shadow: inset 0 -2px 0 var(--ux-accent);
-}
-
-/* #main .clinic-reports-filter (reports page's period/doctor filter card) hardcodes
-   a white background at ID-level specificity, which beats the plain-class dark
-   override reports.php ships for it — the filter card stayed white in dark mode. */
-[data-theme="dark"] #main .clinic-reports-filter {
-  background: var(--ux-surface);
-  border-color: var(--ux-border);
-}
-
-/* #main .form-label (and its more specific variants for .ux-form-grid / patient
-   profile modal) hardcode a dark navy/slate color at ID-level specificity, which
-   beats the generic dark-mode .form-label override in main.css everywhere — every
-   form label in every modal across the app stayed dark-on-dark and unreadable. */
-[data-theme="dark"] #main .form-label,
-[data-theme="dark"] #main .ux-form-grid .form-label,
-[data-theme="dark"] #main .modal .ux-form-grid .form-label,
-[data-theme="dark"] #patientProfileModal .form-label {
-  color: var(--ux-muted, #cbd5e1);
-}
-
-/* Rich patient profile card (assets/js/doctor-patient-profile.js, renderDoctorPatientProfile()).
+}/* Rich patient profile card (assets/js/doctor-patient-profile.js, renderDoctorPatientProfile()).
    Un-scoped by modal ID so any modal using these classes (doctor's Session "Profile"
    button, doctor's My Patients "Profile" button, secretary's View Profiling) renders
    identically — previously this was duplicated/scoped to a single modal ID per page. */
@@ -2321,37 +2045,4 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 .dpp-field-value {
   font-size: var(--fs-sm);
   color: #1e293b;
-}
-
-[data-theme="dark"] .dpp-name {
-  color: #e2e8f0;
-}
-[data-theme="dark"] .dpp-chip {
-  background: #263449;
-  color: #cbd5e1;
-}
-[data-theme="dark"] .dpp-alert-box {
-  background: rgba(220, 38, 38, 0.14);
-  border-color: rgba(220, 38, 38, 0.35);
-}
-[data-theme="dark"] .dpp-alert-box .dpp-alert-title {
-  color: #f87171;
-}
-[data-theme="dark"] .dpp-safe-box {
-  background: rgba(21, 128, 61, 0.16);
-  border-color: rgba(21, 128, 61, 0.4);
-  color: #4ade80;
-}
-[data-theme="dark"] .dpp-section {
-  background: #16223a;
-  border-color: #2f3d52;
-}
-[data-theme="dark"] .dpp-section-title {
-  color: #cbd5e1;
-}
-[data-theme="dark"] .dpp-field-label {
-  color: #94a3b8;
-}
-[data-theme="dark"] .dpp-field-value {
-  color: #e2e8f0;
 }

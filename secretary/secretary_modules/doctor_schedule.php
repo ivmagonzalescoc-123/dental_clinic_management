@@ -218,28 +218,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 .ds-onleave{background:#fee2e2;color:#991b1b}
 .ds-pend{background:#fef3c7;color:#92400e}
 .ds-none{background:#f1f5f9;color:#94a3b8}
-@media(max-width:768px){.ds-cell{min-height:56px;padding:5px 3px}.ds-num{font-size:.8rem}}
-
-/* ---- Dark mode ---- */
-[data-theme="dark"] .ds-cal th{background:#1c2c47;color:#94a3b8}
-[data-theme="dark"] .ds-cell{background:#16223a}
-[data-theme="dark"] .ds-cell:hover{background:#1c2c47}
-[data-theme="dark"] .ds-cell.ds-selected{background:rgba(45,212,191,.2)!important;box-shadow:inset 0 0 0 2px #2dd4bf}
-[data-theme="dark"] .ds-today{background:rgba(45,212,191,.14)!important;box-shadow:inset 0 0 0 2px #2dd4bf}
-[data-theme="dark"] .ds-today:hover{background:rgba(45,212,191,.22)!important}
-[data-theme="dark"] .ds-closed{background:#1a2436}
-[data-theme="dark"] .ds-leave{background:rgba(220,38,38,.12)}
-[data-theme="dark"] .ds-cell-empty{background:#16223a}
-[data-theme="dark"] .ds-num{color:#e2e8f0}
-[data-theme="dark"] .ds-cnt{color:#94a3b8}
-[data-theme="dark"] .ds-detail-date{color:#cbd5e1;border-bottom-color:#2f3d52}
-[data-theme="dark"] .ds-row:hover{background:#1c2c47}
-[data-theme="dark"] .ds-name{color:#e2e8f0}
-[data-theme="dark"] .ds-avail{background:rgba(22,163,74,.2);color:#4ade80}
-[data-theme="dark"] .ds-onleave{background:rgba(220,38,38,.2);color:#f87171}
-[data-theme="dark"] .ds-pend{background:rgba(217,119,6,.24);color:#fbbf24}
-[data-theme="dark"] .ds-none{background:#263449;color:#94a3b8}
-</style>
+@media(max-width:768px){.ds-cell{min-height:56px;padding:5px 3px}.ds-num{font-size:.8rem}}</style>
 
 <script>
 var dayData=<?php echo json_encode($dayData); ?>;

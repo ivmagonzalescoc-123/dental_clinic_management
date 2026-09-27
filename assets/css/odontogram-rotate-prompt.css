@@ -1,0 +1,94 @@
+/**
+ * Odontogram fullscreen: "rotate to landscape" prompt + the iOS Safari
+ * pseudo-fullscreen fallback (iOS has no element Fullscreen API, so
+ * assets/js/main.js falls back to a fixed-position "fake fullscreen" via
+ * the .is-pseudo-fullscreen class instead of :fullscreen).
+ */
+
+/* ---- Pseudo-fullscreen fallback ---- */
+.odontogram-viewport.is-pseudo-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    z-index: 10600 !important;
+    background: #0b0f19;
+    padding: 0 !important;
+}
+
+.odontogram-viewport.is-pseudo-fullscreen #odontogramContainer {
+    height: 100% !important;
+}
+
+body.odontogram-pseudo-fullscreen-lock {
+    overflow: hidden;
+}
+
+/* ---- Rotate prompt ---- */
+.odontogram-rotate-prompt {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 25;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(9, 13, 21, 0.94);
+    color: #f1f5f9;
+}
+
+/* Only nag touch devices actually held in portrait — a resized desktop
+   window matches (orientation: portrait) too, but "rotate your device"
+   makes no sense there. */
+@media (pointer: coarse) and (orientation: portrait) {
+    .odontogram-viewport:fullscreen .odontogram-rotate-prompt:not(.is-dismissed),
+    .odontogram-viewport:-webkit-full-screen .odontogram-rotate-prompt:not(.is-dismissed),
+    .odontogram-viewport.is-pseudo-fullscreen .odontogram-rotate-prompt:not(.is-dismissed) {
+        display: flex;
+    }
+}
+
+.odontogram-rotate-prompt__icon {
+    color: #5eead4;
+    animation: odontogramRotateHint 1.8s ease-in-out infinite;
+}
+
+@keyframes odontogramRotateHint {
+    0%, 10%   { transform: rotate(0deg); }
+    45%, 60%  { transform: rotate(-90deg); }
+    95%, 100% { transform: rotate(0deg); }
+}
+
+.odontogram-rotate-prompt__text {
+    margin: 0;
+    max-width: 260px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.odontogram-rotate-prompt__dismiss {
+    border: 1px solid rgba(241, 245, 249, 0.3);
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.odontogram-rotate-prompt__dismiss:hover,
+.odontogram-rotate-prompt__dismiss:focus-visible {
+    background: rgba(241, 245, 249, 0.12);
+    color: #fff;
+    outline: none;
+}

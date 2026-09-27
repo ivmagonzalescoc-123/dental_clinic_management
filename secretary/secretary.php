@@ -153,11 +153,12 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260719-dark2" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260927-nodarkmode" rel="stylesheet">
     <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260719-dark2" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260719-dark2" rel="stylesheet">
-    <link href="../assets/css/appointment-services.css?v=20260719-dark2" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260927-nodarkmode" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260927-nodarkmode" rel="stylesheet">
+    <link href="../assets/css/appointment-services.css?v=20260927-nodarkmode" rel="stylesheet">
+    <link href="../assets/css/odontogram-rotate-prompt.css?v=20260927-1" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">
@@ -170,6 +171,10 @@ switch ($role_key) {
         } catch (e) {}
     })();
     </script>
+    <!-- Loaded early (before EHR queue/records module content further down)
+         since those modules call window.OdontogramFullscreen synchronously
+         at parse time — a footer-loaded script would be too late. -->
+    <script src="../assets/js/odontogram-fullscreen.js?v=20260927-1"></script>
 
     <!-- Global Loading Overlay -->
     <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;">
@@ -397,7 +402,7 @@ switch ($role_key) {
     <script src="../assets/js/app-confirm.js?v=20260611-confirm"></script>
     <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
     <script>window.__pageLoadStart = Date.now();</script>
-    <script src="../assets/js/main.js?v=20260818-loaderfix1"></script>
+    <script src="../assets/js/main.js?v=20260927-odontorotate"></script>
     <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
     <script src="../assets/js/profiling-display.js?v=20260606-hiv"></script>
     <script src="../assets/js/doctor-patient-profile.js?v=20260722-1"></script>
@@ -450,13 +455,7 @@ switch ($role_key) {
                         '.search-suggest-title{font-size:14px;color:#153b66;font-weight:600;}' +
                         '.search-suggest-meta{font-size:12px;color:#6b7f95;}' +
                         '.search-suggest-empty{padding:10px 12px;font-size:13px;color:#71839a;}' +
-                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}' +
-                        '[data-theme="dark"] .search-suggest-menu{background:#16223a;border-color:#2f3d52;box-shadow:0 10px 24px rgba(0,0,0,.4);}' +
-                        '[data-theme="dark"] .search-suggest-item:hover,[data-theme="dark"] .search-suggest-item.active{background:rgba(45,212,191,.12);}' +
-                        '[data-theme="dark"] .search-suggest-title{color:#e2e8f0;}' +
-                        '[data-theme="dark"] .search-suggest-meta{color:#94a3b8;}' +
-                        '[data-theme="dark"] .search-suggest-empty{color:#94a3b8;}' +
-                        '[data-theme="dark"] .search-suggest-item mark{background:#3d3419;color:#fde68a;}';
+                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}';
                     document.head.appendChild(style);
                 }
 

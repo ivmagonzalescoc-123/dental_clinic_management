@@ -168,6 +168,7 @@ if ($stmt) {
                                         <div id="histOdontogramWrapRec" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
                                             <iframe id="histOdontoFrameRec" data-src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
                                         </div>
+                                        <?php odontogram_render_rotate_prompt(); ?>
                                     </div>
                                 </div>
                             </div>
@@ -239,36 +240,7 @@ if ($stmt) {
             background: #f8fafc;
             border-radius: 8px;
             border: 1px solid #e2e8f0;
-        }
-
-        /* ---- Dark mode ---- */
-        [data-theme="dark"] .hist-field,
-        [data-theme="dark"] .hist-section,
-        [data-theme="dark"] .hist-patient-header {
-            background: #16223a;
-            border-color: #2f3d52;
-        }
-        [data-theme="dark"] .hist-label {
-            color: #94a3b8;
-        }
-        [data-theme="dark"] .hist-value {
-            color: #e2e8f0;
-        }
-        [data-theme="dark"] .hist-section-title {
-            color: #cbd5e1;
-        }
-        [data-theme="dark"] .hist-pre {
-            background: #1c2c47;
-            border-color: #2f3d52;
-            color: #e2e8f0;
-        }
-        [data-theme="dark"] #histPatientNameRec {
-            color: #e2e8f0 !important;
-        }
-        [data-theme="dark"] #histPatientDetailsRec {
-            color: #94a3b8 !important;
-        }
-        </style>
+        }        </style>
 
         <script>
         function notifyDoctorRecord(message, type) {
@@ -454,25 +426,20 @@ if ($stmt) {
             }
         }
 
-        function getHistoryOdontogramFullscreenElementRec() {
-            return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
-        }
-
         function isHistoryOdontogramFullscreenRec() {
             const viewport = document.getElementById('histOdontogramViewportRec');
-            return !!viewport && getHistoryOdontogramFullscreenElementRec() === viewport;
+            return !!viewport && window.OdontogramFullscreen.isActive(viewport);
         }
 
         function requestHistoryOdontogramFullscreenRec() {
             const viewport = document.getElementById('histOdontogramViewportRec');
             if (!viewport) return;
-            const requestFn = viewport.requestFullscreen || viewport.webkitRequestFullscreen || viewport.msRequestFullscreen;
-            if (requestFn) requestFn.call(viewport);
+            window.OdontogramFullscreen.request(viewport);
         }
 
         function exitHistoryOdontogramFullscreenRec() {
-            const exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-            if (exitFn) exitFn.call(document);
+            const viewport = document.getElementById('histOdontogramViewportRec');
+            window.OdontogramFullscreen.exit(viewport);
         }
 
         function syncHistoryOdontogramFullscreenUIRec() {
@@ -493,6 +460,9 @@ if ($stmt) {
         document.getElementById('histOdontogramFullscreenCloseBtnRec')?.addEventListener('click', exitHistoryOdontogramFullscreenRec);
         document.addEventListener('fullscreenchange', syncHistoryOdontogramFullscreenUIRec);
         document.addEventListener('webkitfullscreenchange', syncHistoryOdontogramFullscreenUIRec);
+        document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
+            if (e.target.id === 'histOdontogramViewportRec') syncHistoryOdontogramFullscreenUIRec();
+        });
         document.getElementById('historyModalRecords')?.addEventListener('hidden.bs.modal', exitHistoryOdontogramFullscreenRec);
         syncHistoryOdontogramFullscreenUIRec();
 

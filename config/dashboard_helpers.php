@@ -216,3 +216,16 @@ if (!function_exists('dashboard_render_kpi_card')) {
         echo '</div></div></div>';
     }
 }
+
+if (!function_exists('dashboard_render_empty_state')) {
+    function dashboard_render_empty_state(string $message, string $icon = 'bi-inbox', ?string $ctaLabel = null, ?string $ctaHref = null): void
+    {
+        echo '<div class="dental-empty-state">';
+        echo '<div class="dental-empty-state__icon" aria-hidden="true"><i class="bi ' . htmlspecialchars($icon, ENT_QUOTES, 'UTF-8') . '"></i></div>';
+        echo '<p class="dental-empty-state__message">' . htmlspecialchars($message) . '</p>';
+        if ($ctaLabel !== null && $ctaHref !== null) {
+            echo '<a class="dental-empty-state__cta" href="' . htmlspecialchars($ctaHref, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($ctaLabel) . '</a>';
+        }
+        echo '</div>';
+    }
+}
