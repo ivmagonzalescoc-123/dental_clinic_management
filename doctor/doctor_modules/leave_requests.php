@@ -284,13 +284,6 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
     <div class="card-header">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="card-title mb-0">My Schedule</h5>
-            <form method="GET" action="doctor.php" class="d-flex align-items-center gap-2">
-                <input type="hidden" name="page" value="schedule">
-                <input type="hidden" name="view" value="calendar">
-                <label class="small text-muted mb-0" for="doctorScheduleMonth">Month</label>
-                <input id="doctorScheduleMonth" type="month" class="form-control form-control-sm" name="month" value="<?php echo htmlspecialchars($selectedMonth); ?>" style="min-width: 170px;">
-                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-            </form>
         </div>
     </div>
     <div class="card-body">
@@ -306,99 +299,56 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
             </div>
         </div>
 
-        <div class="table-responsive">
-            <table class="table table-bordered dr-cal-table mb-0" data-skip-table-search="1">
-                <thead>
-                    <tr>
-                        <th>Sun</th>
-                        <th>Mon</th>
-                        <th>Tue</th>
-                        <th>Wed</th>
-                        <th>Thu</th>
-                        <th>Fri</th>
-                        <th>Sat</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $dayNum = 1;
-                    $started = false;
-                    while ($dayNum <= $daysInMonth):
-                        echo '<tr>';
-                        for ($w = 0; $w < 7; $w++):
-                            if (!$started && $w === $firstWeekday) {
-                                $started = true;
-                            }
+        <?php
+        $calendarDays = [];
+        for ($dayNum = 1; $dayNum <= $daysInMonth; $dayNum++) {
+            $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
+            $weekday = (int)date('w', strtotime($dateStr));
+            $isClosed = ($weekday === 0);
+            $isApprovedLeave = !empty($approvedLeaveByDate[$dateStr]);
+            $isPendingLeave = !empty($pendingLeaveByDate[$dateStr]);
+            $isAvailable = !$isClosed && (($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true);
 
-                            if (!$started || $dayNum > $daysInMonth) {
-                                echo '<td class="bg-light"></td>';
-                                continue;
-                            }
-
-                            $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
-                            $weekday = (int)date('w', strtotime($dateStr));
-                            $isClosed = ($weekday === 0);
-                            $isApprovedLeave = !empty($approvedLeaveByDate[$dateStr]);
-                            $isPendingLeave = !empty($pendingLeaveByDate[$dateStr]);
-                            $isAvailable = !$isClosed && (($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true);
-
-                            $cellClass = 'dr-cal-cell';
-                            $marksHtml = '';
-                            $today = date('Y-m-d');
-                            $isToday = ($dateStr === $today);
-
-                            if ($isToday) $cellClass .= ' dr-cal-today';
-                            if ($isClosed) {
-                                $cellClass .= ' dr-cal-closed';
-                                $marksHtml = '<div class="dr-cal-closed-label">Closed</div>';
-                            } elseif ($isApprovedLeave) {
-                                $cellClass .= ' dr-cal-leave';
-                                $reasonText = '';
-                                if (!empty($leaveDetailsByDate[$dateStr])) {
-                                    $reasonText = trim((string)($leaveDetailsByDate[$dateStr][0]['reason'] ?? ''));
-                                    $reasonText = preg_replace('/^\[Filed by Secretary.*?\]\s*/', '', $reasonText);
-                                }
-                                $marksHtml = '<div class="dr-cal-leave-label"><i class="bi bi-pause-circle"></i> Leave' . ($reasonText !== '' ? ' - ' . htmlspecialchars($reasonText) : '') . '</div>';
-                            } elseif ($isPendingLeave) {
-                                $cellClass .= ' dr-cal-pending';
-                                $marksHtml = '<div class="dr-cal-pending-label"><i class="bi bi-clock"></i> Pending</div>';
-                            } elseif ($isAvailable) {
-                                $marksHtml = '<div class="dr-cal-hours"><i class="bi bi-clock"></i> ';
-                                if (!empty($availabilityTimes[$weekday])) {
-                                    $startLabel = date('g:i A', strtotime($availabilityTimes[$weekday]['start']));
-                                    $endLabel = date('g:i A', strtotime($availabilityTimes[$weekday]['end']));
-                                    $marksHtml .= $startLabel . ' - ' . $endLabel;
-                                } else {
-                                    $marksHtml .= '9:00 AM - 5:00 PM';
-                                }
-                                $marksHtml .= '</div>';
-                            } else {
-                                $cellClass .= ' dr-cal-nosched';
-                                $marksHtml = '<div class="dr-cal-nosched-label">No Availability</div>';
-                            }
-
-                            echo '<td class="' . htmlspecialchars($cellClass) . '">';
-                            echo '<div class="dr-cal-day">' . (int)$dayNum;
-                            if ($isToday) echo '<span class="dr-cal-today-dot"></span>';
-                            echo '</div>';
-                            echo '<div class="dr-cal-marks">' . $marksHtml . '</div>';
-                            echo '</td>';
-
-                            $dayNum++;
-                        endfor;
-                        echo '</tr>';
-                    endwhile;
-                    ?>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="d-flex flex-wrap gap-3 mt-3 small">
-            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#eff6ff;border:1px solid #93c5fd;"></span> Your Hours</span>
-            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fee2e2;border:1px solid #fca5a5;"></span> Leave</span>
-            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#fef3c7;border:1px solid #fcd34d;"></span> Pending Leave</span>
-            <span class="dr-legend-item"><span class="dr-legend-dot" style="background:#f1f5f9;border:1px solid #cbd5e1;"></span> Closed</span>
-        </div>
+            if ($isClosed) {
+                $calendarDays[$dateStr] = ['state' => 'closed', 'tags' => [['text' => 'Closed', 'tone' => 'muted']]];
+            } elseif ($isApprovedLeave) {
+                $reasonText = '';
+                if (!empty($leaveDetailsByDate[$dateStr])) {
+                    $reasonText = trim((string)($leaveDetailsByDate[$dateStr][0]['reason'] ?? ''));
+                    $reasonText = trim((string)preg_replace('/^\[Filed by Secretary.*?\]\s*/', '', $reasonText));
+                }
+                $calendarDays[$dateStr] = ['state' => 'leave', 'tags' => [['text' => 'Leave', 'tone' => 'danger']], 'title' => 'Leave' . ($reasonText !== '' && $reasonText !== 'N/A' ? ': ' . $reasonText : '')];
+            } elseif ($isPendingLeave) {
+                $calendarDays[$dateStr] = ['state' => 'pending', 'tags' => [['text' => 'Pending leave', 'tone' => 'warn']]];
+            } elseif ($isAvailable) {
+                $hours = !empty($availabilityTimes[$weekday])
+                    ? date('g:i A', strtotime($availabilityTimes[$weekday]['start'])) . ' – ' . date('g:i A', strtotime($availabilityTimes[$weekday]['end']))
+                    : '9:00 AM – 5:00 PM';
+                $calendarDays[$dateStr] = ['state' => 'available', 'tags' => [['text' => $hours, 'tone' => 'info']]];
+            } else {
+                $calendarDays[$dateStr] = ['state' => 'unavailable', 'tags' => [['text' => 'No availability', 'tone' => 'muted']]];
+            }
+        }
+        ?>
+        <div id="doctorScheduleCalendar"></div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var days = <?php echo json_encode($calendarDays, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+            DentalCalendar.create(document.getElementById('doctorScheduleCalendar'), {
+                month: <?php echo json_encode($selectedMonth); ?>,
+                getDay: function (iso) { return days[iso] || { state: 'muted' }; },
+                onMonthChange: function (ym) {
+                    return DentalCalendar.goTo('doctor.php?page=schedule&view=calendar&month=' + encodeURIComponent(ym));
+                },
+                legend: [
+                    { tone: 'info', label: 'Your hours' },
+                    { tone: 'danger', label: 'Leave' },
+                    { tone: 'warn', label: 'Pending leave' },
+                    { tone: 'muted', label: 'Closed / no availability' }
+                ]
+            });
+        });
+        </script>
     </div>
 </div>
 <?php endif; ?>
@@ -506,74 +456,8 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
 <?php endif; ?>
 
 <style>
-.dr-cal-table th {
-    text-align: center;
-    background: #f8fafc;
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    padding: 8px 4px;
-}
-.dr-cal-cell {
-    vertical-align: top;
-    padding: 6px;
-    min-height: 100px;
-    background: #fff;
-    transition: background 0.15s ease;
-}
-.dr-cal-cell:hover {
-    background: #f8fbff;
-}
-.dr-cal-today {
-    background: #f0f7ff !important;
-    box-shadow: inset 0 0 0 2px #0d9488;
-}
-.dr-cal-today:hover {
-    background: #e8f2ff !important;
-}
-.dr-cal-closed { background: #fafafa; }
-.dr-cal-leave { background: #fff5f5; }
-.dr-cal-pending { background: #fffbeb; }
-.dr-cal-nosched { background: #f9fafb; }
-.dr-cal-empty { background: #f9fafb; }
-.dr-cal-day {
-    font-weight: 700;
-    font-size: 0.88rem;
-    color: #1e293b;
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.dr-cal-today-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #0d9488;
-}
-.dr-cal-hours {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #0d9488;
-    background: #eff6ff;
-    border-radius: 6px;
-    padding: 2px 6px;
-    display: inline-block;
-    margin-bottom: 4px;
-}
-.dr-cal-closed-label { font-size: 0.68rem; font-weight: 600; color: #94a3b8; }
-.dr-cal-leave-label { font-size: 0.68rem; font-weight: 600; color: #dc2626; }
-.dr-cal-pending-label { font-size: 0.68rem; font-weight: 600; color: #d97706; }
-.dr-cal-nosched-label { font-size: 0.68rem; font-weight: 600; color: #94a3b8; }
 .schedule-stat-chip { border-radius: 999px; padding: 8px 12px; font-size: 0.84rem; font-weight: 600; text-align: center; }
 .schedule-stat-available { background: #dcfce7; color: #166534; }
 .schedule-stat-leave { background: #fee2e2; color: #991b1b; }
 .schedule-stat-pending { background: #fde68a; color: #92400e; }
-@media (max-width: 768px) {
-    .dr-cal-cell { min-height: 70px; padding: 4px; }
-    .dr-cal-day { font-size: 0.8rem; }
-    .dr-appt-chip { font-size: 0.56rem; padding: 1px 4px; }
-    .dr-cal-hours { font-size: 0.6rem; }
-}</style>
+</style>

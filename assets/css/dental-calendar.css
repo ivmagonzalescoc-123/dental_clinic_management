@@ -1,0 +1,314 @@
+/**
+ * Shared month calendar (assets/js/dental-calendar.js). One look for every
+ * calendar in the system: patient booking, doctor My Schedule, and the
+ * secretary/admin Doctor Schedule pages.
+ *
+ * Built on CSS grid rather than <table> on purpose: a <table> inside
+ * .table-responsive gets `min-width: max-content` from module-content-ux.css
+ * (which pushed Saturday off the card), and the global table-search script
+ * attaches a "Search table…" bar to any table it finds.
+ */
+.dcal {
+    --dcal-accent: #0d9488;
+    --dcal-accent-strong: #0f766e;
+    --dcal-accent-soft: #f0fdfa;
+    --dcal-border: #e4edf5;
+    --dcal-muted: #94a3b8;
+    font-size: 0.9rem;
+}
+
+.dcal-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.dcal-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0f2133;
+    min-width: 0;
+    margin: 0 4px;
+}
+
+.dcal-nav,
+.dcal-today-btn {
+    border: 1px solid var(--dcal-border);
+    background: #fff;
+    color: #334155;
+    border-radius: 8px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.dcal-nav { width: 32px; font-size: 1.1rem; line-height: 1; }
+.dcal-today-btn { padding: 0 12px; font-size: 0.8rem; margin-left: auto; }
+
+.dcal-nav:hover:not(:disabled),
+.dcal-today-btn:hover:not(:disabled) {
+    background: var(--dcal-accent-soft);
+    border-color: #b7e4dc;
+    color: var(--dcal-accent-strong);
+}
+
+.dcal-nav:disabled,
+.dcal-today-btn:disabled { opacity: 0.4; cursor: default; }
+
+.dcal-nav:focus-visible,
+.dcal-today-btn:focus-visible,
+.dcal-day:focus-visible {
+    outline: 2px solid rgba(13, 148, 136, 0.55);
+    outline-offset: 2px;
+}
+
+.dcal-body {
+    position: relative;
+    border: 1px solid var(--dcal-border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.dcal-weekdays,
+.dcal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.dcal-weekdays {
+    background: #f8fafc;
+    border-bottom: 1px solid var(--dcal-border);
+}
+
+.dcal-weekdays span {
+    text-align: center;
+    padding: 8px 2px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.dcal-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    min-height: 84px;
+    min-width: 0;
+    padding: 7px;
+    border: 0;
+    border-right: 1px solid #edf2f8;
+    border-bottom: 1px solid #edf2f8;
+    background: #fff;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dcal-day:nth-child(7n) { border-right: 0; }
+
+button.dcal-day { cursor: pointer; }
+button.dcal-day[aria-disabled="true"] { cursor: not-allowed; }
+button.dcal-day:not([aria-disabled="true"]):hover { background: #f5fbfa; }
+
+.dcal-day.is-empty { background: #fafcfe; }
+.dcal-day.is-available { background: #fff; }
+.dcal-day.is-muted,
+.dcal-day.is-closed,
+.dcal-day.is-unavailable,
+.dcal-day.is-past { background: #f8fafc; }
+.dcal-day.is-muted .dcal-num,
+.dcal-day.is-closed .dcal-num,
+.dcal-day.is-unavailable .dcal-num,
+.dcal-day.is-past .dcal-num { color: var(--dcal-muted); }
+.dcal-day.is-leave { background: #fff5f5; }
+.dcal-day.is-pending { background: #fffbeb; }
+
+/* Outline (not box-shadow) so the ring stays inside the cell and above the
+   neighbouring cells' borders instead of bleeding past the edge. */
+.dcal-day.is-today { outline: 2px solid #99e0d6; outline-offset: -2px; z-index: 1; }
+.dcal-day.is-selected {
+    background: #ccfbf1 !important;
+    outline: 2px solid var(--dcal-accent);
+    outline-offset: -2px;
+    z-index: 1;
+}
+
+.dcal-num {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.dcal-today-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--dcal-accent);
+    flex-shrink: 0;
+}
+
+.dcal-tags {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+}
+
+.dcal-tag {
+    max-width: 100%;
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1.25;
+    padding: 2px 6px;
+    border-radius: 6px;
+    /* Wrap between words only ("9:00 AM – 5:00 PM" → two lines), never mid-word. */
+    overflow-wrap: normal;
+    word-break: normal;
+}
+
+.dcal-tag--ok      { background: #ecfdf5; color: #047857; }
+.dcal-tag--info    { background: #eff6ff; color: #0f766e; }
+.dcal-tag--warn    { background: #fef3c7; color: #92400e; }
+.dcal-tag--danger  { background: #fee2e2; color: #b91c1c; }
+.dcal-tag--muted   { background: transparent; color: var(--dcal-muted); padding-left: 0; }
+
+/* "Select" affordance on bookable days (patient booking) */
+.dcal-select {
+    margin-top: auto;
+    align-self: stretch;
+    max-width: 96px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--dcal-accent-strong);
+    border: 1px solid #99e0d6;
+    background: #fff;
+    border-radius: 999px;
+    padding: 2px 4px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+button.dcal-day:not([aria-disabled="true"]):hover .dcal-select {
+    background: var(--dcal-accent);
+    border-color: var(--dcal-accent);
+    color: #fff;
+}
+
+.dcal-day.is-selected .dcal-select {
+    background: var(--dcal-accent);
+    border-color: var(--dcal-accent);
+    color: #fff;
+}
+
+/* Mobile-only status dot (tags are too long to fit phone-width cells) */
+.dcal-mark { display: none; }
+
+.dcal-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(248, 250, 252, 0.82);
+    backdrop-filter: blur(1.5px);
+    -webkit-backdrop-filter: blur(1.5px);
+    z-index: 2;
+}
+
+.dcal-overlay__box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--dcal-border);
+    box-shadow: 0 8px 24px rgba(15, 35, 60, 0.1);
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.dcal-overlay__box i { color: var(--dcal-accent); font-size: 1.2rem; }
+
+.dcal.is-loading .dcal-grid { opacity: 0.5; }
+
+.dcal-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: #475569;
+}
+
+.dcal-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dcal-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+}
+
+.dcal-swatch--ok      { background: #ecfdf5; border-color: #6ee7b7; }
+.dcal-swatch--info    { background: #eff6ff; border-color: #99e0d6; }
+.dcal-swatch--warn    { background: #fef3c7; border-color: #fcd34d; }
+.dcal-swatch--danger  { background: #fee2e2; border-color: #fca5a5; }
+.dcal-swatch--muted   { background: #f1f5f9; border-color: #cbd5e1; }
+.dcal-swatch--selected { background: #ccfbf1; border-color: var(--dcal-accent); }
+
+@media (max-width: 575.98px) {
+    .dcal-day {
+        min-height: 50px;
+        padding: 5px 2px;
+        align-items: center;
+        gap: 3px;
+    }
+    .dcal-num { font-size: 0.82rem; }
+    .dcal-tags,
+    .dcal-select { display: none; }
+    .dcal-mark {
+        display: block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+    }
+    .dcal-mark--ok      { background: #10b981; }
+    .dcal-mark--info    { background: #0d9488; }
+    .dcal-mark--warn    { background: #f59e0b; }
+    .dcal-mark--danger  { background: #ef4444; }
+    .dcal-mark--muted   { background: transparent; }
+    .dcal-weekdays span { font-size: 0.64rem; letter-spacing: 0.02em; }
+    .dcal-today-btn { padding: 0 10px; }
+}
+
+@media print {
+    .dcal-nav, .dcal-today-btn, .dcal-select { display: none !important; }
+}

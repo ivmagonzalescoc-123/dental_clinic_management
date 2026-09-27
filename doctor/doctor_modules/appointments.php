@@ -817,59 +817,6 @@ if ($stmt) {
     vertical-align: middle;
 }
 
-#doctorAppointmentsCalendar {
-    min-height: 560px;
-}
-
-#doctorAppointmentsCalendar .fc-toolbar-title {
-    font-size: 1.05rem;
-    font-weight: 700;
-}
-
-#doctorAppointmentsCalendar .fc-daygrid-day-frame {
-    position: relative;
-}
-
-#doctorAppointmentsCalendar .fc-daygrid-day-number {
-    font-weight: 700;
-}
-
-.doctor-day-counts {
-    position: absolute;
-    right: 4px;
-    bottom: 4px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    align-items: flex-end;
-    pointer-events: none;
-}
-
-.doctor-booking-count {
-    border-radius: 999px;
-    color: #111827;
-    background: #e5e7eb;
-    font-size: 0.64rem;
-    font-weight: 700;
-    line-height: 1.25;
-    text-align: center;
-    padding: 2px 6px;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.doctor-booking-count.type-appointment {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.doctor-booking-count.type-followup {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-
 .doctor-recent-appointments-table tbody td {
     vertical-align: middle;
 }
@@ -947,7 +894,6 @@ if ($stmt) {
     border: 1px solid #e2e8f0;
 }</style>
 
-<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
 // Service map for resolving service IDs to names
 window.serviceMap = {
@@ -958,8 +904,8 @@ window.serviceMap = {
 
 window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
-window.doctorCalendarCountsByDate = <?php echo json_encode($calendarCountsByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
-window.doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+window.doctorCalendarCountsByDate = <?php echo json_encode($calendarCountsByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+window.doctorCalendarHoverByDate = <?php echo json_encode($calendarHoverByDate, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
 window.generalDateFilter = '';
 window.generalMonthFilter = '';
 window.generalSearchTerm = '';
@@ -1017,84 +963,57 @@ function filterGeneralAppointmentsByDate(dateStr, shouldScroll) {
 
 function initDoctorAppointmentsCalendar() {
     const calendarEl = document.getElementById('doctorAppointmentsCalendar');
-    if (!calendarEl || typeof FullCalendar === 'undefined') {
+    if (!calendarEl || typeof DentalCalendar === 'undefined') {
         return;
     }
 
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        height: 'auto',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth'
-        },
-        dayCellDidMount: function (info) {
-            const y = info.date.getFullYear();
-            const m = String(info.date.getMonth() + 1).padStart(2, '0');
-            const d = String(info.date.getDate()).padStart(2, '0');
-            const dateKey = y + '-' + m + '-' + d;
+    function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+    const calendar = DentalCalendar.create(calendarEl, {
+        getDay: function (dateKey) {
             const counts = doctorCalendarCountsByDate[dateKey] || { appointments: 0, followups: 0 };
             const appointmentCount = Number(counts.appointments || 0);
             const followupCount = Number(counts.followups || 0);
             const lines = Array.isArray(doctorCalendarHoverByDate[dateKey]) ? doctorCalendarHoverByDate[dateKey] : [];
-
-            if (appointmentCount > 0 || followupCount > 0) {
-                const badgesWrap = document.createElement('div');
-                badgesWrap.className = 'doctor-day-counts';
-
-                if (appointmentCount > 0) {
-                    const appointmentBadge = document.createElement('span');
-                    appointmentBadge.className = 'doctor-booking-count type-appointment';
-                    appointmentBadge.textContent = 'Appointment: ' + String(appointmentCount);
-                    badgesWrap.appendChild(appointmentBadge);
-                }
-
-                if (followupCount > 0) {
-                    const followupBadge = document.createElement('span');
-                    followupBadge.className = 'doctor-booking-count type-followup';
-                    followupBadge.textContent = 'Follow-up: ' + String(followupCount);
-                    badgesWrap.appendChild(followupBadge);
-                }
-
-                const frame = info.el.querySelector('.fc-daygrid-day-frame');
-                if (frame) {
-                    frame.appendChild(badgesWrap);
-                }
-            }
-
-            if (lines.length > 0) {
-                const capped = lines.slice(0, 10);
-                const moreCount = lines.length - capped.length;
-                const title = [
-                    'Appointments: ' + appointmentCount,
-                    'Follow-up: ' + followupCount,
-                    capped.join('\n'),
-                    moreCount > 0 ? ('+' + moreCount + ' more') : ''
-                ].filter(Boolean).join('\n');
-                info.el.setAttribute('title', title);
-            }
+            const tags = [];
+            if (appointmentCount > 0) tags.push({ text: plural(appointmentCount, 'appointment'), tone: 'info' });
+            if (followupCount > 0) tags.push({ text: plural(followupCount, 'follow-up'), tone: 'ok' });
+            const capped = lines.slice(0, 10);
+            const more = lines.length - capped.length;
+            return {
+                state: 'available',
+                selectable: true,
+                tags: tags,
+                title: capped.length ? capped.join(', ') + (more > 0 ? ' +' + more + ' more' : '') : (tags.length ? '' : 'No appointments')
+            };
         },
-        dateClick: function (info) {
-            filterGeneralAppointmentsByDate(info.dateStr, true);
+        // Clicking a day filters the appointments table to that date.
+        onSelect: function (dateKey) {
+            filterGeneralAppointmentsByDate(dateKey, true);
         },
-        datesSet: function (info) {
-            const activeDate = info.view && info.view.currentStart ? info.view.currentStart : info.start;
-            const y = activeDate.getFullYear();
-            const m = String(activeDate.getMonth() + 1).padStart(2, '0');
-            generalMonthFilter = y + '-' + m;
+        onMonthChange: function (ym) {
+            calendar.selected = null;
+            generalMonthFilter = ym;
             generalDateFilter = '';
             applyGeneralTableFilters(false);
-        }
+        },
+        legend: [
+            { tone: 'info', label: 'Appointments' },
+            { tone: 'ok', label: 'Follow-ups' },
+            { tone: 'selected', label: 'Filtering table by this day' }
+        ]
     });
 
-    calendar.render();
+    generalMonthFilter = calendar.month;
+    generalDateFilter = '';
+    applyGeneralTableFilters(false);
 
     const clearBtn = document.getElementById('clearAppointmentsDateFilter');
     if (clearBtn) {
         clearBtn.addEventListener('click', function () {
             generalDateFilter = '';
             generalMonthFilter = '';
+            calendar.setSelected(null);
             filterGeneralAppointmentsByDate('');
         });
     }
@@ -1611,7 +1530,12 @@ window.doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
 function notifyDoctor(message, type) {
     window.showToast(String(message || ''), type || 'info');
 }
-window.resModal = new bootstrap.Modal(document.getElementById('rescheduleModal'));
+// Created on first use: this script runs while the page is still parsing, before the
+// footer loads Bootstrap, so constructing the modal here threw and stopped everything
+// below it (including the Save handler) from ever running.
+function getRescheduleModal() {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById('rescheduleModal'));
+}
 window.fpStart = null; window.fpEnd = null;
 function initReschedulePickers() {
     try {
@@ -1638,7 +1562,7 @@ async function openRescheduleModal(schedule) {
     document.getElementById('rescheduleScheduleId').value = schedule.schedule_id || '';
     document.getElementById('rescheduleStart').value = toLocalInput(schedule.scheduled_start || '');
     document.getElementById('rescheduleEnd').value = toLocalInput(schedule.scheduled_end || '');
-    resModal.show();
+    getRescheduleModal().show();
 }
 
 document.getElementById('rescheduleSaveBtn').addEventListener('click', async function(){
@@ -1657,7 +1581,7 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
         const j = await res.json();
         if (!j.success) return notifyDoctor(j.message || 'Failed to reschedule', 'danger');
         notifyDoctor('Rescheduled', 'success');
-        resModal.hide();
+        getRescheduleModal().hide();
         // reload page or update UI: simple approach reload
         location.reload();
     } catch (e) { console.error(e); notifyDoctor('Error', 'danger'); }

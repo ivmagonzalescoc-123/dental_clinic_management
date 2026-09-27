@@ -98,75 +98,6 @@ if ($patient_id) {
     border-radius: 999px;
     padding: 0.35rem 0.8rem;
 }
-.patient-appt-card .calendar-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 10px;
-    font-size: 0.82rem;
-    color: #334155;
-}
-.patient-appt-card .legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.patient-appt-card .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-}
-.patient-appt-card .legend-open { background: #16a34a; }
-.patient-appt-card .legend-blocked { background: #dc2626; }
-.patient-appt-card #appointmentCalendar .fc-toolbar-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-.patient-appt-card #appointmentCalendar .fc-button {
-    border-radius: 10px;
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-open:hover,
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-busy:hover {
-    transform: translateY(-1px);
-    box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.35);
-    cursor: pointer;
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-open .fc-daygrid-day-frame {
-    background: rgba(22, 163, 74, 0.1);
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-busy .fc-daygrid-day-frame {
-    background: rgba(245, 158, 11, 0.12);
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-closed .fc-daygrid-day-frame,
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-disabled .fc-daygrid-day-frame {
-    background: rgba(220, 38, 38, 0.12);
-}
-.patient-appt-card #appointmentCalendar .fc-daygrid-day.appt-day-selected {
-    box-shadow: inset 0 0 0 2px #0f766e;
-}
-.patient-appt-card #appointmentCalendar .appt-day-badge {
-    display: inline-flex;
-    margin-top: 4px;
-    padding: 2px 6px;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: #334155;
-}
-.patient-appt-card #appointmentCalendar .appt-day-badge.state-open {
-    color: #166534;
-}
-.patient-appt-card #appointmentCalendar .appt-day-badge.state-busy {
-    color: #92400e;
-}
-.patient-appt-card #appointmentCalendar .appt-day-badge.state-closed {
-    color: #991b1b;
-}
 .patient-appt-card .appt-tab-nav .nav-link {
     border-radius: 999px;
     font-weight: 600;
@@ -175,23 +106,6 @@ if ($patient_id) {
 .patient-appt-card .appt-tab-nav .nav-link.active {
     background: #0d9488;
     color: #fff;
-}
-.patient-appt-card #appointmentCalendar .fc-button-primary {
-    background-color: transparent;
-    background-image: none;
-    border-color: transparent;
-    color: #000;
-    box-shadow: none;
-}
-.patient-appt-card #appointmentCalendar .fc-button-primary:hover,
-.patient-appt-card #appointmentCalendar .fc-button-primary:focus,
-.patient-appt-card #appointmentCalendar .fc-button-primary:active,
-.patient-appt-card #appointmentCalendar .fc-button-primary.fc-button-active {
-    background-color: transparent;
-    background-image: none;
-    border-color: transparent;
-    color: #000;
-    box-shadow: none;
 }
 .patient-appt-card .history-table-wrap {
     border: 1px solid #dbe7e4;
@@ -331,28 +245,6 @@ if ($patient_id) {
     .patient-appt-card .calendar-panel {
         padding: 10px;
     }
-    .patient-appt-card #appointmentCalendar .appt-day-badge {
-        display: none;
-    }
-    .patient-appt-card #appointmentCalendar .fc-daygrid-day-frame {
-        min-height: 2.35rem;
-    }
-    .patient-appt-card #appointmentCalendar .fc-daygrid-day-number {
-        font-size: 0.82rem;
-        padding: 2px 4px;
-    }
-    .patient-appt-card #appointmentCalendar .fc-col-header-cell-cushion {
-        font-size: 0.68rem;
-        padding: 4px 2px;
-    }
-    .patient-appt-card #appointmentCalendar .fc-scrollgrid,
-    .patient-appt-card #appointmentCalendar .fc-scrollgrid-section > * {
-        border-color: #e2e8f0;
-    }
-    .patient-appt-card #appointmentCalendar .fc-daygrid-body-unbalanced .fc-daygrid-day-events {
-        min-height: 0;
-        margin: 0;
-    }
 }</style>
 
 <div class="card border-0 patient-appt-card">
@@ -381,11 +273,7 @@ if ($patient_id) {
                                     <span id="selectedDateLabel" class="selected-date-chip">No date selected</span>
                                 </div>
                                 <input type="hidden" id="appointment_date" name="appointment_date">
-                                <div id="appointmentCalendar" aria-live="polite"></div>
-                                <div class="calendar-legend">
-                                    <span class="legend-item"><span class="legend-dot legend-open"></span>Available</span>
-                                    <span class="legend-item"><span class="legend-dot legend-blocked"></span>Unavailable / Closed</span>
-                                </div>
+                                <div id="appointmentCalendar"></div>
                             </div>
                         </div>
                     </div>
@@ -656,7 +544,6 @@ if ($patient_id) {
     </div>
 </div>
 
-<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const appointmentCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
@@ -689,15 +576,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let appointmentCalendar = null;
     let availabilityByDate = {};
-    let selectedDayEl = null;
     let calendarDataLoaded = false;
 
     function getCalendarEl() {
         return document.getElementById('appointmentCalendar');
-    }
-
-    function isMobileCalendar() {
-        return window.innerWidth < 768;
     }
 
     function setCalendarPanelVisible(visible) {
@@ -710,14 +592,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (dateSelect) {
             dateSelect.required = visible;
         }
-    }
-
-    function destroyCalendar() {
-        if (appointmentCalendar) {
-            appointmentCalendar.destroy();
-            appointmentCalendar = null;
-        }
-        selectedDayEl = null;
     }
 
     function toIsoDateLocal(dateObj) {
@@ -908,10 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function clearSelectedDate() {
         if (dateSelect) dateSelect.value = '';
         updateSelectedDateLabel('');
-        if (selectedDayEl) {
-            selectedDayEl.classList.remove('appt-day-selected');
-            selectedDayEl = null;
-        }
+        if (appointmentCalendar) appointmentCalendar.setSelected(null);
         resetTimeslots();
     }
 
@@ -949,129 +820,91 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'This date is not available for booking.';
     }
 
-    function decorateDayCell(arg) {
-        const dateStr = toIsoDateLocal(arg.date);
-        const item = availabilityByDate[dateStr] || null;
-        const frame = arg.el.querySelector('.fc-daygrid-day-frame');
-        if (!frame) return;
+    function hasDoctorSelected() {
+        return !!(doctorSelect && String(doctorSelect.value || '').trim() !== '');
+    }
 
-        arg.el.classList.remove('appt-day-open', 'appt-day-busy', 'appt-day-closed', 'appt-day-disabled', 'appt-day-selected');
-
-        const existingBadge = frame.querySelector('.appt-day-badge');
-        if (existingBadge) existingBadge.remove();
-
-        const badge = document.createElement('span');
-        badge.className = 'appt-day-badge';
-
-        if (!doctorSelect || String(doctorSelect.value || '').trim() === '') {
-            arg.el.classList.add('appt-day-disabled');
-            badge.classList.add('state-closed');
-            badge.textContent = 'Select doctor';
-        } else if (dateStr < todayIso) {
-            arg.el.classList.add('appt-day-disabled');
-            badge.classList.add('state-closed');
-            badge.textContent = 'Past';
-        } else if (arg.date.getDay() === 0) {
-            arg.el.classList.add('appt-day-closed');
-            badge.classList.add('state-closed');
-            badge.textContent = 'Closed';
-        } else if (item && item.available) {
-            arg.el.classList.add('appt-day-open');
-            badge.classList.add('state-open');
-            badge.textContent = 'Available';
-        } else if (item && !item.available) {
-            // Data loaded but date is not available
-            arg.el.classList.add('appt-day-closed');
-            badge.classList.add('state-closed');
-            const reason = String(item.reason || '').toLowerCase();
-            if (reason.includes('leave')) {
-                badge.textContent = 'On leave';
-            } else if (reason.includes('schedule') || reason.includes('doctors available')) {
-                badge.textContent = 'No schedule';
-            } else {
-                badge.textContent = 'Unavailable';
-            }
-        } else if (!calendarDataLoaded && !doctorSelect?.value) {
-            // No data loaded yet and no doctor selected — show as Open by default
-            arg.el.classList.add('appt-day-open');
-            badge.classList.add('state-open');
-            badge.textContent = 'Open';
-        } else {
-            // Data loaded but this date has no entry — closed
-            arg.el.classList.add('appt-day-closed');
-            badge.classList.add('state-closed');
-            badge.textContent = 'Unavailable';
+    // Per-day state for the shared calendar (assets/js/dental-calendar.js).
+    function getBookingDay(dateStr, dateObj) {
+        const lastBookable = addDaysIso(todayIso, DAYS_AHEAD);
+        if (dateStr < todayIso || dateStr > lastBookable) {
+            return { state: 'past' };
         }
-
-        if (dateSelect && dateSelect.value === dateStr) {
-            arg.el.classList.add('appt-day-selected');
-            selectedDayEl = arg.el;
+        if (dateObj.getDay() === 0) {
+            return { state: 'closed', tags: [{ text: 'Closed', tone: 'muted' }], title: 'Clinic is closed on Sundays' };
         }
+        if (!hasDoctorSelected() || !calendarDataLoaded) {
+            return { state: 'muted' };
+        }
+        const item = availabilityByDate[dateStr];
+        if (item && item.available) {
+            const free = Math.max(0, item.total - item.count);
+            // Slots are 10 minutes each, so a raw count means little to a patient;
+            // only call out when an hour or less of openings is left.
+            const few = item.total > 0 && free <= 6;
+            // The "Select" button already says the day is bookable; only add a label
+            // when it tells the patient something extra.
+            return {
+                state: 'available',
+                selectable: true,
+                mark: few ? 'warn' : 'ok',
+                title: few ? 'Few slots left' : 'Available',
+                tags: few ? [{ text: 'Few slots left', tone: 'warn' }] : []
+            };
+        }
+        const reason = String(item && item.reason || '').toLowerCase();
+        if (reason.includes('leave')) {
+            return { state: 'leave', tags: [{ text: 'On leave', tone: 'danger' }], title: 'Doctor is on leave' };
+        }
+        if (reason.includes('remaining') || reason.includes('slot')) {
+            return { state: 'unavailable', tags: [{ text: 'Fully booked', tone: 'warn' }] };
+        }
+        if (reason.includes('sunday') || reason.includes('closed')) {
+            return { state: 'closed', tags: [{ text: 'Closed', tone: 'muted' }] };
+        }
+        return { state: 'unavailable', tags: [{ text: 'No schedule', tone: 'muted' }], title: 'Doctor has no schedule on this date' };
+    }
 
-        frame.appendChild(badge);
+    function calendarOverlayMessage() {
+        if (!hasDoctorSelected()) return 'Choose a doctor to see which days are available.';
+        if (!calendarDataLoaded) return 'Loading available days…';
+        return null;
     }
 
     function renderCalendar() {
         const calendarEl = getCalendarEl();
-        if (!calendarEl) return;
-
-        destroyCalendar();
-
-        if (typeof FullCalendar === 'undefined') {
-            calendarEl.innerHTML = '<div class="text-danger small">Calendar library failed to load.</div>';
-            return;
-        }
-
-        appointmentCalendar = new FullCalendar.Calendar(calendarEl, {
-            themeSystem: 'bootstrap5',
-            initialView: 'dayGridMonth',
-            fixedWeekCount: false,
-            showNonCurrentDates: false,
-            height: 'auto',
-            contentHeight: isMobileCalendar() ? 'auto' : undefined,
-            aspectRatio: isMobileCalendar() ? 1.05 : 1.35,
-            headerToolbar: isMobileCalendar()
-                ? { left: 'prev,next', center: 'title', right: 'today' }
-                : { left: 'prev,next today', center: 'title', right: '' },
-            validRange: {
-                start: todayIso,
-                end: addDaysIso(todayIso, DAYS_AHEAD + 1)
-            },
-            dateClick: function(info) {
-                const dateStr = info.dateStr;
-                if (!isDateSelectable(dateStr)) {
-                    showAlert(getBlockedReason(dateStr), 'warning');
-                    return;
-                }
-
-                if (selectedDayEl) {
-                    selectedDayEl.classList.remove('appt-day-selected');
-                }
-
-                selectedDayEl = info.dayEl;
-                selectedDayEl.classList.add('appt-day-selected');
-
-                if (dateSelect) {
-                    dateSelect.value = dateStr;
-                }
+        if (!calendarEl || typeof DentalCalendar === 'undefined') return;
+        appointmentCalendar = DentalCalendar.create(calendarEl, {
+            month: todayIso.slice(0, 7),
+            minMonth: todayIso.slice(0, 7),
+            maxMonth: addDaysIso(todayIso, DAYS_AHEAD).slice(0, 7),
+            selected: dateSelect && dateSelect.value ? dateSelect.value : null,
+            selectLabel: 'Select',
+            overlay: calendarOverlayMessage(),
+            getDay: getBookingDay,
+            onSelect: function(dateStr) {
+                if (dateSelect) dateSelect.value = dateStr;
                 updateSelectedDateLabel(dateStr);
                 loadTimeslots();
             },
-            dayCellDidMount: decorateDayCell
+            onBlocked: function(dateStr) {
+                if (dateStr < todayIso || dateStr > addDaysIso(todayIso, DAYS_AHEAD)) return;
+                showAlert(getBlockedReason(dateStr), 'warning');
+            },
+            legend: [
+                { tone: 'ok', label: 'Available' },
+                { tone: 'warn', label: 'Few slots left / fully booked' },
+                { tone: 'danger', label: 'Doctor on leave' },
+                { tone: 'muted', label: 'Closed / no schedule' },
+                { tone: 'selected', label: 'Your selected date' }
+            ]
         });
-
-        appointmentCalendar.render();
     }
 
     function refreshDayCells() {
         if (!appointmentCalendar) return;
-        var cells = document.querySelectorAll('.fc-daygrid-day');
-        cells.forEach(function(cell) {
-            var dateStr = cell.getAttribute('data-date');
-            if (!dateStr) return;
-            var arg = { date: new Date(dateStr + 'T00:00:00'), el: cell, dayEl: cell };
-            decorateDayCell(arg);
-        });
+        appointmentCalendar.overlay = calendarOverlayMessage();
+        appointmentCalendar.refresh();
     }
 
     async function loadDates() {
@@ -1091,6 +924,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         clearSelectedDate();
+        calendarDataLoaded = false;
+        refreshDayCells();
 
         try {
             let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(String(DAYS_AHEAD));
@@ -1108,6 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (!data.success || !Array.isArray(data.dates)) {
                 availabilityByDate = {};
+                calendarDataLoaded = true;
                 refreshDayCells();
                 showAlert('Unable to load available dates.', 'warning');
                 return;
@@ -1119,16 +955,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 availabilityByDate[String(item.date)] = {
                     available: !!item.available,
                     count: parseInt(item.count || 0, 10) || 0,
+                    total: parseInt(item.total || 0, 10) || 0,
                     reason: String(item.reason || ''),
                     doctors_available: parseInt(item.doctors_available || 0, 10) || 0
                 };
             });
 
-            refreshDayCells();
             calendarDataLoaded = true;
+            refreshDayCells();
         } catch (err) {
             console.error(err);
             availabilityByDate = {};
+            calendarDataLoaded = true;
             refreshDayCells();
             showAlert('Error loading available dates.', 'danger');
         }
@@ -1256,15 +1094,6 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTimeslots();
         });
     }
-
-    let calendarResizeTimer = null;
-    window.addEventListener('resize', function() {
-        if (!appointmentCalendar) return;
-        clearTimeout(calendarResizeTimer);
-        calendarResizeTimer = setTimeout(function() {
-            renderCalendar();
-        }, 200);
-    });
 
     if (timeslotSelect) {
         timeslotSelect.addEventListener('change', function() {
@@ -1467,8 +1296,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     form.reset();
                     syncReasonField();
                     clearSelectedDate();
-                    setCalendarPanelVisible(false);
-                    destroyCalendar();
+                    // The form reset cleared the doctor, so this redraws the calendar with
+                    // the "choose a doctor" prompt instead of leaving it gone until a reload.
+                    loadDates();
                     // Reset service selector to initial state
                     const svcEl = document.getElementById('serviceSelector');
                     if (svcEl) svcEl.innerHTML = '';

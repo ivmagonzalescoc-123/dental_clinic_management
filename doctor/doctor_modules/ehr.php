@@ -224,6 +224,13 @@ if ($sstmt) {
             </table>
         </div>
     </div>
+
+    <!-- Row 4: Treatment Plan (multi-visit; estimate only — billed via Services Performed when done) -->
+    <div class="mb-3 p-2 border rounded bg-light">
+        <div id="ehrTreatmentPlan">
+            <div class="tp-empty">Select a patient to see their treatment plan.</div>
+        </div>
+    </div>
     <!-- Camera Modal -->
     <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -740,7 +747,10 @@ if ($sstmt) {
                 prefillClinicalRecord(apptId).then(() => {
                     showOdontogram();
                     try { updateOdontogramToggle(); } catch (e) { }
+                    mountDoctorTreatmentPlan();
                 });
+            } else {
+                mountDoctorTreatmentPlan();
             }
         });
 
@@ -756,6 +766,7 @@ if ($sstmt) {
                 prefillClinicalRecord(initialAppt).then(() => {
                     showOdontogram();
                     try { updateOdontogramToggle(); } catch (e) { }
+                    mountDoctorTreatmentPlan();
                 });
             } else {
                 try { updateOdontogramToggle(); } catch (e) { }
@@ -920,6 +931,60 @@ if ($sstmt) {
         // Exposed globally because rows use an inline onclick="removeEhrService(...)"
         // handler, which resolves against the global scope, not this IIFE's closure.
         window.removeEhrService = removeEhrService;
+
+        // Treatment plan sync: completing a plan item puts its service in Services
+        // Performed (what billing is built from). Tracks which services the plan added,
+        // so undoing a completion never removes a service the doctor picked by hand.
+        var planAddedServiceIds = new Set();
+        function ehrAddServiceFromPlan(item) {
+            var sid = Number(item.service_id);
+            if (!sid || ehrSelectedServices.some(function(s) { return s.service_id === sid; })) return;
+            var opt = document.querySelector('#ehrServiceSelect option[value="' + sid + '"]');
+            ehrSelectedServices.push({
+                service_id: sid,
+                name: item.service_name || (opt ? opt.dataset.name : 'Service #' + sid),
+                price: opt ? parseFloat(opt.dataset.price || 0) : Number(item.estimated_cost || 0)
+            });
+            planAddedServiceIds.add(sid);
+            renderEhrServicesTable();
+        }
+        function ehrRemoveServiceFromPlan(item, items) {
+            var sid = Number(item.service_id);
+            var appt = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
+            var stillDone = (items || []).some(function(i) {
+                return Number(i.service_id) === sid && i.status === 'completed' && Number(i.completed_appointment_id) === appt;
+            });
+            if (!planAddedServiceIds.has(sid) || stillDone) return;
+            planAddedServiceIds.delete(sid);
+            removeEhrService(sid);
+        }
+
+        function mountDoctorTreatmentPlan() {
+            var host = document.getElementById('ehrTreatmentPlan');
+            var sel = document.getElementById('queueSelector');
+            var opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+            var patientId = opt ? parseInt(opt.dataset.patientId || '0', 10) : 0;
+            if (!host || typeof window.TreatmentPlan === 'undefined') return;
+            planAddedServiceIds.clear();
+            if (!patientId) {
+                host.innerHTML = '<div class="tp-empty">Select a patient to see their treatment plan.</div>';
+                return;
+            }
+            var services = Array.prototype.slice.call(document.querySelectorAll('#ehrServiceSelect option[value]'))
+                .filter(function(o) { return o.value; })
+                .map(function(o) { return { service_id: parseInt(o.value, 10), name: o.dataset.name, price: parseFloat(o.dataset.price || 0) }; });
+            window.TreatmentPlan.mount(host, {
+                patientId: patientId,
+                appointmentId: parseInt(document.getElementById('appointment_id_hidden').value || '0', 10),
+                role: 'doctor',
+                csrfToken: doctorCsrfToken,
+                services: services,
+                onCompleted: ehrAddServiceFromPlan,
+                onUncompleted: ehrRemoveServiceFromPlan,
+                notify: notifyDoctor
+            });
+        }
+        window.mountDoctorTreatmentPlan = mountDoctorTreatmentPlan;
 
         function renderEhrServicesTable() {
             var tbody = document.getElementById('ehrServicesBody');

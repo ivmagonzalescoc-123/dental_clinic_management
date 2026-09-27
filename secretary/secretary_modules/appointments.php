@@ -2596,68 +2596,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 .secretary-booking-calendar .legend-open { background: #16a34a; }
 .secretary-booking-calendar .legend-busy { background: #f59e0b; }
 .secretary-booking-calendar .legend-closed { background: #dc2626; }
-
-#bookCalendar .fc-toolbar-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-#bookCalendar .fc-button {
-    border-radius: 10px;
-}
-#bookCalendar .fc-daygrid-day-frame {
-    border-radius: 8px;
-    transition: box-shadow 0.16s ease, transform 0.16s ease, background-color 0.16s ease;
-}
-#bookCalendar .fc-daygrid-day-number {
-    font-weight: 700;
-    color: #1f3b5a;
-}
-#bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame {
-    background: rgba(22, 163, 74, 0.1);
-}
-#bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
-    background: rgba(245, 158, 11, 0.12);
-}
-#bookCalendar .fc-daygrid-day.book-day-closed .fc-daygrid-day-frame,
-#bookCalendar .fc-daygrid-day.book-day-disabled .fc-daygrid-day-frame {
-    background: rgba(220, 38, 38, 0.12);
-}
-#bookCalendar .fc-daygrid-day.book-day-selected {
-    box-shadow: inset 0 0 0 2px #0f766e;
-}
-#bookCalendar .fc-daygrid-day.book-day-open,
-#bookCalendar .fc-daygrid-day.book-day-busy {
-    cursor: pointer;
-}
-#bookCalendar .fc-daygrid-day.book-day-open .fc-daygrid-day-frame,
-#bookCalendar .fc-daygrid-day.book-day-busy .fc-daygrid-day-frame {
-    cursor: pointer;
-}
-#bookCalendar .fc-daygrid-day.book-day-open:hover,
-#bookCalendar .fc-daygrid-day.book-day-busy:hover {
-    box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.35);
-    transform: translateY(-1px);
-}
-#bookCalendar .book-day-badge {
-    display: inline-flex;
-    margin-top: 4px;
-    padding: 2px 6px;
-    border-radius: 999px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    color: #334155;
-}
-#bookCalendar .book-day-badge.state-open {
-    color: #166534;
-}
-#bookCalendar .book-day-badge.state-busy {
-    color: #92400e;
-}
-#bookCalendar .book-day-badge.state-closed {
-    color: #991b1b;
-}.appointments-actions-cell {
+.appointments-actions-cell {
     width: auto;
     min-width: 160px;
 }
@@ -2684,7 +2623,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     font-size: 0.85rem;
 }
 </style>
-<script src="../assets/vendor/fullcalendar/index.global.min.js"></script>
 
 <!-- Book New Appointment Modal -->
 <div class="modal fade" id="bookAppointmentModal" tabindex="-1" role="dialog" aria-hidden="true">
@@ -3150,7 +3088,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             const bookSelectedDateText = document.getElementById('bookSelectedDateText');
             let bookCalendarInstance = null;
             let bookAvailabilityByDate = {};
-            let bookSelectedDayEl = null;
+            let bookDataLoaded = false;
 
             function toIsoDateLocal(dateObj) {
                 const year = dateObj.getFullYear();
@@ -3195,10 +3133,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 const hid = document.getElementById('bookAppointmentDateInput');
                 if (hid) hid.value = '';
                 setBookSelectedDateText('');
-                if (bookSelectedDayEl) {
-                    bookSelectedDayEl.classList.remove('book-day-selected');
-                    bookSelectedDayEl = null;
-                }
+                if (bookCalendarInstance) bookCalendarInstance.setSelected(null);
                 resetBookTimeslotSelection();
             }
 
@@ -3229,120 +3164,68 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 return 'This date is not available for booking.';
             }
 
-            function decorateBookDayCell(arg) {
-                const dateStr = toIsoDateLocal(arg.date);
-                const item = bookAvailabilityByDate[dateStr] || null;
-                const frame = arg.el.querySelector('.fc-daygrid-day-frame');
-                if (!frame) return;
-
-                arg.el.classList.remove('book-day-open', 'book-day-busy', 'book-day-closed', 'book-day-disabled', 'book-day-selected');
-
-                const existingBadge = frame.querySelector('.book-day-badge');
-                if (existingBadge) existingBadge.remove();
-
-                const badge = document.createElement('span');
-                badge.className = 'book-day-badge';
-
-                if (dateStr < todayIso) {
-                    arg.el.classList.add('book-day-disabled');
-                    badge.classList.add('state-closed');
-                    badge.textContent = 'Past';
-                    arg.el.setAttribute('title', 'Past date');
-                } else if (arg.date.getDay() === 0) {
-                    arg.el.classList.add('book-day-closed');
-                    badge.classList.add('state-closed');
-                    badge.textContent = 'Closed';
-                    arg.el.setAttribute('title', 'Clinic closed');
-                } else if (item && item.available) {
-                    if ((item.count || 0) > 0) {
-                        arg.el.classList.add('book-day-busy');
-                        badge.classList.add('state-busy');
-                        badge.textContent = item.count + ' booked';
-                        arg.el.setAttribute('title', 'Selectable date with existing bookings');
-                    } else {
-                        arg.el.classList.add('book-day-open');
-                        badge.classList.add('state-open');
-                        badge.textContent = 'Open';
-                        arg.el.setAttribute('title', 'Selectable date');
-                    }
-                } else {
-                    arg.el.classList.add('book-day-closed');
-                    badge.classList.add('state-closed');
-                    const reason = String(item && item.reason ? item.reason : '').toLowerCase();
-                    if (reason.includes('leave')) {
-                        badge.textContent = 'On leave';
-                        arg.el.setAttribute('title', 'Doctor on leave');
-                    } else if (reason.includes('schedule')) {
-                        badge.textContent = 'No schedule';
-                        arg.el.setAttribute('title', 'No schedule available');
-                    } else {
-                        badge.textContent = 'Unavailable';
-                        arg.el.setAttribute('title', 'Date unavailable');
-                    }
+            // Per-day state for the shared calendar (assets/js/dental-calendar.js).
+            function getBookDay(dateStr, dateObj) {
+                if (dateStr < todayIso || dateStr > addDaysIso(todayIso, BOOK_DAYS_AHEAD)) {
+                    return { state: 'past' };
                 }
-
-                const hid = document.getElementById('bookAppointmentDateInput');
-                if (hid && hid.value === dateStr) {
-                    arg.el.classList.add('book-day-selected');
-                    bookSelectedDayEl = arg.el;
+                if (dateObj.getDay() === 0) {
+                    return { state: 'closed', tags: [{ text: 'Closed', tone: 'muted' }], title: 'Clinic closed' };
                 }
-
-                frame.appendChild(badge);
+                if (!bookDataLoaded) {
+                    return { state: 'muted' };
+                }
+                const item = bookAvailabilityByDate[dateStr];
+                if (item && item.available) {
+                    const booked = item.count || 0;
+                    return {
+                        state: 'available',
+                        selectable: true,
+                        mark: booked > 0 ? 'info' : 'ok',
+                        title: booked > 0 ? booked + ' already booked' : 'Open',
+                        tags: booked > 0 ? [{ text: booked + ' booked', tone: 'info' }] : []
+                    };
+                }
+                const reason = String(item && item.reason ? item.reason : '').toLowerCase();
+                if (reason.includes('leave')) return { state: 'leave', tags: [{ text: 'On leave', tone: 'danger' }], title: 'Doctor on leave' };
+                if (reason.includes('remaining') || reason.includes('slot')) return { state: 'unavailable', tags: [{ text: 'Fully booked', tone: 'warn' }] };
+                if (reason.includes('schedule') || reason.includes('doctors available')) return { state: 'unavailable', tags: [{ text: 'No schedule', tone: 'muted' }] };
+                return { state: 'unavailable', tags: [{ text: 'Unavailable', tone: 'muted' }] };
             }
 
             function renderBookCalendar() {
                 const cal = document.getElementById('bookCalendar');
-                if (!cal) return;
-
-                if (bookCalendarInstance) {
-                    bookCalendarInstance.destroy();
-                    bookCalendarInstance = null;
-                    bookSelectedDayEl = null;
-                }
-
-                if (typeof FullCalendar === 'undefined') {
-                    cal.innerHTML = '<div class="text-danger small">Calendar library failed to load.</div>';
+                if (!cal || typeof DentalCalendar === 'undefined') return;
+                if (bookCalendarInstance && bookCalendarInstance.el === cal) {
+                    bookCalendarInstance.refresh();
                     return;
                 }
-
-                bookCalendarInstance = new FullCalendar.Calendar(cal, {
-                    themeSystem: 'bootstrap5',
-                    initialView: 'dayGridMonth',
-                    fixedWeekCount: false,
-                    showNonCurrentDates: false,
-                    height: 'auto',
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: ''
-                    },
-                    validRange: {
-                        start: todayIso,
-                        end: addDaysIso(todayIso, BOOK_DAYS_AHEAD + 1)
-                    },
-                    dateClick: function(info) {
-                        const hid = document.getElementById('bookAppointmentDateInput');
-                        if (!hid) return;
-
-                        if (!isBookDateSelectable(info.dateStr)) {
-                            showSecretaryActionFeedback(getBookBlockedReason(info.dateStr), 'warning');
-                            return;
-                        }
-
-                        if (bookSelectedDayEl) {
-                            bookSelectedDayEl.classList.remove('book-day-selected');
-                        }
-                        bookSelectedDayEl = info.dayEl;
-                        bookSelectedDayEl.classList.add('book-day-selected');
-
-                        hid.value = info.dateStr;
-                        setBookSelectedDateText(info.dateStr);
+                const hid = document.getElementById('bookAppointmentDateInput');
+                bookCalendarInstance = DentalCalendar.create(cal, {
+                    month: todayIso.slice(0, 7),
+                    minMonth: todayIso.slice(0, 7),
+                    maxMonth: addDaysIso(todayIso, BOOK_DAYS_AHEAD).slice(0, 7),
+                    selected: hid && hid.value ? hid.value : null,
+                    selectLabel: 'Select',
+                    getDay: getBookDay,
+                    onSelect: function(dateStr) {
+                        const hidden = document.getElementById('bookAppointmentDateInput');
+                        if (hidden) hidden.value = dateStr;
+                        setBookSelectedDateText(dateStr);
                         loadTimeslots();
                     },
-                    dayCellDidMount: decorateBookDayCell
+                    onBlocked: function(dateStr) {
+                        if (dateStr < todayIso || dateStr > addDaysIso(todayIso, BOOK_DAYS_AHEAD)) return;
+                        showSecretaryActionFeedback(getBookBlockedReason(dateStr), 'warning');
+                    },
+                    legend: [
+                        { tone: 'ok', label: 'Open' },
+                        { tone: 'info', label: 'Has bookings' },
+                        { tone: 'warn', label: 'Fully booked' },
+                        { tone: 'danger', label: 'Doctor on leave' },
+                        { tone: 'muted', label: 'Closed / no schedule' }
+                    ]
                 });
-
-                bookCalendarInstance.render();
             }
 
             async function loadAvailableDates(days = BOOK_DAYS_AHEAD) {
@@ -3350,13 +3233,9 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 const selectedDoctorId = document.getElementById('bookDoctorSelect')?.value || '';
                 if (!cal) return;
 
-                if (bookCalendarInstance) {
-                    bookCalendarInstance.destroy();
-                    bookCalendarInstance = null;
-                    bookSelectedDayEl = null;
-                }
-
                 clearBookDateSelection();
+                bookDataLoaded = false;
+                renderBookCalendar();
 
                 try {
                     let url = '../assets/api/appointments/get_available_dates.php?days=' + encodeURIComponent(days);
@@ -3369,6 +3248,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 
                     if (!j.success || !Array.isArray(j.dates)) {
                         bookAvailabilityByDate = {};
+                        bookDataLoaded = true;
                         renderBookCalendar();
                         return;
                     }
@@ -3383,10 +3263,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                         };
                     });
 
+                    bookDataLoaded = true;
                     renderBookCalendar();
                 } catch (e) {
                     console.error(e);
-                    cal.innerHTML = '<div class="text-danger">Error loading dates</div>';
+                    bookAvailabilityByDate = {};
+                    bookDataLoaded = true;
+                    renderBookCalendar();
+                    showSecretaryActionFeedback('Error loading available dates.', 'danger');
                 }
             }
 
@@ -3416,11 +3300,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     // Services aren't doctor-specific — load them right away so the
                     // secretary can start picking services before choosing a doctor.
                     initializeSecretaryServiceManager();
-                    setTimeout(function() {
-                        if (bookCalendarInstance) {
-                            bookCalendarInstance.updateSize();
-                        }
-                    }, 120);
                 });
             }
 

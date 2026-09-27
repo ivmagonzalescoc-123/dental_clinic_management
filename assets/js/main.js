@@ -220,7 +220,7 @@
     /**
      * Persistent body guard: removes any element appended to document.body
      * that isn't part of the known page structure. This prevents orphaned
-     * elements (Flatpickr calendars, FullCalendar widgets, echarts tooltips,
+     * elements (Flatpickr calendars, echarts tooltips,
      * etc.) from accumulating below the footer after AJAX page switches.
      */
     function isRecognizedBodyChild(el) {
@@ -278,18 +278,6 @@
       var inlineScripts = Array.from(container.querySelectorAll('script:not([src])'))
 
       function runInline() {
-        if (window.FullCalendar && !FullCalendar.__fcPatched) {
-          window.__fcInstances = window.__fcInstances || []
-          var _OrigCalendar = FullCalendar.Calendar
-          FullCalendar.Calendar = function(el, opts) {
-            var inst = new _OrigCalendar(el, opts)
-            window.__fcInstances.push(inst)
-            return inst
-          }
-          FullCalendar.Calendar.prototype = _OrigCalendar.prototype
-          FullCalendar.__fcPatched = true
-        }
-
         var origAddEL = EventTarget.prototype.addEventListener
         var dcQueue = []
         EventTarget.prototype.addEventListener = function(type, listener, opts) {
@@ -375,12 +363,6 @@
       '</div>'
 
     function cleanupModalState() {
-      if (window.__fcInstances && window.__fcInstances.length) {
-        window.__fcInstances.forEach(function(cal) {
-          try { cal.destroy() } catch(e) {}
-        })
-        window.__fcInstances = []
-      }
       destroyAllFlatpickrs()
 
       if (window.bootstrap) {
@@ -393,20 +375,6 @@
       document.body.classList.remove('modal-open')
       document.body.style.removeProperty('overflow')
       document.body.style.removeProperty('padding-right')
-    }
-
-    function destroyAllFullCalendars() {
-      // Destroy tracked instances
-      if (window.__fcInstances && window.__fcInstances.length) {
-        window.__fcInstances.forEach(function(cal) {
-          try { cal.destroy() } catch(e) {}
-        })
-        window.__fcInstances = []
-      }
-      // Aggressively find and remove any leftover FullCalendar DOM
-      document.querySelectorAll('#main .fc, #main .fc-root, #main [data-fullcalendar]').forEach(function(el) {
-        try { el.remove() } catch(e) {}
-      })
     }
 
     function destroyAllFlatpickrs() {
@@ -450,8 +418,7 @@
 
           currentAbort = null
 
-          // Destroy all FullCalendar/flatpickr instances BEFORE swapping DOM
-          destroyAllFullCalendars()
+          // Destroy flatpickr instances BEFORE swapping DOM
           destroyAllFlatpickrs()
 
           var parser = new DOMParser()
@@ -477,7 +444,6 @@
         .catch(function(err) {
           if (err.name === 'AbortError') return
           if (myToken !== navToken) return
-          destroyAllFullCalendars()
           destroyAllFlatpickrs()
           cleanupModalState()
           window.location.href = url
@@ -513,6 +479,9 @@
 
     document.addEventListener('submit', function(e) {
       if (window.innerWidth <= 991) return
+      // A page script already handled this submit itself (e.g. a fetch-based form,
+      // or Bootstrap validation blocking an invalid form) — don't navigate anyway.
+      if (e.defaultPrevented) return
       var form = e.target
       if (form.method && form.method.toUpperCase() === 'POST') return
       if (form.hasAttribute('data-no-ajax')) return

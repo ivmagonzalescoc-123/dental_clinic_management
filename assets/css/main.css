@@ -1503,23 +1503,6 @@ a.text-info,
     color: #64748b;
     line-height: 1.3;
     word-break: break-word;
-}.fc .fc-button-primary {
-    background-color: transparent !important;
-    background-image: none !important;
-    border-color: transparent !important;
-    color: #000 !important;
-    box-shadow: none !important;
-}
-
-.fc .fc-button-primary:hover,
-.fc .fc-button-primary:focus,
-.fc .fc-button-primary:active,
-.fc .fc-button-primary.fc-button-active {
-    background-color: transparent !important;
-    background-image: none !important;
-    border-color: transparent !important;
-    color: #000 !important;
-    box-shadow: none !important;
 }
 
 /* ========== TABLE STYLES (legacy — portal tables use #main rules in module-content-ux.css) ========== */

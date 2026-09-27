@@ -179,18 +179,8 @@ body.patient-portal {
         font-size: 0.88rem;
     }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .appt-day-badge {
-        display: none;
-    }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-daygrid-day-frame {
-        min-height: 2.35rem;
-    }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-daygrid-day-events {
-        min-height: 0 !important;
-        margin: 0 !important;
-    }
 
     body.patient-portal .service-selector {
         background: transparent;
@@ -442,29 +432,9 @@ body.patient-portal {
         gap: 8px;
     }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-header-toolbar {
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 0.75rem !important;
-    }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-toolbar-chunk {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-    }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-toolbar-title {
-        font-size: 0.95rem;
-        text-align: center;
-        width: 100%;
-    }
 
-    body.patient-portal .patient-appt-card #appointmentCalendar .fc-button {
-        padding: 0.35rem 0.55rem;
-        font-size: 0.82rem;
-    }
 
     body.patient-portal .patient-appt-card .calendar-legend {
         flex-direction: column;

@@ -107,7 +107,7 @@ $aboutPoints = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 2023.">
+    <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 1998.">
     <title>Azucena's Dental Clinic | Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -724,7 +724,7 @@ $aboutPoints = [
                         <span class="inline-block text-primary text-sm mb-3 tracking-widest uppercase" style="font-weight: 600;">About Us</span>
                         <h2 class="text-foreground mb-5" style="font-family: 'Lora', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 600;">Caring for Smiles With Heart & Expertise</h2>
                         <p class="text-muted-foreground leading-relaxed mb-5">
-                            Azucena's Dental Clinic has been actively serving our community since 2023. With a dedicated team of experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism.
+                            Azucena's Dental Clinic has been actively serving our community since 1998. With a dedicated team of experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism.
                         </p>
                         <p class="text-muted-foreground leading-relaxed mb-8">
                             Our team of board-certified specialists is dedicated to staying at the forefront of dental medicine, using the latest technology and techniques to ensure every patient receives the best possible care.

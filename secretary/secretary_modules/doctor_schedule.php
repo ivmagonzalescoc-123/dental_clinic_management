@@ -114,50 +114,37 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 
 <div class="row g-3">
     <div class="col-lg-8">
-        <form class="card border-0 mb-3" method="GET" action="secretary.php">
-            <div class="card-body row g-2 align-items-end">
-                <input type="hidden" name="page" value="doctor_schedule">
-                <div class="col-md-5"><label class="form-label small fw-semibold">Month</label><input type="month" class="form-control" name="month" value="<?php echo htmlspecialchars($selectedMonth); ?>"></div>
-                <div class="col-md-4 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
-                    <a class="btn btn-outline-secondary" href="secretary.php?page=doctor_schedule">Reset</a>
-                </div>
-            </div>
-        </form>
-
+        <?php
+        $calendarDays = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = $selectedMonth . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
+            $weekday = (int)date('w', strtotime($dateStr));
+            if ($weekday === 0) {
+                $calendarDays[$dateStr] = ['state' => 'closed', 'tags' => [['text' => 'Closed', 'tone' => 'muted']], 'selectable' => true];
+                continue;
+            }
+            $availableCount = 0; $leaveCount = 0; $pendingCount = 0;
+            foreach ($dayData[$d] as $info) {
+                if ($info['status'] === 'available') $availableCount++;
+                elseif ($info['status'] === 'leave') $leaveCount++;
+                elseif ($info['status'] === 'pending') $pendingCount++;
+            }
+            $tags = [];
+            if ($availableCount > 0) $tags[] = ['text' => $availableCount . ' available', 'tone' => 'ok'];
+            if ($leaveCount > 0) $tags[] = ['text' => $leaveCount . ' on leave', 'tone' => 'danger'];
+            if ($pendingCount > 0) $tags[] = ['text' => $pendingCount . ' pending', 'tone' => 'warn'];
+            if (!$tags) $tags[] = ['text' => 'No doctors', 'tone' => 'muted'];
+            $state = $availableCount > 0 ? 'available' : ($leaveCount > 0 ? 'leave' : ($pendingCount > 0 ? 'pending' : 'unavailable'));
+            $calendarDays[$dateStr] = ['state' => $state, 'tags' => $tags, 'selectable' => true];
+        }
+        ?>
         <div class="card border-0">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong><?php echo htmlspecialchars($monthLabel); ?></strong>
-                <span class="text-muted small"><?php echo count($doctors); ?> doctors</span>
+                <strong>Doctor availability</strong>
+                <span class="text-muted small"><?php echo count($doctors); ?> doctor<?php echo count($doctors) === 1 ? '' : 's'; ?></span>
             </div>
-            <div class="card-body p-2">
-                <div class="table-responsive">
-                <table class="table table-bordered ds-cal mb-0">
-                    <thead><tr><?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $d): ?><th><?php echo $d; ?></th><?php endforeach; ?></tr></thead>
-                    <tbody>
-                        <?php $dayNum = 1; $started = false; while ($dayNum <= $daysInMonth): echo '<tr>';
-                        for ($w = 0; $w < 7; $w++):
-                            if (!$started && $w === $firstWeekday) $started = true;
-                            if (!$started || $dayNum > $daysInMonth) { echo '<td class="ds-cell ds-cell-empty"></td>'; continue; }
-                            $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
-                            $weekday = (int)date('w', strtotime($dateStr));
-                            $isToday = ($dateStr === $today); $isClosed = ($weekday === 0);
-                            $hasLeave = !empty($approvedLeaveByDate[$dateStr]) || !empty($pendingLeaveByDate[$dateStr]);
-                            $cls = 'ds-cell';
-                            if ($isToday) $cls .= ' ds-today';
-                            if ($isClosed) $cls .= ' ds-closed';
-                            elseif ($hasLeave) $cls .= ' ds-leave';
-                            echo '<td class="'.$cls.'" data-day="'.(int)$dayNum.'" onclick="selectDay('.(int)$dayNum.')">';
-                            echo '<div class="ds-num">'.(int)$dayNum;
-                            if ($isToday) echo '<span class="ds-dot"></span>';
-                            echo '</div>';
-                            if (!$isClosed) { $cnt = 0; foreach ($doctors as $doc) { if (secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday) && empty($approvedLeaveByDate[$dateStr][(int)$doc['user_id']])) $cnt++; }
-                                if ($cnt > 0) echo '<div class="ds-cnt">'.$cnt.' avail</div>'; }
-                            echo '</td>'; $dayNum++;
-                        endfor; echo '</tr>'; endwhile; ?>
-                    </tbody>
-                </table>
-                </div>
+            <div class="card-body">
+                <div id="secretaryDoctorCalendar"></div>
             </div>
         </div>
     </div>
@@ -194,19 +181,6 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 </div>
 
 <style>
-.ds-cal{min-width:560px}
-.ds-cal th{text-align:center;background:#f8fafc;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#64748b;padding:8px 4px;white-space:nowrap;width:14.2857%}
-.ds-cell{vertical-align:middle;padding:8px 6px;min-height:72px;background:#fff;text-align:center;cursor:pointer;transition:all .15s ease}
-.ds-cell:hover{background:#f0f7ff}
-.ds-cell.ds-selected{background:#ccfbf1!important;box-shadow:inset 0 0 0 2px #0d9488}
-.ds-today{background:#f0fdfa!important;box-shadow:inset 0 0 0 2px #0d9488}
-.ds-today:hover{background:#ccfbf1!important}
-.ds-closed{background:#f9fafb;cursor:default;opacity:.6}
-.ds-leave{background:#fff5f5}
-.ds-cell-empty{background:#f9fafb;cursor:default}
-.ds-num{font-weight:700;font-size:.9rem;color:#1e293b}
-.ds-dot{width:6px;height:6px;border-radius:50%;background:#0d9488;display:inline-block;margin-left:3px}
-.ds-cnt{font-size:.62rem;color:#64748b;margin-top:2px;font-weight:600}
 .ds-detail-date{font-size:.82rem;font-weight:700;color:#475569;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e2e8f0}
 .ds-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;margin-bottom:6px;transition:background .12s ease}
 .ds-row:hover{background:#f8fafc}
@@ -218,7 +192,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 .ds-onleave{background:#fee2e2;color:#991b1b}
 .ds-pend{background:#fef3c7;color:#92400e}
 .ds-none{background:#f1f5f9;color:#94a3b8}
-@media(max-width:768px){.ds-cell{min-height:56px;padding:5px 3px}.ds-num{font-size:.8rem}}</style>
+</style>
 
 <script>
 var dayData=<?php echo json_encode($dayData); ?>;
@@ -227,8 +201,6 @@ function selectDay(day){
     var data=dayData[day]||[],panel=document.getElementById('dayDetail');if(!panel)return;
     var dt=new Date(selMonth+'-'+String(day).padStart(2,'0')+'T00:00:00');
     var label=dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-    document.querySelectorAll('.ds-cell').forEach(function(e){e.classList.remove('ds-selected')});
-    var c=document.querySelector('.ds-cell[data-day="'+day+'"]');if(c)c.classList.add('ds-selected');
     if(!data.length){panel.innerHTML='<div class="ds-detail-date">'+label+'</div><div class="text-muted small text-center py-3">No doctors scheduled</div>';return}
     var h='<div class="ds-detail-date">'+label+'</div>';
     data.forEach(function(d){
@@ -241,4 +213,15 @@ function selectDay(day){
     });
     panel.innerHTML=h;
 }
+
+document.addEventListener('DOMContentLoaded',function(){
+    var days=<?php echo json_encode($calendarDays, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT); ?>;
+    DentalCalendar.create(document.getElementById('secretaryDoctorCalendar'),{
+        month:selMonth,
+        getDay:function(iso){return days[iso]||{state:'muted'};},
+        onSelect:function(iso){selectDay(parseInt(iso.slice(8),10));},
+        onMonthChange:function(ym){return DentalCalendar.goTo('secretary.php?page=doctor_schedule&month='+encodeURIComponent(ym));},
+        legend:[{tone:'ok',label:'Doctors available'},{tone:'danger',label:'On leave'},{tone:'warn',label:'Pending leave'},{tone:'muted',label:'Closed / no doctors'}]
+    });
+});
 </script>

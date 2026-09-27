@@ -148,69 +148,36 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 
 <div class="row g-3">
     <div class="col-lg-8">
-        <form class="card border-0 mb-3" method="GET" action="admin.php">
-            <div class="card-body row g-2 align-items-end">
-                <input type="hidden" name="page" value="doctor_management">
-                <input type="hidden" name="tab" value="schedule">
-                <div class="col-md-5">
-                    <label class="form-label small fw-semibold">Month</label>
-                    <input type="month" class="form-control" name="month" value="<?php echo htmlspecialchars($selectedMonth); ?>">
-                </div>
-                <div class="col-md-4 d-flex gap-2">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Filter</button>
-                    <a class="btn btn-outline-secondary" href="admin.php?page=doctor_management&tab=schedule">Reset</a>
-                </div>
-            </div>
-        </form>
-
+        <?php
+        $calendarDays = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $dateStr = $selectedMonth . '-' . str_pad((string)$d, 2, '0', STR_PAD_LEFT);
+            if ((int)date('w', strtotime($dateStr)) === 0) {
+                $calendarDays[$dateStr] = ['state' => 'closed', 'tags' => [['text' => 'Closed', 'tone' => 'muted']], 'selectable' => true];
+                continue;
+            }
+            $availableCount = 0; $leaveCount = 0; $pendingCount = 0;
+            foreach ($dayData[$d] as $info) {
+                if ($info['status'] === 'available') $availableCount++;
+                elseif ($info['status'] === 'leave') $leaveCount++;
+                elseif ($info['status'] === 'pending') $pendingCount++;
+            }
+            $tags = [];
+            if ($availableCount > 0) $tags[] = ['text' => $availableCount . ' available', 'tone' => 'ok'];
+            if ($leaveCount > 0) $tags[] = ['text' => $leaveCount . ' on leave', 'tone' => 'danger'];
+            if ($pendingCount > 0) $tags[] = ['text' => $pendingCount . ' pending', 'tone' => 'warn'];
+            if (!$tags) $tags[] = ['text' => 'No doctors', 'tone' => 'muted'];
+            $state = $availableCount > 0 ? 'available' : ($leaveCount > 0 ? 'leave' : ($pendingCount > 0 ? 'pending' : 'unavailable'));
+            $calendarDays[$dateStr] = ['state' => $state, 'tags' => $tags, 'selectable' => true];
+        }
+        ?>
         <div class="card border-0">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <strong><?php echo htmlspecialchars($monthLabel); ?></strong>
-                <span class="text-muted small"><?php echo count($doctors); ?> doctors</span>
+                <strong>Doctor availability</strong>
+                <span class="text-muted small"><?php echo count($doctors); ?> doctor<?php echo count($doctors) === 1 ? '' : 's'; ?></span>
             </div>
-            <div class="card-body p-2">
-                <div class="table-responsive">
-                <table class="table table-bordered ds-calendar mb-0">
-                    <thead>
-                        <tr><?php foreach (['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] as $d): ?><th><?php echo $d; ?></th><?php endforeach; ?></tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        $dayNum = 1; $started = false;
-                        while ($dayNum <= $daysInMonth):
-                            echo '<tr>';
-                            for ($w = 0; $w < 7; $w++):
-                                if (!$started && $w === $firstWeekday) $started = true;
-                                if (!$started || $dayNum > $daysInMonth) { echo '<td class="ds-day ds-day-empty"></td>'; continue; }
-                                $dateStr = $selectedMonth . '-' . str_pad((string)$dayNum, 2, '0', STR_PAD_LEFT);
-                                $weekday = (int)date('w', strtotime($dateStr));
-                                $isToday = ($dateStr === $today);
-                                $isClosed = ($weekday === 0);
-                                $hasLeave = !empty($approvedLeaveByDate[$dateStr]) || !empty($pendingLeaveByDate[$dateStr]);
-                                $classes = 'ds-day';
-                                if ($isToday) $classes .= ' ds-day-today';
-                                if ($isClosed) $classes .= ' ds-day-closed';
-                                elseif ($hasLeave) $classes .= ' ds-day-leave';
-                                echo '<td class="' . $classes . '" data-day="' . (int)$dayNum . '" onclick="selectDay(' . (int)$dayNum . ')">';
-                                echo '<div class="ds-day-num">' . (int)$dayNum;
-                                if ($isToday) echo '<span class="ds-today-dot"></span>';
-                                echo '</div>';
-                                if (!$isClosed) {
-                                    $availCount = 0;
-                                    foreach ($doctors as $doc) {
-                                        if (admin_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday) && empty($approvedLeaveByDate[$dateStr][(int)$doc['user_id']])) $availCount++;
-                                    }
-                                    if ($availCount > 0) echo '<div class="ds-day-count">' . $availCount . ' avail</div>';
-                                }
-                                echo '</td>';
-                                $dayNum++;
-                            endfor;
-                            echo '</tr>';
-                        endwhile;
-                        ?>
-                    </tbody>
-                </table>
-                </div>
+            <div class="card-body">
+                <div id="adminDoctorCalendar"></div>
             </div>
         </div>
     </div>
@@ -281,40 +248,6 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 </div>
 
 <style>
-.ds-calendar {
-    min-width: 560px;
-}
-.ds-calendar th {
-    text-align: center;
-    background: #f8fafc;
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #64748b;
-    padding: 8px 4px;
-    white-space: nowrap;
-    width: 14.2857%;
-}
-.ds-day {
-    vertical-align: middle;
-    padding: 8px 6px;
-    min-height: 72px;
-    background: #fff;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-.ds-day:hover { background: #f0f7ff; }
-.ds-day-today { background: #f0fdfa !important; box-shadow: inset 0 0 0 2px #0d9488; }
-.ds-day-today:hover { background: #dbeafe !important; }
-.ds-day-closed { background: #f9fafb; cursor: default; opacity: 0.6; }
-.ds-day-leave { background: #fff5f5; }
-.ds-day-empty { background: #f9fafb; cursor: default; }
-.ds-day-num { font-weight: 700; font-size: 0.9rem; color: #1e293b; }
-.ds-today-dot { width: 6px; height: 6px; border-radius: 50%; background: #0d9488; display: inline-block; margin-left: 3px; }
-.ds-day-count { font-size: 0.62rem; color: #64748b; margin-top: 2px; font-weight: 600; }
-
 /* Day detail panel */
 .ds-detail-date { font-size: 0.82rem; font-weight: 700; color: #475569; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
 .ds-doctor-row {
@@ -340,11 +273,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 .ds-status-leave { background: #fee2e2; color: #991b1b; }
 .ds-status-pending { background: #fef3c7; color: #92400e; }
 .ds-status-none { background: #f1f5f9; color: #94a3b8; }
-
-@media (max-width: 768px) {
-    .ds-day { min-height: 56px; padding: 5px 3px; }
-    .ds-day-num { font-size: 0.8rem; }
-}</style>
+</style>
 
 <script>
 var dayData = <?php echo json_encode($dayData); ?>;
@@ -357,11 +286,6 @@ function selectDay(day) {
 
     var dateObj = new Date(selectedMonth + '-' + String(day).padStart(2, '0') + 'T00:00:00');
     var dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-
-    // Highlight selected
-    document.querySelectorAll('.ds-day').forEach(function(el) { el.classList.remove('ds-day-selected'); });
-    var cell = document.querySelector('.ds-day[data-day="' + day + '"]');
-    if (cell) cell.classList.add('ds-day-selected');
 
     if (data.length === 0) {
         panel.innerHTML = '<div class="ds-detail-date">' + dateLabel + '</div><div class="text-muted small text-center py-3">No doctors scheduled</div>';
@@ -381,4 +305,21 @@ function selectDay(day) {
     });
     panel.innerHTML = html;
 }
+document.addEventListener('DOMContentLoaded', function () {
+    var days = <?php echo json_encode($calendarDays, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    DentalCalendar.create(document.getElementById('adminDoctorCalendar'), {
+        month: selectedMonth,
+        getDay: function (iso) { return days[iso] || { state: 'muted' }; },
+        onSelect: function (iso) { selectDay(parseInt(iso.slice(8), 10)); },
+        onMonthChange: function (ym) {
+            return DentalCalendar.goTo('admin.php?page=doctor_management&tab=schedule&month=' + encodeURIComponent(ym));
+        },
+        legend: [
+            { tone: 'ok', label: 'Doctors available' },
+            { tone: 'danger', label: 'On leave' },
+            { tone: 'warn', label: 'Pending leave' },
+            { tone: 'muted', label: 'Closed / no doctors' }
+        ]
+    });
+});
 </script>

@@ -284,6 +284,10 @@ $csrf_token = security_generate_csrf_token();
                         <div id="outstandingInstallmentBanner" class="alert alert-warning py-2 px-3 mb-3" style="display:none; font-size:0.85rem;">
                             <i class="bi bi-exclamation-triangle-fill"></i> <span id="outstandingInstallmentBannerText"></span>
                         </div>
+                        <div class="pf-section">
+                            <div id="secretaryTreatmentPlan"></div>
+                            <small class="text-muted d-block mt-2">Record the patient's decision (Accept / Decline) after discussing the estimate. Only work the doctor marks done is billed below.</small>
+                        </div>
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <div class="pf-section">
@@ -1103,6 +1107,16 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
+
+    if (window.TreatmentPlan) {
+        window.TreatmentPlan.mount(document.getElementById('secretaryTreatmentPlan'), {
+            patientId: patientId,
+            appointmentId: appointmentId,
+            role: 'secretary',
+            csrfToken: <?php echo json_encode($csrf_token); ?>,
+            notify: notifySecretary
+        });
+    }
 
     if (typeof window.resetEhrRecordStepper === 'function') {
         window.resetEhrRecordStepper();
