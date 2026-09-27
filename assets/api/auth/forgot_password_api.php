@@ -59,7 +59,7 @@ function auth_ensure_password_reset_table(mysqli $conn)
         INDEX idx_resets_email (email),
         INDEX idx_resets_token (token_hash),
         INDEX idx_resets_expires (expires_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci";
 
     $conn->query($sql);
 }

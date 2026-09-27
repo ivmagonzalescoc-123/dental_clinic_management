@@ -997,37 +997,12 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     flex: 1;
     margin-left: 260px;
     margin-top: 60px;
-    padding: 20px 20px 96px;
+    padding: 20px;
     transition: margin-left 0.3s ease;
     width: calc(100% - 260px);
     box-sizing: border-box;
     overflow-x: hidden;
-    background-color: #ffffff;
-    /* Faint brand watermark, sits behind all in-flow content since it's
-       just this element's own background layer — no stacking/z-index
-       gymnastics needed. Scrolls with the page rather than using
-       background-attachment:fixed, which iOS Safari handles unreliably.
-       Card content is opaque edge-to-edge on most pages, so the extra
-       bottom padding above guarantees a strip it won't get covered by. */
-    background-image: url('../img/watermark-logo.png');
-    background-repeat: no-repeat;
-    background-position: right 20px bottom 14px;
-    background-size: 130px auto;
-}
-@media (max-width: 991.98px) {
-    #main {
-        padding-bottom: 80px;
-        background-position: right 14px bottom 12px;
-        background-size: 100px auto;
-    }
-}
-
-@media (max-width: 575.98px) {
-    #main {
-        padding-bottom: 68px;
-        background-position: right 10px bottom 10px;
-        background-size: 80px auto;
-    }
+    background: #ffffff;
 }
 
 .pagetitle {

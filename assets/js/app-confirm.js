@@ -48,7 +48,13 @@
         resolve(true);
       }
       if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        var instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+        instance.hide();
+        // Bootstrap ignores hide() while the fade-in is still running (a quick click on OK),
+        // which would leave the dialog open after the action ran — retry once it settles.
+        window.setTimeout(function () {
+          if (!pendingResolve && modalEl.classList.contains('show')) instance.hide();
+        }, 350);
       } else {
         modalEl.classList.remove('show');
         modalEl.style.display = 'none';

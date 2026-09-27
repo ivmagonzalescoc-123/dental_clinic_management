@@ -35,7 +35,7 @@ if (!function_exists('treatment_plan_ensure_table')) {
                 updated_at DATETIME NULL,
                 INDEX idx_tp_patient (patient_id, status),
                 INDEX idx_tp_completed_appt (completed_appointment_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
         $done = true;
     }

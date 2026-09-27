@@ -269,61 +269,64 @@ async function loadArrivalTimeslots(select, row) {
     }
 }
 
-document.getElementById('arrivedDoctorSelect')?.addEventListener('change', function() {
-    // Reload timeslots when doctor changes
-    const tsSel = document.getElementById('arrTimeslotSelect');
-    if (tsSel && arrModalData.slot_date) {
-        tsSel.innerHTML = '<option value="">Keep current time (' + fmtT(arrModalData.start_time) + ' – ' + fmtT(arrModalData.end_time) + ')</option>';
-        loadArrivalTimeslots(tsSel, arrModalData);
-    }
-});
-
-document.getElementById('arrivedConfirmBtn')?.addEventListener('click', async function() {
-    const apptId = document.getElementById('arrApptId')?.value;
-    const doctorId = document.getElementById('arrDoctorSelect')?.value || '';
-    const timeslotId = document.getElementById('arrTimeslotSelect')?.value || '';
-
-    if (!apptId) return;
-    if (!doctorId) {
-        showArrToast('Please assign a doctor.', 'warning');
-        return;
-    }
-
-    this.disabled = true;
-    try {
-        const fd = new FormData();
-        fd.append('appointment_id', apptId);
-        fd.append('csrf_token', secretaryCsrfToken);
-        fd.append('doctor_id', doctorId);
-        if (timeslotId) fd.append('timeslot_id', timeslotId);
-
-        const svcChecks = document.querySelectorAll('#arrServiceCheckboxes input[type="checkbox"]:checked');
-        svcChecks.forEach(cb => fd.append('selected_service_ids[]', cb.value));
-
-        const resp = await fetch('../assets/api/arrivals/mark_arrived.php', { method: 'POST', body: fd });
-        const data = await resp.json();
-        if (data.success) {
-            const dot = document.getElementById('secretaryArrivalsDot');
-            if (dot) {
-                const count = parseInt(dot.dataset.count || '0', 10);
-                const next = Math.max(0, count - 1);
-                dot.dataset.count = next;
-                dot.classList.toggle('is-active', next > 0);
-            }
-            bootstrap.Modal.getInstance(document.getElementById('arrivedModal'))?.hide();
-            showArrToast(data.message, 'success');
-            loadArrivalSchedule(currentArrivalDate);
-        } else {
-            showArrToast(data.message || 'Failed', 'danger');
-        }
-    } catch (e) {
-        showArrToast('Error: ' + e.message, 'danger');
-    } finally {
-        this.disabled = false;
-    }
-});
-
 document.addEventListener('DOMContentLoaded', function() {
+    // The Arrived modal's markup comes after this <script>, so its handlers must be
+    // attached here — attaching at parse time found no elements and silently did
+    // nothing (Confirm Arrival was dead).
+    document.getElementById('arrDoctorSelect')?.addEventListener('change', function() {
+        // Reload timeslots when doctor changes
+        const tsSel = document.getElementById('arrTimeslotSelect');
+        if (tsSel && arrModalData.slot_date) {
+            tsSel.innerHTML = '<option value="">Keep current time (' + fmtT(arrModalData.start_time) + ' – ' + fmtT(arrModalData.end_time) + ')</option>';
+            loadArrivalTimeslots(tsSel, arrModalData);
+        }
+    });
+
+    document.getElementById('arrivedConfirmBtn')?.addEventListener('click', async function() {
+        const apptId = document.getElementById('arrApptId')?.value;
+        const doctorId = document.getElementById('arrDoctorSelect')?.value || '';
+        const timeslotId = document.getElementById('arrTimeslotSelect')?.value || '';
+
+        if (!apptId) return;
+        if (!doctorId) {
+            showArrToast('Please assign a doctor.', 'warning');
+            return;
+        }
+
+        this.disabled = true;
+        try {
+            const fd = new FormData();
+            fd.append('appointment_id', apptId);
+            fd.append('csrf_token', secretaryCsrfToken);
+            fd.append('doctor_id', doctorId);
+            if (timeslotId) fd.append('timeslot_id', timeslotId);
+
+            const svcChecks = document.querySelectorAll('#arrServiceCheckboxes input[type="checkbox"]:checked');
+            svcChecks.forEach(cb => fd.append('selected_service_ids[]', cb.value));
+
+            const resp = await fetch('../assets/api/arrivals/mark_arrived.php', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (data.success) {
+                const dot = document.getElementById('secretaryArrivalsDot');
+                if (dot) {
+                    const count = parseInt(dot.dataset.count || '0', 10);
+                    const next = Math.max(0, count - 1);
+                    dot.dataset.count = next;
+                    dot.classList.toggle('is-active', next > 0);
+                }
+                bootstrap.Modal.getInstance(document.getElementById('arrivedModal'))?.hide();
+                showArrToast(data.message, 'success');
+                loadArrivalSchedule(currentArrivalDate);
+            } else {
+                showArrToast(data.message || 'Failed', 'danger');
+            }
+        } catch (e) {
+            showArrToast('Error: ' + e.message, 'danger');
+        } finally {
+            this.disabled = false;
+        }
+    });
+
     // Hide arrivals dot when page loads
     const arrDot = document.getElementById('secretaryArrivalsDot');
     if (arrDot) arrDot.classList.remove('is-active');
