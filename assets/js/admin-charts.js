@@ -183,8 +183,33 @@
             },
             colors: colors,
             legend: { show: false },
-            grid: { padding: { right: 24 } }
+            grid: { padding: { right: 24 } },
+            // Long service names + full "₱1,000.00" in-bar labels don't fit a
+            // phone-width card: the amounts got clipped ("₱1,0") and names
+            // truncated. Cap label width, compact the axis, and drop the in-bar
+            // labels there (the tooltip still shows the exact figure on tap).
+            responsive: [{
+                breakpoint: 576,
+                options: {
+                    dataLabels: { enabled: false },
+                    yaxis: { labels: { maxWidth: 110, style: { fontSize: '10px' } } },
+                    xaxis: {
+                        labels: {
+                            style: { fontSize: '10px' },
+                            formatter: isMoney ? formatCompactMoney : function (val) { return Math.round(val); }
+                        }
+                    },
+                    grid: { padding: { right: 8 } }
+                }
+            }]
         }, 240);
+    }
+
+    function formatCompactMoney(val) {
+        var n = Number(val);
+        if (Math.abs(n) >= 1000000) return '₱' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+        if (Math.abs(n) >= 1000) return '₱' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
+        return '₱' + Math.round(n);
     }
 
     function buildDonutOptions(labels, values, opts) {

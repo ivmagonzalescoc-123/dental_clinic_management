@@ -1488,13 +1488,13 @@
 
   function removeGlobalLoadingOverlay() {
     var overlay = document.getElementById('globalLoadingOverlay');
-    if (!overlay) return;
-    var loadTime = Date.now() - (window.__pageLoadStart || Date.now());
-    var minDisplay = 300; // minimum 300ms display
-    var remaining = Math.max(0, minDisplay - loadTime);
+    if (!overlay || overlay.dataset.removing === '1') return;
+    overlay.dataset.removing = '1';
+    overlay.style.transition = 'opacity 150ms ease';
+    overlay.style.opacity = '0';
     setTimeout(function() {
       if (overlay && overlay.parentNode) overlay.remove();
-    }, remaining);
+    }, 160);
   }
 
   document.addEventListener('DOMContentLoaded', function () {

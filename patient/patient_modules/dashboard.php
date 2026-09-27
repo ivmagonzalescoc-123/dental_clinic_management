@@ -128,7 +128,9 @@ if ($patientId > 0) {
         <div>
             <h4 class="mb-0">Patient Dashboard</h4>
         </div>
-        <span class="dental-chip">Care Overview</span>
+        <a href="patient.php?page=appointments" class="dental-hero-cta">
+            <i class="bi bi-calendar-plus" aria-hidden="true"></i> Book appointment
+        </a>
     </div>
 
     <?php if ($showReviewPrompt): ?>

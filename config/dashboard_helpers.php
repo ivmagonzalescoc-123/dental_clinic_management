@@ -165,6 +165,11 @@ if (!function_exists('dashboard_render_appt_chart_script')) {
         if (typeof ApexCharts === 'undefined') return;
         var el = document.getElementById('{$safeId}');
         if (!el) return;
+        var values = {$valuesJson};
+        if (!values.some(function (v) { return Number(v) > 0; })) {
+            el.innerHTML = '<div class="dental-empty-state"><div class="dental-empty-state__icon" aria-hidden="true"><i class="bi bi-graph-up"></i></div><p class="dental-empty-state__message">No appointments in the last 7 days.</p></div>';
+            return;
+        }
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         var textColor = isDark ? '#94a3b8' : '#6c757d';
         var gridColor = isDark ? '#2f3d52' : '#e9ecef';

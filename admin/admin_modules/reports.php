@@ -813,28 +813,28 @@ $reportNavQuery = array_merge(
 
     <?php if ($reportType === 'sales'): ?>
     <div class="row g-3 mb-3">
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-cash-stack"></i></div>
                 <div class="dental-kpi-label">Total Billed</div>
                 <div class="dental-kpi-value">₱<?php echo number_format($totalBilled, 2); ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-check-circle"></i></div>
                 <div class="dental-kpi-label">Collected</div>
                 <div class="dental-kpi-value text-success">₱<?php echo number_format($totalCollected, 2); ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--amber"><i class="bi bi-exclamation-circle"></i></div>
                 <div class="dental-kpi-label">Outstanding</div>
                 <div class="dental-kpi-value <?php echo $totalOutstanding > 0 ? 'text-danger' : ''; ?>">₱<?php echo number_format($totalOutstanding, 2); ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
                 <div class="dental-kpi-label">Collection Rate</div>
@@ -845,21 +845,21 @@ $reportNavQuery = array_merge(
 
     <p class="dental-section-eyebrow">Averages</p>
     <div class="row g-3 mb-3">
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-person"></i></div>
                 <div class="dental-kpi-label">Avg Revenue / Patient</div>
                 <div class="dental-kpi-value">₱<?php echo number_format($avgRevenuePerPatient, 2); ?></div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-check"></i></div>
                 <div class="dental-kpi-label">Avg Revenue / Visit</div>
                 <div class="dental-kpi-value">₱<?php echo number_format($avgRevenuePerAppointment, 2); ?></div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-receipt"></i></div>
                 <div class="dental-kpi-label">Total Invoices</div>
@@ -985,28 +985,28 @@ $reportNavQuery = array_merge(
 
     <?php elseif ($reportType === 'appointments'): ?>
     <div class="row g-3 mb-3">
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar3"></i></div>
                 <div class="dental-kpi-label">Total Appointments</div>
                 <div class="dental-kpi-value"><?php echo (int)$totalAppointments; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-check-circle"></i></div>
                 <div class="dental-kpi-label">Completed Visits</div>
                 <div class="dental-kpi-value text-success"><?php echo (int)$completedVisits; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--red"><i class="bi bi-x-circle"></i></div>
                 <div class="dental-kpi-label">No-Shows</div>
                 <div class="dental-kpi-value <?php echo $noShows > 0 ? 'text-danger' : ''; ?>"><?php echo (int)$noShows; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
                 <div class="dental-kpi-label">Completion Rate</div>
@@ -1155,28 +1155,28 @@ $reportNavQuery = array_merge(
 
     <?php elseif ($reportType === 'demographic'): ?>
     <div class="row g-3 mb-3">
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-people"></i></div>
                 <div class="dental-kpi-label">Total Patients Seen</div>
                 <div class="dental-kpi-value"><?php echo (int)$patientsSeen; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--green"><i class="bi bi-person-plus"></i></div>
                 <div class="dental-kpi-label">New Patients</div>
                 <div class="dental-kpi-value"><?php echo (int)$newPatients; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar3"></i></div>
                 <div class="dental-kpi-label">Total Appointments</div>
                 <div class="dental-kpi-value"><?php echo (int)$totalAppointments; ?></div>
             </div>
         </div>
-        <div class="col-md-6 col-xl-3">
+        <div class="col-6 col-xl-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up"></i></div>
                 <div class="dental-kpi-label">Completion Rate</div>
@@ -1255,21 +1255,21 @@ $reportNavQuery = array_merge(
 
     <?php elseif ($reportType === 'trend'): ?>
     <div class="row g-3 mb-3">
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up-arrow"></i></div>
                 <div class="dental-kpi-label">Predicted Next Month</div>
                 <div class="dental-kpi-value text-primary"><?php echo $nextMonthPredicted; ?> <small>appointments</small></div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-range"></i></div>
                 <div class="dental-kpi-label">12-Month Total</div>
                 <div class="dental-kpi-value"><?php echo array_sum($monthlyTrendAppts); ?> <small>appointments</small></div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-6 col-md-4">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-bar-chart"></i></div>
                 <div class="dental-kpi-label">Avg Monthly Appointments</div>
@@ -1479,7 +1479,7 @@ $reportNavQuery = array_merge(
     </div>
 </div>
 
-<script src="../assets/js/admin-charts.js?v=20260702-reports"></script>
+<script src="../assets/js/admin-charts.js?v=20260928-mobilebars"></script>
 <script>
 (function () {
     var reportType = <?php echo json_encode($reportType); ?>;
@@ -1856,6 +1856,21 @@ $reportNavQuery = array_merge(
     font-size: 0.85rem;
     font-weight: 600;
     color: #94a3b8;
+}
+/* Phones: stat cards sit 2-per-row (col-6), so shrink the big figures to fit
+   a half-width card, and let an odd card left alone at the end span the row. */
+@media (max-width: 767.98px) {
+    .row > .col-6:last-child:nth-child(odd):has(> .dental-kpi-card) {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .dental-kpi-card.p-3 {
+        padding: 0.8rem !important;
+    }
+    .dental-kpi-value {
+        font-size: 1.2rem;
+        overflow-wrap: anywhere;
+    }
 }
 .dental-section-eyebrow {
     font-size: 0.72rem;

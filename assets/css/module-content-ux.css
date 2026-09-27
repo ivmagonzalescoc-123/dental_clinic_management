@@ -777,6 +777,29 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   box-shadow: 0 12px 32px rgba(13, 148, 136, 0.2);
 }
 
+#main .dental-hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f766e;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(15, 35, 60, 0.12);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#main .dental-hero-cta:hover,
+#main .dental-hero-cta:focus-visible {
+  color: #0f766e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 35, 60, 0.18);
+  outline: none;
+}
+
 #main .dental-dashboard-hero h4 {
   color: #ffffff !important;
   font-weight: 700;
@@ -863,7 +886,10 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   flex: 1;
 }
 
-#main .dental-kpi-card__label {
+/* Extra .dental-kpi-card in the selector: the generic `#main .section h6`
+   rule in main.css is otherwise more specific and inflates this to 0.95rem,
+   which made long labels ("APPOINTMENTS") split mid-word in narrow cards. */
+#main .dental-kpi-card .dental-kpi-card__label {
   margin: 0 0 0.35rem;
   color: #5d6f85;
   font-size: var(--fs-xs);
