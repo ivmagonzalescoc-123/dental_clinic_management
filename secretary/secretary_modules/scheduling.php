@@ -116,7 +116,7 @@ foreach ($schedules as $row) {
 }
 ?>
 
-<div class="card border-0 mb-3 mt-4">
+<div class="card border-0 mb-3">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h2 class="card-title mb-0"><i class="bi bi-calendar-range me-2"></i>Follow-up Appointments</h2>
     </div>
@@ -124,9 +124,7 @@ foreach ($schedules as $row) {
 <form class="card border mb-3" method="GET" action="secretary.php">
     <div class="card-body row g-2 align-items-end">
         <input type="hidden" name="page" value="appointments">
-        <?php if (!empty($secretary_scheduling_view) && $secretary_scheduling_view !== 'all'): ?>
-            <input type="hidden" name="view" value="<?php echo htmlspecialchars($secretary_scheduling_view); ?>">
-        <?php endif; ?>
+        <input type="hidden" name="section" value="follow_ups">
         <div class="col-md-3">
             <label class="form-label">Doctor</label>
             <select name="doctor_id" class="form-select">
@@ -160,13 +158,7 @@ foreach ($schedules as $row) {
         </div>
         <div class="col-md-3 d-flex gap-2">
             <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i> Apply</button>
-            <?php
-                $schedulingResetUrl = 'secretary.php?page=appointments';
-                if (!empty($secretary_scheduling_view) && $secretary_scheduling_view !== 'all') {
-                    $schedulingResetUrl .= '&view=' . urlencode($secretary_scheduling_view);
-                }
-            ?>
-            <a href="<?php echo htmlspecialchars($schedulingResetUrl); ?>" class="btn btn-outline-secondary w-100">Reset</a>
+            <a href="secretary.php?page=appointments&amp;section=follow_ups" class="btn btn-outline-secondary w-100">Reset</a>
         </div>
     </div>
 </form>

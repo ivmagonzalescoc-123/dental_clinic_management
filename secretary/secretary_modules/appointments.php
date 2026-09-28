@@ -656,7 +656,7 @@ $appointmentsViewFilters = [
 
 // Top-level section tabs
 $activeSection = $_GET['section'] ?? 'appointments';
-if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
+if (!in_array($activeSection, ['appointments', 'new_customers', 'follow_ups'], true)) {
     $activeSection = 'appointments';
 }
 ?>
@@ -665,6 +665,8 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
     <h4 class="mb-0">
         <?php if ($activeSection === 'new_customers'): ?>
             <span class="module-page-header__crumb">Appointments</span> <span class="module-page-header__sep">&gt;</span> New Patients
+        <?php elseif ($activeSection === 'follow_ups'): ?>
+            <span class="module-page-header__crumb">Appointments</span> <span class="module-page-header__sep">&gt;</span> Follow-ups
         <?php else: ?>
             Appointments
         <?php endif; ?>
@@ -693,6 +695,11 @@ if (!in_array($activeSection, ['appointments', 'new_customers'], true)) {
         <a class="nav-link <?php echo $activeSection === 'new_customers' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=new_customers" style="font-size:0.85rem;">
             <i class="bi bi-person-plus"></i> New Patients
             <span class="nav-dot<?php echo (int)$guestBookingsCount > 0 ? ' is-active' : ''; ?>" id="dotNewCustomers" data-count="<?php echo (int)$guestBookingsCount; ?>"></span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $activeSection === 'follow_ups' ? 'active' : ''; ?>" href="secretary.php?page=appointments&amp;section=follow_ups" style="font-size:0.85rem;">
+            <i class="bi bi-calendar-range"></i> Follow-ups
         </a>
     </li>
 </ul>
@@ -2071,6 +2078,13 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 });
 </script>
 
+<?php elseif ($activeSection === 'follow_ups'): ?>
+
+<?php
+    $secretary_scheduling_embedded = true;
+    include __DIR__ . '/scheduling.php';
+?>
+
 <?php else: ?>
 
 <!-- Appointments Section Nav -->
@@ -2359,11 +2373,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     </div>
 </div>
 
-<?php
-    $secretary_scheduling_embedded = true;
-    $secretary_scheduling_view = $view;
-    include __DIR__ . '/scheduling.php';
-?>
 <?php endif; ?>
 
 <style>

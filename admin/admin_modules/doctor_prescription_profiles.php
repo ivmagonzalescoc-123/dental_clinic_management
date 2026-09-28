@@ -62,10 +62,14 @@ if ($action === 'save_profile' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!is_dir($upload_dir)) {
                 mkdir($upload_dir, 0755, true);
             }
-            $ext = strtolower(pathinfo($_FILES['signature_image']['name'], PATHINFO_EXTENSION));
-            $allowed_ext = ['png', 'jpg', 'jpeg', 'gif', 'svg'];
-            if (in_array($ext, $allowed_ext)) {
-                $filename = 'signature_' . $user_id . '_' . time() . '.' . $ext;
+            // Must be a real raster image; the extension comes from its detected type, never
+            // from the filename. SVG is not accepted since it can carry script.
+            $sigTypes = [IMAGETYPE_PNG => 'png', IMAGETYPE_JPEG => 'jpg', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp'];
+            $sigTmp = (string)$_FILES['signature_image']['tmp_name'];
+            $sigInfo = is_uploaded_file($sigTmp) ? @getimagesize($sigTmp) : false;
+            $ext = $sigInfo ? ($sigTypes[(int)$sigInfo[2]] ?? '') : '';
+            if ($ext !== '' && (int)$_FILES['signature_image']['size'] <= 2 * 1024 * 1024) {
+                $filename = 'signature_' . $user_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 $dest = $upload_dir . $filename;
                 if (move_uploaded_file($_FILES['signature_image']['tmp_name'], $dest)) {
                     $signature_image = 'assets/uploads/doctor_signatures/' . $filename;
@@ -277,11 +281,11 @@ if ($doc_stmt) {
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Or Upload Signature Image</label>
-                            <input type="file" class="form-control" name="signature_image" accept="image/png,image/jpeg,image/gif,image/svg+xml">
+                            <input type="file" class="form-control" name="signature_image" accept="image/png,image/jpeg,image/gif,image/webp">
                             <div id="signaturePreview" class="mt-2" style="display:none;">
                                 <img id="previewImg" src="" alt="Signature preview" style="max-height:120px; border:1px solid #dee2e6; border-radius:4px;">
                             </div>
-                            <small class="text-muted">Supported formats: PNG, JPG, GIF, SVG. Recommended: transparent background PNG.</small>
+                            <small class="text-muted">Supported formats: PNG, JPG, GIF, WEBP (max 2MB). Recommended: transparent background PNG.</small>
                         </div>
                     </div>
                 </div>

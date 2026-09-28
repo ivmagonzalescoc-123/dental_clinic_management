@@ -308,25 +308,28 @@ try {
             }
 
             $tmpPath = $_FILES['photos']['tmp_name'][$i];
-            $mimeType = function_exists('mime_content_type')
-                ? (mime_content_type($tmpPath) ?: '')
-                : '';
-            if ($mimeType === '' && !empty($_FILES['photos']['type'][$i])) {
-                $mimeType = (string)$_FILES['photos']['type'][$i];
-            }
-            $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-            if (!in_array($mimeType, $allowedMimes, true)) {
-                $extGuess = strtolower(pathinfo((string)$_FILES['photos']['name'][$i], PATHINFO_EXTENSION));
-                $extToMime = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp'];
-                $mimeType = $extToMime[$extGuess] ?? $mimeType;
-            }
-            if (!in_array($mimeType, $allowedMimes, true)) {
-                $uploadErrors[] = basename($_FILES['photos']['name'][$i]) . ': invalid type (' . ($mimeType ?: 'unknown') . ')';
+            $originalName = basename((string)$_FILES['photos']['name'][$i]);
+            if (!is_uploaded_file($tmpPath)) {
+                $uploadErrors[] = $originalName . ': invalid upload';
                 continue;
             }
 
-            $originalName = basename($_FILES['photos']['name'][$i]);
-            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            // The file must parse as a real image, and the saved extension comes from the
+            // detected image type — never from the uploaded filename or the browser's MIME
+            // type, which a caller controls (e.g. a GIF-headed HTML file named photo.html).
+            $allowedImageTypes = [
+                IMAGETYPE_JPEG => ['image/jpeg', 'jpg'],
+                IMAGETYPE_PNG => ['image/png', 'png'],
+                IMAGETYPE_GIF => ['image/gif', 'gif'],
+                IMAGETYPE_WEBP => ['image/webp', 'webp'],
+            ];
+            $imageInfo = @getimagesize($tmpPath);
+            $imageType = $imageInfo ? (int)$imageInfo[2] : 0;
+            if (!isset($allowedImageTypes[$imageType])) {
+                $uploadErrors[] = $originalName . ': not a JPG, PNG, GIF, or WEBP image';
+                continue;
+            }
+            [$mimeType, $ext] = $allowedImageTypes[$imageType];
             $uniqueName = 'appt_' . $appointmentId . '_photo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
             $filePath = $uploadDir . $uniqueName;
 
@@ -340,7 +343,7 @@ try {
             // memory_limit low and kill the whole request on exhaustion —
             // better to just store the original file than crash the request).
             if ($gdAvailable && $mimeType !== 'image/webp') {
-                $dims = @getimagesize($tmpPath);
+                $dims = $imageInfo;
                 if ($dims) {
                     $estimatedBytes = $dims[0] * $dims[1] * 5; // ~4 bytes/px truecolor + headroom
                     $limitBytes = appt_media_memory_limit_bytes();
