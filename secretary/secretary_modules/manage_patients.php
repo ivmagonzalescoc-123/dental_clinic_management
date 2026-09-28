@@ -530,15 +530,22 @@ function fillProfileForm(patient) {
         defaultView.style.display = '';
     }
 
+    let searchController = null;
+
     function runSearch(query) {
         statusEl.textContent = 'Searching...';
         showResultsView();
         if (typeof DentalUI !== 'undefined' && DentalUI.showSkeleton) {
             DentalUI.showSkeleton(resultsBody, 5, 7);
         }
-        fetch('../assets/api/patients/search_patients.php?q=' + encodeURIComponent(query))
+        if (searchController) searchController.abort();
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        searchController = controller;
+        fetch('../assets/api/patients/search_patients.php?q=' + encodeURIComponent(query), controller ? { signal: controller.signal } : undefined)
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                // A newer search (or clearing the box) has replaced this one.
+                if (controller !== searchController) return;
                 if (!data.success) {
                     statusEl.textContent = '';
                     return;
@@ -552,19 +559,38 @@ function fillProfileForm(patient) {
                 }
                 statusEl.textContent = currentResults.length + ' result' + (currentResults.length === 1 ? '' : 's');
             })
-            .catch(function () {
+            .catch(function (err) {
+                if ((err && err.name === 'AbortError') || controller !== searchController) return;
                 statusEl.textContent = 'Search failed. Please try again.';
             });
     }
 
-    const debouncedSearch = (typeof DentalUI !== 'undefined' && DentalUI.debounce)
-        ? DentalUI.debounce(runSearch, 300)
-        : function (q) { runSearch(q); };
+    // Wait until typing pauses before asking the server, so a search costs one request
+    // instead of one per keystroke.
+    const SEARCH_DELAY_MS = 500;
+    let searchTimer = null;
+    let lastQuery = '';
+    function cancelPendingSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = null;
+        lastQuery = '';
+        if (searchController) searchController.abort();
+        searchController = null;
+    }
+    function debouncedSearch(q) {
+        clearTimeout(searchTimer);
+        if (q === lastQuery) return;
+        searchTimer = setTimeout(function () {
+            lastQuery = q;
+            runSearch(q);
+        }, SEARCH_DELAY_MS);
+    }
 
     input.addEventListener('input', function () {
         const q = input.value.trim();
         clearBtn.style.display = q ? '' : 'none';
         if (!q) {
+            cancelPendingSearch();
             currentResults = [];
             showDefaultView();
             statusEl.textContent = '';
@@ -574,6 +600,7 @@ function fillProfileForm(patient) {
     });
 
     clearBtn.addEventListener('click', function () {
+        cancelPendingSearch();
         input.value = '';
         clearBtn.style.display = 'none';
         currentResults = [];

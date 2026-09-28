@@ -117,6 +117,7 @@ switch ($role_key) {
     <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
     <link href="../assets/css/portal-header-mobile.css?v=20260927-nodarkmode" rel="stylesheet">
     <link href="../assets/css/module-content-ux.css?v=20260928-tp2" rel="stylesheet">
+    <link href="../assets/css/doctor-patients.css?v=20260928-2" rel="stylesheet">
     <link href="../assets/css/dental-calendar.css?v=20260928-6" rel="stylesheet">
     <link href="../assets/css/appointment-services.css?v=20260927-nodarkmode" rel="stylesheet">
     <link href="../assets/css/odontogram-rotate-prompt.css?v=20260927-1" rel="stylesheet">
@@ -350,6 +351,7 @@ switch ($role_key) {
     <script src="../assets/js/doctor-patient-profile.js?v=20260722-1"></script>
     <script src="../assets/js/clinical-assessment-fields.js?v=20260606-clinical"></script>
     <script src="../assets/js/media-gallery.js?v=20260606-media"></script>
+    <script src="../assets/js/doctor-patients.js?v=20260928-2"></script>
     <script src="../assets/js/appointment-service-manager.js"></script>
 
     <!-- Active Navigation Highlight -->
