@@ -237,14 +237,14 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
 }
 
 .chart-surface-chip:hover {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-color: #9dd2e6;
+  background: #eff8fb;
 }
 
 .chart-surface-chip.is-active {
-  border-color: #2563eb;
-  background: #dbeafe;
-  outline: 2px solid rgba(37, 99, 235, 0.35);
+  border-color: #1b7aa3;
+  background: #dcf0f7;
+  outline: 2px solid rgba(27, 122, 163, 0.35);
   outline-offset: 1px;
 }
 
@@ -324,9 +324,9 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
 }
 
 .svg-tooth.is-active .svg-tooth__pick {
-  stroke: #2563eb;
+  stroke: #1b7aa3;
   stroke-width: 2;
-  fill: rgba(37, 99, 235, 0.06);
+  fill: rgba(27, 122, 163, 0.06);
 }
 
 .svg-tooth__status {
@@ -338,15 +338,15 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
 }
 
 .detail-surface[fill="transparent"]:hover {
-  stroke: #2563eb;
+  stroke: #1b7aa3;
   stroke-width: 1.4;
-  fill: rgba(37, 99, 235, 0.1);
+  fill: rgba(27, 122, 163, 0.1);
 }
 
 .detail-surface.is-active-surface {
-  stroke: #2563eb;
+  stroke: #1b7aa3;
   stroke-width: 2.4;
-  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.45));
+  filter: drop-shadow(0 0 4px rgba(27, 122, 163, 0.45));
 }
 
 .detail-surface-code {
@@ -439,15 +439,15 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
 }
 
 .svg-surface[fill="transparent"]:hover {
-  stroke: #2563eb;
+  stroke: #1b7aa3;
   stroke-width: 1.2;
-  fill: rgba(37, 99, 235, 0.08);
+  fill: rgba(27, 122, 163, 0.08);
 }
 
 .svg-tooth.is-active .svg-surface.is-active-surface {
-  stroke: #2563eb;
+  stroke: #1b7aa3;
   stroke-width: 2.4;
-  filter: drop-shadow(0 0 4px rgba(37,99,235,.45));
+  filter: drop-shadow(0 0 4px rgba(27,122,163,.45));
 }
 
 .svg-surface {

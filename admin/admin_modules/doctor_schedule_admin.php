@@ -261,7 +261,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 }
 .ds-doctor-row:hover { background: #f8fafc; }
 .ds-doctor-name { font-size: 0.82rem; font-weight: 700; color: #1e293b; }
-.ds-doctor-hours { font-size: 0.75rem; font-weight: 600; color: #0d9488; }
+.ds-doctor-hours { font-size: 0.75rem; font-weight: 600; color: #1b7aa3; }
 .ds-doctor-type { font-size: 0.65rem; color: #94a3b8; }
 .ds-status-badge {
     font-size: 0.65rem;

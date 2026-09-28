@@ -185,7 +185,7 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
 .ds-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;margin-bottom:6px;transition:background .12s ease}
 .ds-row:hover{background:#f8fafc}
 .ds-name{font-size:.82rem;font-weight:700;color:#1e293b}
-.ds-hours{font-size:.75rem;font-weight:600;color:#0d9488}
+.ds-hours{font-size:.75rem;font-weight:600;color:#1b7aa3}
 .ds-type{font-size:.65rem;color:#94a3b8}
 .ds-badge{font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:999px}
 .ds-avail{background:#dcfce7;color:#166534}

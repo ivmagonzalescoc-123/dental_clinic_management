@@ -900,7 +900,7 @@ if (!$hasAnyData) {
         legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '12px', labels: { colors: textColor } },
         xaxis: { categories: labels, axisBorder: { show: true }, axisTicks: { show: true } },
         stroke: { curve: 'smooth', width: 3 },
-        colors: ['#0d9488'],
+        colors: ['#1b7aa3'],
         fill: { type: 'solid', opacity: 0 },
         dataLabels: { enabled: false },
         yaxis: { min: 0, forceNiceScale: true, show: true },

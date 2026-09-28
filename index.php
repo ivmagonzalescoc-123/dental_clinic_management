@@ -112,7 +112,7 @@ $aboutPoints = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260718-dark1">
+    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260928-clinicblue">
     <link rel="stylesheet" href="assets/css/app-request.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <?php if ($googleClientId !== ''): ?>
@@ -131,15 +131,15 @@ $aboutPoints = [
                     },
                     colors: {
                         primary: {
-                            DEFAULT: '#0d9488',
+                            DEFAULT: '#1b7aa3',
                             foreground: '#ffffff',
                         },
                         secondary: {
-                            DEFAULT: '#ccfbf1',
+                            DEFAULT: '#dcf0f7',
                             foreground: '#0f1e35',
                         },
                         muted: {
-                            DEFAULT: '#f0fdfa',
+                            DEFAULT: '#eff8fb',
                             foreground: '#5a6e8c',
                         },
                         card: {
@@ -148,7 +148,7 @@ $aboutPoints = [
                         },
                         background: '#f7f9fc',
                         foreground: '#0f1e35',
-                        border: 'rgba(13, 148, 136, 0.12)',
+                        border: 'rgba(27, 122, 163, 0.12)',
                     },
                 },
             },
@@ -186,7 +186,7 @@ $aboutPoints = [
             bottom: -4px;
             height: 2px;
             width: 0;
-            background-color: #0d9488;
+            background-color: #1b7aa3;
             transition: width 0.25s ease;
         }
         .nav-link:hover::after,
@@ -200,13 +200,13 @@ $aboutPoints = [
             color: #0f1e35 !important;
         }
         .header-scrolled .nav-link:hover {
-            color: #0d9488 !important;
+            color: #1b7aa3 !important;
         }
         .header-scrolled .nav-link.active {
-            color: #0d9488 !important;
+            color: #1b7aa3 !important;
         }
         .header-scrolled .nav-link::after {
-            background-color: #0d9488;
+            background-color: #1b7aa3;
         }
 
         .auth-overlay {
@@ -262,7 +262,7 @@ $aboutPoints = [
             transition: border-color 0.2s ease, background-color 0.2s ease;
         }
         .auth-field:focus {
-            border-color: rgb(13, 148, 136);
+            border-color: rgb(27, 122, 163);
             background-color: #fff;
             box-shadow: none;
             outline: none;
@@ -366,7 +366,7 @@ $aboutPoints = [
         .terms-content li + li { margin-top: 0.35rem; }
 
         .service-card:hover .service-icon-box {
-            background: #0d9488;
+            background: #1b7aa3;
         }
         .service-card:hover .service-icon-box svg {
             color: #fff;
@@ -392,26 +392,26 @@ $aboutPoints = [
             padding: 0;
             border: none;
             border-radius: 50%;
-            background-color: #0d9488;
+            background-color: #1b7aa3;
             color: #ffffff;
             cursor: pointer;
-            box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4);
+            box-shadow: 0 4px 14px rgba(27, 122, 163, 0.4);
             transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
             -webkit-appearance: none;
             appearance: none;
             line-height: 1;
         }
         .back-to-top-btn:hover {
-            background-color: #0f766e;
-            box-shadow: 0 6px 20px rgba(13, 148, 136, 0.5);
+            background-color: #17698c;
+            box-shadow: 0 6px 20px rgba(27, 122, 163, 0.5);
             transform: translateY(-2px);
         }
         .back-to-top-btn:active {
             transform: translateY(0);
-            box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+            box-shadow: 0 2px 8px rgba(27, 122, 163, 0.3);
         }
         .back-to-top-btn:focus-visible {
-            outline: 2px solid #0d9488;
+            outline: 2px solid #1b7aa3;
             outline-offset: 2px;
         }
         .back-to-top-btn.is-visible {
@@ -422,7 +422,7 @@ $aboutPoints = [
         .complaint-check {
             width: 1rem;
             height: 1rem;
-            accent-color: #0d9488;
+            accent-color: #1b7aa3;
             cursor: pointer;
         }
 
@@ -455,8 +455,8 @@ $aboutPoints = [
             animation: trackCardIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         @keyframes trackStatusFlash {
-            0%   { box-shadow: 0 0 0 3px rgba(13,148,136,0.18); }
-            100% { box-shadow: 0 0 0 0 rgba(13,148,136,0); }
+            0%   { box-shadow: 0 0 0 3px rgba(27,122,163,0.18); }
+            100% { box-shadow: 0 0 0 0 rgba(27,122,163,0); }
         }
         .track-status-flash {
             animation: trackStatusFlash 0.9s ease-out;
@@ -531,7 +531,7 @@ $aboutPoints = [
         </nav>
 
         <!-- Mobile menu -->
-        <div id="mobileMenu" class="hidden border-b md:hidden" style="background: #f7f9fc; border-color: rgba(13,148,136,0.1);">
+        <div id="mobileMenu" class="hidden border-b md:hidden" style="background: #f7f9fc; border-color: rgba(27,122,163,0.1);">
             <ul class="flex flex-col gap-4 px-6 pb-6 pt-4">
                 <li><a href="#track-booking" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Track Appointment</a></li>
                 <li><a href="#services" class="mobile-nav-link block text-foreground hover:text-primary transition-colors" style="font-weight: 500;">Services</a></li>
@@ -552,7 +552,7 @@ $aboutPoints = [
         <!-- Hero -->
         <section id="hero" class="relative min-h-screen flex items-center overflow-hidden">
             <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>');"></div>
-            <div class="absolute inset-0" style="background: linear-gradient(120deg, rgba(15,30,53,0.88) 0%, rgba(13,148,136,0.55) 100%);"></div>
+            <div class="absolute inset-0" style="background: linear-gradient(120deg, rgba(15,30,53,0.88) 0%, rgba(27,122,163,0.55) 100%);"></div>
 
             <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 w-full lg:grid-cols-[1.15fr,0.85fr] lg:py-28">
                 <div class="reveal is-visible">
@@ -562,7 +562,7 @@ $aboutPoints = [
                     </span>
 
                     <h1 class="mt-6 font-display text-white" style="font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.15; font-weight: 600;">
-                        Your Smile Deserves the <br class="hidden sm:inline"> <span style="color: #5eead4;">Best Care</span>
+                        Your Smile Deserves the <br class="hidden sm:inline"> <span style="color: #9dd2e6;">Best Care</span>
                     </h1>
 
                     <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
@@ -588,7 +588,7 @@ $aboutPoints = [
         </section>
 
         <!-- Track Your Booking -->
-        <section id="track-booking" class="py-16" style="background: linear-gradient(135deg, #f0fdfa 0%, #f0fdf4 100%);">
+        <section id="track-booking" class="py-16" style="background: linear-gradient(135deg, #eff8fb 0%, #f0fdf4 100%);">
             <div class="mx-auto max-w-6xl px-6">
                 <div class="reveal mx-auto max-w-xl text-center">
                     <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Appointment Status</span>
@@ -665,19 +665,19 @@ $aboutPoints = [
                 <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     <?php foreach ($services as $i => $service): ?>
                     <div class="reveal reveal-delay-<?php echo min($i, 3); ?> service-card group relative rounded-2xl border border-border bg-card p-7 cursor-pointer transition-all duration-300 hover:shadow-lg hover:border-primary/30 hover:-translate-y-1">
-                        <div class="service-icon-box mb-5 flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-300" style="background: #e4f3ee;">
+                        <div class="service-icon-box mb-5 flex h-12 w-12 items-center justify-center rounded-xl transition-colors duration-300" style="background: #e4f2f7;">
                             <?php if ($service['icon'] === 'sparkles'): ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
                             <?php elseif ($service['icon'] === 'shield'): ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>
                             <?php elseif ($service['icon'] === 'zap'): ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
                             <?php elseif ($service['icon'] === 'heart'): ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
                             <?php elseif ($service['icon'] === 'award'): ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0116.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.015 6.015 0 01-2.27.308 6.015 6.015 0 01-2.27-.308"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0116.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.015 6.015 0 01-2.27.308 6.015 6.015 0 01-2.27-.308"/></svg>
                             <?php else: ?>
-                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #0d9488;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                            <svg class="h-6 w-6 transition-colors duration-300" style="color: #1b7aa3;" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                             <?php endif; ?>
                         </div>
 
@@ -694,12 +694,12 @@ $aboutPoints = [
         </section>
 
         <!-- About -->
-        <section id="about" class="py-24" style="background: #f0fdfa;">
+        <section id="about" class="py-24" style="background: #eff8fb;">
             <div class="mx-auto max-w-6xl px-6">
                 <div class="grid items-center gap-16 lg:grid-cols-2">
                     <div class="reveal">
                         <div class="relative">
-                            <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(13,148,136,0.08); z-index: 0;"></div>
+                            <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(27,122,163,0.08); z-index: 0;"></div>
                             <img
                                 src="assets/img/profile_picture.jpg"
                                 alt="Azucena's Dental Clinic"
@@ -708,7 +708,7 @@ $aboutPoints = [
                             >
                             <div class="absolute bottom-6 right-6 z-20 rounded-2xl border border-primary/12 bg-white px-5 py-4 shadow-xl">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex h-10 w-10 items-center justify-center rounded-full" style="background: #ccfbf1;">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-full" style="background: #dcf0f7;">
                                         <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 013 3h-15a3 3 0 013-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 01-.982-3.172M9.497 14.25a7.454 7.454 0 00.981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 007.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M18.75 4.236c.982.143 1.954.317 2.916.52A6.003 6.003 0 0116.27 9.728M18.75 4.236V4.5c0 2.108-.966 3.99-2.48 5.228m0 0a6.015 6.015 0 01-2.27.308 6.015 6.015 0 01-2.27-.308"/></svg>
                                     </div>
                                     <div>
@@ -765,7 +765,7 @@ $aboutPoints = [
                             &ldquo;<?php echo htmlspecialchars($t['text'], ENT_QUOTES, 'UTF-8'); ?>&rdquo;
                         </p>
                         <div class="flex items-center gap-3">
-                            <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm text-white" style="background: #0d9488; font-weight: 700;">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full text-sm text-white" style="background: #1b7aa3; font-weight: 700;">
                                 <?php echo htmlspecialchars($t['avatar'], ENT_QUOTES, 'UTF-8'); ?>
                             </div>
                             <div>
@@ -793,7 +793,7 @@ $aboutPoints = [
                     <!-- Left: clinic info -->
                     <div class="reveal space-y-5">
                         <div class="flex items-start gap-4">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #ccfbf1;">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #dcf0f7;">
                                 <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
                             </div>
                             <div>
@@ -803,7 +803,7 @@ $aboutPoints = [
                         </div>
 
                         <div class="flex items-start gap-4">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #ccfbf1;">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #dcf0f7;">
                                 <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z"/></svg>
                             </div>
                             <div>
@@ -813,7 +813,7 @@ $aboutPoints = [
                         </div>
 
                         <div class="flex items-start gap-4">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #ccfbf1;">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #dcf0f7;">
                                 <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                             </div>
                             <div>
@@ -823,7 +823,7 @@ $aboutPoints = [
                         </div>
 
                         <div class="flex items-start gap-4">
-                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #ccfbf1;">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style="background: #dcf0f7;">
                                 <svg class="h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             </div>
                             <div>
@@ -854,20 +854,20 @@ $aboutPoints = [
                                 <div class="grid gap-4 sm:grid-cols-2">
                                     <div>
                                         <label for="contact-name" class="block text-sm font-medium text-card-foreground">Full Name</label>
-                                        <input type="text" id="contact-name" name="name" required placeholder="Maria Santos" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0fdfa;">
+                                        <input type="text" id="contact-name" name="name" required placeholder="Maria Santos" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #eff8fb;">
                                     </div>
                                     <div>
                                         <label for="contact-phone" class="block text-sm font-medium text-card-foreground">Phone Number</label>
-                                        <input type="tel" id="contact-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="e.g. 0917 123 4567" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0fdfa;">
+                                        <input type="tel" id="contact-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="e.g. 0917 123 4567" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #eff8fb;">
                                     </div>
                                 </div>
                                 <div>
                                     <label for="contact-email" class="block text-sm font-medium text-card-foreground">Email</label>
-                                    <input type="email" id="contact-email" name="email" required placeholder="maria@email.com" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0fdfa;">
+                                    <input type="email" id="contact-email" name="email" required placeholder="maria@email.com" class="mt-1.5 w-full rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #eff8fb;">
                                 </div>
                                 <div>
                                     <label for="contact-message" class="block text-sm font-medium text-card-foreground">Message</label>
-                                    <textarea id="contact-message" name="message" rows="5" required class="mt-1.5 w-full resize-y rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #f0fdfa;" placeholder="How can we help you?"></textarea>
+                                    <textarea id="contact-message" name="message" rows="5" required class="mt-1.5 w-full resize-y rounded-xl border border-border px-4 py-3 text-sm transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none" style="background: #eff8fb;" placeholder="How can we help you?"></textarea>
                                 </div>
                                 <button type="submit" id="contact-form-submit" class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-sm font-bold text-white hover:opacity-90 active:scale-[0.98] transition-all duration-200">
                                     Send Message
@@ -1680,7 +1680,7 @@ $aboutPoints = [
                         if (data.step3) {
                             setBadge('Completed', 'Successfully visited the clinic.', '#dcfce7', '#166534');
                         } else if (data.step2) {
-                            setBadge('Confirmed', 'Booking confirmed — please visit the clinic on your scheduled date.', '#ccfbf1', '#0d9488');
+                            setBadge('Confirmed', 'Booking confirmed — please visit the clinic on your scheduled date.', '#dcf0f7', '#1b7aa3');
                         } else {
                             setBadge('Pending Approval', 'Booking created, waiting for secretary approval.', '#fef3c7', '#92400e');
                         }
@@ -1758,8 +1758,8 @@ $aboutPoints = [
             if (siteHeader) {
                 siteHeader.style.background = scrolled ? 'rgba(247,250,248,0.92)' : 'transparent';
                 siteHeader.style.backdropFilter = scrolled ? 'blur(12px)' : 'none';
-                siteHeader.style.borderBottom = scrolled ? '1px solid rgba(42,140,112,0.1)' : 'none';
-                siteHeader.style.boxShadow = scrolled ? '0 2px 24px rgba(42,140,112,0.06)' : 'none';
+                siteHeader.style.borderBottom = scrolled ? '1px solid rgba(27,122,163,0.1)' : 'none';
+                siteHeader.style.boxShadow = scrolled ? '0 2px 24px rgba(27,122,163,0.06)' : 'none';
                 siteHeader.classList.toggle('header-scrolled', scrolled);
             }
 
@@ -1769,7 +1769,7 @@ $aboutPoints = [
 
             if (navLoginBtn) {
                 if (scrolled) {
-                    navLoginBtn.style.background = '#0d9488';
+                    navLoginBtn.style.background = '#1b7aa3';
                     navLoginBtn.style.color = '#ffffff';
                     navLoginBtn.style.border = 'none';
                     navLoginBtn.style.backdropFilter = 'none';

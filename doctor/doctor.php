@@ -113,14 +113,14 @@ switch ($role_key) {
     <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260928-nowm" rel="stylesheet">
-    <link href="../assets/css/app-toast.css?v=20260718-dark1" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260927-nodarkmode" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260928-tp2" rel="stylesheet">
-    <link href="../assets/css/doctor-patients.css?v=20260928-2" rel="stylesheet">
-    <link href="../assets/css/dental-calendar.css?v=20260928-6" rel="stylesheet">
-    <link href="../assets/css/appointment-services.css?v=20260927-nodarkmode" rel="stylesheet">
-    <link href="../assets/css/odontogram-rotate-prompt.css?v=20260927-1" rel="stylesheet">
+    <link href="../assets/css/main.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/app-toast.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/portal-header-mobile.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/module-content-ux.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/doctor-patients.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/dental-calendar.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/appointment-services.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="../assets/css/odontogram-rotate-prompt.css?v=20260928-clinicblue" rel="stylesheet">
 </head>
 
 <body class="doctor-portal">

@@ -249,19 +249,19 @@ if ($patientId > 0) {
     </div>
 </div>
 
-<?php dashboard_render_appt_chart_script('patientAppt7Chart', $chartLabels, $seriesValues, '#0d9488', 'area'); ?>
+<?php dashboard_render_appt_chart_script('patientAppt7Chart', $chartLabels, $seriesValues, '#1b7aa3', 'area'); ?>
 
 <?php if ($showReviewPrompt): ?>
 <style>
 .patient-review-prompt-card {
-    border-left: 4px solid #0d9488;
+    border-left: 4px solid #1b7aa3;
 }
 .patient-review-prompt-icon {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: #ccfbf1;
-    color: #0d9488;
+    background: #dcf0f7;
+    color: #1b7aa3;
     display: flex;
     align-items: center;
     justify-content: center;

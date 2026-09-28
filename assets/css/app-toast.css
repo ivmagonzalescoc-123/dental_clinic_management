@@ -61,7 +61,7 @@
 }
 
 .app-toast-info {
-    background: #115e59 !important;
+    background: #185671 !important;
     color: #ffffff !important;
     border: none !important;
 }
@@ -99,7 +99,7 @@
 
 .app-toast-icon--info {
     background: #ffffff;
-    color: #0d9488;
+    color: #1b7aa3;
 }
 
 .app-toast-body {

@@ -1479,7 +1479,7 @@ $reportNavQuery = array_merge(
     </div>
 </div>
 
-<script src="../assets/js/admin-charts.js?v=20260928-mobilebars"></script>
+<script src="../assets/js/admin-charts.js?v=20260928-clinicblue"></script>
 <script>
 (function () {
     var reportType = <?php echo json_encode($reportType); ?>;
@@ -1512,7 +1512,7 @@ $reportNavQuery = array_merge(
     var totalCollected = <?php echo json_encode(round($totalCollected, 2)); ?>;
     var totalOutstanding = <?php echo json_encode(round($totalOutstanding, 2)); ?>;
 
-    var chartColors = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+    var chartColors = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#3a9fc0'];
 
     function renderCharts() {
         if (typeof AdminCharts === 'undefined' || typeof ApexCharts === 'undefined') return;
@@ -1671,7 +1671,7 @@ $reportNavQuery = array_merge(
                         ],
                         xaxis: { categories: monthlyTrendLabels, labels: { style: { fontSize: '11px' } } },
                         yaxis: { min: 0, forceNiceScale: true },
-                        colors: ['#0d9488', '#10b981'],
+                        colors: ['#1b7aa3', '#10b981'],
                         stroke: { curve: 'smooth', width: 2 },
                         fill: { type: 'solid', opacity: 0 },
                         dataLabels: { enabled: false },
@@ -1736,7 +1736,7 @@ $reportNavQuery = array_merge(
                         ],
                         xaxis: { categories: dailyLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
                         yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
-                        colors: ['#94a3b8', '#0d9488'],
+                        colors: ['#94a3b8', '#1b7aa3'],
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05 } },
                         stroke: { curve: 'smooth', width: 3 },
                         markers: { size: 4, strokeWidth: 0, hover: { size: 6 } },
@@ -1811,7 +1811,7 @@ $reportNavQuery = array_merge(
 .clinic-reports-filter .form-select:focus,
 .clinic-reports-filter .form-control:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.1);
 }
 .dental-kpi-card {
     border-radius: 14px;
@@ -1834,7 +1834,7 @@ $reportNavQuery = array_merge(
     font-size: 1.05rem;
     margin-bottom: 10px;
 }
-.dental-kpi-icon--teal { background: var(--primary-soft, #f0fdfa); color: var(--primary-color, #0d9488); }
+.dental-kpi-icon--teal { background: var(--primary-soft, #eff8fb); color: var(--primary-color, #1b7aa3); }
 .dental-kpi-icon--green { background: #dcfce7; color: #16a34a; }
 .dental-kpi-icon--red { background: #fee2e2; color: #dc3545; }
 .dental-kpi-icon--amber { background: #fef3c7; color: #b45309; }
@@ -2111,10 +2111,10 @@ $reportNavQuery = array_merge(
     width: 54px;
     height: 54px;
     border-radius: 16px;
-    background: linear-gradient(145deg, #0d9488, #0f766e);
+    background: linear-gradient(145deg, #1b7aa3, #17698c);
     color: #fff;
     border: none;
-    box-shadow: 0 4px 18px rgba(13, 148, 136,0.38), 0 2px 6px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 18px rgba(27, 122, 163,0.38), 0 2px 6px rgba(0,0,0,0.12);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -2173,14 +2173,14 @@ $reportNavQuery = array_merge(
     width: 38px;
     height: 38px;
     border-radius: 11px;
-    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    background: linear-gradient(135deg, #1b7aa3 0%, #17698c 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 17px;
     flex-shrink: 0;
     color: #fff;
-    box-shadow: 0 3px 10px rgba(13, 148, 136,0.28);
+    box-shadow: 0 3px 10px rgba(27, 122, 163,0.28);
 }
 .ai-chat-header-text h6 {
     margin: 0 0 2px;
@@ -2242,10 +2242,10 @@ $reportNavQuery = array_merge(
 }
 .ai-chat-msg.user {
     align-self: flex-end;
-    background: linear-gradient(135deg, #0d9488, #0f766e);
+    background: linear-gradient(135deg, #1b7aa3, #17698c);
     color: #fff;
     border-bottom-right-radius: 4px;
-    box-shadow: 0 2px 8px rgba(13, 148, 136,0.22);
+    box-shadow: 0 2px 8px rgba(27, 122, 163,0.22);
 }
 .ai-chat-msg.bot {
     align-self: flex-start;
@@ -2319,15 +2319,15 @@ $reportNavQuery = array_merge(
     background: #f8fafc;
 }
 .ai-chat-input:focus {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136,0.1);
+    box-shadow: 0 0 0 3px rgba(27, 122, 163,0.1);
 }
 .ai-chat-send {
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    background: linear-gradient(135deg, #0d9488, #0f766e);
+    background: linear-gradient(135deg, #1b7aa3, #17698c);
     color: #fff;
     border: none;
     cursor: pointer;
@@ -2337,14 +2337,14 @@ $reportNavQuery = array_merge(
     flex-shrink: 0;
     transition: opacity 0.2s, transform 0.2s;
     font-size: 15px;
-    box-shadow: 0 2px 8px rgba(13, 148, 136,0.25);
+    box-shadow: 0 2px 8px rgba(27, 122, 163,0.25);
 }
 .ai-chat-send:hover { opacity: 0.88; transform: scale(1.06); }
 .ai-chat-send:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 .ai-metric {
     font-size: 28px;
     font-weight: 800;
-    color: #0d9488;
+    color: #1b7aa3;
     line-height: 1.1;
     margin-bottom: 4px;
 }

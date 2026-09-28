@@ -9,9 +9,9 @@
  * attaches a "Search table…" bar to any table it finds.
  */
 .dcal {
-    --dcal-accent: #0d9488;
-    --dcal-accent-strong: #0f766e;
-    --dcal-accent-soft: #f0fdfa;
+    --dcal-accent: #1b7aa3;
+    --dcal-accent-strong: #17698c;
+    --dcal-accent-soft: #eff8fb;
     --dcal-border: #e4edf5;
     --dcal-muted: #94a3b8;
     font-size: 0.9rem;
@@ -53,7 +53,7 @@
 .dcal-nav:hover:not(:disabled),
 .dcal-today-btn:hover:not(:disabled) {
     background: var(--dcal-accent-soft);
-    border-color: #b7e4dc;
+    border-color: #c2e3ef;
     color: var(--dcal-accent-strong);
 }
 
@@ -63,7 +63,7 @@
 .dcal-nav:focus-visible,
 .dcal-today-btn:focus-visible,
 .dcal-day:focus-visible {
-    outline: 2px solid rgba(13, 148, 136, 0.55);
+    outline: 2px solid rgba(27, 122, 163, 0.55);
     outline-offset: 2px;
 }
 
@@ -136,9 +136,9 @@ button.dcal-day:not([aria-disabled="true"]):hover { background: #f5fbfa; }
 
 /* Outline (not box-shadow) so the ring stays inside the cell and above the
    neighbouring cells' borders instead of bleeding past the edge. */
-.dcal-day.is-today { outline: 2px solid #99e0d6; outline-offset: -2px; z-index: 1; }
+.dcal-day.is-today { outline: 2px solid #b9e0ee; outline-offset: -2px; z-index: 1; }
 .dcal-day.is-selected {
-    background: #ccfbf1 !important;
+    background: #dcf0f7 !important;
     outline: 2px solid var(--dcal-accent);
     outline-offset: -2px;
     z-index: 1;
@@ -183,7 +183,7 @@ button.dcal-day:not([aria-disabled="true"]):hover { background: #f5fbfa; }
 }
 
 .dcal-tag--ok      { background: #ecfdf5; color: #047857; }
-.dcal-tag--info    { background: #eff6ff; color: #0f766e; }
+.dcal-tag--info    { background: #eff8fb; color: #17698c; }
 .dcal-tag--warn    { background: #fef3c7; color: #92400e; }
 .dcal-tag--danger  { background: #fee2e2; color: #b91c1c; }
 .dcal-tag--muted   { background: transparent; color: var(--dcal-muted); padding-left: 0; }
@@ -200,7 +200,7 @@ button.dcal-day:not([aria-disabled="true"]):hover { background: #f5fbfa; }
     font-size: 0.68rem;
     font-weight: 700;
     color: var(--dcal-accent-strong);
-    border: 1px solid #99e0d6;
+    border: 1px solid #b9e0ee;
     background: #fff;
     border-radius: 999px;
     padding: 2px 4px;
@@ -278,11 +278,11 @@ button.dcal-day:not([aria-disabled="true"]):hover .dcal-select {
 }
 
 .dcal-swatch--ok      { background: #ecfdf5; border-color: #6ee7b7; }
-.dcal-swatch--info    { background: #eff6ff; border-color: #99e0d6; }
+.dcal-swatch--info    { background: #eff8fb; border-color: #b9e0ee; }
 .dcal-swatch--warn    { background: #fef3c7; border-color: #fcd34d; }
 .dcal-swatch--danger  { background: #fee2e2; border-color: #fca5a5; }
 .dcal-swatch--muted   { background: #f1f5f9; border-color: #cbd5e1; }
-.dcal-swatch--selected { background: #ccfbf1; border-color: var(--dcal-accent); }
+.dcal-swatch--selected { background: #dcf0f7; border-color: var(--dcal-accent); }
 
 @media (max-width: 575.98px) {
     .dcal-day {
@@ -301,7 +301,7 @@ button.dcal-day:not([aria-disabled="true"]):hover .dcal-select {
         border-radius: 50%;
     }
     .dcal-mark--ok      { background: #10b981; }
-    .dcal-mark--info    { background: #0d9488; }
+    .dcal-mark--info    { background: #1b7aa3; }
     .dcal-mark--warn    { background: #f59e0b; }
     .dcal-mark--danger  { background: #ef4444; }
     .dcal-mark--muted   { background: transparent; }

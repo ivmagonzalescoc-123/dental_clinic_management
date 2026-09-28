@@ -406,7 +406,7 @@ if ($sstmt) {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    border: 2px solid #0d9488;
+    border: 2px solid #1b7aa3;
     background: #e2e8f0;
     display: flex;
     align-items: center;
@@ -417,7 +417,7 @@ if ($sstmt) {
     transition: box-shadow .15s ease;
 }
 .ehr-patient-avatar:hover {
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2);
+    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.2);
 }
 .ehr-patient-avatar img {
     width: 100%;
@@ -466,7 +466,7 @@ if ($sstmt) {
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    border: 2px solid #0d9488;
+    border: 2px solid #1b7aa3;
     background: #e2e8f0;
     display: flex;
     align-items: center;
@@ -527,7 +527,7 @@ if ($sstmt) {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #0d9488;
+    color: #1b7aa3;
     margin-bottom: 0.65rem;
 }
 #doctorClinicalFindingsModal .pf-pill-group {
@@ -556,17 +556,17 @@ if ($sstmt) {
     line-height: 1.3;
 }
 #doctorClinicalFindingsModal .pf-pill:hover {
-    border-color: #0d9488;
-    color: #0d9488;
+    border-color: #1b7aa3;
+    color: #1b7aa3;
 }
 #doctorClinicalFindingsModal .pf-check:checked + .pf-pill {
-    background: #0d9488;
-    border-color: #0d9488;
+    background: #1b7aa3;
+    border-color: #1b7aa3;
     color: #fff;
-    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+    box-shadow: 0 2px 6px rgba(27, 122, 163, 0.25);
 }
 #doctorClinicalFindingsModal .pf-check:focus-visible + .pf-pill {
-    outline: 2px solid #0d9488;
+    outline: 2px solid #1b7aa3;
     outline-offset: 1px;
 }.odontogram-viewport {
     position: relative;

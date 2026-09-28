@@ -8,28 +8,28 @@
    ======================================== */
 
 :root {
-    --primary-color: #0d9488;
-    --primary-hover: #0f766e;
-    --primary-gradient: #0d9488;
-    --primary-gradient-hover: #0f766e;
-    --profile-primary-color: #0d9488;
-    --profile-primary-hover: #0f766e;
-    --bs-primary: #0d9488;
-    --bs-primary-rgb: 13, 148, 136;
-    --bs-info: #0d9488;
-    --bs-info-rgb: 13, 148, 136;
-    --bs-link-color: #0d9488;
-    --bs-link-hover-color: #0f766e;
-    --bs-focus-ring-color: rgba(13, 148, 136, 0.25);
-    --bs-nav-pills-link-active-bg: #0d9488;
-    --bs-pagination-active-bg: #0d9488;
-    --bs-pagination-active-border-color: #0d9488;
-    --bs-dropdown-link-active-bg: #0d9488;
-    --primary-light: #ccfbf1;
-    --primary-soft: #f0fdfa;
+    --primary-color: #1b7aa3;
+    --primary-hover: #17698c;
+    --primary-gradient: #1b7aa3;
+    --primary-gradient-hover: #17698c;
+    --profile-primary-color: #1b7aa3;
+    --profile-primary-hover: #17698c;
+    --bs-primary: #1b7aa3;
+    --bs-primary-rgb: 27, 122, 163;
+    --bs-info: #1b7aa3;
+    --bs-info-rgb: 27, 122, 163;
+    --bs-link-color: #1b7aa3;
+    --bs-link-hover-color: #17698c;
+    --bs-focus-ring-color: rgba(27, 122, 163, 0.25);
+    --bs-nav-pills-link-active-bg: #1b7aa3;
+    --bs-pagination-active-bg: #1b7aa3;
+    --bs-pagination-active-border-color: #1b7aa3;
+    --bs-dropdown-link-active-bg: #1b7aa3;
+    --primary-light: #dcf0f7;
+    --primary-soft: #eff8fb;
     /* Sidebar is now the teal surface; the active item + #main are white and
        read as one connected shape against it. */
-    --sidebar-bg: #0f766e;
+    --sidebar-bg: #17698c;
     --sidebar-text: #1f3347;
     --header-bg: var(--primary-color);
     --border-color: #d9e7e4;
@@ -38,7 +38,7 @@
     --success: #16a34a;
     --danger: #dc3545;
     --warning: #f59e0b;
-    --info: #0d9488;
+    --info: #1b7aa3;
     --radius-card: 14px;
     --font-body: 'Inter', 'Segoe UI', Roboto, sans-serif;
 
@@ -71,7 +71,7 @@ body {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border-bottom: 1px solid rgba(13, 148, 136, 0.08);
+    border-bottom: 1px solid rgba(27, 122, 163, 0.08);
     padding: 0 16px;
     height: 60px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -96,7 +96,7 @@ body {
     display: flex;
     align-items: center;
     text-decoration: none;
-    color: #0d9488;
+    color: #1b7aa3;
     font-weight: 600;
 }
 
@@ -105,7 +105,7 @@ body {
     height: 36px;
     border-radius: 50%;
     margin-right: 10px;
-    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.15);
+    box-shadow: 0 2px 8px rgba(27, 122, 163, 0.15);
 }
 
 #header .logo span {
@@ -129,14 +129,14 @@ body {
 .toggle-sidebar-btn {
     cursor: pointer;
     font-size: 18px;
-    color: #0d9488;
+    color: #1b7aa3;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 6px 10px;
     margin-left: 4px;
-    border: 1px solid rgba(13, 148, 136, 0.1);
-    background: rgba(13, 148, 136, 0.05);
+    border: 1px solid rgba(27, 122, 163, 0.1);
+    background: rgba(27, 122, 163, 0.05);
     border-radius: 10px;
     transition: all 0.2s ease;
 }
@@ -145,15 +145,15 @@ body {
 .toggle-sidebar-btn:focus,
 .toggle-sidebar-btn:focus-visible,
 .toggle-sidebar-btn:active {
-    color: #0f766e;
-    background: rgba(13, 148, 136, 0.1);
-    border-color: rgba(13, 148, 136, 0.18);
+    color: #17698c;
+    background: rgba(27, 122, 163, 0.1);
+    border-color: rgba(27, 122, 163, 0.18);
     box-shadow: none;
     outline: none;
 }
 
 .toggle-sidebar-btn:focus-visible {
-    outline: 2px solid rgba(13, 148, 136, 0.45);
+    outline: 2px solid rgba(27, 122, 163, 0.45);
     outline-offset: 2px;
     border-radius: 8px;
 }
@@ -201,7 +201,7 @@ body {
     border: 0;
     border-radius: 8px;
     background: transparent;
-    color: #0d9488;
+    color: #1b7aa3;
     font-size: 18px;
     line-height: 1;
     flex-shrink: 0;
@@ -210,7 +210,7 @@ body {
 
 .header-search-toggle:hover,
 .header-search-toggle:focus-visible {
-    background-color: rgba(13, 148, 136, 0.08);
+    background-color: rgba(27, 122, 163, 0.08);
     color: #0d5a9a;
     outline: none;
 }
@@ -252,7 +252,7 @@ body {
 
 .header-nav .nav-link {
     position: relative;
-    color: #0d9488 !important;
+    color: #1b7aa3 !important;
     text-decoration: none;
     padding: 0 10px;
     margin: 0 4px;
@@ -274,8 +274,8 @@ body {
 .header-nav .nav-profile:focus-visible,
 .header-nav .nav-profile:active,
 .header-nav .nav-profile.show {
-    background-color: rgba(13, 148, 136, 0.06) !important;
-    color: #0f766e !important;
+    background-color: rgba(27, 122, 163, 0.06) !important;
+    color: #17698c !important;
     box-shadow: none;
     outline: none;
 }
@@ -303,7 +303,7 @@ body {
     height: 38px;
     border-radius: 12px;
     background: #f0f7ff;
-    border: 1px solid rgba(13, 148, 136, 0.1);
+    border: 1px solid rgba(27, 122, 163, 0.1);
     color: #1a365d;
     font-size: var(--fs-sm);
     font-weight: 700;
@@ -322,8 +322,8 @@ body {
     width: 28px;
     height: 28px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(13, 148, 136, 0.2) 0%, rgba(13, 148, 136, 0.04) 70%, transparent 100%);
-    color: #0d9488;
+    background: radial-gradient(circle, rgba(27, 122, 163, 0.2) 0%, rgba(27, 122, 163, 0.04) 70%, transparent 100%);
+    color: #1b7aa3;
     font-size: 14px;
     flex-shrink: 0;
 }
@@ -340,7 +340,7 @@ body {
     background: #e2f0ff;
 }
 .header-clock__time:focus-visible {
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25);
+    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.25);
 }
 
 /* ========== ANALOG CLOCK POPUP ========== */
@@ -384,7 +384,7 @@ body {
 }
 .analog-clock-popup__close:hover {
     background: #f0f7ff;
-    color: #0d9488;
+    color: #1b7aa3;
 }
 
 .analog-clock-face {
@@ -460,7 +460,7 @@ body {
     width: 8px;
     height: 156px;
     margin-left: -4px;
-    background: #0d9488;
+    background: #1b7aa3;
 }
 .analog-clock-hand--second {
     width: 4px;
@@ -497,7 +497,7 @@ body {
 }
 
 .header-nav .nav-notifications:hover {
-    background-color: rgba(13, 148, 136, 0.08);
+    background-color: rgba(27, 122, 163, 0.08);
 }
 
 .header-nav .nav-notifications__badge {
@@ -535,7 +535,7 @@ body {
     top: -5px;
     right: 5px;
     background-color: #ffffff;
-    color: #0f766e;
+    color: #17698c;
     border-radius: 10px;
     padding: 2px 6px;
     font-size: 10px;
@@ -566,8 +566,8 @@ body {
 }
 
 .header-nav .nav-profile:hover {
-    background-color: rgba(13, 148, 136, 0.08);
-    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15);
+    background-color: rgba(27, 122, 163, 0.08);
+    box-shadow: 0 0 0 2px rgba(27, 122, 163, 0.15);
 }
 
 .profile-avatar-icon {
@@ -575,7 +575,7 @@ body {
     align-items: center;
     justify-content: center;
     background: #e8f2fb;
-    color: #0d9488;
+    color: #1b7aa3;
     border: 1px solid #c9deef;
     flex-shrink: 0;
     box-sizing: border-box;
@@ -620,7 +620,7 @@ body {
 }
 
 .header-nav .nav-profile .user-display-name {
-    color: #0d9488;
+    color: #1b7aa3;
     font-weight: 600;
     font-size: var(--fs-h6);
     line-height: 1;
@@ -1065,13 +1065,13 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     border-radius: 30px;
     cursor: pointer;
     font-weight: 600;
-    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.2);
+    box-shadow: 0 4px 12px rgba(23, 105, 140, 0.2);
     transition: background-color 0.3s ease, box-shadow 0.2s ease;
 }
 
 .search-bar button:hover {
     background: var(--primary-hover);
-    box-shadow: 0 6px 14px rgba(15, 118, 110, 0.24);
+    box-shadow: 0 6px 14px rgba(23, 105, 140, 0.24);
 }
 
 .btn-add-new {
@@ -1099,7 +1099,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 13, 148, 136;
+    --bs-btn-focus-shadow-rgb: 27, 122, 163;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -1129,7 +1129,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     border-color: var(--primary-hover) !important;
     color: #fff !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 6px 16px rgba(27, 122, 163, 0.35);
 }
 
 .btn-outline-primary {
@@ -1139,7 +1139,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 13, 148, 136;
+    --bs-btn-focus-shadow-rgb: 27, 122, 163;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -1169,7 +1169,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     border-color: var(--primary-hover) !important;
     color: #fff !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 6px 16px rgba(27, 122, 163, 0.35);
 }
 
 .btn-info {
@@ -1179,7 +1179,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 13, 148, 136;
+    --bs-btn-focus-shadow-rgb: 27, 122, 163;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -1209,7 +1209,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     border-color: var(--primary-hover) !important;
     color: #fff !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 6px 16px rgba(27, 122, 163, 0.35);
 }
 
 .btn-outline-info {
@@ -1219,7 +1219,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: var(--primary-hover);
     --bs-btn-hover-border-color: var(--primary-hover);
-    --bs-btn-focus-shadow-rgb: 13, 148, 136;
+    --bs-btn-focus-shadow-rgb: 27, 122, 163;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: var(--primary-hover);
     --bs-btn-active-border-color: var(--primary-hover);
@@ -1249,7 +1249,7 @@ body.toggle-sidebar .sidebar-nav .nav-dot {
     border-color: var(--primary-hover) !important;
     color: #fff !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 6px 16px rgba(27, 122, 163, 0.35);
 }
 
 /* Warning stays a real, distinct amber — not remapped to the primary accent — so
@@ -1573,8 +1573,8 @@ table a:hover {
 }
 
 .btn-edit {
-    background-color: rgba(13, 148, 136, 0.1);
-    border: 1px solid rgba(13, 148, 136, 0.28);
+    background-color: rgba(27, 122, 163, 0.1);
+    border: 1px solid rgba(27, 122, 163, 0.28);
     color: #0b4c80;
 }
 
@@ -1672,8 +1672,8 @@ table a:hover {
 /* ========== FORM FOCUS STATES (override vendor Bootstrap's hardcoded blue) ========== */
 .form-control:focus,
 .form-select:focus {
-    border-color: #5eead4 !important;
-    box-shadow: 0 0 0 0.25rem rgba(13, 148, 136, 0.25) !important;
+    border-color: #9dd2e6 !important;
+    box-shadow: 0 0 0 0.25rem rgba(27, 122, 163, 0.25) !important;
 }
 
 /* ========== DROPDOWN MENU ========== */
@@ -1772,14 +1772,14 @@ table a:hover {
 }
 
 .unified-table-search-input:focus {
-    border-color: #0d9488 !important;
+    border-color: #1b7aa3 !important;
     box-shadow: none !important;
     outline: none !important;
     background: #fff;
 }
 
 .unified-table-search-input:focus-visible {
-    border-color: #0d9488 !important;
+    border-color: #1b7aa3 !important;
     box-shadow: none !important;
     outline: none !important;
 }
@@ -1802,7 +1802,7 @@ table a:hover {
 }
 
 .unified-table-search-clear:hover {
-    color: #0f766e;
+    color: #17698c;
 }
 
 .datatable-top {
@@ -1901,7 +1901,7 @@ table a:hover {
     align-items: center;
     gap: 12px;
     padding: 18px 18px 14px;
-    background: linear-gradient(135deg, #0d9488, #0f766e);
+    background: linear-gradient(135deg, #1b7aa3, #17698c);
     color: #ffffff;
 }
 
@@ -1965,14 +1965,14 @@ table a:hover {
 
 .profile-menu__item i {
     font-size: 1.05rem;
-    color: #0d9488;
+    color: #1b7aa3;
     width: 20px;
     text-align: center;
 }
 
 .profile-menu__item:hover {
     background: #eef6ff;
-    color: #0f766e;
+    color: #17698c;
 }
 
 .profile-menu__item--danger {
@@ -2078,7 +2078,7 @@ table a:hover {
 
 .notification-dropdown-item.is-unread .notification-dropdown-item__icon {
     background: #eef6ff;
-    color: #0d9488;
+    color: #1b7aa3;
 }
 
 .notification-dropdown-item__body {
@@ -2133,14 +2133,14 @@ table a:hover {
 }
 
 .notifications-menu__mark-all:hover {
-    color: #0d9488;
+    color: #1b7aa3;
     background: #eef6ff;
 }
 
 .notifications-menu__view-all {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #0d9488;
+    color: #1b7aa3;
     text-decoration: none;
     display: flex;
     align-items: center;
@@ -2156,7 +2156,7 @@ table a:hover {
 
 .notification-datetime,
 #main .notification-datetime {
-    color: #0d9488 !important;
+    color: #1b7aa3 !important;
     font-weight: 700;
 }
 
@@ -2496,7 +2496,7 @@ table a:hover {
     padding: 28px 40px;
     background: #fff;
     border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(13, 148, 136, 0.12), 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 8px 32px rgba(27, 122, 163, 0.12), 0 2px 8px rgba(0,0,0,0.06);
 }
 .app-page-loading__dots {
     display: flex;
@@ -2510,7 +2510,7 @@ table a:hover {
     animation: bounceDot 1.4s ease-in-out infinite;
 }
 .app-page-loading__dot:nth-child(1) {
-    background: #0d9488;
+    background: #1b7aa3;
     animation-delay: 0s;
 }
 .app-page-loading__dot:nth-child(2) {
@@ -2564,7 +2564,7 @@ table a:hover {
     animation: bounceDot 1.4s ease-in-out infinite;
 }
 .app-spinner::before {
-    background: #0d9488;
+    background: #1b7aa3;
     animation-delay: 0s;
 }
 .app-spinner span {
@@ -2816,7 +2816,7 @@ table a:hover {
 #main .card-body .form-control:focus,
 #main .card-body .form-select:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.15);
 }
 
 /* -- Alert consistency -- */
@@ -2893,7 +2893,7 @@ table a:hover {
     transition: background 0.15s ease;
 }
 .dropdown-item:hover {
-    background: rgba(13, 148, 136, 0.08);
+    background: rgba(27, 122, 163, 0.08);
     color: var(--primary-color);
 }
 /* ApexCharts hover tooltips (chart "hover labels") sometimes ship with a

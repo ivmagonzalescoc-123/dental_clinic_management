@@ -41,11 +41,11 @@ function peso(float $v): string { return '₱' . number_format($v, 2); }
     * { box-sizing: border-box; }
     body { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #0f172a; margin: 0; padding: 32px 16px; background: #f1f5f9; }
     .sheet { max-width: 800px; margin: 0 auto; background: #fff; padding: 36px 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(15,35,60,.08); }
-    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #0d9488; padding-bottom: 14px; margin-bottom: 20px; }
-    h1 { margin: 0; font-size: 1.3rem; color: #0f766e; }
+    header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #1b7aa3; padding-bottom: 14px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 1.3rem; color: #17698c; }
     .muted { color: #64748b; font-size: .85rem; }
     .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 20px; margin-bottom: 20px; font-size: .9rem; }
-    h2 { font-size: .95rem; margin: 22px 0 8px; color: #0f766e; }
+    h2 { font-size: .95rem; margin: 22px 0 8px; color: #17698c; }
     table { width: 100%; border-collapse: collapse; font-size: .88rem; }
     th, td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
     th { background: #f8fafc; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: #475569; }
@@ -59,7 +59,7 @@ function peso(float $v): string { return '₱' . number_format($v, 2); }
     .signatures div { border-top: 1px solid #0f172a; padding-top: 6px; text-align: center; }
     .empty { padding: 24px; text-align: center; color: #64748b; }
     .actions { max-width: 800px; margin: 0 auto 12px; text-align: right; }
-    .actions button { background: #0d9488; color: #fff; border: 0; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
+    .actions button { background: #1b7aa3; color: #fff; border: 0; border-radius: 8px; padding: 8px 18px; font-weight: 600; cursor: pointer; }
     @media print {
         body { background: #fff; padding: 0; }
         .sheet { box-shadow: none; padding: 0; }

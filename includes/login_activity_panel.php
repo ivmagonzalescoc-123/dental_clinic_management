@@ -41,7 +41,7 @@ if (!function_exists('login_activity_format_time')) {
         <?php if ($loginActivityCurrent): ?>
             <?php $curDevice = login_activity_parse_user_agent($loginActivityCurrent['user_agent'] ?? ''); ?>
             <div class="dpp-header" style="margin-bottom:16px;">
-                <div class="dpp-avatar" style="background:#0d9488;">
+                <div class="dpp-avatar" style="background:#1b7aa3;">
                     <i class="bi <?php echo htmlspecialchars($curDevice['icon']); ?>" style="font-size:1.4rem;"></i>
                 </div>
                 <div>

@@ -47,7 +47,7 @@ if ($svcRes) {
     animation: svcCardIn 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
     opacity: 0;
 }
-.patient-svc-card:nth-child(5n + 1) { background:#dff3ef; }
+.patient-svc-card:nth-child(5n + 1) { background:#dff0f6; }
 .patient-svc-card:nth-child(5n + 2) { background:#e8eafa; }
 .patient-svc-card:nth-child(5n + 3) { background:#fff0d9; }
 .patient-svc-card:nth-child(5n + 4) { background:#e7f3df; }
@@ -57,9 +57,9 @@ if ($svcRes) {
     to   { opacity:1; transform:translateY(0); }
 }
 .patient-svc-card:hover {
-    border-color:#0d9488;
-    background:#eef9f7;
-    box-shadow:0 10px 28px rgba(13,148,136,0.12);
+    border-color:#1b7aa3;
+    background:#edf7fa;
+    box-shadow:0 10px 28px rgba(27,122,163,0.12);
     transform:translateY(-5px);
 }
 

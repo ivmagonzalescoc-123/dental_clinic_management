@@ -3,7 +3,7 @@
 
     var palette = {
         sky: ['#0ea5e9', '#38bdf8', '#0284c7', '#0369a1'],
-        teal: ['#0d9488', '#14b8a6', '#2dd4bf', '#5eead4'],
+        teal: ['#1b7aa3', '#3a9fc0', '#6bbad6', '#9dd2e6'],
         categorical: ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#64748b', '#ec4899'],
         outcome: ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#94a3b8'],
         money: ['#059669', '#ef4444']
@@ -133,7 +133,7 @@
                 forceNiceScale: true,
                 labels: { formatter: function (v) { return Math.round(v); } }
             },
-            colors: ['#94a3b8', '#0d9488'],
+            colors: ['#94a3b8', '#1b7aa3'],
             plotOptions: {
                 bar: {
                     horizontal: false,

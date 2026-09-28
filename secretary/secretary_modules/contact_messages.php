@@ -152,7 +152,7 @@ contact_messages_ensure_table($conn);
 .contact-filters__group .form-control { width: 140px; min-width: 0; }
 .contact-filters__label { width: 38px; font-size: 0.74rem; font-weight: 700; color: #5d6f85; text-transform: uppercase; letter-spacing: 0.04em; }
 .contact-filters__sep { font-size: 0.8rem; color: #94a3b8; }
-.contact-bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #f0fdfa; border: 1px solid #b7e4dc; font-size: 0.86rem; font-weight: 600; color: #0f766e; }
+.contact-bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #eff8fb; border: 1px solid #c2e3ef; font-size: 0.86rem; font-weight: 600; color: #17698c; }
 .contact-bulk-bar[hidden] { display: none; }
 .contact-check-col { width: 36px; text-align: center; }
 #contactMessagesTable { min-width: 0 !important; width: 100%; }
@@ -160,8 +160,8 @@ contact_messages_ensure_table($conn);
 .contact-source-item { display: flex; align-items: center; margin: 0 4px; }
 .contact-source-switch { display: inline-flex; padding: 3px; border-radius: 999px; background: #e2e8f0; gap: 2px; }
 .contact-source-btn { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: #475569; font-size: 0.84rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; white-space: nowrap; transition: background .15s, color .15s, box-shadow .15s; }
-.contact-source-btn:hover { color: #0f766e; }
-.contact-source-btn.active { background: #fff; color: #0f766e; box-shadow: 0 1px 3px rgba(15, 23, 42, .15); }
+.contact-source-btn:hover { color: #17698c; }
+.contact-source-btn.active { background: #fff; color: #17698c; box-shadow: 0 1px 3px rgba(15, 23, 42, .15); }
 .contact-source-btn .nav-dot { position: static; }
 .contact-when { white-space: nowrap; line-height: 1.25; }
 .contact-when small { display: block; color: #64748b; }

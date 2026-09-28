@@ -74,7 +74,7 @@ if ($patient_id) {
 
 <style>
 .patient-appt-card .card-header {
-    background: #0d9488;
+    background: #1b7aa3;
     color: #fff;
 }
 .patient-appt-card .card-header .sub-title {
@@ -93,8 +93,8 @@ if ($patient_id) {
     align-items: center;
     font-weight: 600;
     font-size: 0.85rem;
-    background: #ccfbf1;
-    color: #0f766e;
+    background: #dcf0f7;
+    color: #17698c;
     border-radius: 999px;
     padding: 0.35rem 0.8rem;
 }
@@ -104,7 +104,7 @@ if ($patient_id) {
     color: #0f172a;
 }
 .patient-appt-card .appt-tab-nav .nav-link.active {
-    background: #0d9488;
+    background: #1b7aa3;
     color: #fff;
 }
 .patient-appt-card .history-table-wrap {
@@ -116,8 +116,8 @@ if ($patient_id) {
     margin-bottom: 0;
 }
 .patient-appt-card .history-table-wrap thead th {
-    background: #f0fdfa;
-    color: #0f766e;
+    background: #eff8fb;
+    color: #17698c;
     border-bottom: 1px solid #dbe7e4;
     white-space: nowrap;
 }
@@ -151,7 +151,7 @@ if ($patient_id) {
     align-items: flex-start;
 }
 .patient-appt-step {
-    border-left: 3px solid #0d9488;
+    border-left: 3px solid #1b7aa3;
     padding-left: 14px;
     margin-bottom: 1.35rem;
 }
@@ -169,7 +169,7 @@ if ($patient_id) {
     width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: #0d9488;
+    background: #1b7aa3;
     color: #fff;
     font-weight: 700;
     font-size: 0.95rem;
@@ -204,8 +204,8 @@ if ($patient_id) {
     transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 .patient-symptom-option:hover {
-    border-color: #0d9488;
-    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.08);
+    border-color: #1b7aa3;
+    box-shadow: 0 8px 20px rgba(27, 122, 163, 0.08);
     transform: translateY(-1px);
 }
 .patient-symptom-option input {

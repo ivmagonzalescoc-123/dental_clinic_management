@@ -846,17 +846,17 @@ if ($stmt) {
 }
 
 .doctor-record-btn-clickable {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
     color: #ffffff;
-    background: #0d9488;
+    background: #1b7aa3;
 }
 
 .doctor-record-btn-clickable:hover,
 .doctor-record-btn-clickable:focus {
-    border-color: #0f766e;
-    background: #0f766e;
+    border-color: #17698c;
+    background: #17698c;
     color: #ffffff;
-    box-shadow: 0 0 0 0.12rem rgba(13, 148, 136, 0.22);
+    box-shadow: 0 0 0 0.12rem rgba(27, 122, 163, 0.22);
 }
 
 .doctor-record-btn-disabled,
@@ -1271,7 +1271,7 @@ function openDoctorAppointmentDetailsModal(appt) {
     } else if (['completed', 'records_complete'].includes(status)) {
         statusBox.innerHTML = '<div class="dpp-safe-box"><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
     } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(status)) {
-        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+        statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff8fb;border-color:#c3e4f0;color:#17698c;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
     } else {
         statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '.</div>';
     }
@@ -1689,7 +1689,7 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
     </div>
 </div>
 <!-- Hidden video element for camera capture -->
-<video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #0d9488; border-radius: 5px;"></video>
+<video id="cameraPreviewVideo" style="display: none; max-width: 100%; max-height: 300px; margin: 10px 0; border: 2px solid #1b7aa3; border-radius: 5px;"></video>
 <canvas id="cameraCaptureCanvas" style="display: none;"></canvas>
 
 <script>

@@ -1071,7 +1071,7 @@ if (!in_array($activeSection, ['appointments', 'new_customers', 'follow_ups'], t
                         </div>
 
                         <!-- Static walk-in note: processing always books the appointment for today -->
-                        <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#f0fdfa;border:1px solid #99f6e4;border-radius:6px;font-size:0.78rem;color:#0f766e;font-weight:600;">
+                        <div class="mb-2 px-2 py-1" id="convertWalkInNote" style="background:#eff8fb;border:1px solid #c3e4f0;border-radius:6px;font-size:0.78rem;color:#17698c;font-weight:600;">
                             <i class="bi bi-person-walking"></i> <span id="convertWalkInNoteText">Walk-in Today</span>
                         </div>
 
@@ -2501,7 +2501,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #0d9488;
+    color: #1b7aa3;
     margin-bottom: 0.65rem;
 }
 .pf-grid-2 {
@@ -2548,14 +2548,14 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     line-height: 1.3;
 }
 .pf-pill:hover {
-    border-color: #0d9488;
-    color: #0d9488;
+    border-color: #1b7aa3;
+    color: #1b7aa3;
 }
 .pf-check:checked + .pf-pill {
-    background: #0d9488;
-    border-color: #0d9488;
+    background: #1b7aa3;
+    border-color: #1b7aa3;
     color: #fff;
-    box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+    box-shadow: 0 2px 6px rgba(27, 122, 163, 0.25);
 }
 .pf-check:checked + .pf-pill.pf-pill--alert {
     background: #dc2626;
@@ -2563,7 +2563,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
     box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
 }
 .pf-check:focus-visible + .pf-pill {
-    outline: 2px solid #0d9488;
+    outline: 2px solid #1b7aa3;
     outline-offset: 1px;
 }.secretary-booking-calendar {
     border: 1px solid #dbe7e4;
@@ -2951,7 +2951,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 + '<span><i class="bi bi-check-circle-fill"></i> ' + escapeHtml(statusLabel) + '</span>' + recordLabel + '</div>'
                 + (completedExtra ? '<div class="small mt-1 pt-1" style="border-top:1px dashed rgba(0,0,0,0.1);">' + completedExtra + '</div>' : '') + '</div>';
         } else if (['confirmed', 'arrived', 'checked_in', 'in_progress'].includes(appt.status)) {
-            statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
+            statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#eff8fb;border-color:#c3e4f0;color:#17698c;"><i class="bi bi-info-circle-fill"></i> ' + escapeHtml(statusLabel) + '</div>';
         } else {
             statusBox.innerHTML = '<div class="dpp-safe-box" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><i class="bi bi-hourglass-split"></i> ' + escapeHtml(statusLabel) + '</div>';
         }

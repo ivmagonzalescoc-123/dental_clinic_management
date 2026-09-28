@@ -33,12 +33,12 @@
 }
 
 .service-dropdown-trigger:hover {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
 }
 
 .service-dropdown-trigger.is-open {
-    border-color: #0d9488;
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    border-color: #1b7aa3;
+    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.1);
 }
 
 .service-dropdown-trigger .trigger-text {
@@ -120,8 +120,8 @@
 }
 
 .service-dropdown-item.is-selected .svc-check {
-    background: #0d9488;
-    border-color: #0d9488;
+    background: #1b7aa3;
+    border-color: #1b7aa3;
 }
 
 .service-dropdown-item .svc-check svg {
@@ -151,7 +151,7 @@
 }
 
 .service-dropdown-item .svc-meta .svc-price {
-    color: #0d9488;
+    color: #1b7aa3;
     font-weight: 600;
 }
 
@@ -172,7 +172,7 @@
     border: 1px solid #c7ddf9;
     border-radius: 20px;
     font-size: 0.78rem;
-    color: #0d9488;
+    color: #1b7aa3;
     font-weight: 500;
 }
 
@@ -184,12 +184,12 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    background: rgba(13, 148, 136, 0.15);
+    background: rgba(27, 122, 163, 0.15);
     transition: background 0.15s ease;
 }
 
 .service-tag .tag-remove:hover {
-    background: rgba(13, 148, 136, 0.3);
+    background: rgba(27, 122, 163, 0.3);
 }
 
 .service-tag .tag-remove svg {
@@ -220,14 +220,14 @@
 }
 
 .svc-collapsed:hover {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
     background: #f0f7ff;
 }
 
 .svc-collapsed.is-active {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
     background: #f0f7ff;
-    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.12);
+    box-shadow: 0 0 0 2px rgba(27, 122, 163, 0.12);
 }
 
 .svc-collapsed-label {
@@ -240,7 +240,7 @@
 }
 
 .svc-collapsed.is-active .svc-collapsed-label {
-    color: #0d9488;
+    color: #1b7aa3;
 }
 
 .svc-expanded {
@@ -267,15 +267,15 @@
 }
 
 .svc-check-item:hover {
-    border-color: #0d9488;
-    box-shadow: 0 8px 20px rgba(13, 148, 136, 0.08);
+    border-color: #1b7aa3;
+    box-shadow: 0 8px 20px rgba(27, 122, 163, 0.08);
     transform: translateY(-1px);
 }
 
 .svc-check-item.is-selected {
-    border-color: #0d9488;
+    border-color: #1b7aa3;
     background: #f0f7ff;
-    box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.15);
+    box-shadow: 0 0 0 2px rgba(27, 122, 163, 0.15);
 }
 
 .svc-check-input {
@@ -310,7 +310,7 @@
 }
 
 .doctor-service-modifier h6 {
-    color: #0d9488;
+    color: #1b7aa3;
     font-weight: 600;
     font-size: 15px;
 }
@@ -330,7 +330,7 @@
 }
 
 .service-badge .badge {
-    background-color: #0d9488 !important;
+    background-color: #1b7aa3 !important;
     padding: 6px 10px;
     font-size: 13px;
     display: inline-flex;
@@ -369,8 +369,8 @@
 }
 
 .services-checkbox-group .form-check-input:checked {
-    background-color: #0d9488;
-    border-color: #0d9488;
+    background-color: #1b7aa3;
+    border-color: #1b7aa3;
 }
 
 .services-checkbox-group .form-check-label {
@@ -399,13 +399,13 @@
 }
 
 .btn-primary.btn-sm {
-    background-color: #0d9488;
-    border-color: #0d9488;
+    background-color: #1b7aa3;
+    border-color: #1b7aa3;
 }
 
 .btn-primary.btn-sm:hover {
-    background-color: #0f766e;
-    border-color: #0f766e;
+    background-color: #17698c;
+    border-color: #17698c;
 }
 
 .btn-success.btn-sm {
