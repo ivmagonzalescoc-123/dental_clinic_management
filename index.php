@@ -559,7 +559,7 @@ $aboutPoints = [
                 <div class="reveal is-visible">
                     <span class="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); backdrop-filter: blur(4px);">
                         <span class="h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
-                        <span class="text-white/90" style="font-weight: 500;">Now accepting new patients</span>
+                        <span class="text-white/90" style="font-weight: 500;">Open at 9:00 AM Monday to Saturdays</span>
                     </span>
 
                     <h1 class="mt-6 font-display text-white" style="font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.15; font-weight: 600;">
@@ -567,7 +567,8 @@ $aboutPoints = [
                     </h1>
 
                     <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-                        At Azucena's Dental Clinic, we combine compassionate care with modern technology to give you a healthy, beautiful smile you'll love for life.
+                        <br>
+						<br>
                     </p>
 
                     <div class="mt-10 flex flex-wrap gap-4">

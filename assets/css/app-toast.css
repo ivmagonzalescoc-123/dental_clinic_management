@@ -27,11 +27,15 @@
     width: fit-content;
     padding: 12px 16px;
     border-radius: 14px;
-    border: none !important;
+    /* One neutral, low-exposure dark surface for every type; only the icon
+       carries the success/error/warning/info color. */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     outline: none;
-    background: #1e293b !important;
-    color: #ffffff !important;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.22);
+    background: rgba(24, 27, 33, 0.94) !important;
+    color: #f1f5f9 !important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.18);
     opacity: 0;
     transform: translateY(8px) scale(0.98);
     transition: opacity 0.18s ease, transform 0.18s ease;
@@ -42,37 +46,13 @@
     transform: translateY(0) scale(1);
 }
 
-.app-toast-success {
-    background: #065f46 !important;
-    color: #ffffff !important;
-    border: none !important;
-}
-
-.app-toast-danger {
-    background: #991b1b !important;
-    color: #ffffff !important;
-    border: none !important;
-}
-
-.app-toast-warning {
-    background: #92400e !important;
-    color: #ffffff !important;
-    border: none !important;
-}
-
-.app-toast-info {
-    background: #185671 !important;
-    color: #ffffff !important;
-    border: none !important;
-}
-
 .app-toast-icon {
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 999px;
     font-size: 0;
     font-weight: 700;
@@ -82,31 +62,32 @@
     display: block;
 }
 
+/* Solid colored circle with a white glyph; shades chosen dark enough for white to read. */
 .app-toast-icon--success {
-    background: #ffffff;
-    color: #059669;
+    background: #16a34a;
+    color: #ffffff;
 }
 
 .app-toast-icon--danger {
-    background: #ffffff;
-    color: #dc3545;
+    background: #dc2626;
+    color: #ffffff;
 }
 
 .app-toast-icon--warning {
-    background: #ffffff;
-    color: #f59e0b;
+    background: #d97706;
+    color: #ffffff;
 }
 
 .app-toast-icon--info {
-    background: #ffffff;
-    color: #1b7aa3;
+    background: #2563eb;
+    color: #ffffff;
 }
 
 .app-toast-body {
     font-size: 0.9rem;
     line-height: 1.4;
-    font-weight: 600;
-    color: #ffffff;
+    font-weight: 500;
+    color: #f1f5f9;
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
