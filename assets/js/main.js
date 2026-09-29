@@ -304,8 +304,14 @@
           return origAddEL.call(this, type, listener, opts)
         }
 
+        // Re-insert as real <script> elements rather than eval(): the CSP allows
+        // 'unsafe-inline' but not 'unsafe-eval', so eval'd page scripts were blocked.
+        // An inserted inline script still runs synchronously in global scope.
         inlineScripts.forEach(function(old) {
-          try { ;(0, eval)(old.textContent) } catch(e) { console.error('[ajax script]', e) }
+          var s = document.createElement('script')
+          s.textContent = old.textContent
+          document.head.appendChild(s)
+          s.remove()
         })
 
         EventTarget.prototype.addEventListener = origAddEL
