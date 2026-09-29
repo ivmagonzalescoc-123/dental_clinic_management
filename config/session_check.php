@@ -10,6 +10,7 @@
 
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/remember_me.php';
 security_start_session();
 
 // These portal pages are session-driven and change on every request (sidebar counts,
@@ -112,8 +113,9 @@ if (!function_exists('touch_session_log_rows')) {
 
 if (!function_exists('check_session')) {
     function check_session($allowed_roles = []) {
-    // Check if user is logged in
-    if (!isset($_SESSION['user_id']) && !isset($_SESSION['patient_id'])) {
+    // Check if user is logged in (or can be restored from a "Remember me" cookie)
+    if (!isset($_SESSION['user_id']) && !isset($_SESSION['patient_id'])
+        && !(isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli && remember_me_try_login($GLOBALS['conn']))) {
         header('Location: ../index.php');
         exit;
     }
@@ -152,9 +154,16 @@ if (!function_exists('check_session')) {
         if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
             close_session_log_rows($GLOBALS['conn']);
         }
-        session_destroy();
-        header('Location: ../index.php?timeout=1');
-        exit;
+        // Session went stale while the browser was closed: "Remember me" logs back in.
+        $_SESSION = [];
+        $restored = isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli && remember_me_try_login($GLOBALS['conn']);
+        if (!$restored || !in_array($_SESSION['role'] ?? '', $allowed_roles)) {
+            session_destroy();
+            header('Location: ../index.php?timeout=1');
+            exit;
+        }
+        $user_role = $_SESSION['role'];
+        $timeoutSeconds = get_session_timeout_seconds_for_role((string)$user_role);
     }
 
     // Update last activity time

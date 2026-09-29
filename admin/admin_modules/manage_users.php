@@ -2,6 +2,7 @@
 include_once '../config/database.php';
 include_once '../config/security.php';
 include_once '../config/capabilities.php';
+include_once '../config/remember_me.php';
 security_start_session();
 security_ensure_auth_columns($conn);
 security_ensure_work_type_column($conn);
@@ -177,6 +178,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $updStmt->close();
 
         if ($ok) {
+            remember_me_forget_all($conn, 'patient', (int)$id);
             $displayName = trim((string)($targetPatient['first_name'] ?? '') . ' ' . (string)($targetPatient['last_name'] ?? ''));
             security_set_generated_password_modal(
                 $temporaryPassword,
@@ -236,6 +238,7 @@ if ($action === 'reset_password' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $updStmt->close();
 
     if ($ok) {
+        remember_me_forget_all($conn, 'user', (int)$id);
         if ((int)($_SESSION['user_id'] ?? 0) === $id) {
             $_SESSION['must_change_password'] = true;
         }

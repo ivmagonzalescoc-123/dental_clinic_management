@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 include '../../../config/database.php';
 include '../../../config/security.php';
 include_once '../../../config/rate_limit_helpers.php';
+include_once '../../../config/remember_me.php';
 
 security_start_session();
 
@@ -114,6 +115,7 @@ if (!$updateStmt->execute()) {
     exit;
 }
 $updateStmt->close();
+remember_me_forget_all($conn, $reset['user_type'] === 'user' ? 'user' : 'patient', (int)$reset['user_id']);
 
 $markStmt = $conn->prepare('UPDATE password_resets SET used_at = ? WHERE reset_id = ?');
 if ($markStmt) {

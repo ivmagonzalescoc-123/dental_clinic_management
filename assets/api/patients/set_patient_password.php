@@ -5,6 +5,7 @@ include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/session_check.php';
 include '../../../config/capabilities.php';
+include_once '../../../config/remember_me.php';
 
 security_start_session();
 check_session(['admin', 'secretary']);
@@ -94,6 +95,9 @@ if (!$updStmt) {
 $updStmt->bind_param('si', $hash, $patientId);
 $ok = $updStmt->execute();
 $updStmt->close();
+if ($ok) {
+    remember_me_forget_all($conn, 'patient', (int)$patientId);
+}
 
 if (!$ok) {
     echo json_encode(['success' => false, 'message' => 'Unable to update password.']);

@@ -4,7 +4,9 @@ header('Content-Type: application/json');
 include '../../../config/database.php';
 include '../../../config/system_logs.php';
 include '../../../config/security.php';
+include_once '../../../config/remember_me.php';
 security_start_session();
+remember_me_forget_current($conn);
 
 $currentUserId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 $currentPatientId = isset($_SESSION['patient_id']) ? (int)$_SESSION['patient_id'] : null;

@@ -6,6 +6,7 @@ include '../../../config/security.php';
 include '../../../config/system_logs.php';
 include_once '../../../config/login_activity_helpers.php';
 include_once '../../../config/rate_limit_helpers.php';
+include_once '../../../config/remember_me.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -193,6 +194,7 @@ if (!auth_verify_turnstile($turnstileToken)) {
 
 $email = security_clean_string($input['email'] ?? '', 150);
 $password = (string)($input['password'] ?? '');
+$rememberMe = !empty($input['remember']);
 
 if ($email === '' || $password === '') {
     auth_fail('Email and password are required', 400);
@@ -275,6 +277,9 @@ if ($stmt) {
             $_SESSION['user_log_id'] = $userLogId;
         }
         log_system_event($conn, 'auth.login', 'users', (int)$user['user_id'], 'User login successful', (int)$user['user_id']);
+        if ($rememberMe) {
+            remember_me_issue($conn, 'user', (int)$user['user_id']);
+        }
 
         echo json_encode([
             'success' => true,
@@ -356,6 +361,9 @@ if ($patientLogId !== null) {
 }
 
 log_system_event($conn, 'auth.login', 'patients', (int)$patient['patient_id'], 'Patient login successful', null);
+if ($rememberMe) {
+    remember_me_issue($conn, 'patient', (int)$patient['patient_id']);
+}
 
 echo json_encode([
     'success' => true,

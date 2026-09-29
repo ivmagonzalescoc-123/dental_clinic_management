@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 include '../../../config/database.php';
 include '../../../config/security.php';
+include_once '../../../config/remember_me.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -97,6 +98,7 @@ if ($isPatient) {
     $upd->bind_param('si', $newHash, $patientId);
     $upd->execute();
     $upd->close();
+    remember_me_reset_after_password_change($conn, 'patient', (int)$patientId);
 
     $_SESSION['must_change_password'] = false;
     echo json_encode(['success' => true, 'message' => 'Password updated successfully']);
@@ -149,6 +151,7 @@ if (!$upd) {
 $upd->bind_param('si', $newHash, $userId);
 $upd->execute();
 $upd->close();
+remember_me_reset_after_password_change($conn, 'user', (int)$userId);
 
 $_SESSION['must_change_password'] = false;
 echo json_encode(['success' => true, 'message' => 'Password updated successfully']);

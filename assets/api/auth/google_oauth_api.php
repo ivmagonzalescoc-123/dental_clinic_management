@@ -5,6 +5,7 @@ require_once '../../../config/database.php';
 require_once '../../../config/security.php';
 require_once '../../../config/system_logs.php';
 require_once '../../../config/login_activity_helpers.php';
+require_once '../../../config/remember_me.php';
 
 security_start_session();
 
@@ -40,6 +41,7 @@ $firstNameFromClient = security_clean_string($input['given_name'] ?? '', 100);
 $lastNameFromClient = security_clean_string($input['family_name'] ?? '', 100);
 $pictureFromClient = security_clean_string($input['picture'] ?? '', 500);
 $subFromClient = trim((string)($input['sub'] ?? ''));
+$rememberMe = !empty($input['remember']);
 
 if ($accessToken === '') {
     http_response_code(400);
@@ -201,6 +203,9 @@ if ($patient) {
     }
 
     log_system_event($conn, 'auth.login', 'patients', $patientId, 'Patient Google login', null);
+    if ($rememberMe) {
+        remember_me_issue($conn, 'patient', $patientId);
+    }
 
     echo json_encode([
         'success'  => true,

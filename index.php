@@ -3,7 +3,9 @@ require_once __DIR__ . '/config/asset_helpers.php';
 require_once 'config/security.php';
 require_once 'config/database.php';
 require_once 'config/feedback_helpers.php';
+require_once 'config/remember_me.php';
 security_start_session();
+remember_me_try_login($conn);
 
 // Google Identity Services' OAuth popup flow polls window.closed on the popup it opens;
 // without this header the browser's default Cross-Origin-Opener-Policy silently blocks
@@ -156,6 +158,16 @@ $aboutPoints = [
         };
     </script>
     <style>
+        /* Hide the page scrollbar on the landing page (scrolling still works). */
+        html {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
         .reveal {
             opacity: 0;
             transform: translateY(28px);
@@ -567,8 +579,7 @@ $aboutPoints = [
                     </h1>
 
                     <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80">
-                        <br>
-						<br>
+                        Gentle hands, honest advice, and a smile you'll be proud to share. Dental care the whole family can look forward to.
                     </p>
 
                     <div class="mt-10 flex flex-wrap gap-4">
@@ -929,7 +940,7 @@ $aboutPoints = [
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                         </span>
-                        <input type="email" id="login-email" name="email" autocomplete="email" required placeholder="Enter your email"
+                        <input type="email" id="login-email" name="email" autocomplete="username" required placeholder="Enter your email"
                             class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
                     </div>
                     <p class="auth-field-msg" id="login-email-error"></p>
@@ -951,6 +962,10 @@ $aboutPoints = [
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <label for="login-remember" class="inline-flex cursor-pointer select-none items-center gap-2 text-slate-600">
+                        <input type="checkbox" id="login-remember" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-primary">
+                        Remember me
+                    </label>
                     <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password?</button>
                 </div>
 
@@ -1951,11 +1966,27 @@ $aboutPoints = [
 
         document.getElementById('login-email')?.addEventListener('blur', validateLoginEmail);
 
+        // "Remember me" also remembers the email on this browser, so it is still filled
+        // in after logging out (the auto-login token itself is revoked on logout).
+        const REMEMBER_EMAIL_KEY = 'dental_remember_email';
+        (function() {
+            try {
+                const saved = localStorage.getItem(REMEMBER_EMAIL_KEY);
+                const emailEl = document.getElementById('login-email');
+                const rememberEl = document.getElementById('login-remember');
+                if (saved && emailEl && rememberEl) {
+                    if (!emailEl.value) emailEl.value = saved;
+                    rememberEl.checked = true;
+                }
+            } catch (e) {}
+        })();
+
         document.getElementById('login-form')?.addEventListener('submit', async function(event) {
             event.preventDefault();
 
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
+            const remember = !!document.getElementById('login-remember')?.checked;
             const turnstileToken = getLoginTurnstileToken();
 
             if (!turnstileToken) {
@@ -1967,13 +1998,17 @@ $aboutPoints = [
                 const response = await fetch('assets/api/auth/login_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, turnstile_token: turnstileToken, csrf_token: csrfToken })
+                    body: JSON.stringify({ email, password, remember, turnstile_token: turnstileToken, csrf_token: csrfToken })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
                     setAlert('Login successful.', 'success');
+                    try {
+                        if (remember) localStorage.setItem(REMEMBER_EMAIL_KEY, email);
+                        else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+                    } catch (e) {}
 
                     let redirectUrl = 'index.php';
                     const role = data.user.role;
@@ -2616,6 +2651,7 @@ $aboutPoints = [
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         access_token: response.access_token,
+                        remember: !!document.getElementById('login-remember')?.checked,
                         email: userInfo.email || '',
                         name: userInfo.name || '',
                         given_name: userInfo.given_name || '',
