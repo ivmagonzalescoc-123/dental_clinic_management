@@ -14,8 +14,9 @@ require_once dirname(dirname(__DIR__)) . '/config/database.php';
 
 security_start_session();
 
-// ── DEBUG MODE ──
-if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+// ── DEBUG MODE ── (admin only: it exposes the Groq key prefix and server details)
+if (isset($_GET['debug']) && $_GET['debug'] === '1'
+    && !empty($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'admin') {
     ob_end_clean();
     
     $groqKeyRaw = env('GROQ_API_KEY', '');
@@ -63,8 +64,6 @@ if (empty($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     http_response_code(403);
     echo json_encode([
         'error' => 'Unauthorized',
-        'debug_hint' => 'Session is empty or role is not admin. Visit with ?debug=1 to diagnose.',
-        'session_keys' => array_keys($_SESSION),
     ]);
     exit;
 }

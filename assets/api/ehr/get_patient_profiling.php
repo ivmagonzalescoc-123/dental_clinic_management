@@ -3,6 +3,12 @@ include '../../../config/database.php';
 include_once '../../../config/session_check.php';
 header('Content-Type: application/json');
 
+if (!in_array($_SESSION['role'] ?? '', ['doctor', 'secretary', 'admin'], true)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
+
 $appointment_id = (int)($_GET['appointment_id'] ?? 0);
 
 if ($appointment_id <= 0) {

@@ -27,7 +27,7 @@ billing_sync_from_payments($conn, $billingId);
 $stmt = $conn->prepare('
     SELECT b.billing_id, b.appointment_id, b.total_amount, b.amount_paid, b.status, b.created_at,
            b.subtotal_amount, b.discount_type, b.discount_percent, b.discount_notes,
-           a.appointment_date, p.first_name, p.last_name, p.email, p.phone_number
+           a.appointment_date, a.patient_id, p.first_name, p.last_name, p.email, p.phone_number
     FROM billing b
     INNER JOIN appointments a ON a.appointment_id = b.appointment_id
     INNER JOIN patients p ON p.patient_id = a.patient_id
@@ -43,6 +43,15 @@ if (!$billing) {
     echo json_encode(['success' => false, 'message' => 'Billing not found']);
     exit;
 }
+
+// A patient may only view their own bill.
+if (($_SESSION['role'] ?? '') === 'patient'
+    && (int)$billing['patient_id'] !== (int)($_SESSION['patient_id'] ?? 0)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
+unset($billing['patient_id']);
 
 $lineItems = [];
 $li = $conn->prepare('SELECT description, amount, item_type FROM billing_line_items WHERE appointment_id = ? ORDER BY item_id');

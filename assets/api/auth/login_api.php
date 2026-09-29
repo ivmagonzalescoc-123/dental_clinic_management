@@ -5,6 +5,7 @@ include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/system_logs.php';
 include_once '../../../config/login_activity_helpers.php';
+include_once '../../../config/rate_limit_helpers.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -178,6 +179,11 @@ $input = security_json_input();
 $csrfToken = $input['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrfToken)) {
     auth_fail('Security token is invalid. Please refresh and try again.', 403);
+}
+
+// Per-account lockout alone lets one IP spray passwords across many accounts.
+if (!rate_limit_check($conn, 'login_ip', rate_limit_client_ip(), 20, 900)) {
+    auth_fail('Too many login attempts from this device. Please try again later.', 429);
 }
 
 $turnstileToken = trim((string)($input['turnstile_token'] ?? ''));

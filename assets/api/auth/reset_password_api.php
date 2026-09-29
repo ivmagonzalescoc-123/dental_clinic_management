@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 include '../../../config/database.php';
 include '../../../config/security.php';
+include_once '../../../config/rate_limit_helpers.php';
 
 security_start_session();
 
@@ -33,6 +34,15 @@ if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
 if ($otp === '') {
     echo json_encode(['success' => false, 'message' => 'OTP code is required']);
     exit;
+}
+
+// Cap OTP guesses: a 6-digit code is brute-forceable within its 15-minute lifetime
+// without this. The per-email bucket covers attackers rotating IPs.
+if (!rate_limit_check($conn, 'password_reset_verify_ip', rate_limit_client_ip(), 20, 900)) {
+    rate_limit_reject('Too many attempts from this device. Please try again later.');
+}
+if (!rate_limit_check($conn, 'password_reset_verify_email', $email, 5, 900)) {
+    rate_limit_reject('Too many incorrect codes. Please request a new reset code in 15 minutes.');
 }
 
 if ($newPassword === '' || $newPassword !== $confirmPassword) {

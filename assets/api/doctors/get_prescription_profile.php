@@ -5,6 +5,13 @@ require_once __DIR__ . '/../../../config/security.php';
 
 security_start_session();
 
+// Holds license numbers and signature images, so staff only.
+if (!in_array($_SESSION['role'] ?? '', ['doctor', 'secretary', 'admin'], true)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    exit;
+}
+
 $doctor_id = (int)($_GET['doctor_id'] ?? 0);
 
 if ($doctor_id <= 0) {

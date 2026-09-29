@@ -19,10 +19,15 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/rate_limit_helpers.php';
 
     security_start_session();
 
     if (!$conn) throw new Exception('Database connection failed');
+
+    if (!rate_limit_check($conn, 'booking_verify_ip', rate_limit_client_ip(), 20, 900)) {
+        rate_limit_reject('Too many verification attempts from this device. Please try again later.');
+    }
 
     $otp = trim($_POST['otp'] ?? '');
 
@@ -45,6 +50,13 @@ try {
     // Verify OTP
     $otpHash = hash('sha256', $otp);
     if (!hash_equals($pending['otp_hash'], $otpHash)) {
+        // Burn the pending booking after 5 wrong codes so the OTP can't be brute-forced.
+        $attempts = (int)($pending['otp_attempts'] ?? 0) + 1;
+        if ($attempts >= 5) {
+            unset($_SESSION['pending_booking']);
+            throw new Exception('Too many incorrect codes. Please start your booking again.');
+        }
+        $_SESSION['pending_booking']['otp_attempts'] = $attempts;
         throw new Exception('Invalid verification code. Please try again.');
     }
 

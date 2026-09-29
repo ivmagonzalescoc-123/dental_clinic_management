@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/rate_limit_helpers.php';
 bookings_ensure_decline_reason_column($conn);
 bookings_ensure_tracking_code_column($conn);
 
@@ -13,6 +14,11 @@ $bookingId = isset($_GET['booking_id']) ? (int)$_GET['booking_id'] : 0;
 if ($trackingCode === '' && $bookingId <= 0) {
     echo json_encode(['success' => false, 'message' => 'Please enter a valid booking number.']);
     exit;
+}
+
+// booking_id is sequential, so without a cap anyone could walk every booking.
+if (!rate_limit_check($conn, 'booking_track_ip', rate_limit_client_ip(), 30, 600)) {
+    rate_limit_reject('Too many lookups from this device. Please try again later.');
 }
 
 $baseSql = 'SELECT b.booking_id, b.first_name, b.last_name, b.email, b.phone_number, b.preferred_date, b.preferred_time,
