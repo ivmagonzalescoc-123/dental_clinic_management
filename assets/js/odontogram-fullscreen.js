@@ -48,14 +48,36 @@
       return
     }
     var result = requestFn.call(el)
-    if (result && typeof result.catch === 'function') {
-      result.catch(function () { enterPseudoFullscreen(el) })
+    if (result && typeof result.then === 'function') {
+      result.then(lockLandscape, function () { enterPseudoFullscreen(el) })
+    } else {
+      lockLandscape()
     }
+  }
+
+  // Charting works best in landscape. Browsers only allow an orientation lock
+  // while in native fullscreen (Android Chrome); elsewhere (iOS, desktop) it
+  // rejects and the rotate prompt covers it instead.
+  function lockLandscape() {
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === 'function') {
+        screen.orientation.lock('landscape').catch(function () {})
+      }
+    } catch (e) {}
+  }
+
+  function unlockOrientation() {
+    try {
+      if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+        screen.orientation.unlock()
+      }
+    } catch (e) {}
   }
 
   function exitOdontogramFullscreen(el) {
     var exitFn = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen
     if (getNativeFullscreenElement() && exitFn) {
+      unlockOrientation()
       exitFn.call(document)
     }
     if (el) exitPseudoFullscreen(el)

@@ -24,6 +24,28 @@
     height: 100% !important;
 }
 
+/* Every page wraps the iframe differently (#odontogramContainer,
+   .secretary-odontogram-container, the history viewers' inline 820px wraps),
+   so in any fullscreen mode stretch whatever wrapper holds it to the screen.
+   :is() is forgiving, so an unknown prefixed pseudo doesn't drop the rule. */
+.odontogram-viewport:is(:fullscreen, :-webkit-full-screen, .is-pseudo-fullscreen) {
+    background: #0b0f19;
+}
+
+.odontogram-viewport:is(:fullscreen, :-webkit-full-screen, .is-pseudo-fullscreen) > div:not(.odontogram-rotate-prompt) {
+    height: 100% !important;
+    max-height: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Embedded (not fullscreen): never let the chart box be taller than the screen,
+   e.g. a phone in landscape is only ~350px tall but the embed is 820px. */
+.odontogram-viewport > div:not(.odontogram-rotate-prompt) {
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
+}
+
 body.odontogram-pseudo-fullscreen-lock {
     overflow: hidden;
 }

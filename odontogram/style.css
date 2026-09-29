@@ -168,7 +168,8 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   min-height: 248px;
 }
 
-.chart-tooth-detail__body.is-hidden {
+.chart-tooth-detail__body.is-hidden,
+.chart-tooth-detail__placeholder.is-hidden {
   display: none;
 }
 
@@ -943,7 +944,7 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   /* View tabs on mobile */
   .view-tabs {
     padding: 8px 12px;
-    padding-left: 56px; /* space for toggle button */
+    padding-left: 118px; /* space for the fixed "Controls" toggle button */
   }
 
   /* Chart takes full space */
@@ -983,13 +984,19 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   }
 
   .chart-tooth-detail__surfaces {
+    align-self: stretch;
+    justify-content: center;
     gap: 6px;
+    overflow: visible;
   }
 
+  /* All six surface buttons share the row, so none get cut off or need scrolling */
   .chart-surface-chip {
-    min-width: 64px;
-    min-height: 58px;
-    padding: 6px 8px;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 110px;
+    min-height: 54px;
+    padding: 6px 4px;
   }
 
   .chart-surface-chip__key {
@@ -998,17 +1005,21 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
 
   .chart-surface-chip__name {
     font-size: 10px;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Odontogram arch: allow horizontal scroll if needed */
-  .odontogram--arch {
-    min-height: 140px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .odontogram--svg svg {
-    min-width: 600px;
+  /* Odontogram arch: scale the whole 32-tooth chart to fit the space left under
+     the tooth detail, so every tooth is visible and tappable without scrolling */
+  .odontogram--arch,
+  .chart-pane .odontogram--arch.odontogram--svg {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+    align-items: flex-start;
   }
 
   /* Legend grid: 2 columns on mobile */
@@ -1083,6 +1094,34 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   }
 }
 
+/* Tablet portrait: enough width for tooth + surfaces on one row */
+@media (min-width: 601px) and (max-width: 860px) {
+  .chart-tooth-detail__body {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chart-tooth-detail__tooth {
+    width: auto;
+  }
+
+  .chart-tooth-detail__surfaces {
+    flex: 1 1 auto;
+  }
+}
+
+/* Phones held upright: the chart is small by nature, so nudge toward landscape */
+@media (pointer: coarse) and (orientation: portrait) and (max-width: 600px) {
+  .chart-pane__stack::after {
+    content: "Tip: turn your phone sideways for bigger teeth.";
+    flex: 0 0 auto;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+  }
+}
+
 /* ============================================
    Very small screens (< 480px)
    ============================================ */
@@ -1101,14 +1140,7 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
     max-height: 110px;
   }
 
-  .chart-tooth-detail__surfaces {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
   .chart-surface-chip {
-    min-width: 56px;
     min-height: 50px;
   }
 
@@ -1117,13 +1149,146 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
     max-height: 160px;
   }
 
+  /* Icon-only toggle on the narrowest phones, so the tabs keep their room */
+  .panel-toggle span {
+    display: none;
+  }
+
   .view-tabs {
-    padding-left: 50px;
+    padding-left: 56px;
   }
 
   .view-tab {
     padding: 6px 12px;
     font-size: 12px;
+  }
+}
+
+/* ============================================
+   Landscape phones / short embeds (the recommended
+   way to chart on a phone): the tooth detail shrinks
+   to one slim strip so the full chart gets the height
+   ============================================ */
+@media (orientation: landscape) and (max-height: 600px) {
+  .view-tabs {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    gap: 6px;
+  }
+
+  .view-tab {
+    padding: 5px 12px;
+    font-size: 12px;
+  }
+
+  .panel-toggle {
+    top: 4px;
+    left: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .chart-pane {
+    padding: 6px 8px;
+  }
+
+  .chart-pane__stack {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .chart-tooth-detail {
+    min-height: 0;
+    padding: 5px 8px;
+  }
+
+  .chart-tooth-detail__placeholder {
+    padding: 4px;
+    font-size: 12px;
+  }
+
+  .chart-tooth-detail__body {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+  }
+
+  .chart-tooth-detail__tooth {
+    width: auto;
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .chart-tooth-detail__badge {
+    max-width: 96px;
+  }
+
+  .chart-tooth-detail__name {
+    font-size: 11px;
+  }
+
+  .tooth-detail-svg,
+  .tooth-detail-svg__canvas {
+    width: 46px;
+  }
+
+  .tooth-detail-svg__canvas {
+    max-height: 60px;
+  }
+
+  .chart-tooth-detail__surfaces {
+    flex: 1 1 auto;
+    gap: 5px;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .chart-surface-chip {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 44px;
+    padding: 3px 4px;
+    gap: 1px;
+  }
+
+  .chart-surface-chip__key {
+    font-size: 14px;
+  }
+
+  /* Full names don't fit the slim strip; the letter + applied code are enough */
+  .chart-surface-chip__name {
+    display: none;
+  }
+
+  .chart-surface-chip__code {
+    font-size: 11px;
+    margin-top: 0;
+  }
+
+  .odontogram--arch,
+  .chart-pane .odontogram--arch.odontogram--svg {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+    align-items: flex-start;
+  }
+
+  .odontogram--svg svg {
+    border-radius: 8px;
+  }
+}
+
+/* Wide-but-short screens (big phones / small tablets in landscape) keep the
+   side panel, just narrower, so the chart gets more of the width. */
+@media (min-width: 861px) and (max-height: 600px) {
+  .app {
+    grid-template-columns: minmax(220px, 260px) 1fr;
+  }
+
+  .panel {
+    padding: 10px 12px;
   }
 }
 

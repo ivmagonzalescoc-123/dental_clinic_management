@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         sections.push('<div class="border rounded-4 p-3"><div class="small text-muted fw-semibold mb-2">Odontogram (read-only)</div>' +
-            '<div style="border:1px solid #dee2e6;border-radius:8px;overflow:hidden;height:' + CLINIC_ODONTOGRAM_HEIGHT + 'px;">' +
+            '<div style="border:1px solid #dee2e6;border-radius:8px;overflow:hidden;height:' + CLINIC_ODONTOGRAM_HEIGHT + 'px;max-height:calc(100vh - 140px);">' +
             '<iframe id="clinicOdontogramFrame" src="' + escapeHtml(CLINIC_ODONTOGRAM_SRC) + '" style="width:100%;height:100%;border:0;"></iframe>' +
             '</div>' +
             (toothComments.length ? '<div class="mt-2"><div class="small text-muted fw-semibold mb-1">Tooth Notes</div><ul class="mb-0 ps-3 small">' + toothComments.map(function (t) { return '<li><strong>Tooth #' + escapeHtml(t.tooth) + ':</strong> ' + escapeHtml(t.comment) + '</li>'; }).join('') + '</ul></div>' : '') +
