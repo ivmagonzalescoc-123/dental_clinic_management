@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/config/asset_helpers.php';
 require_once 'config/security.php';
 require_once 'config/database.php';
 require_once 'config/feedback_helpers.php';
@@ -112,8 +113,8 @@ $aboutPoints = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/app-toast.css?v=20260928-clinicblue">
-    <link rel="stylesheet" href="assets/css/app-request.css">
+    <link rel="stylesheet" href="<?= asset_url('assets/css/app-toast.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('assets/css/app-request.css') ?>">
     <script src="https://cdn.tailwindcss.com"></script>
     <?php if ($googleClientId !== ''): ?>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1439,8 +1440,8 @@ $aboutPoints = [
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
     </button>
 
-    <script src="assets/js/app-toast.js?v=20260614-short"></script>
-    <script src="assets/js/app-request.js?v=20260612"></script>
+    <script src="<?= asset_url('assets/js/app-toast.js') ?>"></script>
+    <script src="<?= asset_url('assets/js/app-request.js') ?>"></script>
     <script>
         const contactCsrfToken = <?php echo json_encode($csrf_token); ?>;
         const csrfToken = contactCsrfToken;

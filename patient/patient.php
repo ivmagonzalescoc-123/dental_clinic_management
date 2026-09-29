@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../config/asset_helpers.php';
 include_once '../config/session_check.php';
 check_session(['patient']);
 include_once '../config/profile_helpers.php';
@@ -52,22 +53,22 @@ switch ($role_key) {
         rel="stylesheet">
 
     <!-- Vendor CSS Files -->
-    <link href="../assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="../assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-    <link href="../assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
-    <link href="../assets/vendor/quill/quill.snow.css" rel="stylesheet">
-    <link href="../assets/vendor/quill/quill.bubble.css" rel="stylesheet">
-    <link href="../assets/vendor/remixicon/remixicon.css" rel="stylesheet">
-    <link href="../assets/vendor/simple-datatables/style.css" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/bootstrap-icons/bootstrap-icons.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/boxicons/css/boxicons.min.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/quill/quill.snow.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/quill/quill.bubble.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/remixicon/remixicon.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/vendor/simple-datatables/style.css') ?>" rel="stylesheet">
 
     <!-- Template Main CSS File -->
-    <link href="../assets/css/main.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/app-toast.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/module-content-ux.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/dental-calendar.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/appointment-services.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/patient-mobile.css?v=20260928-clinicblue" rel="stylesheet">
-    <link href="../assets/css/portal-header-mobile.css?v=20260928-clinicblue" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/main.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/app-toast.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/module-content-ux.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/appointment-services.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/patient-mobile.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -255,30 +256,30 @@ switch ($role_key) {
     </a>
 
     <!-- Vendor JS Files -->
-    <script src="../assets/vendor/apexcharts/apexcharts.min.js"></script>
-    <script src="../assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/vendor/chart.js/chart.umd.js"></script>
-    <script src="../assets/vendor/echarts/echarts.min.js"></script>
-    <script src="../assets/vendor/quill/quill.min.js"></script>
-    <script src="../assets/vendor/simple-datatables/simple-datatables.js"></script>
-    <script src="../assets/vendor/tinymce/tinymce.min.js"></script>
-    <script src="../assets/vendor/php-email-form/validate.js"></script>
+    <script src="<?= asset_url('../assets/vendor/apexcharts/apexcharts.min.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/chart.js/chart.umd.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/echarts/echarts.min.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/quill/quill.min.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/simple-datatables/simple-datatables.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/tinymce/tinymce.min.js') ?>"></script>
+    <script src="<?= asset_url('../assets/vendor/php-email-form/validate.js') ?>"></script>
 
     <!-- Template Main JS File -->
-    <script src="../assets/js/app-toast.js?v=20260614-short"></script>
-    <script src="../assets/js/dental-cache.js"></script>
-    <script src="../assets/js/dental-ui.js?v=20260718-fix1"></script>
-    <script src="../assets/js/app-request.js?v=20260613"></script>
-    <script src="../assets/js/app-confirm.js?v=20260928-confirm"></script>
-    <script src="../assets/js/password-toggle.js?v=20260614-pw-no-lock"></script>
-    <script src="../assets/js/dental-calendar.js?v=20260928-5"></script>
-    <script src="../assets/js/main.js?v=20260928-cal"></script>
-    <script src="../assets/js/portal-dropdown.js?v=20260614-notify"></script>
-    <script src="../assets/js/session-idle.js"></script>
-    <script src="../assets/js/appointment-service-manager.js?v=20260718-fix1"></script>
-    <script src="../assets/js/patient-appointments-services.js?v=20260718-fix1"></script>
-    <script src="../assets/js/media-gallery.js?v=20260717-1"></script>
-    <script src="../assets/js/profiling-display.js?v=20260717-1"></script>
+    <script src="<?= asset_url('../assets/js/app-toast.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/dental-cache.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/dental-ui.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/app-request.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/app-confirm.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/password-toggle.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/dental-calendar.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/main.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/portal-dropdown.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-appointments-services.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/profiling-display.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
     <script>

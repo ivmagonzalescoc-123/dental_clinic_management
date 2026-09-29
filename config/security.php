@@ -7,6 +7,7 @@ if (!function_exists('env')) {
 if (!function_exists('app_request_is_https')) {
     require_once __DIR__ . '/app.php';
 }
+require_once __DIR__ . '/security_headers.php';
 
 if (!function_exists('security_start_session')) {
     function security_start_session()

@@ -129,7 +129,9 @@ if (!function_exists('odontogram_embed_src')) {
     /** Single iframe entry point for 2D chart + realistic 3D preview (odontogram/index.html). */
     function odontogram_embed_src(): string
     {
-        return '../odontogram/index.html';
+        require_once __DIR__ . '/asset_helpers.php';
+        // Version by the newest file in odontogram/ so a re-upload reloads the iframe.
+        return '../odontogram/index.html?v=' . asset_dir_version('odontogram');
     }
 }
 

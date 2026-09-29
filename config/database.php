@@ -10,6 +10,8 @@ if (!function_exists('load_env')) {
 // Ensure .env is loaded (no-op if already loaded by env.php)
 load_env();
 
+require_once __DIR__ . '/security_headers.php';
+
 if (!defined('DB_HOST')) define('DB_HOST', (string)env('DB_HOST', 'localhost'));
 if (!defined('DB_USER')) define('DB_USER', (string)env('DB_USER', 'root'));
 if (!defined('DB_PASS')) define('DB_PASS', (string)env('DB_PASS', ''));

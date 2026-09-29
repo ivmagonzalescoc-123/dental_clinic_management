@@ -273,6 +273,22 @@
 
     window.updateActiveNav = updateActiveNav
 
+    function pageFromUrl(url) {
+      var params = new URLSearchParams((url || '').split('?')[1] || '')
+      return params.get('page') || 'dashboard'
+    }
+
+    // Highlight the clicked sidebar item immediately instead of waiting for the
+    // next page to load (applies to AJAX nav on desktop and full reloads on mobile).
+    document.addEventListener('click', function(e) {
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
+      var link = e.target.closest('.sidebar-nav a.nav-link')
+      if (!link || link.target === '_blank') return
+      var href = link.getAttribute('href') || ''
+      if (href.indexOf('page=') === -1) return
+      updateActiveNav(pageFromUrl(href))
+    }, true)
+
     function reExecuteScripts(container) {
       var extScripts = Array.from(container.querySelectorAll('script[src]'))
       var inlineScripts = Array.from(container.querySelectorAll('script:not([src])'))
@@ -401,6 +417,7 @@
       var myToken = ++navToken
       currentAbort = new AbortController()
       isNavigating = true
+      updateActiveNav(pageFromUrl(url))
       cleanupModalState()
 
       var skeletonTarget = document.querySelector('#main')
@@ -431,8 +448,7 @@
             reExecuteScripts(currentMain)
           }
 
-          var params = new URLSearchParams(url.split('?')[1] || '')
-          var page = params.get('page') || 'dashboard'
+          var page = pageFromUrl(url)
           updateActiveNav(page)
 
           history.pushState({ page: page }, '', url)

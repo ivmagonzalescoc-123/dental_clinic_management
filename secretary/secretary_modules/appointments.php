@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/asset_helpers.php';
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/capabilities.php';
@@ -3672,8 +3673,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 </script>
 
 <!-- Reschedule Modal (secretary) -->
-<link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
-<script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
+<link rel="stylesheet" href="<?= asset_url('../assets/vendor/flatpickr/flatpickr.min.css') ?>">
+<script src="<?= asset_url('../assets/vendor/flatpickr/flatpickr.min.js') ?>"></script>
 <div class="modal fade" id="rescheduleModalSec" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">

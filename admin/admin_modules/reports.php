@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/asset_helpers.php';
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/dashboard_helpers.php';
 include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
@@ -1479,7 +1480,7 @@ $reportNavQuery = array_merge(
     </div>
 </div>
 
-<script src="../assets/js/admin-charts.js?v=20260928-clinicblue"></script>
+<script src="<?= asset_url('../assets/js/admin-charts.js') ?>"></script>
 <script>
 (function () {
     var reportType = <?php echo json_encode($reportType); ?>;

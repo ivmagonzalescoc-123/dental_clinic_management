@@ -12,10 +12,10 @@
 </FilesMatch>
 
 # Security headers
-Header always set X-Content-Type-Options "nosniff"
-Header always set X-Frame-Options "SAMEORIGIN"
-Header always set Referrer-Policy "strict-origin-when-cross-origin"
-Header always set X-XSS-Protection "1; mode=block"
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set Referrer-Policy "strict-origin-when-cross-origin"
+Header set X-XSS-Protection "1; mode=block"
 
 RewriteEngine On
 
@@ -30,3 +30,14 @@ RewriteRule ^config/ - [F,L]
 RewriteRule ^docs/ - [F,L]
 RewriteRule ^ws-server/ - [F,L]
 RewriteRule ^backups/ - [F,L]
+
+# Cache busting: PHP pages are never cached (so browsers always see the newest
+# ?v=<mtime> asset URLs from config/asset_helpers.php), while versioned CSS/JS
+# can be cached long-term because a re-upload changes their URL.
+<IfModule mod_headers.c>
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>

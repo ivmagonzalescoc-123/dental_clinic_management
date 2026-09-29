@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/asset_helpers.php';
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
 check_session(['doctor']);
@@ -109,8 +110,8 @@ if ($aStmt) {
       </div>
     </div>
   </div>
-<script src="../assets/vendor/flatpickr/flatpickr.min.js"></script>
-<link rel="stylesheet" href="../assets/vendor/flatpickr/flatpickr.min.css">
+<script src="<?= asset_url('../assets/vendor/flatpickr/flatpickr.min.js') ?>"></script>
+<link rel="stylesheet" href="<?= asset_url('../assets/vendor/flatpickr/flatpickr.min.css') ?>">
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
