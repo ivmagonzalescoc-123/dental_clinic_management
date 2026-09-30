@@ -197,6 +197,69 @@ $aboutPoints = [
         }
         .float-slow { animation: floatSlow 6s ease-in-out infinite; }
 
+        /* Hero 3D tooth */
+        .hero-tooth {
+            position: relative;
+            height: 340px;
+            width: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            border-radius: 1.5rem;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        @media (min-width: 640px) { .hero-tooth { height: 420px; } }
+        @media (min-width: 1024px) { .hero-tooth { height: 540px; } }
+        .hero-tooth:focus-visible { box-shadow: 0 0 0 2px rgba(157, 210, 230, 0.6); }
+        .hero-tooth-halo {
+            position: absolute;
+            inset: 8% 14% 16%;
+            border-radius: 9999px;
+            background: radial-gradient(circle, rgba(92, 200, 240, 0.28) 0%, rgba(27, 122, 163, 0.12) 45%, transparent 70%);
+            filter: blur(8px);
+            pointer-events: none;
+        }
+        .hero-tooth-canvas {
+            position: absolute;
+            /* Bottom strip is reserved for the hint chip so it never covers the platform. */
+            inset: 0 0 2.5rem 0;
+            width: 100%;
+            height: calc(100% - 2.5rem);
+            display: block;
+            opacity: 0;
+            transform: scale(0.96);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            cursor: grab;
+            /* Keep vertical page scroll on touch; horizontal drags rotate the tooth. */
+            touch-action: pan-y;
+        }
+        .hero-tooth.is-ready .hero-tooth-canvas { opacity: 1; transform: none; }
+        .hero-tooth.is-dragging .hero-tooth-canvas { cursor: grabbing; }
+        .hero-tooth-hint {
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translate(-50%, 6px);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            padding: 0.4rem 0.85rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.75rem;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .hero-tooth.is-ready .hero-tooth-hint { opacity: 1; transform: translate(-50%, 0); transition-delay: 1s; }
+        .hero-tooth.is-ready.hint-dismissed .hero-tooth-hint { opacity: 0; transition-delay: 0s; }
+
         .nav-link {
             position: relative;
             color: rgba(255,255,255,0.85);
@@ -305,6 +368,66 @@ $aboutPoints = [
             line-height: 1.3;
         }
         .auth-field-msg.show { display: block; }
+
+        /* Password recovery */
+        .forgot-progress span {
+            height: 4px;
+            border-radius: 9999px;
+            background-color: #e2e8f0;
+            transition: background-color 0.3s ease;
+        }
+        .forgot-progress span.is-active { background-color: rgb(27, 122, 163); }
+        .forgot-step:not(.hidden) { animation: forgotStepIn 0.25s ease; }
+        @keyframes forgotStepIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .forgot-strength-bar {
+            width: 0;
+            transition: width 0.25s ease, background-color 0.25s ease;
+        }
+        .forgot-rules li {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            color: #94a3b8;
+            transition: color 0.2s ease;
+        }
+        .forgot-rules li::before {
+            content: '';
+            width: 0.875rem;
+            height: 0.875rem;
+            flex-shrink: 0;
+            border-radius: 9999px;
+            border: 1.5px solid currentColor;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 0.625rem;
+        }
+        .forgot-rules li.is-met { color: #059669; }
+        .forgot-rules li.is-met::before {
+            border-color: #059669;
+            background-color: #059669;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M4.5 12.75l6 6 9-13.5'/%3E%3C/svg%3E");
+        }
+        .forgot-match-msg:empty { display: none; }
+        .forgot-match-msg.is-ok { color: #059669; }
+        .forgot-match-msg.is-bad { color: #ef4444; }
+        .otp-boxes.is-invalid .otp-box { border-color: #ef4444; background-color: #fff; }
+        .otp-boxes.is-shaking { animation: forgotShake 0.4s ease; }
+        @keyframes forgotShake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .forgot-success-icon { animation: forgotPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes forgotPop {
+            from { opacity: 0; transform: scale(0.6); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .forgot-step:not(.hidden), .otp-boxes.is-shaking, .forgot-success-icon { animation: none; }
+        }
 
         .auth-panel .auth-header,
         .terms-panel > div:first-child {
@@ -628,6 +751,17 @@ $aboutPoints = [
                         </a>
                     </div>
 
+                </div>
+
+                <!-- Interactive 3D tooth (assets/js/hero-tooth.js, lazy-loaded below) -->
+                <div id="heroTooth" class="hero-tooth" aria-hidden="true"
+                    data-module="<?= asset_url('assets/js/hero-tooth.js') ?>"
+                    data-model="<?= asset_url('assets/models/hero-tooth.bin') ?>">
+                    <div class="hero-tooth-halo" aria-hidden="true"></div>
+                    <div class="hero-tooth-hint" aria-hidden="true">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
+                        Drag to rotate &middot; Tap to scan
+                    </div>
                 </div>
             </div>
 
@@ -1324,58 +1458,144 @@ $aboutPoints = [
             </div>
         </section>
 
-        <!-- Password recovery -->
+        <!-- Password recovery: email -> code -> new password -> done -->
         <section id="authPanelForgot" class="auth-panel hidden max-w-md" aria-label="Password recovery">
-            <div class="auth-header flex items-start justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
-                <div class="flex items-center gap-2.5">
-                    <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
-                    <div>
-                        <h2 class="text-sm font-bold text-slate-900">Password Recovery</h2>
-                        <p class="text-[11px] text-slate-500">Enter your email to receive an OTP</p>
+            <div class="auth-header border-b border-slate-100 px-5 pt-4 pb-3 sm:px-7">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <img src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>" alt="" class="h-9 w-9 rounded-full object-cover" width="36" height="36">
+                        <div>
+                            <h2 id="forgot-title" class="text-sm font-bold text-slate-900">Reset your password</h2>
+                            <p id="forgot-subtitle" class="text-[11px] text-slate-500">Step 1 of 3 &middot; Enter your account email</p>
+                        </div>
                     </div>
+                    <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                <div id="forgot-progress" class="forgot-progress mt-3 grid grid-cols-3 gap-1.5" aria-hidden="true">
+                    <span class="is-active"></span><span></span><span></span>
+                </div>
             </div>
 
             <div class="auth-body">
-            <form id="reset-form" class="space-y-4 px-5 py-4 sm:px-7">
-                <input type="email" id="reset-email" required placeholder="Email Address"
-                    class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
-                <button type="button" id="send-otp" data-action-loading="1" class="w-full rounded-lg border border-primary/20 bg-primary/5 py-2.5 text-sm font-semibold text-primary hover:bg-primary/10 transition-colors">
-                    Send OTP
-                </button>
+                <!-- Step 1: email -->
+                <form id="forgot-step-email" data-forgot-step="email" class="forgot-step space-y-4 px-5 py-5 sm:px-7" novalidate>
+                    <p class="text-sm text-slate-600">Enter the email linked to your account and we'll send you a 6-digit code to reset your password.</p>
+                    <div class="space-y-1.5">
+                        <label for="reset-email" class="block text-sm font-medium text-slate-700">Email</label>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                            </span>
+                            <input type="email" id="reset-email" name="email" autocomplete="username" required placeholder="Enter your email"
+                                class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
+                        </div>
+                        <p class="auth-field-msg" id="reset-email-error"></p>
+                    </div>
+                    <button type="submit" id="forgot-send-btn" data-no-action-loading="1" class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                        Send reset code
+                    </button>
+                </form>
 
-                <div id="reset-section" class="space-y-3 hidden">
-                    <input type="hidden" id="reset-otp">
-                    <div class="otp-boxes flex justify-center gap-2" id="reset-otp-boxes" data-otp-target="reset-otp">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                <!-- Step 2: code -->
+                <form id="forgot-step-code" data-forgot-step="code" class="forgot-step hidden space-y-4 px-5 py-5 sm:px-7" novalidate>
+                    <div class="flex items-start gap-3 rounded-lg bg-primary/5 px-3.5 py-3">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-primary" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.981l7.5-4.039a2.25 2.25 0 012.134 0l7.5 4.039a2.25 2.25 0 011.183 1.98V19.5z"/></svg>
+                        <p class="text-sm text-slate-600">
+                            If an account exists for <span id="forgot-email-display" class="font-semibold text-slate-900"></span>, we've sent a 6-digit code to it.
+                            <button type="button" data-forgot-goto="email" data-no-action-loading="1" class="font-medium text-primary hover:underline">Change email</button>
+                        </p>
                     </div>
-                    <div class="relative">
-                        <input type="password" id="reset-password" required placeholder="New Password"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-10 text-sm placeholder:text-slate-400">
-                        <button type="button" data-toggle-password="reset-password" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
-                            <svg data-icon="eye" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <svg data-icon="eye-off" class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
-                        </button>
+
+                    <div>
+                        <input type="hidden" id="reset-otp">
+                        <div class="otp-boxes flex justify-center gap-2" id="reset-otp-boxes" data-otp-target="reset-otp" role="group" aria-label="6-digit reset code">
+                            <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 2" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 3" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 4" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 5" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 6" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        </div>
+                        <p class="auth-field-msg text-center" id="reset-otp-error" role="alert"></p>
+                        <p id="forgot-expiry" class="mt-2 text-center text-xs text-slate-500"></p>
                     </div>
-                    <input type="password" id="reset-confirm" required placeholder="Confirm Password"
-                        class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
-                    <button type="submit" class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
-                        Reset Password
+
+                    <button type="submit" id="forgot-code-btn" disabled class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                        Continue
+                    </button>
+
+                    <p class="text-center text-xs text-slate-500">
+                        Didn't get it? Check your spam folder, or
+                        <button type="button" id="forgot-resend-btn" data-no-action-loading="1" class="font-medium text-primary hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline">resend code</button>
+                    </p>
+                </form>
+
+                <!-- Step 3: new password -->
+                <form id="forgot-step-password" data-forgot-step="password" class="forgot-step hidden space-y-4 px-5 py-5 sm:px-7" novalidate>
+                    <div class="space-y-1.5">
+                        <label for="reset-password" class="block text-sm font-medium text-slate-700">New password</label>
+                        <div class="relative">
+                            <input type="password" id="reset-password" autocomplete="new-password" required placeholder="Create a new password" aria-describedby="reset-rules"
+                                class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-10 text-sm placeholder:text-slate-400">
+                            <button type="button" data-toggle-password="reset-password" data-no-action-loading="1" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
+                                <svg data-icon="eye" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <svg data-icon="eye-off" class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center gap-2 pt-1">
+                            <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                <div id="reset-strength-bar" class="forgot-strength-bar h-full rounded-full"></div>
+                            </div>
+                            <span id="reset-strength-label" class="w-12 text-right text-[11px] font-medium text-slate-400"></span>
+                        </div>
+                        <ul id="reset-rules" class="forgot-rules grid grid-cols-2 gap-x-3 gap-y-1 pt-1 text-xs">
+                            <li data-rule="length">8+ characters</li>
+                            <li data-rule="upper">Uppercase letter</li>
+                            <li data-rule="lower">Lowercase letter</li>
+                            <li data-rule="number">Number</li>
+                            <li data-rule="special">Special character</li>
+                        </ul>
+                        <p class="auth-field-msg" id="reset-password-error" role="alert"></p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="reset-confirm" class="block text-sm font-medium text-slate-700">Confirm password</label>
+                        <div class="relative">
+                            <input type="password" id="reset-confirm" autocomplete="new-password" required placeholder="Re-enter your new password"
+                                class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 pr-10 text-sm placeholder:text-slate-400">
+                            <button type="button" data-toggle-password="reset-confirm" data-no-action-loading="1" class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
+                                <svg data-icon="eye" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <svg data-icon="eye-off" class="hidden h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
+                            </button>
+                        </div>
+                        <p id="reset-confirm-msg" class="forgot-match-msg text-xs" aria-live="polite"></p>
+                    </div>
+
+                    <button type="submit" id="forgot-reset-btn" data-no-action-loading="1" disabled class="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                        Reset password
+                    </button>
+                    <p class="text-center">
+                        <button type="button" data-forgot-goto="code" data-no-action-loading="1" class="text-xs font-medium text-slate-500 hover:text-primary">&larr; Back to code</button>
+                    </p>
+                </form>
+
+                <!-- Done -->
+                <div data-forgot-step="done" class="forgot-step hidden px-5 py-8 text-center sm:px-7">
+                    <div class="forgot-success-icon mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    </div>
+                    <h3 class="mt-4 text-base font-bold text-slate-900">Password updated</h3>
+                    <p class="mt-1.5 text-sm text-slate-600">For your security, you've been signed out on other devices. Log in with your new password.</p>
+                    <button type="button" id="forgot-done-btn" data-no-action-loading="1" class="mt-6 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                        Back to login
                     </button>
                 </div>
 
-                <p class="pt-1 text-center">
-                    <button type="button" data-auth-switch="login" class="text-sm font-medium text-primary hover:text-primary">Back to Login</button>
+                <p id="forgot-back-login" class="px-5 pb-5 text-center sm:px-7">
+                    <button type="button" data-auth-switch="login" data-no-action-loading="1" class="text-sm font-medium text-primary hover:text-primary">Back to login</button>
                 </p>
-            </form>
             </div>
         </section>
     </div>
@@ -1932,10 +2152,7 @@ $aboutPoints = [
                 const target = btn.getAttribute('data-auth-switch');
                 if (target === 'forgot') {
                     const loginEmail = document.getElementById('login-email');
-                    const resetEmail = document.getElementById('reset-email');
-                    if (loginEmail && resetEmail && loginEmail.value.trim()) {
-                        resetEmail.value = loginEmail.value.trim();
-                    }
+                    startForgotFlow(loginEmail ? loginEmail.value.trim() : '');
                 }
                 openAuthModal(target);
             });
@@ -2653,100 +2870,373 @@ $aboutPoints = [
         });
 
         // ----- Password recovery -----
-        const resetSection = document.getElementById('reset-section');
+        // Three client-side steps (email -> code -> new password). The code itself is
+        // only checked by reset_password_api.php on the final submit, so code errors
+        // from that call send the user back to the code step.
+        const FORGOT_CODE_TTL_MS = 15 * 60 * 1000; // matches forgot_password_api.php
+        const FORGOT_RESEND_COOLDOWN_MS = 60 * 1000;
+        const forgotSteps = ['email', 'code', 'password', 'done'];
+        const forgotSubtitles = {
+            email: 'Step 1 of 3 · Enter your account email',
+            code: 'Step 2 of 3 · Enter the code we emailed you',
+            password: 'Step 3 of 3 · Choose a new password',
+            done: 'All done'
+        };
+        const forgotPanel = document.getElementById('authPanelForgot');
+        const forgotState = { email: '', sentAt: 0, timer: null };
+        const resetEmailInput = document.getElementById('reset-email');
+        const resetEmailError = document.getElementById('reset-email-error');
+        const resetOtpInput = document.getElementById('reset-otp');
+        const resetOtpBoxes = document.getElementById('reset-otp-boxes');
+        const resetOtpError = document.getElementById('reset-otp-error');
+        const resetPasswordInput = document.getElementById('reset-password');
+        const resetPasswordError = document.getElementById('reset-password-error');
+        const resetConfirmInput = document.getElementById('reset-confirm');
+        const resetConfirmMsg = document.getElementById('reset-confirm-msg');
+        const forgotSendBtn = document.getElementById('forgot-send-btn');
+        const forgotCodeBtn = document.getElementById('forgot-code-btn');
+        const forgotResendBtn = document.getElementById('forgot-resend-btn');
+        const forgotResetBtn = document.getElementById('forgot-reset-btn');
+        const forgotExpiry = document.getElementById('forgot-expiry');
+        // Mirrors security_password_policy_errors() in config/security.php
+        const resetPasswordRules = {
+            length: function(v) { return v.length >= 8; },
+            upper: function(v) { return /[A-Z]/.test(v); },
+            lower: function(v) { return /[a-z]/.test(v); },
+            number: function(v) { return /\d/.test(v); },
+            special: function(v) { return /[^A-Za-z0-9]/.test(v); }
+        };
 
-        document.getElementById('send-otp')?.addEventListener('click', async function() {
-            const email = document.getElementById('reset-email').value.trim();
-            if (!email) {
-                setAlert('Please enter your email address.', 'warning');
+        function formatCountdown(ms) {
+            const total = Math.max(0, Math.ceil(ms / 1000));
+            return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0');
+        }
+
+        function setForgotFieldError(input, errorEl, message) {
+            input?.classList.toggle('field-invalid', !!message);
+            if (errorEl) {
+                errorEl.textContent = message || '';
+                errorEl.classList.toggle('show', !!message);
+            }
+        }
+
+        function isForgotCodeExpired() {
+            return !!forgotState.sentAt && Date.now() - forgotState.sentAt >= FORGOT_CODE_TTL_MS;
+        }
+
+        function getResetOtpBoxes() {
+            return resetOtpBoxes ? Array.from(resetOtpBoxes.querySelectorAll('.otp-box')) : [];
+        }
+
+        function clearResetOtp() {
+            getResetOtpBoxes().forEach(function(box) { box.value = ''; });
+            if (resetOtpInput) resetOtpInput.value = '';
+            resetOtpBoxes?.classList.remove('is-invalid');
+            setForgotFieldError(null, resetOtpError, '');
+            updateForgotCodeBtn();
+        }
+
+        function showResetOtpError(message) {
+            clearResetOtp();
+            resetOtpBoxes?.classList.add('is-invalid', 'is-shaking');
+            setTimeout(function() { resetOtpBoxes?.classList.remove('is-shaking'); }, 400);
+            setForgotFieldError(null, resetOtpError, message);
+        }
+
+        function updateForgotCodeBtn() {
+            if (forgotCodeBtn) {
+                forgotCodeBtn.disabled = (resetOtpInput?.value.length || 0) !== 6 || isForgotCodeExpired();
+            }
+        }
+
+        function showForgotStep(step) {
+            if (!forgotPanel) return;
+            forgotPanel.querySelectorAll('[data-forgot-step]').forEach(function(el) {
+                el.classList.toggle('hidden', el.getAttribute('data-forgot-step') !== step);
+            });
+            const index = forgotSteps.indexOf(step);
+            forgotPanel.querySelectorAll('#forgot-progress span').forEach(function(bar, i) {
+                bar.classList.toggle('is-active', i <= index);
+            });
+            document.getElementById('forgot-subtitle').textContent = forgotSubtitles[step];
+            document.getElementById('forgot-back-login')?.classList.toggle('hidden', step === 'done');
+
+            let focusTarget = null;
+            if (step === 'email') focusTarget = resetEmailInput;
+            if (step === 'code') focusTarget = getResetOtpBoxes().find(function(b) { return !b.value; }) || forgotCodeBtn;
+            if (step === 'password') focusTarget = resetPasswordInput;
+            if (step === 'done') focusTarget = document.getElementById('forgot-done-btn');
+            if (focusTarget) setTimeout(function() { focusTarget.focus(); }, 60);
+        }
+
+        function tickForgotTimer() {
+            if (!forgotState.sentAt || !forgotExpiry || !forgotResendBtn) return;
+            const elapsed = Date.now() - forgotState.sentAt;
+            const expiresIn = FORGOT_CODE_TTL_MS - elapsed;
+            const resendIn = FORGOT_RESEND_COOLDOWN_MS - elapsed;
+            const expired = expiresIn <= 0;
+
+            if (expired) {
+                forgotExpiry.textContent = 'This code has expired. Please request a new one.';
+                forgotExpiry.className = 'mt-2 text-center text-xs font-medium text-red-500';
+            } else {
+                forgotExpiry.textContent = 'Code expires in ' + formatCountdown(expiresIn);
+                forgotExpiry.className = 'mt-2 text-center text-xs ' + (expiresIn < 60000 ? 'font-medium text-amber-600' : 'text-slate-500');
+            }
+
+            if (forgotResendBtn.dataset.sending !== '1') {
+                const coolingDown = resendIn > 0 && !expired;
+                forgotResendBtn.disabled = coolingDown;
+                forgotResendBtn.textContent = coolingDown ? 'resend in ' + formatCountdown(resendIn) : 'resend code';
+            }
+
+            updateForgotCodeBtn();
+            if (expired) stopForgotTimer();
+        }
+
+        function stopForgotTimer() {
+            if (forgotState.timer) clearInterval(forgotState.timer);
+            forgotState.timer = null;
+        }
+
+        function onForgotCodeSent(email) {
+            forgotState.email = email;
+            forgotState.sentAt = Date.now();
+            document.getElementById('forgot-email-display').textContent = email;
+            clearResetOtp();
+            stopForgotTimer();
+            forgotState.timer = setInterval(tickForgotTimer, 1000);
+            tickForgotTimer();
+        }
+
+        async function postForgotJson(url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({ csrf_token: csrfToken }, payload))
+            });
+            let data = null;
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                data = null;
+            }
+            return { ok: response.ok && !!(data && data.success), data: data };
+        }
+
+        function withButtonLoading(btn, text, fn) {
+            if (btn && typeof window.runWithActionLoading === 'function') {
+                return window.runWithActionLoading(btn, fn, { text: text });
+            }
+            return fn();
+        }
+
+        function sendForgotCode(email) {
+            return postForgotJson('assets/api/auth/forgot_password_api.php', { email: email });
+        }
+
+        // Called when the panel is opened from the login form's "Forgot Password?" link.
+        function startForgotFlow(prefillEmail) {
+            if (prefillEmail && resetEmailInput) resetEmailInput.value = prefillEmail;
+            setForgotFieldError(resetEmailInput, resetEmailError, '');
+            // Resume a still-valid code for the same email instead of starting over.
+            const email = (resetEmailInput?.value || '').trim().toLowerCase();
+            const resumable = forgotState.sentAt && !isForgotCodeExpired() && email === forgotState.email.toLowerCase();
+            showForgotStep(resumable ? 'code' : 'email');
+        }
+
+        document.getElementById('forgot-step-email')?.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const email = resetEmailInput.value.trim();
+            if (!email || !resetEmailInput.checkValidity()) {
+                setForgotFieldError(resetEmailInput, resetEmailError, email ? 'Please enter a valid email address.' : 'Please enter your email address.');
+                resetEmailInput.focus();
+                return;
+            }
+            setForgotFieldError(resetEmailInput, resetEmailError, '');
+
+            // Same email still inside the resend cooldown: reuse the code already sent.
+            if (email.toLowerCase() === forgotState.email.toLowerCase() && forgotState.sentAt
+                && Date.now() - forgotState.sentAt < FORGOT_RESEND_COOLDOWN_MS) {
+                showForgotStep('code');
                 return;
             }
 
             try {
-                const response = await fetch('assets/api/auth/forgot_password_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, csrf_token: csrfToken })
+                const result = await withButtonLoading(forgotSendBtn, 'Sending code...', function() {
+                    return sendForgotCode(email);
                 });
-
-                const rawText = await response.text();
-                let data = null;
-                try {
-                    data = JSON.parse(rawText);
-                } catch (parseError) {
-                    data = null;
-                }
-
-                if (response.ok && data && data.success) {
-                    setAlert('OTP sent. Check your email.', 'success');
-                    resetSection?.classList.remove('hidden');
-                    this.textContent = 'Resend OTP';
-                } else if (data && data.message) {
-                    setAlert(data.message, 'error');
+                if (result.ok) {
+                    onForgotCodeSent(email);
+                    showForgotStep('code');
                 } else {
-                    const preview = rawText ? rawText.slice(0, 200) : '';
-                    setAlert('Request failed (' + response.status + '). ' + preview, 'error');
+                    setForgotFieldError(resetEmailInput, resetEmailError, (result.data && result.data.message) || 'We couldn’t send the code. Please try again.');
                 }
             } catch (error) {
-                setAlert('An error occurred. Please try again.', 'error');
+                setAlert('Network error. Please check your connection and try again.', 'error');
             }
         });
 
-        document.getElementById('reset-form')?.addEventListener('submit', async function(event) {
+        resetEmailInput?.addEventListener('input', function() {
+            setForgotFieldError(resetEmailInput, resetEmailError, '');
+        });
+
+        forgotPanel?.querySelectorAll('[data-forgot-goto]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                showForgotStep(btn.getAttribute('data-forgot-goto'));
+            });
+        });
+
+        resetOtpInput?.addEventListener('otp-change', function() {
+            resetOtpBoxes?.classList.remove('is-invalid');
+            setForgotFieldError(null, resetOtpError, '');
+            updateForgotCodeBtn();
+            // Move on as soon as the 6th digit lands (typed, pasted or autofilled).
+            if (resetOtpInput.value.length === 6 && !isForgotCodeExpired()) {
+                setTimeout(function() {
+                    const codeStep = document.getElementById('forgot-step-code');
+                    if (resetOtpInput.value.length === 6 && codeStep && !codeStep.classList.contains('hidden')) {
+                        showForgotStep('password');
+                    }
+                }, 250);
+            }
+        });
+
+        document.getElementById('forgot-step-code')?.addEventListener('submit', function(event) {
             event.preventDefault();
-
-            const email = document.getElementById('reset-email').value.trim();
-            const otp = document.getElementById('reset-otp').value.trim();
-            const newPassword = document.getElementById('reset-password').value;
-            const confirmPassword = document.getElementById('reset-confirm').value;
-
-            if (!email) {
-                setAlert('Please enter your email address.', 'warning');
+            if (isForgotCodeExpired()) {
+                showResetOtpError('This code has expired. Please request a new one.');
                 return;
             }
-
-            if (!otp) {
-                setAlert('Please enter the OTP code.', 'warning');
+            if (resetOtpInput.value.length !== 6) {
+                setForgotFieldError(null, resetOtpError, 'Please enter all 6 digits.');
                 return;
             }
+            showForgotStep('password');
+        });
 
+        forgotResendBtn?.addEventListener('click', async function() {
+            if (!forgotState.email || forgotResendBtn.disabled) return;
+            forgotResendBtn.dataset.sending = '1';
+            forgotResendBtn.disabled = true;
+            forgotResendBtn.textContent = 'sending...';
             try {
-                const response = await fetch('assets/api/auth/reset_password_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        email,
-                        otp,
-                        new_password: newPassword,
-                        confirm_password: confirmPassword,
-                        csrf_token: csrfToken
-                    })
-                });
-
-                const rawText = await response.text();
-                let data = null;
-                try {
-                    data = JSON.parse(rawText);
-                } catch (parseError) {
-                    data = null;
-                }
-
-                if (response.ok && data && data.success) {
-                    setAlert('Password updated.', 'success');
-                    document.getElementById('reset-form').reset();
-                    resetSection?.classList.add('hidden');
-                    setTimeout(function() {
-                        openAuthModal('login');
-                    }, 1600);
-                } else if (data && data.message) {
-                    setAlert(data.message, 'error');
+                const result = await sendForgotCode(forgotState.email);
+                if (result.ok) {
+                    onForgotCodeSent(forgotState.email);
+                    setAlert('A new code is on its way. Check your inbox.', 'success');
+                    getResetOtpBoxes()[0]?.focus();
                 } else {
-                    const preview = rawText ? rawText.slice(0, 200) : '';
-                    setAlert('Request failed (' + response.status + '). ' + preview, 'error');
+                    setAlert((result.data && result.data.message) || 'We couldn’t resend the code. Please try again.', 'error');
                 }
             } catch (error) {
-                setAlert('An error occurred. Please try again.', 'error');
+                setAlert('Network error. Please check your connection and try again.', 'error');
+            } finally {
+                delete forgotResendBtn.dataset.sending;
+                tickForgotTimer();
             }
+        });
+
+        function evaluateResetPassword() {
+            const value = resetPasswordInput.value;
+            const confirmValue = resetConfirmInput.value;
+            let met = 0;
+            Object.keys(resetPasswordRules).forEach(function(rule) {
+                const ok = resetPasswordRules[rule](value);
+                if (ok) met++;
+                forgotPanel.querySelector('#reset-rules [data-rule="' + rule + '"]')?.classList.toggle('is-met', ok);
+            });
+
+            const bar = document.getElementById('reset-strength-bar');
+            const label = document.getElementById('reset-strength-label');
+            let strength = { width: '0%', color: 'transparent', text: '', textClass: 'text-slate-400' };
+            if (value) {
+                if (met === 5) strength = { width: '100%', color: '#059669', text: 'Strong', textClass: 'text-emerald-600' };
+                else if (met >= 3) strength = { width: '66%', color: '#d97706', text: 'Fair', textClass: 'text-amber-600' };
+                else strength = { width: '33%', color: '#ef4444', text: 'Weak', textClass: 'text-red-500' };
+            }
+            bar.style.width = strength.width;
+            bar.style.backgroundColor = strength.color;
+            label.textContent = strength.text;
+            label.className = 'w-12 text-right text-[11px] font-medium ' + strength.textClass;
+
+            const matches = confirmValue !== '' && confirmValue === value;
+            resetConfirmMsg.textContent = confirmValue === '' ? '' : (matches ? '✓ Passwords match' : 'Passwords don’t match');
+            resetConfirmMsg.classList.toggle('is-ok', matches);
+            resetConfirmMsg.classList.toggle('is-bad', confirmValue !== '' && !matches);
+            resetConfirmInput.classList.toggle('field-invalid', confirmValue !== '' && !matches);
+
+            forgotResetBtn.disabled = !(met === 5 && matches);
+        }
+
+        [resetPasswordInput, resetConfirmInput].forEach(function(input) {
+            input?.addEventListener('input', function() {
+                setForgotFieldError(resetPasswordInput, resetPasswordError, '');
+                evaluateResetPassword();
+            });
+        });
+
+        document.getElementById('forgot-step-password')?.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            if (!forgotState.email || resetOtpInput.value.length !== 6) {
+                showForgotStep(forgotState.email ? 'code' : 'email');
+                return;
+            }
+            if (forgotResetBtn.disabled) return;
+
+            try {
+                const result = await withButtonLoading(forgotResetBtn, 'Updating password...', function() {
+                    return postForgotJson('assets/api/auth/reset_password_api.php', {
+                        email: forgotState.email,
+                        otp: resetOtpInput.value,
+                        new_password: resetPasswordInput.value,
+                        confirm_password: resetConfirmInput.value
+                    });
+                });
+
+                if (result.ok) {
+                    stopForgotTimer();
+                    forgotState.sentAt = 0;
+                    clearResetOtp();
+                    resetPasswordInput.value = '';
+                    resetConfirmInput.value = '';
+                    evaluateResetPassword();
+                    showForgotStep('done');
+                    return;
+                }
+
+                evaluateResetPassword();
+                const message = (result.data && result.data.message) || 'We couldn’t reset your password. Please try again.';
+                if (/invalid otp/i.test(message)) {
+                    showForgotStep('code');
+                    showResetOtpError('That code is incorrect. Please check your email and try again.');
+                } else if (/expired|not found|already used/i.test(message)) {
+                    // Treat the code as dead so "resend code" unlocks right away.
+                    forgotState.sentAt = Date.now() - FORGOT_CODE_TTL_MS;
+                    tickForgotTimer();
+                    showForgotStep('code');
+                    showResetOtpError(/already used/i.test(message)
+                        ? 'This code was already used. Please request a new one.'
+                        : 'This code has expired. Please request a new one.');
+                } else if (/code/i.test(message)) {
+                    showForgotStep('code');
+                    showResetOtpError(message);
+                } else if (/password/i.test(message)) {
+                    setForgotFieldError(resetPasswordInput, resetPasswordError, message);
+                    resetPasswordInput.focus();
+                } else {
+                    setAlert(message, 'error');
+                }
+            } catch (error) {
+                setAlert('Network error. Please check your connection and try again.', 'error');
+            }
+        });
+
+        document.getElementById('forgot-done-btn')?.addEventListener('click', function() {
+            const loginEmail = document.getElementById('login-email');
+            if (loginEmail && forgotState.email) loginEmail.value = forgotState.email;
+            openAuthModal('login');
+            setTimeout(function() { document.getElementById('login-password')?.focus(); }, 120);
         });
 
         // ----- Google OAuth -----
@@ -2967,6 +3457,69 @@ $aboutPoints = [
     </script>
 
     <script>
+        // Hero 3D tooth: pulled in only after page load, once the hero is on screen,
+        // and only when WebGL works and the visitor hasn't asked to save data.
+        // Without it the CSS halo stays as a quiet fallback.
+        (function() {
+            const stage = document.getElementById('heroTooth');
+            if (!stage || !stage.dataset.module) return;
+
+            function webglAvailable() {
+                try {
+                    const probe = document.createElement('canvas');
+                    const gl = probe.getContext('webgl2') || probe.getContext('webgl');
+                    if (!gl) return false;
+                    gl.getExtension('WEBGL_lose_context')?.loseContext();
+                    return true;
+                } catch (error) {
+                    return false;
+                }
+            }
+            if ((navigator.connection && navigator.connection.saveData) || !webglAvailable()) return;
+
+            let started = false;
+            function start() {
+                if (started) return;
+                started = true;
+                // import() treats "assets/..." as a bare module name, so resolve it first.
+                import(new URL(stage.dataset.module, document.baseURI).href).then(function(mod) {
+                    return mod.mountHeroTooth(stage, {
+                        modelUrl: new URL(stage.dataset.model, document.baseURI).href,
+                        onInteract: function() { stage.classList.add('hint-dismissed'); }
+                    });
+                }).then(function() {
+                    stage.removeAttribute('aria-hidden');
+                    stage.setAttribute('tabindex', '0');
+                    stage.setAttribute('role', 'img');
+                    stage.setAttribute('aria-label', 'Interactive 3D model of a tooth. Drag or use the arrow keys to rotate it; press Enter to scan.');
+                }).catch(function(error) {
+                    console.warn('3D tooth unavailable:', error);
+                });
+            }
+
+            function whenIdle(fn) {
+                if ('requestIdleCallback' in window) requestIdleCallback(fn, { timeout: 1500 });
+                else setTimeout(fn, 200);
+            }
+
+            function schedule() {
+                if (!('IntersectionObserver' in window)) {
+                    whenIdle(start);
+                    return;
+                }
+                const observer = new IntersectionObserver(function(entries) {
+                    if (entries[0].isIntersecting) {
+                        observer.disconnect();
+                        whenIdle(start);
+                    }
+                }, { rootMargin: '200px' });
+                observer.observe(stage);
+            }
+
+            if (document.readyState === 'complete') schedule();
+            else window.addEventListener('load', schedule, { once: true });
+        })();
+
         // Per-digit OTP boxes: keeps the underlying hidden input (read by the
         // existing verify/reset logic) in sync with each visible 1-char box.
         (function() {
@@ -2977,11 +3530,23 @@ $aboutPoints = [
 
                 function syncHidden() {
                     hiddenInput.value = boxes.map(function(b) { return b.value; }).join('');
+                    hiddenInput.dispatchEvent(new CustomEvent('otp-change'));
                 }
 
                 boxes.forEach(function(box, idx) {
                     box.addEventListener('input', function() {
-                        box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+                        const digits = box.value.replace(/[^0-9]/g, '');
+                        // Phone autofill (autocomplete="one-time-code") drops the whole code into one box.
+                        if (digits.length > 1) {
+                            digits.split('').slice(0, boxes.length - idx).forEach(function(ch, i) {
+                                boxes[idx + i].value = ch;
+                            });
+                            syncHidden();
+                            const nextEmpty = boxes.findIndex(function(b) { return !b.value; });
+                            boxes[nextEmpty === -1 ? boxes.length - 1 : nextEmpty].focus();
+                            return;
+                        }
+                        box.value = digits;
                         syncHidden();
                         if (box.value && idx < boxes.length - 1) {
                             boxes[idx + 1].focus();
