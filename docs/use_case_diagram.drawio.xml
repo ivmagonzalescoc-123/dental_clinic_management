@@ -1,12 +1,12 @@
 <mxfile host="app.diagrams.net" agent="Claude Code" version="24.0.0" type="device">
   <diagram id="usecase1" name="Use Case Diagram">
-    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="3000" math="0" shadow="0">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="3940" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
         <mxCell id="boundary" value="Dental Clinic Management System" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=center;fontSize=14;fontStyle=1;fillColor=none;strokeColor=#000000;spacingTop=10;" vertex="1" parent="1">
-          <mxGeometry x="550" y="40" width="380" height="3680" as="geometry" />
+          <mxGeometry x="550" y="40" width="380" height="3860" as="geometry" />
         </mxCell>
 
         <mxCell id="actAdmin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=12;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
@@ -149,6 +149,14 @@
         <mxCell id="uc40" value="Verify Bot Check (Cloudflare Turnstile)" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
           <mxGeometry x="570" y="3590" width="340" height="60" as="geometry" />
         </mxCell>
+        <mxCell id="uc41" value="Print Treatment Estimate" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3680" width="340" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc42" value="Remember Me (Stay Signed In)" style="ellipse;whiteSpace=wrap;html=1;fontSize=10;dashed=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="570" y="3770" width="340" height="60" as="geometry" />
+        </mxCell>
+
 
         <mxCell id="e_a_uc1" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_a_uc2" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actAdmin" target="uc2"><mxGeometry relative="1" as="geometry" /></mxCell>
@@ -215,6 +223,10 @@
         <mxCell id="e_ext_email" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc32" target="uc4"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_ext_turnstile" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc40" target="uc1"><mxGeometry relative="1" as="geometry" /></mxCell>
         <mxCell id="e_inc_gmail" value="&lt;&lt;include&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;" edge="1" parent="1" source="uc24" target="uc39"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e_d_uc41" style="endArrow=none;html=1;fontSize=9;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actDoctor" target="uc41"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_s_uc41" style="endArrow=none;html=1;fontSize=9;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="actSecretary" target="uc41"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e_ext_remember" value="&lt;&lt;extend&gt;&gt;" style="endArrow=open;endFill=0;dashed=1;html=1;fontSize=9;edgeStyle=orthogonalEdgeStyle;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="uc42" target="uc1"><mxGeometry x="-0.97" relative="1" as="geometry"><mxPoint x="45" y="0" as="offset" /><Array as="points"><mxPoint x="920" y="3800" /><mxPoint x="920" y="110" /></Array></mxGeometry></mxCell>
 
       </root>
     </mxGraphModel>

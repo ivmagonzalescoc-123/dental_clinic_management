@@ -68,7 +68,7 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Patient Modules&#xa;Dashboard, Appointments, Appointment&#xa;Confirmation, Clinic Records, Billing View,&#xa;Transactions, Services, Notifications,&#xa;Profile, Settings" vertex="1">
           <mxGeometry height="165" width="200" x="1100" y="350" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=8;fillColor=#e1d5e7;strokeColor=#9673a6;" value="config/: session_check.php (role-based access control &amp; idle timeout), security.php, env.php (.env loader), billing_helper, email_templates, followup_helper, idempotency, odontogram_helper, profiling_helper, reminders_helper, system_logs_helper, workflow_notifications  |  includes/: header (clock/search), notifications dropdown, profile dropdown/photo upload, password field" vertex="1">
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-22" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=8;fillColor=#e1d5e7;strokeColor=#9673a6;" value="config/: session_check.php (role-based access control &amp; idle timeout), security.php, env.php (.env loader), billing_helper, email_templates, followup_helper, idempotency, odontogram_helper, profiling_helper, reminders_helper, system_logs_helper, workflow_notifications, treatment_plan_helpers, remember_me.php (persistent login tokens), security_headers.php (CSP / HSTS), asset_helpers (cache busting)  |  includes/: header (clock/search), notifications dropdown, profile dropdown/photo upload, password field" vertex="1">
           <mxGeometry height="60" width="1240" x="60" y="590" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Auth API&lt;div&gt;&lt;br&gt;login_api (+ Cloudflare Turnstile check),&lt;br&gt;logout_api, forgot/reset_password,&lt;br&gt;change_password_api, google_oauth_api,&lt;br&gt;update_profile_api, upload_profile_image_api,&lt;br&gt;session_ping&lt;/div&gt;" vertex="1">
@@ -101,7 +101,7 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-32" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Users &amp;amp; Contact API&lt;div&gt;&lt;br&gt;user management,&lt;br&gt;contact messages&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="200" x="1100" y="800" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Users/Auth&#xa;users, role,&#xa;password_resets,&#xa;user_logs, rate_limit_hits" vertex="1">
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-33" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Users/Auth&#xa;users, role,&#xa;password_resets,&#xa;user_logs, rate_limit_hits,&#xa;auth_remember_tokens" vertex="1">
           <mxGeometry height="150" width="170" x="60" y="1055" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-34" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Patients&#xa;patients, patient_logs,&#xa;patient_notifications,&#xa;patient_profiling,&#xa;patient_schedules, patient_feedback" vertex="1">
@@ -110,7 +110,7 @@
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-35" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Appointments/Scheduling&#xa;appointments, appointment_doctor_notes,&#xa;appointment_media, appointment_reschedule_requests,&#xa;bookings, timeslot, timeslot_service,&#xa;doctor_availability, doctor_leaves" vertex="1">
           <mxGeometry height="150" width="180" x="420" y="1055" as="geometry" />
         </mxCell>
-        <mxCell id="JLcDgtsmxZjL6ryiYy6h-36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Clinical/EHR&#xa;clinical_records, clinical_record_images,&#xa;clinical_record_services, clinical_findings,&#xa;treatment_plans, treatment_materials, prescriptions,&#xa;doctor_prescription_profiles,&#xa;tooth, tooth_status, tooth_status_type" vertex="1">
+        <mxCell id="JLcDgtsmxZjL6ryiYy6h-36" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Clinical/EHR&#xa;clinical_records, clinical_record_images,&#xa;clinical_record_services, clinical_findings,&#xa;treatment_plans, treatment_materials, prescriptions,&#xa;doctor_prescription_profiles,&#xa;tooth, tooth_status, tooth_status_type,&#xa;patient_treatment_plan_items" vertex="1">
           <mxGeometry height="165" width="200" x="600" y="1055" as="geometry" />
         </mxCell>
         <mxCell id="JLcDgtsmxZjL6ryiYy6h-37" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=9;fillColor=#b0e3e6;strokeColor=#0b8080;" value="Billing&#xa;billing, billing_line_items,&#xa;billing_installments,&#xa;billing_installment_terms,&#xa;invoices, payments" vertex="1">
@@ -139,6 +139,9 @@
         </mxCell>
         <mxCell id="odo-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Odontogram Viewer (shared)&#xa;odontogram/ — 2D/3D hybrid tooth&#xa;chart embedded via iframe +&#xa;postMessage; client-cached 1yr,&#xa;loaded only on odontogram click" vertex="1">
           <mxGeometry height="165" width="220" x="60" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="tp-api-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Treatment Plan API&lt;div&gt;&lt;br&gt;list, save (phased items),&lt;br&gt;print_estimate&lt;/div&gt;" vertex="1">
+          <mxGeometry height="70" width="220" x="580" y="890" as="geometry" />
         </mxCell>
         <mxCell id="rev-api-1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fontSize=10;align=left;spacingLeft=6;fillColor=#fff2cc;strokeColor=#d6b656;" value="Reviews/Feedback API&lt;div&gt;&lt;br&gt;submit_feedback,&lt;br&gt;admin feature/unfeature reviews&lt;/div&gt;" vertex="1">
           <mxGeometry height="70" width="220" x="60" y="890" as="geometry" />
