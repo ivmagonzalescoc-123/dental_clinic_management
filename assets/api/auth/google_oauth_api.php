@@ -35,13 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $input = security_json_input();
 $accessToken = trim((string)($input['access_token'] ?? ''));
-$emailFromClient = strtolower(trim((string)($input['email'] ?? '')));
-$nameFromClient = security_clean_string($input['name'] ?? '', 200);
-$firstNameFromClient = security_clean_string($input['given_name'] ?? '', 100);
-$lastNameFromClient = security_clean_string($input['family_name'] ?? '', 100);
-$pictureFromClient = security_clean_string($input['picture'] ?? '', 500);
-$subFromClient = trim((string)($input['sub'] ?? ''));
 $rememberMe = !empty($input['remember']);
+// Identity (email, sub) is taken ONLY from Google's verified response below - never
+// from the request body, which the browser (or an attacker) fully controls.
 
 if ($accessToken === '') {
     http_response_code(400);
@@ -49,12 +45,12 @@ if ($accessToken === '') {
     exit;
 }
 
-// Verify access token via Google's userinfo endpoint
-function google_verify_access_token(string $accessToken): ?array
+/**
+ * GET a Google endpoint and decode the JSON body.
+ * Returns ['status' => int, 'data' => ?array, 'error' => string].
+ */
+function google_http_get_json(string $url, array $headers = []): array
 {
-    $url = 'https://www.googleapis.com/oauth2/v3/userinfo';
-    $headers = ['Authorization: Bearer ' . $accessToken];
-
     if (function_exists('curl_init')) {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -64,17 +60,73 @@ function google_verify_access_token(string $accessToken): ?array
             CURLOPT_HTTPHEADER     => $headers,
         ]);
         $body = curl_exec($ch);
-        $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
         curl_close($ch);
-        if ($body !== false && $status === 200) {
-            return json_decode($body, true) ?: null;
+        if ($body !== false) {
+            return ['status' => $status, 'data' => json_decode((string)$body, true) ?: null, 'error' => ''];
         }
+        // cURL itself failed (DNS, TLS, blocked outbound) - try streams before giving up.
+        $curlError = $err;
     }
 
-    $opts = ['http' => ['timeout' => 10, 'header' => implode("\r\n", $headers)]];
-    $ctx = stream_context_create($opts);
+    $ctx = stream_context_create(['http' => [
+        'timeout' => 10,
+        'ignore_errors' => true,
+        'header' => implode("\r\n", $headers),
+    ]]);
     $body = @file_get_contents($url, false, $ctx);
-    return ($body !== false) ? (json_decode($body, true) ?: null) : null;
+    if ($body === false) {
+        return ['status' => 0, 'data' => null, 'error' => $curlError ?? 'request failed'];
+    }
+    $status = 0;
+    foreach ($http_response_header ?? [] as $h) {
+        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $h, $m)) $status = (int)$m[1];
+    }
+    return ['status' => $status, 'data' => json_decode($body, true) ?: null, 'error' => ''];
+}
+
+/**
+ * Verify the access token with Google and return the signed-in identity, or null.
+ * tokeninfo proves the token is genuine, unexpired and was issued to THIS app's
+ * client ID (so a token obtained by some other site can't be replayed here);
+ * userinfo then supplies the profile fields.
+ */
+function google_verify_access_token(string $accessToken, string $clientId, ?string &$reason = null): ?array
+{
+    $info = google_http_get_json('https://oauth2.googleapis.com/tokeninfo?access_token=' . rawurlencode($accessToken));
+    if ($info['status'] === 0) {
+        $reason = 'Could not reach Google to verify sign-in (' . $info['error'] . ')';
+        return null;
+    }
+    $tok = $info['data'];
+    if ($info['status'] !== 200 || !is_array($tok) || isset($tok['error']) || isset($tok['error_description'])) {
+        $reason = 'Google rejected the sign-in token';
+        return null;
+    }
+    $aud = (string)($tok['aud'] ?? $tok['azp'] ?? '');
+    if ($clientId === '' || !hash_equals($clientId, $aud)) {
+        $reason = 'Sign-in token was not issued for this site';
+        return null;
+    }
+
+    $sub = trim((string)($tok['sub'] ?? ''));
+    $email = strtolower(trim((string)($tok['email'] ?? '')));
+    $verified = ($tok['email_verified'] ?? false) === true || ($tok['email_verified'] ?? '') === 'true';
+
+    $profile = google_http_get_json('https://www.googleapis.com/oauth2/v3/userinfo', ['Authorization: Bearer ' . $accessToken]);
+    $p = ($profile['status'] === 200 && is_array($profile['data'])) ? $profile['data'] : [];
+    // Profile must describe the same account the token belongs to.
+    if ($p && trim((string)($p['sub'] ?? '')) !== $sub) {
+        $p = [];
+    }
+
+    return [
+        'sub'            => $sub,
+        'email'          => $email,
+        'email_verified' => $verified,
+        'picture'        => security_clean_string($p['picture'] ?? '', 500),
+    ];
 }
 
 // Record a patient login row
@@ -108,37 +160,21 @@ function google_record_patient_login(mysqli $conn, int $patientId): ?int
     return $insertId > 0 ? $insertId : null;
 }
 
-$tokenData = google_verify_access_token($accessToken);
-
-// Use verified data from Google, fall back to client-sent data
-$googleId = '';
-$email = '';
-$firstName = '';
-$lastName = '';
-$fullName = '';
-$picture = '';
-$emailVerified = false;
-
-if (is_array($tokenData) && !isset($tokenData['error'])) {
-    $googleId = trim((string)($tokenData['sub'] ?? ''));
-    $email = strtolower(trim((string)($tokenData['email'] ?? '')));
-    $emailVerified = ($tokenData['email_verified'] ?? false) === true || ($tokenData['email_verified'] ?? '') === 'true';
-    $firstName = security_clean_string($tokenData['given_name'] ?? '', 100);
-    $lastName = security_clean_string($tokenData['family_name'] ?? '', 100);
-    $fullName = security_clean_string($tokenData['name'] ?? '', 200);
-    $picture = security_clean_string($tokenData['picture'] ?? '', 500);
+// No fallback to browser-sent data: if Google can't confirm the token, sign-in fails.
+// (A fallback here let anyone log in as any patient by posting their email.)
+$verifyReason = '';
+$identity = google_verify_access_token($accessToken, (string)env('GOOGLE_CLIENT_ID', ''), $verifyReason);
+if ($identity === null) {
+    error_log('Google sign-in verification failed: ' . $verifyReason);
+    // The reason is safe to show (no account data) and tells staff what to fix.
+    echo json_encode(['success' => false, 'message' => 'We could not verify your Google sign-in: ' . $verifyReason . '.']);
+    exit;
 }
 
-// Fall back to client-sent data if Google verification failed
-if ($email === '' && $emailFromClient !== '') {
-    $email = $emailFromClient;
-    $firstName = $firstName ?: $firstNameFromClient;
-    $lastName = $lastName ?: $lastNameFromClient;
-    $fullName = $fullName ?: $nameFromClient;
-    $picture = $picture ?: $pictureFromClient;
-    $googleId = $googleId ?: $subFromClient;
-    $emailVerified = true;
-}
+$googleId = $identity['sub'];
+$email = $identity['email'];
+$emailVerified = $identity['email_verified'];
+$picture = $identity['picture'];
 
 if ($googleId === '' || $email === '') {
     echo json_encode(['success' => false, 'message' => 'Could not retrieve your Google account information. Please try again or contact the clinic.']);

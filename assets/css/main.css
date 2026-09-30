@@ -103,9 +103,8 @@ body {
 #header .logo img {
     width: 36px;
     height: 36px;
-    border-radius: 50%;
+    object-fit: contain;
     margin-right: 10px;
-    box-shadow: 0 2px 8px rgba(27, 122, 163, 0.15);
 }
 
 #header .logo span {

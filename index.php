@@ -2759,31 +2759,29 @@ $aboutPoints = [
                 return;
             }
             setAlert('Signing in with Google...', 'info');
-            fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { 'Authorization': 'Bearer ' + response.access_token }
+            // Only the token is sent: the server verifies it with Google and reads the
+            // email from Google itself. (No browser-side call to googleapis.com, which
+            // the site's Content-Security-Policy connect-src does not allow.)
+            fetch('assets/api/auth/google_oauth_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    access_token: response.access_token,
+                    remember: !!document.getElementById('login-remember')?.checked
+                })
             })
-            .then(function(r) { return r.json(); })
-            .then(function(userInfo) {
-                if (userInfo.error) {
-                    setAlert('Google sign-in failed: ' + (userInfo.error_description || userInfo.error), 'error');
-                    return null;
-                }
-                return fetch('assets/api/auth/google_oauth_api.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        access_token: response.access_token,
-                        remember: !!document.getElementById('login-remember')?.checked,
-                        email: userInfo.email || '',
-                        name: userInfo.name || '',
-                        given_name: userInfo.given_name || '',
-                        family_name: userInfo.family_name || '',
-                        picture: userInfo.picture || '',
-                        sub: userInfo.sub || ''
-                    })
+            .then(function(r) {
+                if (!r) return null;
+                // Surface non-JSON replies (PHP error, host challenge page) instead of a vague failure.
+                return r.text().then(function(text) {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('Google sign-in: unexpected server reply', r.status, text.slice(0, 500));
+                        return { success: false, message: 'Google sign-in failed: the server returned an unexpected response (HTTP ' + r.status + ').' };
+                    }
                 });
             })
-            .then(function(r) { return r ? r.json() : null; })
             .then(function(data) {
                 if (!data) return;
                 if (data.success) {
