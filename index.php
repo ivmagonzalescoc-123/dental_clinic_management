@@ -112,8 +112,14 @@ $aboutPoints = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 1998.">
     <title>Azucena's Dental Clinic | Home</title>
-    <link rel="icon" type="image/png" href="<?= asset_url('assets/img/clinic-logo.png') ?>">
-    <link rel="apple-touch-icon" href="<?= asset_url('assets/img/clinic-logo.png') ?>">
+    <!-- Main address for search engines (also collapses ?i=1 and non-www variants). -->
+    <link rel="canonical" href="https://www.azucenaclinic.online/">
+    <!-- Square icons in multiples of 48px, as Google Search requires for the site icon in results. -->
+    <link rel="icon" href="favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/png" sizes="48x48" href="<?= asset_url('assets/img/favicon-48.png') ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= asset_url('assets/img/favicon-96.png') ?>">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?= asset_url('assets/img/favicon-192.png') ?>">
+    <link rel="apple-touch-icon" href="<?= asset_url('assets/img/favicon-192.png') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">

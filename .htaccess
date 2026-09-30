@@ -19,6 +19,11 @@ Header set X-XSS-Protection "1; mode=block"
 
 RewriteEngine On
 
+# One main address for search engines: send the bare domain to https://www.
+# (in one hop, before the generic HTTPS rule below). Doesn't affect localhost.
+RewriteCond %{HTTP_HOST} ^azucenaclinic\.online$ [NC]
+RewriteRule ^ https://www.azucenaclinic.online%{REQUEST_URI} [L,R=301]
+
 # Force HTTPS on live hosts (skip local XAMPP)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]
