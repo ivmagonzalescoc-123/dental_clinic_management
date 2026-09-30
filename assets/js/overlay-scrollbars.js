@@ -46,6 +46,19 @@
         return isPage(el) ? pageEl() : el;
     }
 
+    /**
+     * False once el is hidden or being hidden - e.g. a modal that just closed. Modals
+     * flip aria-hidden="true" immediately but fade out over a few hundred ms while
+     * keeping their size, so without this their bar lingered until the mouse moved.
+     */
+    function isShown(el) {
+        if (el.closest('[aria-hidden="true"]')) return false;
+        if (typeof el.checkVisibility === 'function') {
+            return el.checkVisibility({ visibilityProperty: true, opacityProperty: true });
+        }
+        return true;
+    }
+
     /** Which axes of el currently overflow and are user-scrollable, or null. */
     function scrollAxes(el) {
         if (!(el instanceof Element) || el.tagName === 'SELECT' || el.hasAttribute('data-native-scrollbar')) return null;
@@ -58,6 +71,7 @@
             y = hs.overflowY !== 'hidden' && bs.overflowY !== 'hidden' && se.scrollHeight > se.clientHeight + 1;
             x = hs.overflowX !== 'hidden' && bs.overflowX !== 'hidden' && se.scrollWidth > se.clientWidth + 1;
         } else {
+            if (!isShown(el)) return null;
             const cs = getComputedStyle(el);
             y = (cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 1;
             x = (cs.overflowX === 'auto' || cs.overflowX === 'scroll') && el.scrollWidth > el.clientWidth + 1;
