@@ -1,0 +1,9 @@
+AddType model/gltf-binary .glb
+
+# Static, versionless model assets shipped with the app — safe to cache long-term
+# so the optimized tooth model set (~2.7MB) only ever downloads once per browser.
+<IfModule mod_headers.c>
+    <FilesMatch "\.glb$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>

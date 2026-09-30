@@ -711,6 +711,29 @@ html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -ap
   display: none;
 }
 
+/* Leaves the single-tooth close-up (also: double-click the tooth or empty space, Esc). */
+.isolation-exit {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(27, 122, 163, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.isolation-exit:hover { background: rgba(27, 122, 163, 1); }
+.isolation-exit:focus-visible { outline: 2px solid #9dd2e6; outline-offset: 2px; }
+.isolation-exit.is-hidden { display: none; }
+
 .isolation-status {
   position: absolute;
   top: 52px;

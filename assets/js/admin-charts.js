@@ -62,6 +62,64 @@
         };
     }
 
+    /** Whole numbers for counts (appointments, patients, bookings). */
+    function formatCount(val) {
+        if (val == null || isNaN(val)) return '';
+        return Math.round(Number(val)).toLocaleString();
+    }
+
+    /** Largest value across a series list; stacked charts are sized by their totals. */
+    function seriesMax(series, stacked) {
+        if (!Array.isArray(series) || !series.length) return 0;
+        if (typeof series[0] === 'number' || series[0] == null) {
+            return Math.max.apply(null, series.map(function (v) { return Number(v) || 0; }).concat([0]));
+        }
+        var lists = series.map(function (s) { return (s && s.data) || []; });
+        var len = Math.max.apply(null, lists.map(function (d) { return d.length; }).concat([0]));
+        var max = 0;
+        for (var i = 0; i < len; i++) {
+            if (stacked) {
+                var sum = 0;
+                lists.forEach(function (d) { sum += Number(d[i]) || 0; });
+                max = Math.max(max, sum);
+            } else {
+                lists.forEach(function (d) { max = Math.max(max, Number(d[i]) || 0); });
+            }
+        }
+        return max;
+    }
+
+    /**
+     * Axis settings for count data: ticks always land on whole numbers (1, 2, 5, 10...
+     * steps) with no duplicates. Rounding the labels alone isn't enough - with a max of 2
+     * ApexCharts steps by 0.5 and the rounded labels repeat ("0, 0, 1, 1, 2").
+     * Use for yaxis on column/line charts and xaxis on horizontal bars.
+     */
+    function countAxis(series, opts) {
+        opts = opts || {};
+        var max = Math.max(0, Math.ceil(seriesMax(series, !!opts.stacked)));
+        var top, ticks;
+        if (max <= 5) {
+            top = Math.max(max, 1);
+            ticks = top;
+        } else {
+            var raw = max / 5;
+            var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+            var norm = raw / mag;
+            var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+            top = Math.ceil(max / step) * step;
+            ticks = Math.round(top / step);
+        }
+        return {
+            min: 0,
+            max: top,
+            tickAmount: ticks,
+            forceNiceScale: false,
+            decimalsInFloat: 0,
+            labels: { formatter: formatCount }
+        };
+    }
+
     function barGradient(colorFrom, colorTo) {
         return {
             type: 'gradient',
@@ -96,11 +154,8 @@
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
-            yaxis: {
-                min: 0,
-                forceNiceScale: true,
-                labels: { formatter: function (v) { return Math.round(v); } }
-            },
+            yaxis: countAxis(values),
+            tooltip: { y: { formatter: formatCount } },
             plotOptions: {
                 bar: {
                     borderRadius: 8,
@@ -128,11 +183,8 @@
                 axisBorder: { show: false },
                 axisTicks: { show: false }
             },
-            yaxis: {
-                min: 0,
-                forceNiceScale: true,
-                labels: { formatter: function (v) { return Math.round(v); } }
-            },
+            yaxis: countAxis([{ data: bookedValues }, { data: completedValues }]),
+            tooltip: { shared: true, intersect: false, y: { formatter: formatCount } },
             colors: ['#94a3b8', '#1b7aa3'],
             plotOptions: {
                 bar: {
@@ -159,10 +211,13 @@
         return enhanceOptions({
             chart: { type: 'bar' },
             series: [{ name: seriesName, data: values }],
-            xaxis: {
-                categories: labels,
-                labels: { style: { fontSize: '11px' } }
-            },
+            // Horizontal bars: the xaxis is the value axis. Counts get whole-number
+            // ticks; money gets compact peso ticks.
+            xaxis: Object.assign(
+                { categories: labels },
+                isMoney ? { labels: { style: { fontSize: '11px' }, formatter: formatCompactMoney } }
+                        : Object.assign(countAxis(values), { labels: { style: { fontSize: '11px' }, formatter: formatCount } })
+            ),
             plotOptions: {
                 bar: {
                     horizontal: true,
@@ -174,12 +229,12 @@
             },
             dataLabels: {
                 enabled: true,
-                formatter: isMoney ? formatMoney : function (val) { return Math.round(val); },
+                formatter: isMoney ? formatMoney : formatCount,
                 style: { fontSize: '11px', fontWeight: 600, colors: ['#fff'] },
                 background: { enabled: false }
             },
             tooltip: {
-                y: { formatter: isMoney ? formatMoney : function (val) { return Math.round(val); } }
+                y: { formatter: isMoney ? formatMoney : formatCount }
             },
             colors: colors,
             legend: { show: false },
@@ -196,7 +251,7 @@
                     xaxis: {
                         labels: {
                             style: { fontSize: '10px' },
-                            formatter: isMoney ? formatCompactMoney : function (val) { return Math.round(val); }
+                            formatter: isMoney ? formatCompactMoney : formatCount
                         }
                     },
                     grid: { padding: { right: 8 } }
@@ -227,7 +282,7 @@
                 style: { fontSize: '11px', fontWeight: 600 }
             },
             tooltip: {
-                y: { formatter: isMoney ? formatMoney : function (val) { return Math.round(val); } }
+                y: { formatter: isMoney ? formatMoney : formatCount }
             },
             plotOptions: {
                 pie: {
@@ -240,7 +295,7 @@
                                 fontSize: '18px',
                                 fontWeight: 700,
                                 color: isDarkTheme() ? '#e2e8f0' : '#1e293b',
-                                formatter: function (val) { return isMoney ? formatMoney(val) : val; }
+                                formatter: function (val) { return isMoney ? formatMoney(val) : formatCount(val); }
                             },
                             total: {
                                 show: true,
@@ -248,7 +303,7 @@
                                 fontSize: '12px',
                                 formatter: function (w) {
                                     var sum = w.globals.seriesTotals.reduce(function (a, b) { return a + b; }, 0);
-                                    return isMoney ? formatMoney(sum) : sum;
+                                    return isMoney ? formatMoney(sum) : formatCount(sum);
                                 }
                             }
                         }
@@ -297,9 +352,7 @@
             legend: { show: false },
             yaxis: {
                 labels: {
-                    formatter: function (val) {
-                        return '₱' + Number(val).toLocaleString();
-                    }
+                    formatter: formatCompactMoney
                 }
             }
         }, 240);
@@ -460,6 +513,10 @@
         buildHorizontalBarOptions: buildHorizontalBarOptions,
         buildDonutOptions: buildDonutOptions,
         buildMoneyBarOptions: buildMoneyBarOptions,
+        countAxis: countAxis,
+        formatCount: formatCount,
+        formatMoney: formatMoney,
+        formatCompactMoney: formatCompactMoney,
         renderNoData: renderNoData,
         mount: mount,
         bindExpandButtons: bindExpandButtons,

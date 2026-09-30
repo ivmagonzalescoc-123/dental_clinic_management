@@ -5,6 +5,9 @@ Per-tooth GLB files (odontogram/models/teeth/)
 Source: DentProSave / 3d-dental-modeling-vaadin-component (Richie Koller)
 URL: https://github.com/richiekoller/3d-dental-modeling-vaadin-component
 Files: maxillary/mandibular incisors, canines, premolars, and molars (12 templates, cloned per FDI type)
+Optimized copies used at runtime: odontogram/models/teeth-lite/ (decimated, 512px textures;
+built with scripts/optimize_odontogram_models.mjs). The landing-page hero tooth
+(assets/models/hero-tooth.bin) is also derived from mandibular_first_molar.glb.
 
 Layout algorithm adapted from the same project (parabolic arch, per-tooth width, open-mouth pivots).
 

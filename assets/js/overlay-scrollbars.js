@@ -8,7 +8,8 @@
  * (e.g. the page), then fades out. Thumbs can be dragged.
  *
  * Desktop (fine pointer) only - touch devices already use overlay scrollbars.
- * Opt out per element with the data-native-scrollbar attribute.
+ * Opt out per element with the data-native-scrollbar attribute; put an element's
+ * vertical bar on its left edge with data-scrollbar-side="left" (e.g. the sidebar).
  */
 (function () {
     'use strict';
@@ -111,18 +112,40 @@
         return right - left >= 24 && bottom - top >= 24 ? { left, top, right, bottom } : null;
     }
 
+    /**
+     * True when something else is painted over el where its bar would sit - e.g. a
+     * second modal (or its backdrop) opened on top of a scrollable modal. The covered
+     * modal is still "shown", so without this its bar lingered until the hide timer ran.
+     */
+    function isCovered(el, rect) {
+        if (isPage(el) || typeof document.elementsFromPoint !== 'function') return false;
+        const x = barOnLeft(el) ? rect.left + INSET + SIZE / 2 : rect.right - INSET - SIZE / 2;
+        const y = (rect.top + rect.bottom) / 2;
+        const hits = document.elementsFromPoint(x, y);
+        for (let i = 0; i < hits.length; i++) {
+            if (hits[i].closest('.ovs-bar')) continue; // our own bars don't count
+            return !el.contains(hits[i]);
+        }
+        return false;
+    }
+
     function isLarge(el, rect) {
         if (isPage(el)) return true;
         const area = (rect.right - rect.left) * (rect.bottom - rect.top);
         return area > LARGE_AREA * root.clientWidth * root.clientHeight;
     }
 
-    function nearEdge(rect, axes) {
+    function barOnLeft(el) {
+        return !isPage(el) && el.getAttribute('data-scrollbar-side') === 'left';
+    }
+
+    function nearEdge(rect, axes, left) {
         if (!rect || !axes) return false;
         const { x, y } = pointer;
         const inX = x >= rect.left && x <= rect.right;
         const inY = y >= rect.top && y <= rect.bottom;
-        return (axes.y && inY && x >= rect.right - EDGE && x <= rect.right)
+        const nearY = left ? x >= rect.left && x <= rect.left + EDGE : x >= rect.right - EDGE && x <= rect.right;
+        return (axes.y && inY && nearY)
             || (axes.x && inX && y >= rect.bottom - EDGE && y <= rect.bottom);
     }
 
@@ -186,7 +209,7 @@
         });
     }
 
-    function placeBar(b, rect, scrollPos, scrollSize, clientSize, both) {
+    function placeBar(b, rect, scrollPos, scrollSize, clientSize, both, left) {
         const vertical = b.axis === 'y';
         const track = (vertical ? rect.bottom - rect.top : rect.right - rect.left) - INSET * 2 - (both ? SIZE : 0);
         const len = Math.min(track, Math.max(MIN_THUMB, track * (clientSize / scrollSize)));
@@ -195,14 +218,15 @@
         const st = b.bar.style;
 
         if (vertical) {
-            st.left = (rect.right - SIZE - INSET) + 'px';
+            st.left = (left ? rect.left + INSET : rect.right - SIZE - INSET) + 'px';
             st.top = (rect.top + INSET) + 'px';
             st.width = SIZE + 'px';
             st.height = track + 'px';
             b.thumb.style.height = len + 'px';
             b.thumb.style.transform = 'translateY(' + pos + 'px)';
         } else {
-            st.left = (rect.left + INSET) + 'px';
+            // Start after a left-side vertical bar so the two don't overlap in the corner.
+            st.left = (rect.left + INSET + (both && left ? SIZE : 0)) + 'px';
             st.top = (rect.bottom - SIZE - INSET) + 'px';
             st.height = SIZE + 'px';
             st.width = track + 'px';
@@ -223,6 +247,12 @@
         s.axes = axes;
         s.rect = rect;
         if (!rect) return false;
+        if (isCovered(el, rect)) {
+            s.rect = null;
+            s.covered = true;
+            return false;
+        }
+        s.covered = false;
 
         // Bars must live inside a fullscreen element to be painted over it.
         const fs = document.fullscreenElement;
@@ -230,15 +260,21 @@
         if (s.v.bar.parentNode !== host) host.append(s.v.bar, s.h.bar);
 
         const both = axes.y && axes.x;
-        if (axes.y) placeBar(s.v, rect, el.scrollTop, el.scrollHeight, el.clientHeight, both);
+        const left = barOnLeft(el);
+        if (axes.y) placeBar(s.v, rect, el.scrollTop, el.scrollHeight, el.clientHeight, both, left);
         else s.v.bar.hidden = true;
-        if (axes.x) placeBar(s.h, rect, el.scrollLeft, el.scrollWidth, el.clientWidth, both);
+        if (axes.x) placeBar(s.h, rect, el.scrollLeft, el.scrollWidth, el.clientWidth, both, left);
         else s.h.bar.hidden = true;
         return true;
     }
 
     function setVisible(s, on) {
         s.visible = on;
+        // Skip the fade when another layer just covered the area, so the bar doesn't
+        // hang over the new modal while it fades.
+        const instant = !on && s.covered;
+        s.v.bar.classList.toggle('is-instant', instant);
+        s.h.bar.classList.toggle('is-instant', instant);
         s.v.bar.classList.toggle('is-visible', on);
         s.h.bar.classList.toggle('is-visible', on);
     }
@@ -247,7 +283,7 @@
         if (drag && drag.s === s) return true;
         if (s.v.thumb.matches(':hover') || s.h.thumb.matches(':hover')) return true;
         if (s.el === hovered && s.rect && !isLarge(s.el, s.rect)) return true;
-        return nearEdge(s.rect, s.axes);
+        return nearEdge(s.rect, s.axes, barOnLeft(s.el));
     }
 
     function scheduleHide(s, delay) {
@@ -298,7 +334,7 @@
         list.forEach(function (item, i) {
             const rect = visibleRect(item.el);
             if (!rect) return;
-            if ((i === 0 && !isLarge(item.el, rect)) || nearEdge(rect, item.axes)) reveal(item.el);
+            if ((i === 0 && !isLarge(item.el, rect)) || nearEdge(rect, item.axes, barOnLeft(item.el))) reveal(item.el);
         });
     }
 

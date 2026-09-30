@@ -286,8 +286,9 @@ if ($sstmt) {
 
 <!-- Clinical Findings Modal — the doctor inputs clinical findings here during their own
      session (Occlusal Classification is what's actually used day-to-day, so it's shown
-     first; Clinical Assessment / Vitals & Lab are optional), pre-filled with whatever the
-     secretary already captured during Create Record if any, plus the doctor's own notes. -->
+     first, with the doctor's own notes right after it; Clinical Assessment / Vitals & Lab
+     are optional), pre-filled with whatever the secretary already captured during Create
+     Record if any. -->
 <div class="modal fade" id="doctorClinicalFindingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
@@ -299,9 +300,13 @@ if ($sstmt) {
                 <div id="doctorFindingsBody">
                     <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
                 </div>
-                <div class="pf-section mb-0 mt-3">
-                    <div class="pf-section__title"><i class="bi bi-journal-medical"></i> Doctor's Notes</div>
-                    <textarea id="doctor_notes" class="form-control form-control-sm" rows="3" placeholder="Notes..." style="font-size:0.82rem;"></textarea>
+                <!-- Parked here while the findings load; placeDoctorNotesSection() moves it to
+                     second place (after Occlusal Classification) once they render. -->
+                <div id="doctorNotesHolder">
+                    <div id="doctorNotesSection" class="pf-section mb-2">
+                        <div class="pf-section__title"><i class="bi bi-journal-medical"></i> Doctor's Notes</div>
+                        <textarea id="doctor_notes" class="form-control form-control-sm" rows="3" placeholder="Notes..." style="font-size:0.82rem;"></textarea>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer py-2">
@@ -1556,6 +1561,29 @@ function renderClinicalFindingsHtml(findings) {
 
 let doctorFindingsApptId = 0;
 
+// Doctor's Notes sits second, right after Occlusal Classification. The section is one
+// persistent element (#doctor_notes is read on save/finish and filled on prefill), so it's
+// moved rather than re-rendered, and parked back in its holder before the findings body is
+// replaced so typed notes aren't lost.
+function parkDoctorNotesSection() {
+    const section = document.getElementById('doctorNotesSection');
+    const holder = document.getElementById('doctorNotesHolder');
+    if (section && holder && section.parentNode !== holder) holder.appendChild(section);
+}
+
+function placeDoctorNotesSection(bodyEl) {
+    const section = document.getElementById('doctorNotesSection');
+    const first = bodyEl && bodyEl.querySelector('.pf-section');
+    if (section && first) first.insertAdjacentElement('afterend', section);
+}
+
+function renderDoctorFindings(bodyEl, findings) {
+    parkDoctorNotesSection();
+    bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
+    placeDoctorNotesSection(bodyEl);
+    if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+}
+
 function openDoctorClinicalFindingsModal() {
     const sel = document.getElementById('queueSelector');
     const apptId = sel ? parseInt(sel.value || document.getElementById('appointment_id_hidden')?.value || '0', 10) : parseInt(document.getElementById('appointment_id_hidden')?.value || '0', 10);
@@ -1569,6 +1597,7 @@ function openDoctorClinicalFindingsModal() {
     const bodyEl = document.getElementById('doctorFindingsBody');
     if (!modalEl || !bodyEl) return;
     const modal = new bootstrap.Modal(modalEl);
+    parkDoctorNotesSection();
     bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
     modal.show();
 
@@ -1576,12 +1605,10 @@ function openDoctorClinicalFindingsModal() {
         .then(r => r.json())
         .then(data => {
             const findings = (data && data.success && data.record) ? (data.record.clinical_findings || {}) : {};
-            bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
-            if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+            renderDoctorFindings(bodyEl, findings);
         })
         .catch(() => {
-            bodyEl.innerHTML = renderClinicalFindingsHtml({});
-            if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+            renderDoctorFindings(bodyEl, {});
         });
 }
 

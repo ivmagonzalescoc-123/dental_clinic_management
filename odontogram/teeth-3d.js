@@ -60,6 +60,44 @@ export function toothTypeFromFdi(fdi) {
   return "molar";
 }
 
+/**
+ * Which way each template's buccal/labial surface faces, as a yaw in degrees
+ * (0 = +Z, 90 = +X). The GLBs keep the orientation they had inside the source jaw
+ * scan (patient's front = +Z, patient's left = +X) and are all LEFT-side teeth, so
+ * premolars and molars face +X rather than +Z. prepareToothTemplate() turns each one
+ * so buccal = +Z, mesial = -X: the frame tooth-surface-3d.js classifies surfaces in.
+ * Right-side teeth (quadrants 1 and 4) are mirrored copies of these.
+ */
+// Measured from the models: labial crown lean (incisors, canines), palatal root vs the
+// buccal root pair and tallest buccal cusp (upper premolar/molars), mesial-distal root
+// axis (lower molars).
+const TEMPLATE_BUCCAL_YAW_DEG = {
+  incisor_upper: 0,
+  canine_upper: 15,
+  premolar_upper: 75,
+  molar1_upper: 70,
+  molar2_upper: 80,
+  molar3_upper: 77,
+  incisor_lower: 0,
+  canine_lower: 15,
+  premolar_lower: 65,
+  molar1_lower: 57,
+  molar2_lower: 84,
+  molar3_lower: 67,
+};
+
+export function templateBuccalYaw(key) {
+  return THREE.MathUtils.degToRad(TEMPLATE_BUCCAL_YAW_DEG[key] ?? 0);
+}
+
+export const TOOTH_MIRROR_NODE = "__toothMirror";
+
+/** Quadrants 1 and 4 are the patient's right side. */
+export function isRightSideTooth(fdi) {
+  const q = Math.floor(parseInt(String(fdi), 10) / 10);
+  return q === 1 || q === 4;
+}
+
 // Tight side-by-side spacing — teeth sit close like a natural arch.
 const ARCH_CONTACT = 0.78;
 const ARCH_WIDTH = 1.38;
@@ -96,11 +134,126 @@ export function buildArchLayout(jaw) {
       z,
       nx,
       rotY,
+      // Yaw of the arch's outward normal here (0 = straight forward).
+      outwardYaw: rawRotY,
       isUpper: isUp,
     });
   }
 
   return positions;
+}
+
+// Arch curve z = -(A u^2 + B u^4), u = 1 at the second-molar centre. Fitted to typical
+// upper-arch landmarks (canine ~17mm out / 9mm back, second molar ~27mm out / 37mm
+// back): a broad rounded front (U shape) with near-straight sides, not a V.
+const ARCH_A = 0.49;
+const ARCH_B = 0.88;
+const archDepth = (u) => ARCH_A * u * u + ARCH_B * u * u * u * u;
+const archSlope = (u) => 2 * ARCH_A * u + 4 * ARCH_B * u * u * u;
+
+/** Typical mesio-distal crown widths (mm) by tooth position 1-8. */
+const CROWN_WIDTH_MM = {
+  upper: [8.5, 6.5, 7.5, 7.0, 6.5, 10.0, 9.0, 8.5],
+  lower: [5.0, 5.5, 7.0, 7.0, 7.0, 11.0, 10.5, 10.0],
+};
+
+export function crownWidthMm(fdi) {
+  const q = Math.floor(parseInt(String(fdi), 10) / 10);
+  const pos = parseInt(String(fdi).slice(-1), 10);
+  return CROWN_WIDTH_MM[q <= 2 ? "upper" : "lower"][pos - 1] ?? 7;
+}
+
+/**
+ * Places teeth edge to edge ALONG the arch curve (by arc length), using each tooth's
+ * mesio-distal crown width, so neighbours touch instead of drifting apart where the
+ * arch runs front to back. `widths` are in the same units as the returned x/z.
+ */
+export function buildAnatomicalArchLayout(jaw, widths) {
+  const isUp = jaw === "upper";
+  const right = isUp ? ["11", "12", "13", "14", "15", "16", "17", "18"] : ["41", "42", "43", "44", "45", "46", "47", "48"];
+  const left = isUp ? ["21", "22", "23", "24", "25", "26", "27", "28"] : ["31", "32", "33", "34", "35", "36", "37", "38"];
+
+  // Arc length from the midline to each tooth's centre on one side.
+  const centreS = [];
+  let s = 0;
+  for (const fdi of right) {
+    const w = widths(fdi);
+    centreS.push(s + w / 2);
+    s += w;
+  }
+  // Scale the unit arch curve so the second molar centre lands at u = 1.
+  const steps = 4000;
+  const xMax = 2.2;
+  const table = [{ x: 0, s: 0 }];
+  for (let i = 1; i <= steps; i++) {
+    const x = (xMax * i) / steps;
+    const prev = table[i - 1];
+    table.push({ x, s: prev.s + Math.hypot(x - prev.x, archDepth(x) - archDepth(prev.x)) });
+  }
+  const sAtUnit = table[Math.round(steps / xMax)].s;
+  const scale = centreS[6] / sAtUnit; // tooth 7 (second molar) centre at x = 1 * scale
+  const xForArc = (arc) => {
+    const target = arc / scale;
+    let lo = 0, hi = table.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (table[mid].s < target) lo = mid; else hi = mid;
+    }
+    const a = table[lo], b = table[hi];
+    return a.x + ((target - a.s) / Math.max(b.s - a.s, 1e-9)) * (b.x - a.x);
+  };
+
+  const halfWidth = xForArc(centreS[7]) * scale || 1;
+  const place = (fdi, arc, side) => {
+    const ux = xForArc(arc);
+    const x = ux * scale * side;
+    const z = -archDepth(ux) * scale;
+    const dzdx = -archSlope(ux) * side; // slope of the arch at this tooth
+    const outwardYaw = Math.atan2(-dzdx, 1.0);
+    const nx = x / halfWidth;
+    return {
+      fdi,
+      x,
+      y: isUp ? 0.7 : -0.7,
+      z,
+      nx,
+      rotY: archRotationForTooth(nx, outwardYaw),
+      outwardYaw,
+      isUpper: isUp,
+    };
+  };
+
+  const positions = [];
+  right.forEach((fdi, i) => positions.push(place(fdi, centreS[i], -1)));
+  left.forEach((fdi, i) => positions.push(place(fdi, centreS[i], 1)));
+  return positions;
+}
+
+/** Mesio-distal crown width of a template (normalized units), measured once and cached. */
+export function templateCrownWidth(tpl, upper) {
+  if (tpl.userData.crownWidth) return tpl.userData.crownWidth;
+  tpl.updateMatrixWorld(true);
+  const pts = [];
+  const v = new THREE.Vector3();
+  tpl.traverse((obj) => {
+    if (!obj.isMesh) return;
+    const pos = obj.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) pts.push(v.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld).clone());
+  });
+  let minY = Infinity, maxY = -Infinity;
+  for (const p of pts) { minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); }
+  const h = maxY - minY;
+  // Crown = occlusal 40% (upper crowns point down, lower crowns up); X is mesio-distal
+  // once the template is normalized to buccal = +Z.
+  let minX = Infinity, maxX = -Infinity;
+  for (const p of pts) {
+    const inCrown = upper ? p.y < minY + h * 0.4 : p.y > maxY - h * 0.4;
+    if (!inCrown) continue;
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+  }
+  tpl.userData.crownWidth = Number.isFinite(maxX - minX) && maxX > minX ? maxX - minX : 0.5;
+  return tpl.userData.crownWidth;
 }
 
 function smoothstep(edge0, edge1, x) {
@@ -130,21 +283,22 @@ function archTiltRadians(fdi, nx = 0) {
   return ((deg * Math.PI) / 180) * sideBlend * side;
 }
 
-/** Match DentProSave GLB placement: models are already jaw-oriented; only arch Y rotation. */
 export function applyNaturalToothOrientation(tooth, pos, { procedural = false } = {}) {
-  const extraRot = archTiltRadians(pos.fdi, pos.nx ?? 0);
   tooth.rotation.order = "YXZ";
 
   if (procedural) {
+    const extraRot = archTiltRadians(pos.fdi, pos.nx ?? 0);
     tooth.rotation.x = pos.isUpper ? 0.08 : -0.08;
     tooth.rotation.y = -pos.rotY + Math.PI / 2 + extraRot;
     tooth.rotation.z = 0;
     return;
   }
 
-  // GLB maxillary/mandibular files are exported with correct crown direction per jaw.
+  // GLB templates are normalized to buccal = +Z (see TEMPLATE_BUCCAL_YAW_DEG), so
+  // turning the tooth to the arch's outward normal puts buccal outside and
+  // lingual/palatal toward the tongue on both sides.
   tooth.rotation.x = 0;
-  tooth.rotation.y = pos.rotY + extraRot;
+  tooth.rotation.y = pos.outwardYaw ?? pos.rotY;
   tooth.rotation.z = 0;
 }
 
@@ -247,7 +401,7 @@ function normalizeMeshMaterials(mesh) {
     : polish(mesh.material);
 }
 
-function prepareToothTemplate(scene) {
+function prepareToothTemplate(scene, key) {
   scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(scene);
   const center = box.getCenter(new THREE.Vector3());
@@ -256,8 +410,17 @@ function prepareToothTemplate(scene) {
   scene.updateMatrixWorld(true);
 
   const maxDim = Math.max(size.x, size.y, size.z, 0.001);
+  // wrapper (unit scale) > mirror (x = -1 for right-side teeth) > orient (buccal -> +Z) > scene.
+  // Both extra nodes sit inside the wrapper, so surface classification still works in
+  // the same units as before (it measures relative to the wrapper).
+  const orient = new THREE.Group();
+  orient.rotation.y = -templateBuccalYaw(key);
+  orient.add(scene);
+  const mirror = new THREE.Group();
+  mirror.name = TOOTH_MIRROR_NODE;
+  mirror.add(orient);
   const wrapper = new THREE.Group();
-  wrapper.add(scene);
+  wrapper.add(mirror);
   wrapper.scale.setScalar(1.0 / maxDim);
 
   scene.traverse((obj) => {
@@ -282,9 +445,33 @@ function parseGltfBuffer(loader, buffer, url) {
   });
 }
 
+async function fetchToothGltf(loader, file, bases) {
+  let lastError = null;
+  for (const base of bases) {
+    const url = new URL(file, base).href;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} for ${file}`);
+      }
+      const buffer = await response.arrayBuffer();
+      return { gltf: await parseGltfBuffer(loader, buffer, url), url };
+    } catch (err) {
+      lastError = err;
+      if (bases.length > 1) console.warn(`[odontogram 3d] ${url} failed, trying next model folder`, err);
+    }
+  }
+  throw lastError || new Error(`No model folder for ${file}`);
+}
+
+/**
+ * `modelsBase` may be one folder or a list tried in order per file
+ * (optimized models first, full-size originals as a fallback).
+ */
 export async function loadToothTemplates(loader, modelsBase, { onProgress } = {}) {
   const templates = new Map();
-  const base = resolveTeethModelsBase(modelsBase);
+  const bases = (Array.isArray(modelsBase) ? modelsBase : [modelsBase]).map(resolveTeethModelsBase);
+  const base = bases[0];
   const entries = Object.entries(TOOTH_FILES);
   const failures = [];
   const total = entries.length;
@@ -302,13 +489,8 @@ export async function loadToothTemplates(loader, modelsBase, { onProgress } = {}
     entries.map(async ([key, file]) => {
       const url = new URL(file, base).href;
       try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status} for ${file}`);
-        }
-        const buffer = await response.arrayBuffer();
-        const gltf = await parseGltfBuffer(loader, buffer, url);
-        templates.set(key, prepareToothTemplate(gltf.scene));
+        const { gltf } = await fetchToothGltf(loader, file, bases);
+        templates.set(key, prepareToothTemplate(gltf.scene, key));
       } catch (err) {
         failures.push({ file, url, message: err?.message || String(err) });
         console.warn(`[odontogram 3d] failed to load ${file} from ${url}`, err);
@@ -350,9 +532,30 @@ export function layoutRealisticArch({
 
   let loadedCount = 0;
 
+  const typeScaleFor = (fdi) => {
+    const type = toothTypeFromFdi(fdi);
+    return type === "molar" ? 1.08 : type === "premolar" ? 0.96 : type === "canine" ? 0.88 : 0.82;
+  };
+  const isUpperFdi = (fdi) => Math.floor(parseInt(String(fdi), 10) / 10) <= 2;
+  // World units per mm, anchored so the upper first molar keeps its previous size.
+  const molarTpl = templates.get("molar1_upper");
+  const unitsPerMm = molarTpl
+    ? (templateCrownWidth(molarTpl, true) * typeScaleFor("16") * layoutScale * 0.64) / crownWidthMm("16")
+    : 0;
+  // Size each GLB tooth so its crown is its typical width (laterals smaller than
+  // centrals, etc.); schematic fallback teeth keep the old per-type scale.
+  const toothScaleFor = (fdi) => {
+    const tpl = templates.get(toothTemplateKey(fdi));
+    if (!tpl || !unitsPerMm) return typeScaleFor(fdi) * layoutScale * 0.64;
+    return (crownWidthMm(fdi) * unitsPerMm) / templateCrownWidth(tpl, isUpperFdi(fdi));
+  };
+  // Crown width in layout units (positions are multiplied by layoutScale below).
+  const archWidthFor = (fdi) => (crownWidthMm(fdi) * unitsPerMm) / layoutScale;
+  const useAnatomicalArch = templates.size > 0 && unitsPerMm > 0;
+
   for (const jaw of ["upper", "lower"]) {
     const parent = jaw === "upper" ? upperPivot : lowerPivot;
-    const positions = buildArchLayout(jaw);
+    const positions = useAnatomicalArch ? buildAnatomicalArchLayout(jaw, archWidthFor) : buildArchLayout(jaw);
 
     for (const pos of positions) {
       const key = toothTemplateKey(pos.fdi);
@@ -361,6 +564,9 @@ export function layoutRealisticArch({
 
       if (tpl) {
         tooth = tpl.clone(true);
+        // Templates are left-side teeth; mirror them for the patient's right.
+        const mirror = tooth.getObjectByName(TOOTH_MIRROR_NODE);
+        if (mirror) mirror.scale.x = isRightSideTooth(pos.fdi) ? -1 : 1;
         isolateToothAssets(tooth);
         tagToothObject(tooth, pos.fdi);
         loadedCount++;
@@ -373,13 +579,10 @@ export function layoutRealisticArch({
 
       tooth.position.set(pos.x * layoutScale, pos.y * layoutScale, pos.z * layoutScale);
 
-      const type = toothTypeFromFdi(pos.fdi);
       const usingGlb = !!tpl;
       applyNaturalToothOrientation(tooth, pos, { procedural: !usingGlb });
 
-      const typeScale =
-        type === "molar" ? 1.08 : type === "premolar" ? 0.96 : type === "canine" ? 0.88 : 0.82;
-      tooth.scale.multiplyScalar(typeScale * layoutScale * 0.64);
+      tooth.scale.multiplyScalar(toothScaleFor(pos.fdi));
 
       parent.add(tooth);
       const fdi = String(pos.fdi);

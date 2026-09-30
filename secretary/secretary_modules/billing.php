@@ -939,10 +939,16 @@ if (!$hasAnyData) {
         colors: ['#1b7aa3'],
         fill: { type: 'solid', opacity: 0 },
         dataLabels: { enabled: false },
-        yaxis: { min: 0, forceNiceScale: true, show: true },
+        // Peso amounts: compact ticks (₱1.5k); the tooltip shows the exact amount.
+        yaxis: { min: 0, forceNiceScale: true, show: true, labels: { formatter: function (v) {
+            var n = Number(v) || 0;
+            if (Math.abs(n) >= 1000000) return '₱' + (n / 1000000).toFixed(n % 1000000 === 0 ? 0 : 1) + 'M';
+            if (Math.abs(n) >= 1000) return '₱' + (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'k';
+            return '₱' + Math.round(n);
+        } } },
         grid: { show: true, strokeDashArray: 4, borderColor: isDark ? '#2f3d52' : '#e9ecef' },
         tooltip: {
-            y: { formatter: function(val) { return '₱' + val.toLocaleString(undefined, {minimumFractionDigits:2}); } }
+            y: { formatter: function(val) { return '₱' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } }
         }
     };
     new ApexCharts(el, opts).render();

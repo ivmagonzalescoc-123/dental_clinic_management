@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../config/asset_helpers.php';
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/dashboard_helpers.php';
 include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/report_trend_helpers.php';
 
 billing_ensure_tables($conn);
 
@@ -323,42 +324,229 @@ if ($svcStmt) {
     $svcStmt->close();
 }
 
-$monthlyTrends = [];
-$monthTrendSql = "
-    SELECT DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
-           DATE_FORMAT(a.appointment_date, '%b %Y') AS month_label,
-           COUNT(*) AS total_appointments,
-           SUM(CASE WHEN a.status IN ('completed','records_complete') THEN 1 ELSE 0 END) AS completed,
-           COUNT(DISTINCT a.patient_id) AS unique_patients
-    FROM appointments a
-    WHERE a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-    GROUP BY month_key, month_label
-    ORDER BY month_key ASC
-";
-$monthTrendRes = $conn->query($monthTrendSql);
-if ($monthTrendRes) {
-    while ($row = $monthTrendRes->fetch_assoc()) {
-        $monthlyTrends[] = $row;
-    }
-}
+// ---- Trend & Predictive (appointments only; loaded only for that tab) ----
+// Forecasts use complete months; the current month is shown as "pace so far".
+$trend = [
+    'months' => [], 'labels' => [], 'booked' => [], 'visits' => [], 'cancelled' => [], 'no_show' => [], 'rescheduled' => [],
+    'new_patients' => [], 'returning_patients' => [],
+    'forecast' => null, 'next_label' => '', 'next_short' => '', 'next_booked' => 0, 'next_clinic_days' => 0,
+    'month_so_far' => 0, 'month_booked_ahead' => 0, 'month_label' => '', 'last_month_total' => 0,
+    'rates' => ['completion' => null, 'no_show' => null, 'cancellation' => null, 'returning' => null],
+    'services' => [], 'service_series' => [], 'service_labels' => [],
+    'peak_days' => [], 'peak_hours' => [],
+];
+if ($reportType === 'trend') {
+    $today = new DateTimeImmutable('today');
+    $trendKeys = trend_complete_month_keys(12, $today);
+    $windowStart = $trendKeys[0] . '-01';
+    $thisMonthStart = $today->modify('first day of this month')->format('Y-m-d');
+    $nextMonth = $today->modify('first day of next month');
+    $nextMonthStart = $nextMonth->format('Y-m-d');
+    $nextMonthEnd = $nextMonth->modify('last day of this month')->format('Y-m-d');
+    $visitList = trend_sql_list(trend_visit_statuses());
+    $openList = trend_sql_list(trend_open_statuses());
 
-$serviceTrends = [];
-$svcTrendSql = "
-    SELECT s.service_name,
-           DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
-           DATE_FORMAT(a.appointment_date, '%b %Y') AS month_label,
-           COUNT(*) AS bookings
-    FROM selected_services ss
-    INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
-    INNER JOIN services s ON s.service_id = ss.service_id
-    WHERE a.appointment_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY s.service_id, s.service_name, month_key, month_label
-    ORDER BY month_key ASC, bookings DESC
-";
-$svcTrendRes = $conn->query($svcTrendSql);
-if ($svcTrendRes) {
-    while ($row = $svcTrendRes->fetch_assoc()) {
-        $serviceTrends[] = $row;
+    // Monthly outcomes for the last 12 complete months. "Booked" leaves out rescheduled
+    // rows (their replacement appointment is counted instead).
+    $byMonth = [];
+    $monthlyStmt = $conn->prepare("
+        SELECT DATE_FORMAT(appointment_date, '%Y-%m') AS month_key,
+               SUM(status <> 'rescheduled') AS booked,
+               SUM(status IN ($visitList)) AS visits,
+               SUM(status = 'cancelled') AS cancelled,
+               SUM(status = 'no_show') AS no_show,
+               SUM(status = 'rescheduled') AS rescheduled
+        FROM appointments
+        WHERE appointment_date >= ? AND appointment_date < ?
+        GROUP BY month_key
+    ");
+    if ($monthlyStmt) {
+        $monthlyStmt->bind_param('ss', $windowStart, $thisMonthStart);
+        $monthlyStmt->execute();
+        $res = $monthlyStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $byMonth[$row['month_key']] = $row;
+        }
+        $monthlyStmt->close();
+    }
+    foreach ($trendKeys as $k) {
+        $trend['months'][] = $k;
+        $trend['labels'][] = date('M Y', strtotime($k . '-01'));
+        foreach (['booked', 'visits', 'cancelled', 'no_show', 'rescheduled'] as $f) {
+            $trend[$f][] = (int)($byMonth[$k][$f] ?? 0);
+        }
+    }
+    $trend['forecast'] = trend_forecast($trend['booked']);
+    $trend['last_month_total'] = (int)end($trend['booked']);
+
+    // New vs returning patients per month: "new" = the month of their first real visit.
+    $patientMonths = [];
+    $patientStmt = $conn->prepare("
+        SELECT DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
+               COUNT(DISTINCT CASE WHEN f.first_month = DATE_FORMAT(a.appointment_date, '%Y-%m') THEN a.patient_id END) AS new_patients,
+               COUNT(DISTINCT CASE WHEN f.first_month < DATE_FORMAT(a.appointment_date, '%Y-%m') THEN a.patient_id END) AS returning_patients
+        FROM appointments a
+        INNER JOIN (
+            SELECT patient_id, DATE_FORMAT(MIN(appointment_date), '%Y-%m') AS first_month
+            FROM appointments
+            WHERE status NOT IN ('cancelled', 'rescheduled')
+            GROUP BY patient_id
+        ) f ON f.patient_id = a.patient_id
+        WHERE a.status NOT IN ('cancelled', 'rescheduled')
+          AND a.appointment_date >= ? AND a.appointment_date < ?
+        GROUP BY month_key
+    ");
+    if ($patientStmt) {
+        $patientStmt->bind_param('ss', $windowStart, $thisMonthStart);
+        $patientStmt->execute();
+        $res = $patientStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $patientMonths[$row['month_key']] = $row;
+        }
+        $patientStmt->close();
+    }
+    foreach ($trendKeys as $k) {
+        $trend['new_patients'][] = (int)($patientMonths[$k]['new_patients'] ?? 0);
+        $trend['returning_patients'][] = (int)($patientMonths[$k]['returning_patients'] ?? 0);
+    }
+
+    // This month so far + what's already on the books (this month and next).
+    $paceStmt = $conn->prepare("
+        SELECT
+            SUM(appointment_date >= ? AND appointment_date <= CURDATE() AND status <> 'rescheduled') AS so_far,
+            SUM(appointment_date > CURDATE() AND appointment_date < ? AND status IN ($openList)) AS ahead,
+            SUM(appointment_date >= ? AND appointment_date <= ? AND status IN ($openList)) AS next_booked
+        FROM appointments
+        WHERE appointment_date >= ? AND appointment_date <= ?
+    ");
+    if ($paceStmt) {
+        $paceStmt->bind_param('ssssss', $thisMonthStart, $nextMonthStart, $nextMonthStart, $nextMonthEnd, $thisMonthStart, $nextMonthEnd);
+        $paceStmt->execute();
+        $pace = $paceStmt->get_result()->fetch_assoc() ?: [];
+        $paceStmt->close();
+        $trend['month_so_far'] = (int)($pace['so_far'] ?? 0);
+        $trend['month_booked_ahead'] = (int)($pace['ahead'] ?? 0);
+        $trend['next_booked'] = (int)($pace['next_booked'] ?? 0);
+    }
+    $trend['month_label'] = $today->format('F Y');
+    $trend['next_label'] = $nextMonth->format('F Y');
+    $trend['next_short'] = $nextMonth->format('M Y');
+    $trend['next_clinic_days'] = trend_clinic_days_in_month($nextMonth);
+    // Never forecast below what's already booked for next month.
+    if ($trend['forecast'] && $trend['next_booked'] > $trend['forecast']['value']) {
+        $trend['forecast']['value'] = $trend['next_booked'];
+        $trend['forecast']['low'] = max($trend['forecast']['low'], $trend['next_booked']);
+        $trend['forecast']['high'] = max($trend['forecast']['high'], $trend['next_booked']);
+    }
+
+    // Outcome rates over the last 3 complete months.
+    $recentVisits = array_sum(array_slice($trend['visits'], -3));
+    $recentCancelled = array_sum(array_slice($trend['cancelled'], -3));
+    $recentNoShow = array_sum(array_slice($trend['no_show'], -3));
+    $resolved = $recentVisits + $recentCancelled + $recentNoShow;
+    $trend['rates']['completion'] = trend_rate($recentVisits, $resolved);
+    $trend['rates']['no_show'] = trend_rate($recentNoShow, $resolved);
+    $trend['rates']['cancellation'] = trend_rate($recentCancelled, $resolved);
+    $recentNew = array_sum(array_slice($trend['new_patients'], -3));
+    $recentReturning = array_sum(array_slice($trend['returning_patients'], -3));
+    $trend['rates']['returning'] = trend_rate($recentReturning, $recentNew + $recentReturning);
+
+    // Service demand: bookings per service over the last 6 complete months, plus what's
+    // already booked for next month.
+    $svcKeys = array_slice($trendKeys, -6);
+    $svcStart = $svcKeys[0] . '-01';
+    $svcMonths = [];
+    $svcNames = [];
+    $svcStmt = $conn->prepare("
+        SELECT s.service_id, s.service_name,
+               DATE_FORMAT(a.appointment_date, '%Y-%m') AS month_key,
+               COUNT(*) AS bookings
+        FROM selected_services ss
+        INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
+        INNER JOIN services s ON s.service_id = ss.service_id
+        WHERE a.status <> 'rescheduled' AND a.appointment_date >= ? AND a.appointment_date < ?
+        GROUP BY s.service_id, s.service_name, month_key
+    ");
+    if ($svcStmt) {
+        $svcStmt->bind_param('ss', $svcStart, $thisMonthStart);
+        $svcStmt->execute();
+        $res = $svcStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $sid = (int)$row['service_id'];
+            $svcNames[$sid] = (string)$row['service_name'];
+            $svcMonths[$sid][$row['month_key']] = (int)$row['bookings'];
+        }
+        $svcStmt->close();
+    }
+    $svcBookedNext = [];
+    $svcNextStmt = $conn->prepare("
+        SELECT ss.service_id, COUNT(*) AS bookings
+        FROM selected_services ss
+        INNER JOIN appointments a ON a.appointment_id = ss.appointment_id
+        WHERE a.status IN ($openList) AND a.appointment_date >= ? AND a.appointment_date <= ?
+        GROUP BY ss.service_id
+    ");
+    if ($svcNextStmt) {
+        $svcNextStmt->bind_param('ss', $nextMonthStart, $nextMonthEnd);
+        $svcNextStmt->execute();
+        $res = $svcNextStmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $svcBookedNext[(int)$row['service_id']] = (int)$row['bookings'];
+        }
+        $svcNextStmt->close();
+    }
+    foreach ($svcNames as $sid => $name) {
+        $series = trend_fill($svcKeys, $svcMonths[$sid] ?? []);
+        $total = array_sum($series);
+        if ($total < 2) continue; // too few bookings to say anything
+        $f = trend_forecast($series);
+        $booked = $svcBookedNext[$sid] ?? 0;
+        $trend['services'][] = [
+            'name' => $name,
+            'series' => $series,
+            'total' => $total,
+            'last' => (int)end($series),
+            'forecast' => max($f ? $f['value'] : 0, $booked),
+            'booked' => $booked,
+            'direction' => trend_direction($series),
+        ];
+    }
+    usort($trend['services'], fn($a, $b) => [$b['forecast'], $b['total']] <=> [$a['forecast'], $a['total']]);
+    // Chart: the 4 busiest services (colours stay distinct and readable).
+    foreach (array_slice($trend['services'], 0, 4) as $svc) {
+        $trend['service_series'][] = ['name' => $svc['name'], 'data' => $svc['series']];
+    }
+    $trend['service_labels'] = array_map(fn($k) => date('M Y', strtotime($k . '-01')), $svcKeys);
+
+    // Busiest days / hours over the last 3 complete months of real visits.
+    $peakStart = $trendKeys[count($trendKeys) - 3] . '-01';
+    $dayStmt = $conn->prepare("
+        SELECT DAYNAME(appointment_date) AS day_name, COUNT(*) AS visits
+        FROM appointments
+        WHERE status IN ($visitList) AND appointment_date >= ? AND appointment_date < ?
+        GROUP BY DAYOFWEEK(appointment_date), day_name
+        ORDER BY visits DESC
+    ");
+    if ($dayStmt) {
+        $dayStmt->bind_param('ss', $peakStart, $thisMonthStart);
+        $dayStmt->execute();
+        $trend['peak_days'] = $dayStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $dayStmt->close();
+    }
+    $hourStmt = $conn->prepare("
+        SELECT HOUR(ts.start_time) AS hour_of_day, COUNT(*) AS visits
+        FROM appointments a
+        INNER JOIN timeslot ts ON ts.timeslot_id = a.timeslot_id
+        WHERE a.status IN ($visitList) AND a.appointment_date >= ? AND a.appointment_date < ?
+        GROUP BY hour_of_day
+        ORDER BY visits DESC
+        LIMIT 3
+    ");
+    if ($hourStmt) {
+        $hourStmt->bind_param('ss', $peakStart, $thisMonthStart);
+        $hourStmt->execute();
+        $trend['peak_hours'] = $hourStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $hourStmt->close();
     }
 }
 
@@ -566,40 +754,6 @@ foreach ($paymentMethods as $row) {
     $payMethodValues[] = (float)$row['total'];
 }
 
-$monthlyTrendLabels = [];
-$monthlyTrendAppts = [];
-$monthlyTrendCompleted = [];
-foreach ($monthlyTrends as $row) {
-    $monthlyTrendLabels[] = (string)$row['month_label'];
-    $monthlyTrendAppts[] = (int)$row['total_appointments'];
-    $monthlyTrendCompleted[] = (int)$row['completed'];
-}
-
-$serviceTrendSeries = [];
-$svcTrendMap = [];
-foreach ($serviceTrends as $row) {
-    $svcName = (string)$row['service_name'];
-    $monthKey = (string)$row['month_key'];
-    if (!isset($svcTrendMap[$svcName])) {
-        $svcTrendMap[$svcName] = [];
-    }
-    $svcTrendMap[$svcName][$monthKey] = (int)$row['bookings'];
-}
-$allTrendMonths = array_unique(array_column($serviceTrends, 'month_key'));
-sort($allTrendMonths);
-$topTrendServices = array_slice(array_keys($svcTrendMap), 0, 5);
-foreach ($topTrendServices as $svcName) {
-    $data = [];
-    foreach ($allTrendMonths as $m) {
-        $data[] = $svcTrendMap[$svcName][$m] ?? 0;
-    }
-    $serviceTrendSeries[] = ['name' => $svcName, 'data' => $data];
-}
-$serviceTrendMonthLabels = [];
-foreach ($allTrendMonths as $m) {
-    $serviceTrendMonthLabels[] = date('M Y', strtotime($m . '-01'));
-}
-
 $peakDayLabels = [];
 $peakDayValues = [];
 foreach ($peakDays as $row) {
@@ -618,40 +772,6 @@ foreach ($peakHours as $row) {
 $avgRevenuePerPatient = $patientsSeen > 0 ? round($totalCollected / $patientsSeen, 2) : 0;
 $avgRevenuePerAppointment = $completedVisits > 0 ? round($totalCollected / $completedVisits, 2) : 0;
 $collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100) : 0;
-
-$nextMonthPredicted = 0;
-if (count($monthlyTrends) >= 2) {
-    $recentMonths = array_slice($monthlyTrends, -3);
-    $avgGrowth = 0;
-    for ($i = 1; $i < count($recentMonths); $i++) {
-        $prev = (int)$recentMonths[$i - 1]['total_appointments'];
-        $curr = (int)$recentMonths[$i]['total_appointments'];
-        if ($prev > 0) {
-            $avgGrowth += ($curr - $prev) / $prev;
-        }
-    }
-    $avgGrowth = $avgGrowth / max(1, count($recentMonths) - 1);
-    $lastMonth = (int)end($monthlyTrends)['total_appointments'];
-    $nextMonthPredicted = max(0, round($lastMonth * (1 + $avgGrowth)));
-}
-
-$topServicesPredicted = [];
-if (!empty($serviceTrendSeries)) {
-    foreach ($serviceTrendSeries as $series) {
-        $data = $series['data'];
-        if (count($data) >= 2) {
-            $recent = array_slice($data, -2);
-            $growth = $recent[0] > 0 ? ($recent[1] - $recent[0]) / $recent[0] : 0;
-            $topServicesPredicted[] = [
-                'service' => $series['name'],
-                'current' => end($data),
-                'predicted' => max(0, round(end($data) * (1 + $growth))),
-                'growth' => round($growth * 100, 1),
-            ];
-        }
-    }
-    usort($topServicesPredicted, fn($a, $b) => $b['predicted'] <=> $a['predicted']);
-}
 
 $doctorActivity = [];
 $docSql = "
@@ -1254,39 +1374,76 @@ $reportNavQuery = array_merge(
         </div>
     </div>
 
-    <?php elseif ($reportType === 'trend'): ?>
+    <?php elseif ($reportType === 'trend'):
+        $fc = $trend['forecast'];
+        $monthProjected = $trend['month_so_far'] + $trend['month_booked_ahead'];
+        $perClinicDay = ($fc && $trend['next_clinic_days'] > 0) ? $fc['value'] / $trend['next_clinic_days'] : null;
+        $hasHistory = array_sum($trend['booked']) > 0;
+        $dirMeta = [
+            'rising' => ['bi-arrow-up-right', 'text-success', 'Rising'],
+            'falling' => ['bi-arrow-down-right', 'text-danger', 'Falling'],
+            'stable' => ['bi-dash-lg', 'text-muted', 'Steady'],
+            'new' => ['bi-stars', 'text-primary', 'New'],
+        ];
+        $peakHourLabel = function ($h) { return date('g A', mktime((int)$h, 0)); };
+    ?>
+    <p class="text-muted small mb-3">
+        Based on appointments only. Forecasts use complete months (the current month is still in progress, so it's shown as "so far").
+    </p>
+
     <div class="row g-3 mb-3">
-        <div class="col-6 col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="card dental-kpi-card p-3 h-100">
                 <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-graph-up-arrow"></i></div>
-                <div class="dental-kpi-label">Predicted Next Month</div>
-                <div class="dental-kpi-value text-primary"><?php echo $nextMonthPredicted; ?> <small>appointments</small></div>
+                <div class="dental-kpi-label">Forecast for <?php echo htmlspecialchars($trend['next_label']); ?></div>
+                <?php if ($fc): ?>
+                    <div class="dental-kpi-value text-primary"><?php echo (int)$fc['value']; ?> <small>appointments</small></div>
+                    <div class="small text-muted">Likely <?php echo (int)$fc['low']; ?>–<?php echo (int)$fc['high']; ?> · <?php echo (int)$trend['next_booked']; ?> already booked</div>
+                <?php else: ?>
+                    <div class="dental-kpi-value text-muted">—</div>
+                    <div class="small text-muted">Needs at least one complete month of appointments.</div>
+                <?php endif; ?>
             </div>
         </div>
-        <div class="col-6 col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-range"></i></div>
-                <div class="dental-kpi-label">12-Month Total</div>
-                <div class="dental-kpi-value"><?php echo array_sum($monthlyTrendAppts); ?> <small>appointments</small></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-calendar-week"></i></div>
+                <div class="dental-kpi-label"><?php echo htmlspecialchars($trend['month_label']); ?> so far</div>
+                <div class="dental-kpi-value"><?php echo (int)$trend['month_so_far']; ?> <small>appointments</small></div>
+                <div class="small text-muted">
+                    + <?php echo (int)$trend['month_booked_ahead']; ?> booked ahead = <?php echo (int)$monthProjected; ?>
+                    · last month <?php echo (int)$trend['last_month_total']; ?>
+                </div>
             </div>
         </div>
-        <div class="col-6 col-md-4">
+        <div class="col-6 col-lg-3">
             <div class="card dental-kpi-card p-3 h-100">
-                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-bar-chart"></i></div>
-                <div class="dental-kpi-label">Avg Monthly Appointments</div>
-                <div class="dental-kpi-value"><?php echo count($monthlyTrendAppts) > 0 ? round(array_sum($monthlyTrendAppts) / count($monthlyTrendAppts)) : 0; ?> <small>per month</small></div>
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-check2-circle"></i></div>
+                <div class="dental-kpi-label">Visits completed (3 months)</div>
+                <div class="dental-kpi-value"><?php echo $trend['rates']['completion'] === null ? '—' : (int)$trend['rates']['completion'] . '%'; ?></div>
+                <div class="small text-muted">
+                    No-show <?php echo $trend['rates']['no_show'] === null ? '—' : (int)$trend['rates']['no_show'] . '%'; ?>
+                    · Cancelled <?php echo $trend['rates']['cancellation'] === null ? '—' : (int)$trend['rates']['cancellation'] . '%'; ?>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card dental-kpi-card p-3 h-100">
+                <div class="dental-kpi-icon dental-kpi-icon--teal"><i class="bi bi-arrow-repeat"></i></div>
+                <div class="dental-kpi-label">Returning patients (3 months)</div>
+                <div class="dental-kpi-value"><?php echo $trend['rates']['returning'] === null ? '—' : (int)$trend['rates']['returning'] . '%'; ?></div>
+                <div class="small text-muted">of patients seen had visited before</div>
             </div>
         </div>
     </div>
 
     <p class="dental-section-eyebrow">Forecast</p>
-
     <div class="row g-3 mb-3">
         <div class="col-lg-8">
             <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
                     <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Monthly Appointment Trend (12 Months)</h5>
+                        <h5 class="card-title mb-0">Monthly appointments &amp; forecast</h5>
                         <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendMonthlyChart" aria-label="Enlarge chart">
                             <i class="bi bi-arrows-fullscreen"></i>
                         </button>
@@ -1300,52 +1457,128 @@ $reportNavQuery = array_merge(
         <div class="col-lg-4">
             <div class="card dental-surface-card h-100">
                 <div class="card-body">
-                    <h5 class="card-title mb-3">Service Demand Forecast</h5>
-                    <?php if (empty($topServicesPredicted)): ?>
-                        <p class="text-muted mb-0">Not enough data for predictions.</p>
+                    <h5 class="card-title mb-3"><i class="bi bi-people text-primary"></i> Scheduling &amp; capacity</h5>
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Expected per clinic day:</strong>
+                            <?php echo $perClinicDay === null ? '—' : number_format($perClinicDay, 1); ?>
+                            <span class="text-muted">(<?php echo (int)$trend['next_clinic_days']; ?> clinic days in <?php echo htmlspecialchars($trend['next_label']); ?>, Mon–Sat)</span>
+                        </li>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Busiest day:</strong>
+                            <?php if ($trend['peak_days']): ?>
+                                <?php echo htmlspecialchars($trend['peak_days'][0]['day_name']); ?>
+                                <span class="text-muted">(<?php echo (int)$trend['peak_days'][0]['visits']; ?> visits in 3 months)</span>
+                            <?php else: ?>
+                                <span class="text-muted">Not enough visits yet</span>
+                            <?php endif; ?>
+                        </li>
+                        <li class="mb-2 pb-2 border-bottom">
+                            <strong>Quietest day:</strong>
+                            <?php if (count($trend['peak_days']) > 1): $q = end($trend['peak_days']); ?>
+                                <?php echo htmlspecialchars($q['day_name']); ?>
+                                <span class="text-muted">(<?php echo (int)$q['visits']; ?> visits)</span>
+                            <?php else: ?>
+                                <span class="text-muted">Not enough visits yet</span>
+                            <?php endif; ?>
+                        </li>
+                        <li>
+                            <strong>Peak hours:</strong>
+                            <?php if ($trend['peak_hours']): ?>
+                                <?php echo htmlspecialchars(implode(', ', array_map(fn($r) => $peakHourLabel($r['hour_of_day']), $trend['peak_hours']))); ?>
+                            <?php else: ?>
+                                <span class="text-muted">Not enough visits yet</span>
+                            <?php endif; ?>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="dental-section-eyebrow">Appointment outcomes</p>
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">Completed, cancelled &amp; no-show</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendOutcomeChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendOutcomeChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card dental-surface-card dental-chart-card h-100">
+                <div class="card-body">
+                    <div class="dental-chart-card__head">
+                        <h5 class="card-title mb-0">New vs returning patients</h5>
+                        <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendPatientsChart" aria-label="Enlarge chart">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                        </button>
+                    </div>
+                    <div class="dental-chart-frame">
+                        <div id="trendPatientsChart" class="clinic-simple-chart"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="dental-section-eyebrow">Service demand</p>
+    <div class="row g-3 mb-3">
+        <div class="col-lg-5">
+            <div class="card dental-surface-card h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Service demand forecast</h5>
+                    <?php if (empty($trend['services'])): ?>
+                        <p class="text-muted mb-0">Not enough booked services yet (a service needs at least 2 bookings in the last 6 months).</p>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>Service</th>
-                                        <th class="text-end">Now</th>
-                                        <th class="text-end">Predicted</th>
+                                        <th class="text-end" title="Bookings last month">Last month</th>
+                                        <th class="text-end" title="Estimated bookings next month">Next month</th>
+                                        <th class="text-end" title="Already booked for next month">Booked</th>
                                         <th class="text-end">Trend</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach (array_slice($topServicesPredicted, 0, 8) as $pred): ?>
+                                    <?php foreach (array_slice($trend['services'], 0, 8) as $svc):
+                                        $dm = $dirMeta[$svc['direction']['label']] ?? $dirMeta['stable'];
+                                        $chg = $svc['direction']['change'];
+                                    ?>
                                         <tr>
-                                            <td class="fw-semibold small"><?php echo htmlspecialchars($pred['service']); ?></td>
-                                            <td class="text-end"><?php echo $pred['current']; ?></td>
-                                            <td class="text-end fw-bold"><?php echo $pred['predicted']; ?></td>
-                                            <td class="text-end">
-                                                <?php if ($pred['growth'] > 0): ?>
-                                                    <span class="text-success"><i class="bi bi-arrow-up"></i> <?php echo $pred['growth']; ?>%</span>
-                                                <?php elseif ($pred['growth'] < 0): ?>
-                                                    <span class="text-danger"><i class="bi bi-arrow-down"></i> <?php echo abs($pred['growth']); ?>%</span>
-                                                <?php else: ?>
-                                                    <span class="text-muted">0%</span>
-                                                <?php endif; ?>
+                                            <td class="fw-semibold small"><?php echo htmlspecialchars($svc['name']); ?></td>
+                                            <td class="text-end"><?php echo (int)$svc['last']; ?></td>
+                                            <td class="text-end fw-bold"><?php echo (int)$svc['forecast']; ?></td>
+                                            <td class="text-end"><?php echo (int)$svc['booked']; ?></td>
+                                            <td class="text-end small <?php echo $dm[1]; ?>" style="white-space:nowrap;">
+                                                <i class="bi <?php echo $dm[0]; ?>" aria-hidden="true"></i>
+                                                <?php echo $dm[2]; ?><?php if ($chg !== null && $svc['direction']['label'] !== 'stable' && $svc['direction']['base'] >= 3): // % from tiny counts (1 -> 3 = +200%) misleads ?> <?php echo ($chg > 0 ? '+' : '') . (int)round($chg); ?>%<?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
                         </div>
+                        <p class="text-muted small mt-2 mb-0">Trend compares the last 3 months with the 3 before.</p>
                     <?php endif; ?>
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="row g-3 mb-3">
-        <div class="col-lg-12">
+        <div class="col-lg-7">
             <div class="card dental-surface-card dental-chart-card h-100">
                 <div class="card-body">
                     <div class="dental-chart-card__head">
-                        <h5 class="card-title mb-0">Service Trends (6 Months)</h5>
+                        <h5 class="card-title mb-0">Top services by month (6 months)</h5>
                         <button type="button" class="dental-chart-expand-btn" data-chart-expand="trendSvcChart" aria-label="Enlarge chart">
                             <i class="bi bi-arrows-fullscreen"></i>
                         </button>
@@ -1360,103 +1593,56 @@ $reportNavQuery = array_merge(
 
     <p class="dental-section-eyebrow">Recommendations</p>
     <div class="row g-3 mb-3">
-        <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
+        <div class="col-12">
+            <div class="card dental-surface-card">
                 <div class="card-body">
-                    <h5 class="card-title mb-3"><i class="bi bi-lightbulb text-warning"></i> Data-Driven Insights</h5>
-                    <ul class="list-unstyled mb-0">
-                        <?php if (!empty($peakDays)): ?>
-                        <li class="mb-2 pb-2 border-bottom">
-                            <strong>Busiest Day:</strong> <?php echo htmlspecialchars($peakDays[0]['day_name']); ?>
-                            (<?php echo (int)$peakDays[0]['appointments']; ?> appointments)
-                        </li>
-                        <?php endif; ?>
-                        <?php if (!empty($peakHours)): ?>
-                        <li class="mb-2 pb-2 border-bottom">
-                            <strong>Peak Hour:</strong> <?php echo htmlspecialchars($peakHourLabels[0] ?? ''); ?>
-                            (<?php echo (int)$peakHourValues[0]; ?> appointments)
-                        </li>
-                        <?php endif; ?>
-                        <?php if (!empty($topServices)): ?>
-                        <li class="mb-2 pb-2 border-bottom">
-                            <strong>Most In-Demand Service:</strong> <?php echo htmlspecialchars($topServices[0]['service_name']); ?>
-                            (<?php echo (int)$topServices[0]['bookings']; ?> bookings)
-                        </li>
-                        <?php endif; ?>
-                        <?php if ($nextMonthPredicted > 0): ?>
-                        <li class="mb-2 pb-2 border-bottom">
-                            <strong>Next Month Forecast:</strong> ~<?php echo $nextMonthPredicted; ?> appointments
-                            (based on recent growth trend)
-                        </li>
-                        <?php endif; ?>
-                        <li>
-                            <strong>Recommendation:</strong>
-                            <?php if (!empty($peakDays) && !empty($peakHours)): ?>
-                                Consider <?php echo $peakHours[0]['appointments'] > 5 ? 'extending' : 'maintaining'; ?> staff coverage on <?php echo htmlspecialchars($peakDays[0]['day_name']); ?>s during <?php echo htmlspecialchars($peakHourLabels[0] ?? ''); ?>.
-                            <?php else: ?>
-                                Collect more data to generate actionable insights.
-                            <?php endif; ?>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-6">
-            <div class="card dental-surface-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title mb-3"><i class="bi bi-box-seam text-info"></i> Material Preparation Guide</h5>
-                    <?php if (empty($topServicesPredicted)): ?>
-                        <p class="text-muted mb-0">Not enough data for material recommendations.</p>
+                    <h5 class="card-title mb-3"><i class="bi bi-lightbulb text-warning"></i> What the appointments suggest</h5>
+                    <?php
+                    $tips = [];
+                    if ($fc && $trend['last_month_total'] > 0) {
+                        $delta = ($fc['value'] - $trend['last_month_total']) / $trend['last_month_total'];
+                        if ($delta >= 0.10) {
+                            $tips[] = ['bi-graph-up-arrow', 'Expect a busier ' . $trend['next_label'] . ': about ' . $fc['value'] . ' appointments vs ' . $trend['last_month_total'] . ' last month. Open extra slots on ' . ($trend['peak_days'][0]['day_name'] ?? 'your busiest days') . '.'];
+                        } elseif ($delta <= -0.10) {
+                            $tips[] = ['bi-graph-down-arrow', $trend['next_label'] . ' looks quieter (about ' . $fc['value'] . ' vs ' . $trend['last_month_total'] . ' last month). A good time for recall reminders or follow-ups on pending treatment plans.'];
+                        }
+                    }
+                    if ($trend['rates']['no_show'] !== null && $trend['rates']['no_show'] >= 10) {
+                        $tips[] = ['bi-bell', $trend['rates']['no_show'] . '% of appointments were no-shows in the last 3 months. Confirm appointments the day before.'];
+                    }
+                    if ($trend['rates']['cancellation'] !== null && $trend['rates']['cancellation'] >= 15) {
+                        $tips[] = ['bi-calendar-x', $trend['rates']['cancellation'] . '% were cancelled. Keep a short waitlist to refill cancelled slots.'];
+                    }
+                    $rising = array_values(array_filter($trend['services'], fn($svc) => $svc['direction']['label'] === 'rising'));
+                    if ($rising) {
+                        $parts = array_map(fn($svc) => $svc['name'] . ' (about ' . $svc['forecast'] . ')', array_slice($rising, 0, 3));
+                        $tips[] = ['bi-arrow-up-right', 'Demand is rising for ' . implode(', ', $parts) . '. Plan chair time for these next month.'];
+                    }
+                    $falling = array_values(array_filter($trend['services'], fn($svc) => $svc['direction']['label'] === 'falling'));
+                    if ($falling) {
+                        $tips[] = ['bi-arrow-down-right', 'Fewer bookings lately for ' . implode(', ', array_map(fn($svc) => $svc['name'], array_slice($falling, 0, 3))) . '. Worth mentioning to patients whose treatment plans include them.'];
+                    }
+                    if (count($trend['peak_days']) > 1) {
+                        $q = end($trend['peak_days']);
+                        $tips[] = ['bi-calendar-check', $q['day_name'] . ' is the quietest day. Suggest it to patients who are flexible, to ease ' . $trend['peak_days'][0]['day_name'] . '.'];
+                    }
+                    if ($trend['rates']['returning'] !== null && $trend['rates']['returning'] < 40) {
+                        $tips[] = ['bi-arrow-repeat', 'Only ' . $trend['rates']['returning'] . '% of patients were returning. Recall reminders for check-ups and cleanings can bring more back.'];
+                    }
+                    ?>
+                    <?php if (!$hasHistory): ?>
+                        <p class="text-muted mb-0">No complete months of appointments yet. Recommendations appear once there's at least a month of history.</p>
+                    <?php elseif (!$tips): ?>
+                        <p class="text-muted mb-0">Appointments look steady. Nothing needs attention right now.</p>
                     <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
-                                <thead>
-                                    <tr>
-                                        <th>Service Trending Up</th>
-                                        <th>Prepare Materials</th>
-                                        <th>Priority</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $materialMap = [
-                                        'Teeth Cleaning' => 'Scaler tips, polishing paste, fluoride',
-                                        'Root Canal Treatment' => 'Files, gutta percha, sealer',
-                                        'Crown Placement' => 'Impression material, temporary crowns',
-                                        'Filling' => 'Composite resin, bonding agent, etchant',
-                                        'Extraction' => 'Forceps, elevators, sutures',
-                                        'Whitening' => 'Whitening gel, LED light, sensitivity paste',
-                                        'Denture Fitting' => 'Impression trays, acrylic, articulator',
-                                        'Implant Consultation' => 'CT scan referral, implant catalog',
-                                    ];
-                                    $priority = 1;
-                                    foreach (array_slice($topServicesPredicted, 0, 5) as $pred):
-                                        if ($pred['growth'] > 0):
-                                            $materials = $materialMap[$pred['service']] ?? 'General supplies';
-                                    ?>
-                                        <tr>
-                                            <td class="fw-semibold">
-                                                <?php echo htmlspecialchars($pred['service']); ?>
-                                                <br><small class="text-success">+<?php echo $pred['growth']; ?>%</small>
-                                            </td>
-                                            <td class="small"><?php echo htmlspecialchars($materials); ?></td>
-                                            <td>
-                                                <?php if ($priority <= 2): ?>
-                                                    <span class="badge bg-danger">High</span>
-                                                <?php elseif ($priority <= 3): ?>
-                                                    <span class="badge bg-warning text-dark">Medium</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-secondary">Low</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php
-                                            $priority++;
-                                        endif;
-                                    endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                        <ul class="list-unstyled mb-0">
+                            <?php foreach (array_slice($tips, 0, 6) as $i => $tip): ?>
+                                <li class="d-flex gap-2 <?php echo $i < min(6, count($tips)) - 1 ? 'mb-2 pb-2 border-bottom' : ''; ?>">
+                                    <i class="bi <?php echo $tip[0]; ?> text-primary mt-1" aria-hidden="true"></i>
+                                    <span><?php echo htmlspecialchars($tip[1]); ?></span>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1505,11 +1691,20 @@ $reportNavQuery = array_merge(
     var peakDayValues = <?php echo json_encode($peakDayValues); ?>;
     var peakHourLabels = <?php echo json_encode($peakHourLabels); ?>;
     var peakHourValues = <?php echo json_encode($peakHourValues); ?>;
-    var monthlyTrendLabels = <?php echo json_encode($monthlyTrendLabels); ?>;
-    var monthlyTrendAppts = <?php echo json_encode($monthlyTrendAppts); ?>;
-    var monthlyTrendCompleted = <?php echo json_encode($monthlyTrendCompleted); ?>;
-    var serviceTrendLabels = <?php echo json_encode($serviceTrendMonthLabels); ?>;
-    var serviceTrendSeries = <?php echo json_encode($serviceTrendSeries); ?>;
+    var trendData = <?php echo json_encode([
+        'labels' => $trend['labels'],
+        'booked' => $trend['booked'],
+        'visits' => $trend['visits'],
+        'cancelled' => $trend['cancelled'],
+        'no_show' => $trend['no_show'],
+        'rescheduled' => $trend['rescheduled'],
+        'new_patients' => $trend['new_patients'],
+        'returning_patients' => $trend['returning_patients'],
+        'forecast' => $trend['forecast'],
+        'nextLabel' => $trend['next_short'],
+        'serviceLabels' => $trend['service_labels'],
+        'serviceSeries' => $trend['service_series'],
+    ]); ?>;
     var totalCollected = <?php echo json_encode(round($totalCollected, 2)); ?>;
     var totalOutstanding = <?php echo json_encode(round($totalOutstanding, 2)); ?>;
 
@@ -1541,14 +1736,14 @@ $reportNavQuery = array_merge(
                         chart: { type: 'area', height: 260, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Revenue', data: dailyRevValues }],
                         xaxis: { categories: dailyRevLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-                        yaxis: { min: 0, labels: { formatter: function(v) { return '₱' + v.toLocaleString(); } } },
+                        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: AdminCharts.formatCompactMoney } },
                         colors: ['#10b981'],
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
                         stroke: { curve: 'smooth', width: 2 },
                         dataLabels: { enabled: false },
                         legend: { show: false },
                         grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
-                        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v) { return '₱' + v.toLocaleString(); } } }
+                        tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: AdminCharts.formatMoney } }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -1562,7 +1757,7 @@ $reportNavQuery = array_merge(
 
         try {
             if (payMethodLabels.length) {
-                AdminCharts.mount('salesPayMethodChart', AdminCharts.buildDonutOptions(payMethodLabels, payMethodValues), 'Payment Methods');
+                AdminCharts.mount('salesPayMethodChart', AdminCharts.buildDonutOptions(payMethodLabels, payMethodValues, { money: true }), 'Payment Methods');
             } else {
                 AdminCharts.renderNoData('salesPayMethodChart', 'payment data');
             }
@@ -1612,7 +1807,8 @@ $reportNavQuery = array_merge(
                         chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakDayValues }],
                         xaxis: { categories: peakDayLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
+                        yaxis: AdminCharts.countAxis(peakDayValues),
+                        tooltip: { y: { formatter: AdminCharts.formatCount } },
                         colors: ['#6366f1'],
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
@@ -1639,7 +1835,8 @@ $reportNavQuery = array_merge(
                         chart: { type: 'bar', height: 240, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
                         series: [{ name: 'Appointments', data: peakHourValues }],
                         xaxis: { categories: peakHourLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
+                        yaxis: AdminCharts.countAxis(peakHourValues),
+                        tooltip: { y: { formatter: AdminCharts.formatCount } },
                         colors: ['#f59e0b'],
                         plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
                         dataLabels: { enabled: false },
@@ -1658,68 +1855,158 @@ $reportNavQuery = array_merge(
     }
 
     function renderTrendCharts() {
-        try {
-            if (monthlyTrendLabels.length) {
-                var el = document.getElementById('trendMonthlyChart');
-                if (el) {
-                    el.innerHTML = '';
-                    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-                    var opts = {
-                        chart: { type: 'line', height: 280, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
-                        series: [
-                            { name: 'Total Appointments', data: monthlyTrendAppts },
-                            { name: 'Completed', data: monthlyTrendCompleted }
-                        ],
-                        xaxis: { categories: monthlyTrendLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
-                        colors: ['#1b7aa3', '#10b981'],
-                        stroke: { curve: 'smooth', width: 2 },
-                        fill: { type: 'solid', opacity: 0 },
-                        dataLabels: { enabled: false },
-                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
-                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
-                        markers: { size: 4, hover: { size: 6 } }
-                    };
-                    var chart = new ApexCharts(el, opts);
-                    chart.render();
-                    AdminCharts._registry = AdminCharts._registry || {};
-                    AdminCharts._registry['trendMonthlyChart'] = { options: opts, title: 'Monthly Appointment Trend (12 Months)', chart: chart };
-                }
-            } else {
-                AdminCharts.renderNoData('trendMonthlyChart', 'monthly data');
-            }
-        } catch(e) { console.error('Monthly trend chart:', e); }
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        // Palettes validated for colour-blind separation on light and dark surfaces
+        // (dataviz validate_palette.js). Outcome colours are status colours: kept visits
+        // use the series blue, cancelled = serious (orange), no-show = critical (red).
+        var P = isDark
+            ? { blue: '#3987e5', aqua: '#199e70', magenta: '#d55181', violet: '#9085e9' }
+            : { blue: '#2a78d6', aqua: '#1baf7a', magenta: '#e87ba4', violet: '#4a3aa7' };
+        var STATUS = { serious: '#ec835a', critical: '#d03b3b' };
+        var ink = isDark ? '#94a3b8' : '#64748b';
+        var legendInk = isDark ? '#cbd5e1' : '#475569';
+        var gridColor = isDark ? '#2f3d52' : '#e8eef5';
+        var intLabel = AdminCharts.formatCount;
+        function surfaceOf(el) {
+            var card = el.closest('.card');
+            var bg = card ? getComputedStyle(card).backgroundColor : '';
+            return bg && bg !== 'rgba(0, 0, 0, 0)' ? bg : (isDark ? '#1e293b' : '#ffffff');
+        }
+        function base(type, height) {
+            return {
+                chart: { type: type, height: height, toolbar: { show: false }, fontFamily: 'inherit', foreColor: ink },
+                dataLabels: { enabled: false },
+                legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: legendInk } },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                tooltip: { shared: true, intersect: false, y: { formatter: intLabel } }
+            };
+        }
+        function mount(id, title, opts) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+            var chart = new ApexCharts(el, opts);
+            chart.render();
+            AdminCharts._registry = AdminCharts._registry || {};
+            AdminCharts._registry[id] = { options: opts, title: title, chart: chart };
+        }
+        var anyData = function (arr) { return arr.some(function (v) { return v > 0; }); };
 
+        // 1. Monthly appointments + dashed forecast point for next month.
         try {
-            if (serviceTrendLabels.length && serviceTrendSeries.length) {
-                var el = document.getElementById('trendSvcChart');
-                if (el) {
-                    el.innerHTML = '';
-                    var seriesData = serviceTrendSeries.map(function(s, i) {
-                        return { name: s.name, data: s.data };
-                    });
-                    var opts = {
-                        chart: { type: 'line', height: 300, toolbar: { show: false }, fontFamily: 'inherit', foreColor: isDark ? '#94a3b8' : '#64748b' },
-                        series: seriesData,
-                        xaxis: { categories: serviceTrendLabels, labels: { style: { fontSize: '11px' } } },
-                        yaxis: { min: 0, forceNiceScale: true },
-                        colors: chartColors,
-                        stroke: { curve: 'smooth', width: 2 },
-                        fill: { type: 'solid', opacity: 0 },
-                        dataLabels: { enabled: false },
-                        legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
-                        grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
-                        markers: { size: 3, hover: { size: 5 } }
-                    };
-                    var chart = new ApexCharts(el, opts);
-                    chart.render();
-                    AdminCharts._registry = AdminCharts._registry || {};
-                    AdminCharts._registry['trendSvcChart'] = { options: opts, title: 'Service Trends (6 Months)', chart: chart };
+            if (trendData.labels.length && anyData(trendData.booked)) {
+                var n = trendData.booked.length;
+                var cats = trendData.labels.concat(trendData.forecast ? [trendData.nextLabel + ' (forecast)'] : []);
+                var series = [
+                    { name: 'Booked', data: trendData.booked.concat(trendData.forecast ? [null] : []) },
+                    { name: 'Completed visits', data: trendData.visits.concat(trendData.forecast ? [null] : []) }
+                ];
+                var colors = [P.blue, P.aqua];
+                var widths = [2, 2], dashes = [0, 0];
+                if (trendData.forecast) {
+                    var fc = new Array(n + 1).fill(null);
+                    fc[n - 1] = trendData.booked[n - 1];
+                    fc[n] = trendData.forecast.value;
+                    series.push({ name: 'Forecast', data: fc });
+                    colors.push(P.blue); widths.push(2); dashes.push(6);
                 }
+                var o = base('line', 300);
+                o.series = series;
+                o.yaxis = AdminCharts.countAxis(series);
+                o.colors = colors;
+                o.stroke = { curve: 'straight', width: widths, dashArray: dashes };
+                o.markers = { size: 4, strokeWidth: 2, strokeColors: surfaceOf(document.getElementById('trendMonthlyChart')), hover: { size: 6 } };
+                o.xaxis = { categories: cats, labels: { rotate: -45, style: { fontSize: '11px' } } };
+                o.tooltip.y = {
+                    formatter: function (v, ctx) {
+                        if (v == null) return '';
+                        if (ctx && ctx.seriesIndex === 2 && ctx.dataPointIndex === n && trendData.forecast) {
+                            return Math.round(v) + ' (likely ' + trendData.forecast.low + '–' + trendData.forecast.high + ')';
+                        }
+                        return intLabel(v);
+                    }
+                };
+                mount('trendMonthlyChart', 'Monthly appointments & forecast', o);
             } else {
-                AdminCharts.renderNoData('trendSvcChart', 'service trend data');
+                AdminCharts.renderNoData('trendMonthlyChart', 'monthly appointments');
             }
-        } catch(e) { console.error('Service trend chart:', e); }
+        } catch (e) { console.error('Monthly trend chart:', e); }
+
+        // 2. Outcomes per month (stacked). Rescheduled shown in the tooltip only: those
+        // appointments were replaced by a new booking, not lost.
+        try {
+            if (anyData(trendData.visits) || anyData(trendData.cancelled) || anyData(trendData.no_show)) {
+                var el2 = document.getElementById('trendOutcomeChart');
+                var o2 = base('bar', 300);
+                o2.chart.stacked = true;
+                o2.series = [
+                    { name: 'Completed', data: trendData.visits },
+                    { name: 'Cancelled', data: trendData.cancelled },
+                    { name: 'No-show', data: trendData.no_show }
+                ];
+                o2.yaxis = AdminCharts.countAxis(o2.series, { stacked: true });
+                o2.colors = [P.blue, STATUS.serious, STATUS.critical];
+                o2.plotOptions = { bar: { columnWidth: '55%', borderRadius: 4, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } };
+                o2.stroke = { show: true, width: 2, colors: [surfaceOf(el2)] };
+                o2.xaxis = { categories: trendData.labels, labels: { rotate: -45, style: { fontSize: '11px' } } };
+                o2.tooltip = {
+                    shared: true, intersect: false,
+                    custom: function (opts) {
+                        var i = opts.dataPointIndex;
+                        var rows = [
+                            ['Completed', trendData.visits[i], P.blue],
+                            ['Cancelled', trendData.cancelled[i], STATUS.serious],
+                            ['No-show', trendData.no_show[i], STATUS.critical]
+                        ].map(function (r) {
+                            return '<div style="display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:2px;background:' + r[2] + '"></span>' + r[0] + ': <strong>' + r[1] + '</strong></div>';
+                        }).join('');
+                        return '<div style="padding:8px 10px;font-size:12px;">' +
+                            '<div style="font-weight:600;margin-bottom:4px;">' + trendData.labels[i] + '</div>' + rows +
+                            '<div style="color:' + ink + ';margin-top:4px;">Rescheduled: ' + trendData.rescheduled[i] + '</div></div>';
+                    }
+                };
+                mount('trendOutcomeChart', 'Completed, cancelled & no-show', o2);
+            } else {
+                AdminCharts.renderNoData('trendOutcomeChart', 'appointment outcomes');
+            }
+        } catch (e) { console.error('Outcome chart:', e); }
+
+        // 3. New vs returning patients (stacked).
+        try {
+            if (anyData(trendData.new_patients) || anyData(trendData.returning_patients)) {
+                var el3 = document.getElementById('trendPatientsChart');
+                var o3 = base('bar', 300);
+                o3.chart.stacked = true;
+                o3.series = [
+                    { name: 'New', data: trendData.new_patients },
+                    { name: 'Returning', data: trendData.returning_patients }
+                ];
+                o3.yaxis = AdminCharts.countAxis(o3.series, { stacked: true });
+                o3.colors = [P.blue, P.magenta];
+                o3.plotOptions = { bar: { columnWidth: '55%', borderRadius: 4, borderRadiusApplication: 'end', borderRadiusWhenStacked: 'last' } };
+                o3.stroke = { show: true, width: 2, colors: [surfaceOf(el3)] };
+                o3.xaxis = { categories: trendData.labels, labels: { rotate: -45, style: { fontSize: '11px' } } };
+                mount('trendPatientsChart', 'New vs returning patients', o3);
+            } else {
+                AdminCharts.renderNoData('trendPatientsChart', 'patient visits');
+            }
+        } catch (e) { console.error('Patients chart:', e); }
+
+        // 4. Top services by month.
+        try {
+            if (trendData.serviceLabels.length && trendData.serviceSeries.length) {
+                var o4 = base('line', 300);
+                o4.series = trendData.serviceSeries.map(function (s) { return { name: s.name, data: s.data }; });
+                o4.yaxis = AdminCharts.countAxis(o4.series);
+                o4.colors = [P.blue, P.magenta, P.violet, P.aqua];
+                o4.stroke = { curve: 'straight', width: 2 };
+                o4.markers = { size: 4, strokeWidth: 2, strokeColors: surfaceOf(document.getElementById('trendSvcChart')), hover: { size: 6 } };
+                o4.xaxis = { categories: trendData.serviceLabels, labels: { style: { fontSize: '11px' } } };
+                mount('trendSvcChart', 'Top services by month (6 months)', o4);
+            } else {
+                AdminCharts.renderNoData('trendSvcChart', 'service bookings');
+            }
+        } catch (e) { console.error('Service trend chart:', e); }
     }
 
     function renderCommonCharts() {
@@ -1736,7 +2023,7 @@ $reportNavQuery = array_merge(
                             { name: 'Completed', data: dailyCompleted }
                         ],
                         xaxis: { categories: dailyLabels, labels: { rotate: -45, style: { fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
-                        yaxis: { min: 0, forceNiceScale: true, labels: { formatter: function (v) { return Math.round(v); } } },
+                        yaxis: AdminCharts.countAxis([{ data: dailyBooked }, { data: dailyCompleted }]),
                         colors: ['#94a3b8', '#1b7aa3'],
                         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05 } },
                         stroke: { curve: 'smooth', width: 3 },
@@ -1744,7 +2031,7 @@ $reportNavQuery = array_merge(
                         dataLabels: { enabled: false },
                         legend: { position: 'top', horizontalAlign: 'left', fontSize: '12px', labels: { colors: isDark ? '#cbd5e1' : '#475569' } },
                         grid: { borderColor: isDark ? '#2f3d52' : '#e8eef5', strokeDashArray: 4 },
-                        tooltip: { y: { formatter: function (v) { return Math.round(v); } } }
+                        tooltip: { shared: true, intersect: false, y: { formatter: AdminCharts.formatCount } }
                     };
                     var chart = new ApexCharts(el, opts);
                     chart.render();
@@ -2485,7 +2772,8 @@ $reportNavQuery = array_merge(
         }
 
         if (answer) {
-            html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\n/g, '<br>') + '</p>';
+            // Escaped first, so the only markup is the <strong>/<br> added here.
+            html += '<p class="ai-answer-text">' + escHtml(answer).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</p>';
         }
 
         if (rows.length === 0 && !answer) {

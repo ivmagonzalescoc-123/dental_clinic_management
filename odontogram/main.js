@@ -43,7 +43,12 @@ import {
 } from "./tooth-surface-3d.js";
 
 const ODONTOGRAM_BASE = new URL("./", import.meta.url);
-const TEETH_MODELS_BASE = new URL("models/teeth/", ODONTOGRAM_BASE);
+// teeth-lite/ holds decimated copies of teeth/ (same files, ~2.7MB instead of ~45MB;
+// see scripts/optimize_odontogram_models.mjs). A file missing there falls back to teeth/.
+const TEETH_MODELS_BASE = [
+  new URL("models/teeth-lite/", ODONTOGRAM_BASE),
+  new URL("models/teeth/", ODONTOGRAM_BASE),
+];
 
 const toothState = {};
 for (const fdi of ALL_FDI_TEETH) toothState[fdi] = createEmptyToothEntry();
@@ -96,14 +101,15 @@ function setView(view) {
     if (readonlyMode) {
       viewHintEl.textContent = isChart
         ? "View only — select a tooth, then inspect surfaces in the bar above the chart."
-        : "View only — double-click a tooth for close-up, double-click again to return.";
+        : "View only — double-click a tooth for close-up; double-click it again, press Esc or tap \"All teeth\" to return.";
     } else {
       viewHintEl.textContent = isChart
         ? "Click a tooth on the arch, pick a surface in the bar above, then apply a legend code."
-        : "Double-click a tooth for close-up. Pick a surface to tilt the view; apply codes on the left.";
+        : "Double-click a tooth for close-up (Esc or \"All teeth\" to return). Pick a surface to tilt the view; apply codes on the left.";
     }
   }
   if (!isChart) {
+    requestRender();
     resizeToDisplaySize();
     if (!isolatedToothFdi) fitCameraToArch();
     updateModelStatusForSelection();
@@ -229,6 +235,9 @@ async function normalizeIncomingToothState(ts) {
   for (const fdi of ALL_FDI_TEETH) {
     toothState[fdi] = migrated[fdi] || createEmptyToothEntry();
   }
+  // Models may already be on the arch (they load faster than the parent's message
+  // can arrive), so repaint them from the new state as well as the 2D chart.
+  repaintAllTeeth3d();
   await buildOdontogramUI();
 }
 
@@ -282,8 +291,11 @@ function paintTooth3d(fdi) {
   forEachToothMesh(fdi, (m) => {
     ensureStandardMaterial(m);
     paintMeshSurfaceColors(m, toothRoot, fdi, entry, { highlightSurface, missing });
-    m.visible = !isolatedToothFdi || String(fdi) === isolatedToothFdi;
+    // Close-up hides whole teeth via syncToothVisibility(); hiding meshes here too left
+    // teeth invisible after leaving close-up (e.g. when another record was loaded).
+    m.visible = true;
   });
+  requestRender();
 }
 
 function applyVisualStatus(fdi) {
@@ -385,6 +397,14 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.target.set(0, 2.5, -2.4);
 controls.enablePan = false;
+
+// Draw only when something changed (camera, colors, visibility, size) instead of
+// every frame, so an idle 3D tab doesn't keep the GPU busy.
+let needsRender = true;
+function requestRender() {
+  needsRender = true;
+}
+controls.addEventListener("change", requestRender);
 
 const archControlLimits = {
   minDistance: 4.5,
@@ -593,6 +613,7 @@ function layoutTeeth() {
   });
   usingGlbTeeth = loaded > 0;
   refreshDefaultPreview();
+  requestRender();
   return loaded;
 }
 
@@ -706,13 +727,14 @@ function syncToothVisibility() {
   for (const [fdi, mesh] of toothMeshes.entries()) {
     mesh.visible = !isolatedToothFdi || String(fdi) === isolatedToothFdi;
   }
+  requestRender();
 }
 
 function updateModelStatusForSelection() {
   if (activeView !== "3d" || modelStatusEl?.classList.contains("is-error")) return;
   if (isolatedToothFdi) {
     setModelStatus(
-      `${toothAnatomicalName(isolatedToothFdi)} (${isolatedToothFdi}) — double-click again to show all teeth`,
+      `${toothAnatomicalName(isolatedToothFdi)} (${isolatedToothFdi}) · double-click or Esc to go back`,
     );
     return;
   }
@@ -723,8 +745,13 @@ function updateModelStatusForSelection() {
   setModelStatus("");
 }
 
+function updateIsolationExitButton() {
+  exitIsolationBtn?.classList.toggle("is-hidden", !isolatedToothFdi);
+}
+
 function updateIsolationBanner() {
   updateModelStatusForSelection();
+  updateIsolationExitButton();
 }
 
 function formatSurfaceCodes(labels) {
@@ -877,6 +904,7 @@ function toggleToothIsolation(fdi) {
 
 function clearHighlight() {
   if (!highlightMesh) return;
+  requestRender();
   const prev = String(highlightMesh.userData.toothFdi || "");
   if (prev) {
     forEachToothMeshMaterial(prev, (material) => {
@@ -916,6 +944,7 @@ function setHighlight(fdi) {
   });
   mesh.userData.toothFdi = fdi;
   highlightMesh = mesh;
+  requestRender();
 }
 
 const camAnim = {
@@ -970,11 +999,50 @@ function focusCameraOnSurface(mesh, fdi, surface) {
 
 resetViewBtn?.addEventListener("click", resetCameraView);
 
+const exitIsolationBtn = document.getElementById("exitIsolationBtn");
+exitIsolationBtn?.addEventListener("click", () => exitToothIsolation());
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && isolatedToothFdi) exitToothIsolation();
+});
+
+/**
+ * Back to the state a freshly opened chart has: 2D tab, nothing selected, no
+ * close-up, camera framing the whole arch. Run whenever a record is loaded, since
+ * the records pages reuse this iframe for every patient/visit.
+ */
+function resetViewerToDefault() {
+  if (pendingClickTimer) {
+    clearTimeout(pendingClickTimer);
+    pendingClickTimer = null;
+  }
+  lastPointerDown = { t: 0, fdi: null };
+  lastBackgroundDown = 0;
+  camAnim.active = false;
+  selectedTooth = null;
+  selectedSurface = null;
+  clearHighlight();
+  isolatedToothFdi = null;
+  savedArchCamera = null;
+  syncToothVisibility();
+  applyControlLimits(archControlLimits);
+  updateIsolationStatusPanel();
+  updateIsolationExitButton();
+  fitCameraToArch();
+  setView("chart");
+}
+
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const DBL_CLICK_MS = 320;
 let pendingClickTimer = null;
 let lastPointerDown = { t: 0, fdi: null };
+
+function isObjectShown(obj) {
+  for (let node = obj; node; node = node.parent) {
+    if (!node.visible) return false;
+  }
+  return true;
+}
 
 function pickToothFromPointer(e) {
   const rect = canvas.getBoundingClientRect();
@@ -984,6 +1052,9 @@ function pickToothFromPointer(e) {
   const hits = raycaster.intersectObjects([...toothMeshes.values()], true);
   const seen = new Set();
   for (const hit of hits) {
+    // Raycasting ignores `visible`, so without this a hidden neighbour in front of the
+    // close-up tooth would swallow the double-click meant to zoom back out.
+    if (!isObjectShown(hit.object)) continue;
     const fdi = String(resolveToothFdi(hit.object) || "");
     if (!fdi || seen.has(fdi)) continue;
     seen.add(fdi);
@@ -992,11 +1063,22 @@ function pickToothFromPointer(e) {
   return null;
 }
 
+let lastBackgroundDown = 0;
+
 canvas.addEventListener("pointerdown", (e) => {
   if (e.button !== 0) return;
   const fdi = pickToothFromPointer(e);
-  if (!fdi) return;
   const now = performance.now();
+  if (!fdi) {
+    // Double-click on empty space in close-up returns to the full arch.
+    if (isolatedToothFdi && now - lastBackgroundDown <= DBL_CLICK_MS) {
+      lastBackgroundDown = 0;
+      exitToothIsolation();
+      return;
+    }
+    lastBackgroundDown = now;
+    return;
+  }
   if (lastPointerDown.fdi === fdi && now - lastPointerDown.t <= DBL_CLICK_MS) {
     if (pendingClickTimer) {
       clearTimeout(pendingClickTimer);
@@ -1019,26 +1101,35 @@ canvas.addEventListener("pointerdown", (e) => {
   }, DBL_CLICK_MS);
 });
 
+let lastCanvasSize = "";
 function resizeToDisplaySize() {
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
-  if (!w || !h) return;
+  if (!w || !h) return false;
+  // setSize() clears the drawing buffer, so skip it unless the size really changed.
+  const size = `${w}x${h}x${renderer.getPixelRatio()}`;
+  if (size === lastCanvasSize) return false;
+  lastCanvasSize = size;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  requestRender();
+  return true;
 }
 
 function animate() {
   requestAnimationFrame(animate);
   if (!render3d) return;
   resizeToDisplaySize();
-  controls.update();
+  // update() returns true while the camera is still moving (including damping).
+  if (controls.update()) needsRender = true;
   if (!camAnim.active) {
     const distance = camera.position.distanceTo(controls.target);
     if (distance < controls.minDistance || distance > controls.maxDistance) {
       const dir = camera.position.clone().sub(controls.target).normalize();
       const clampedDistance = THREE.MathUtils.clamp(distance, controls.minDistance, controls.maxDistance);
       camera.position.copy(controls.target.clone().add(dir.multiplyScalar(clampedDistance)));
+      needsRender = true;
     }
   }
   if (camAnim.active) {
@@ -1047,7 +1138,10 @@ function animate() {
     camera.position.lerpVectors(camAnim.fromPos, camAnim.toPos, tt);
     controls.target.lerpVectors(camAnim.fromTarget, camAnim.toTarget, tt);
     if (t >= 1) camAnim.active = false;
+    needsRender = true;
   }
+  if (!needsRender) return;
+  needsRender = false;
   renderer.render(scene, camera);
 }
 
@@ -1090,6 +1184,7 @@ buildOdontogramUI().catch((err) => {
 });
 
 window.addEventListener("resize", () => {
+  requestRender();
   if (!render3d || isolatedToothFdi) return;
   resizeToDisplaySize();
   fitCameraToArch();
@@ -1098,11 +1193,15 @@ window.addEventListener("resize", () => {
 window.addEventListener("message", (ev) => {
   try {
     if (ev.data?.type === "odontogram_resize") {
+      requestRender();
       resizeToDisplaySize();
       if (!isolatedToothFdi) fitCameraToArch();
       return;
     }
     if (!ev.data || ev.data.type !== "load_odontogram") return;
+    // New record (another patient or visit): start from the default view, not
+    // whatever close-up/angle/tab the previous record was left in.
+    resetViewerToDefault();
     setReadonlyMode(!!ev.data.readonly);
     normalizeIncomingToothState(ev.data.toothState || {});
     clearSelection();

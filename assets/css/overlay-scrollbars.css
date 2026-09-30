@@ -29,6 +29,10 @@ html.ovs-enabled *:not([data-native-scrollbar]):not(select)::-webkit-scrollbar {
 .ovs-bar.is-visible {
     opacity: 1;
 }
+/* Hidden without the fade when something (e.g. another modal) covers the area. */
+.ovs-bar.is-instant {
+    transition: none;
+}
 
 .ovs-thumb {
     position: absolute;

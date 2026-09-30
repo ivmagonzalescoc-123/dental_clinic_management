@@ -182,7 +182,18 @@ if (!function_exists('dashboard_render_appt_chart_script')) {
             colors: [{$colorJson}],
             fill: { type: 'solid', opacity: 0 },
             dataLabels: { enabled: false },
-            yaxis: { min: 0, forceNiceScale: true, show: true },
+            // Appointment counts: whole-number ticks (1/2/5/10 steps) so small weeks don't
+            // show 0.5, 1.5... (same rule as AdminCharts.countAxis in assets/js/admin-charts.js).
+            yaxis: (function () {
+                var max = Math.max.apply(null, values.map(function (v) { return Number(v) || 0; }).concat([0]));
+                max = Math.ceil(max);
+                if (max <= 5) { max = Math.max(max, 1); return { min: 0, max: max, tickAmount: max, forceNiceScale: false, labels: { formatter: function (v) { return Math.round(v); } } }; }
+                var raw = max / 5, mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), norm = raw / mag;
+                var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+                var top = Math.ceil(max / step) * step;
+                return { min: 0, max: top, tickAmount: Math.round(top / step), forceNiceScale: false, labels: { formatter: function (v) { return Math.round(v); } } };
+            })(),
+            tooltip: { y: { formatter: function (v) { return Math.round(v); } } },
             grid: { show: true, strokeDashArray: 4, borderColor: gridColor }
         };
         new ApexCharts(el, opts).render();
