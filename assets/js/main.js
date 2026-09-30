@@ -237,7 +237,7 @@
       if (cl.contains('footer') || cl.contains('back-to-top') ||
           cl.contains('app-page-loading') || cl.contains('modal-backdrop') ||
           cl.contains('modal') || cl.contains('app-toast-host') ||
-          cl.contains('toast-container')) return true
+          cl.contains('toast-container') || cl.contains('ovs-bar')) return true
       return false
     }
 
@@ -1464,11 +1464,12 @@
     const toggle = document.getElementById('navNotificationsToggle');
     const markAllBtn = document.getElementById('navMarkAllRead');
 
+    // Opening the bell only refreshes the list - it must not mark anything read.
+    // A notification is read when the user clicks it (see fetchNotifications),
+    // or when they press "Mark all read" explicitly.
     if (toggle) {
       toggle.addEventListener('portaldropdown:open', function () {
-        if (typeof window.markAllNotificationsRead === 'function') {
-          window.markAllNotificationsRead();
-        }
+        fetchNotifications();
       });
     }
 

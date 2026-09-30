@@ -110,6 +110,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/module-content-ux.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
 </head>
 
 <body class="admin-portal">
@@ -122,6 +123,8 @@ switch ($role_key) {
         } catch (e) {}
     })();
     </script>
+    <!-- Loaded early: the records module calls window.OdontogramFullscreen at parse time. -->
+    <script src="<?= asset_url('../assets/js/odontogram-fullscreen.js') ?>"></script>
 
     <!-- Global Loading Overlay -->
     <div id="globalLoadingOverlay" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;pointer-events:none;">
@@ -207,6 +210,18 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=records" data-tooltip="Clinical Records" title="Clinical Records">
+                    <i class="bi bi-journal-medical"></i>
+                    <span>Clinical Records</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=contact_messages" data-tooltip="Contact Us" title="Contact Us">
+                    <i class="bi bi-envelope"></i>
+                    <span>Contact Us</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=reports" data-tooltip="Reports" title="Reports">
                     <i class="bi bi-bar-chart-line"></i>
                     <span>Reports</span>
@@ -284,6 +299,12 @@ switch ($role_key) {
                                 case "reports":
                                     include "admin_modules/reports.php";
                                     break;
+                                case "records":
+                                    include "admin_modules/records.php";
+                                    break;
+                                case "contact_messages":
+                                    include "admin_modules/contact_messages.php";
+                                    break;
                                 case "notifications":
                                     include "admin_modules/notifications.php";
                                     break;
@@ -342,6 +363,9 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/page-skeleton.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/main.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/portal-dropdown.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/portal-search.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/profiling-display.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
@@ -361,154 +385,111 @@ switch ($role_key) {
                 });
             }
 
-            const searchInput = document.getElementById('adminSearch');
-
-            if (searchInput) {
-                const portalBaseFile = 'admin.php';
-                const pageKeywordMap = {
-                    dashboard: ['home', 'overview', 'summary'],
-                    reports: ['analytics', 'charts', 'insights'],
-                    billing: ['invoices', 'payments', 'payment history', 'balance'],
-                    manage_users: ['users', 'accounts', 'staff', 'patients'],
-                    doctor_management: ['doctor', 'dentist', 'providers'],
-                    doctor_schedule_admin: ['schedule', 'calendar', 'availability'],
-                    doctor_leaves: ['leave', 'vacation', 'absence'],
-                    doctor_deployment: ['deployment', 'assignment'],
-                    services: ['procedures', 'pricing', 'clinic services'],
-                    reviews: ['testimonials', 'feedback', 'ratings'],
-                    system_logs: ['logs', 'audit', 'history'],
-                    settings: ['preferences', 'configuration'],
-                    profile: ['account', 'my profile']
-                };
-
-                const styleId = 'portalSearchSuggestionStyles';
-                if (!document.getElementById(styleId)) {
-                    const style = document.createElement('style');
-                    style.id = styleId;
-                    style.textContent = '' +
-                        '.search-suggest-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #dbe4f0;border-radius:10px;box-shadow:0 10px 24px rgba(24,45,74,.14);max-height:280px;overflow:auto;z-index:1200;display:none;}' +
-                        '.search-suggest-item{display:block;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;cursor:pointer;}' +
-                        '.search-suggest-item:hover,.search-suggest-item.active{background:#eef5ff;}' +
-                        '.search-suggest-title{font-size:14px;color:#153b66;font-weight:600;}' +
-                        '.search-suggest-meta{font-size:12px;color:#6b7f95;}' +
-                        '.search-suggest-empty{padding:10px 12px;font-size:13px;color:#71839a;}' +
-                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}';
-                    document.head.appendChild(style);
-                }
-
-                const wrap = searchInput.closest('.header-search-wrap');
-                const menu = document.createElement('div');
-                menu.className = 'search-suggest-menu';
-                if (wrap) {
-                    wrap.appendChild(menu);
-                }
-
-                const linkNodes = document.querySelectorAll('#sidebar-nav a.nav-link[href*="page="], .dropdown-menu a.dropdown-item[href*="page="]');
-                const seen = new Set();
-                const pages = [];
-
-                linkNodes.forEach((a) => {
-                    let urlObj;
-                    try {
-                        urlObj = new URL(a.href, window.location.origin);
-                    } catch (err) {
-                        return;
-                    }
-                    const page = (urlObj.searchParams.get('page') || '').trim();
-                    if (!page) return;
-
-                    const title = (a.textContent || '').replace(/\s+/g, ' ').trim() || page.replace(/_/g, ' ');
-                    const key = page + '|' + title.toLowerCase();
-                    if (seen.has(key)) return;
-                    seen.add(key);
-
-                    const keywords = [title, page.replace(/_/g, ' ')].concat(pageKeywordMap[page] || []);
-                    const normalized = Array.from(new Set(keywords.map((k) => String(k).toLowerCase().trim()).filter(Boolean)));
-
-                    pages.push({
-                        title: title,
-                        page: page,
-                        href: portalBaseFile + '?page=' + encodeURIComponent(page),
-                        keywords: normalized
-                    });
-                });
-
-                const highlightText = (text, term) => {
-                    if (!term) return text;
-                    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    return text.replace(new RegExp('(' + escaped + ')', 'ig'), '<mark>$1</mark>');
-                };
-
-                const findMatches = (term) => {
-                    const q = (term || '').trim().toLowerCase();
-                    if (!q) return pages.slice(0, 6);
-                    const tokens = q.split(/\s+/).filter(Boolean);
-                    return pages.filter((p) => {
-                        const hay = (p.title + ' ' + p.page + ' ' + p.keywords.join(' ')).toLowerCase();
-                        return tokens.every((t) => hay.indexOf(t) !== -1);
-                    }).slice(0, 6);
-                };
-
-                let currentSuggestions = [];
-                const renderMenu = (term) => {
-                    const header = document.getElementById('header');
-                    if (header && !header.classList.contains('header-search-open') && window.innerWidth <= 991) {
-                        menu.style.display = 'none';
-                        return;
-                    }
-                    currentSuggestions = findMatches(term);
-                    if (!currentSuggestions.length) {
-                        menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
-                        menu.style.display = 'block';
-                        return;
-                    }
-                    menu.innerHTML = currentSuggestions.map((s, idx) => {
-                        const meta = s.keywords.slice(0, 4).join(' • ');
-                        return '<button type="button" class="search-suggest-item' + (idx === 0 ? ' active' : '') + '" data-href="' + s.href + '">' +
-                            '<div class="search-suggest-title">' + highlightText(s.title, term) + '</div>' +
-                            '<div class="search-suggest-meta">' + highlightText(meta, term) + '</div>' +
-                            '</button>';
-                    }).join('');
-                    menu.style.display = 'block';
-                };
-
-                const navigateFirst = () => {
-                    const first = currentSuggestions[0];
-                    if (first && first.href) window.location.href = first.href;
-                };
-
-                searchInput.addEventListener('input', function () {
-                    renderMenu(searchInput.value || '');
-                });
-
-                searchInput.addEventListener('focus', function () {
-                    if (window.innerWidth <= 991) {
-                        const header = document.getElementById('header');
-                        if (header && !header.classList.contains('header-search-open')) return;
-                    }
-                    renderMenu(searchInput.value || '');
-                });
-
-                searchInput.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (menu.style.display === 'none') renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    }
-                    if (e.key === 'Escape') {
-                        menu.style.display = 'none';
-                    }
-                });
-
-                menu.addEventListener('click', function (e) {
-                    const btn = e.target.closest('.search-suggest-item');
-                    if (!btn) return;
-                    const href = btn.getAttribute('data-href');
-                    if (href) window.location.href = href;
-                });
-
-                document.addEventListener('click', function (e) {
-                    if (!wrap || !wrap.contains(e.target)) menu.style.display = 'none';
+            // Header page search - shared logic in assets/js/portal-search.js.
+            if (typeof window.initPortalSearch === 'function') {
+                window.initPortalSearch({
+                    inputId: 'adminSearch',
+                    keywords: {
+                        "dashboard": ["home", "overview", "summary"],
+                        "manage_users": ["users", "accounts", "staff", "patients", "doctor", "secretary"],
+                        "services": ["procedures", "pricing", "clinic services", "treatments"],
+                        "billing": ["invoices", "payments", "payment history", "balance", "receipts"],
+                        "doctor_management": ["doctor", "dentist", "providers", "schedule"],
+                        "records": ["clinical records", "ehr", "patient history", "odontogram", "chart"],
+                        "contact_messages": ["contact us", "inquiries", "messages", "gmail", "email"],
+                        "reports": ["analytics", "charts", "insights", "revenue", "bir"],
+                        "reviews": ["testimonials", "feedback", "ratings"],
+                        "system_logs": ["logs", "audit", "history", "activity"],
+                        "backups": ["backup", "database", "restore", "export"],
+                        "notifications": ["alerts", "updates"],
+                        "settings": ["preferences", "configuration", "password"],
+                        "profile": ["account", "my profile"]
+                    },
+                    sections: [
+                        {
+                            "title": "Clinic Users",
+                            "href": "admin.php?page=manage_users&type=users",
+                            "keywords": ["staff", "doctor", "secretary", "admin"],
+                            "parent": "Manage Users"
+                        },
+                        {
+                            "title": "Patients",
+                            "href": "admin.php?page=manage_users&type=patients",
+                            "keywords": ["patient accounts"],
+                            "parent": "Manage Users"
+                        },
+                        {
+                            "title": "Archived Services",
+                            "href": "admin.php?page=services&tab=archived",
+                            "keywords": ["archive", "restore"],
+                            "parent": "Services"
+                        },
+                        {
+                            "title": "Service Time",
+                            "href": "admin.php?page=services&tab=timeslot",
+                            "keywords": ["time slots", "duration"],
+                            "parent": "Services"
+                        },
+                        {
+                            "title": "Doctor Schedule",
+                            "href": "admin.php?page=doctor_management&tab=schedule",
+                            "keywords": ["calendar", "availability"],
+                            "parent": "Doctor Management"
+                        },
+                        {
+                            "title": "Doctor Leaves",
+                            "href": "admin.php?page=doctor_management&tab=leaves",
+                            "keywords": ["leave", "vacation", "absence", "day off"],
+                            "parent": "Doctor Management"
+                        },
+                        {
+                            "title": "Doctor Worktype",
+                            "href": "admin.php?page=doctor_management&tab=deployment",
+                            "keywords": ["deployment", "part time", "regular", "assignment"],
+                            "parent": "Doctor Management"
+                        },
+                        {
+                            "title": "Prescription Profiles",
+                            "href": "admin.php?page=doctor_management&tab=prescription_profiles",
+                            "keywords": ["prescription", "rx", "medicine", "license", "ptr"],
+                            "parent": "Doctor Management"
+                        },
+                        {
+                            "title": "Featured Reviews",
+                            "href": "admin.php?page=reviews&filter=featured",
+                            "keywords": ["featured", "landing page"],
+                            "parent": "Reviews"
+                        },
+                        {
+                            "title": "Active Users",
+                            "href": "admin.php?page=system_logs&view=active_users",
+                            "keywords": ["online", "sessions"],
+                            "parent": "System Logs"
+                        },
+                        {
+                            "title": "Audit Logs",
+                            "href": "admin.php?page=system_logs&view=audit_logs",
+                            "keywords": ["changes", "audit trail"],
+                            "parent": "System Logs"
+                        },
+                        {
+                            "title": "User Logs",
+                            "href": "admin.php?page=system_logs&view=user_logs",
+                            "keywords": ["login", "logout", "staff"],
+                            "parent": "System Logs"
+                        },
+                        {
+                            "title": "Patient Sessions",
+                            "href": "admin.php?page=system_logs&view=patient_sessions",
+                            "keywords": ["patient login"],
+                            "parent": "System Logs"
+                        },
+                        {
+                            "title": "Notifications",
+                            "href": "admin.php?page=notifications",
+                            "keywords": ["alerts", "updates"]
+                        }
+                    ]
                 });
             }
         });

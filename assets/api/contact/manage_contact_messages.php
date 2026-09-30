@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 
 include '../../../config/session_check.php';
-check_session(['secretary']);
+check_session(['secretary', 'admin']); // admin: read-only (GET)
 include '../../../config/database.php';
 include '../../../config/security.php';
 include_once '../../../config/contact_messages_helpers.php';
@@ -84,6 +84,12 @@ if ($method === 'GET') {
 if ($method !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+    exit;
+}
+
+if (($_SESSION['role'] ?? '') !== 'secretary') {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => 'You have view-only access to contact messages.']);
     exit;
 }
 

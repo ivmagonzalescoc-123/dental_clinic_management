@@ -382,6 +382,32 @@ $aboutPoints = [
         }
         .terms-content li + li { margin-top: 0.35rem; }
 
+        .cookie-notice {
+            position: fixed;
+            left: 1rem;
+            right: 1rem;
+            bottom: 1rem;
+            z-index: 70;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem 1rem;
+            max-width: 40rem;
+            margin: 0 auto;
+            padding: 0.9rem 1.1rem;
+            border: 1px solid rgba(27, 122, 163, 0.18);
+            border-radius: 1rem;
+            background: #fff;
+            box-shadow: 0 18px 40px -12px rgba(15, 30, 53, 0.3);
+            transform: translateY(calc(100% + 1.5rem));
+            opacity: 0;
+            transition: transform 0.35s ease, opacity 0.35s ease;
+        }
+        .cookie-notice.show { transform: translateY(0); opacity: 1; }
+        .cookie-notice[hidden] { display: none; }
+        .cookie-notice p { flex: 1 1 16rem; margin: 0; font-size: 0.85rem; line-height: 1.5; color: #475569; }
+        .cookie-notice__actions { display: flex; gap: 0.5rem; margin-left: auto; }
+
         .service-card:hover .service-icon-box {
             background: #1b7aa3;
         }
@@ -912,7 +938,7 @@ $aboutPoints = [
                 <span class="font-display text-sm text-white" style="font-weight: 600;">Azucena's Dental Clinic</span>
             </div>
             <p class="text-center text-sm">&copy; <?php echo $year; ?> Azucena's Dental Clinic. All rights reserved.</p>
-            <div class="flex gap-5 text-sm">
+            <div class="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm">
                 <a href="#hero" class="hover:text-white transition-colors">Home</a>
                 <a href="#services" class="hover:text-white transition-colors">Services</a>
                 <a href="#contact" class="hover:text-white transition-colors">Contact</a>
@@ -920,6 +946,7 @@ $aboutPoints = [
                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.52 1.49-3.91 3.78-3.91 1.1 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.88h2.78l-.44 2.91h-2.34V22c4.78-.76 8.43-4.92 8.43-9.94z"/></svg>
                     Facebook
                 </a>
+                <button type="button" data-open-cookie-policy class="hover:text-white transition-colors">Cookie Policy</button>
             </div>
         </div>
     </footer>
@@ -1013,7 +1040,8 @@ $aboutPoints = [
 
             <footer class="auth-footer border-t border-slate-100 bg-slate-50/80 px-5 py-3 sm:px-7">
                 <p class="text-center text-[10px] leading-relaxed text-slate-500">
-                    Compliant with the Philippine Data Privacy Act of 2012 (RA 10173)
+                    Compliant with the Philippine Data Privacy Act of 2012 (RA 10173) &middot;
+                    <button type="button" data-open-cookie-policy class="font-semibold text-primary hover:underline">Cookie Policy</button>
                 </p>
             </footer>
         </section>
@@ -1405,7 +1433,7 @@ $aboutPoints = [
                 </ul>
 
                 <h3>8. Data Security</h3>
-                <p>The clinic implements reasonable organizational, physical, and technical safeguards—including access controls, secure authentication, and monitored system activity—to protect your information against unauthorized access, disclosure, alteration, or destruction.</p>
+                <p>The clinic implements reasonable organizational, physical, and technical safeguards—including access controls, secure authentication, and monitored system activity—to protect your information against unauthorized access, disclosure, alteration, or destruction. The cookies and browser storage the portal uses are described in our <button type="button" data-open-cookie-policy class="font-semibold text-primary underline">Cookie Policy</button>.</p>
 
                 <h3>9. Your Rights as a Data Subject</h3>
                 <p>Under the Data Privacy Act, you may request access to, correction of, or objection to the processing of your personal data, subject to legal and clinical limitations. You may also file a complaint with the National Privacy Commission (NPC) if you believe your data privacy rights have been violated.</p>
@@ -1454,6 +1482,36 @@ $aboutPoints = [
                     I Agree
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Cookie Policy -->
+    <div id="cookieModal" class="terms-overlay" role="dialog" aria-modal="true" aria-labelledby="cookieModalTitle" aria-hidden="true">
+        <div class="terms-backdrop" data-cookie-close></div>
+        <div class="terms-panel">
+            <div class="border-b border-slate-100 px-6 py-5 sm:px-8">
+                <h2 id="cookieModalTitle" class="text-base font-bold text-slate-900">Cookie Policy</h2>
+                <p class="mt-1 text-xs text-slate-500">Azucena's Dental Clinic Patient Portal</p>
+            </div>
+
+            <div class="terms-content sm:px-8">
+                <?php include __DIR__ . '/includes/cookie_policy_content.php'; ?>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8">
+                <button type="button" data-cookie-close class="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cookie notice (first visit). Only essential cookies are used, so it informs rather than asks. -->
+    <div id="cookieNotice" class="cookie-notice" role="region" aria-label="Cookie notice" hidden>
+        <p>We use only essential cookies to keep you signed in and secure. No advertising or tracking cookies.</p>
+        <div class="cookie-notice__actions">
+            <button type="button" data-open-cookie-policy class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">Learn more</button>
+            <button type="button" id="cookieNoticeDismiss" class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors">Got it</button>
         </div>
     </div>
 
@@ -1883,6 +1941,10 @@ $aboutPoints = [
 
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
+                if (cookieModal?.classList.contains('open')) {
+                    closeCookieModal();
+                    return;
+                }
                 if (termsModal?.classList.contains('open')) {
                     closeTermsModal();
                     return;
@@ -1922,6 +1984,60 @@ $aboutPoints = [
         document.querySelectorAll('[data-terms-close]').forEach(function(el) {
             el.addEventListener('click', closeTermsModal);
         });
+
+        // ----- Cookie Policy modal + first-visit notice -----
+        const cookieModal = document.getElementById('cookieModal');
+        const cookieNotice = document.getElementById('cookieNotice');
+        const COOKIE_NOTICE_KEY = 'dental_cookie_notice';
+
+        function openCookieModal() {
+            if (!cookieModal) return;
+            cookieModal.classList.add('open');
+            cookieModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCookieModal() {
+            if (!cookieModal) return;
+            cookieModal.classList.remove('open');
+            cookieModal.setAttribute('aria-hidden', 'true');
+            if (!authModal?.classList.contains('open') && !termsModal?.classList.contains('open')) {
+                document.body.style.overflow = '';
+            }
+            if (location.hash === '#cookie-policy') {
+                history.replaceState(null, '', location.pathname + location.search);
+            }
+        }
+
+        function dismissCookieNotice() {
+            if (!cookieNotice) return;
+            try { localStorage.setItem(COOKIE_NOTICE_KEY, '1'); } catch (e) {}
+            cookieNotice.classList.remove('show');
+            setTimeout(function() { cookieNotice.hidden = true; }, 350);
+        }
+
+        document.querySelectorAll('[data-open-cookie-policy]').forEach(function(el) {
+            el.addEventListener('click', function(event) {
+                event.preventDefault();
+                event.stopPropagation();
+                openCookieModal();
+            });
+        });
+        document.querySelectorAll('[data-cookie-close]').forEach(function(el) {
+            el.addEventListener('click', closeCookieModal);
+        });
+        document.getElementById('cookieNoticeDismiss')?.addEventListener('click', dismissCookieNotice);
+
+        if (location.hash === '#cookie-policy') openCookieModal();
+
+        let cookieNoticeSeen = false;
+        try { cookieNoticeSeen = localStorage.getItem(COOKIE_NOTICE_KEY) === '1'; } catch (e) {}
+        if (cookieNotice && !cookieNoticeSeen) {
+            cookieNotice.hidden = false;
+            requestAnimationFrame(function() {
+                requestAnimationFrame(function() { cookieNotice.classList.add('show'); });
+            });
+        }
 
         document.getElementById('acceptTermsBtn')?.addEventListener('click', function() {
             if (regTermsCheckbox) regTermsCheckbox.checked = true;

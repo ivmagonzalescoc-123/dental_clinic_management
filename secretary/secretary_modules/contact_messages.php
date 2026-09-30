@@ -1,18 +1,25 @@
 <?php
 include_once dirname(dirname(__DIR__)) . '/config/contact_messages_helpers.php';
 contact_messages_ensure_table($conn);
+// Shared with the admin portal, where it is view-only: no marking read, archiving or Gmail sync.
+$contactReadOnly = ($_SESSION['role'] ?? '') !== 'secretary';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
         <h5 class="card-title mb-1">Contact Us Inquiries</h5>
+        <?php if ($contactReadOnly): ?>
+            <small class="text-muted"><i class="bi bi-eye"></i> View only</small>
+        <?php endif; ?>
     </div>
     <div class="d-flex flex-wrap gap-2">
+        <?php if (!$contactReadOnly): ?>
         <button type="button" class="btn btn-sm btn-outline-success" id="markAllContactReadBtn" disabled>
             <i class="bi bi-envelope-open"></i> Mark all as read
         </button>
         <button type="button" class="btn btn-sm btn-outline-primary" id="syncGmailMessagesBtn">
             <i class="bi bi-envelope-arrow-down"></i> Check Gmail
         </button>
+        <?php endif; ?>
         <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshContactMessagesBtn">
             Refresh
         </button>
@@ -77,11 +84,13 @@ contact_messages_ensure_table($conn);
     </div>
 </div>
 
+<?php if (!$contactReadOnly): ?>
 <div class="contact-bulk-bar mb-2" id="contactBulkBar" hidden>
     <span id="contactSelectedCount">0 selected</span>
     <button type="button" class="btn btn-sm btn-danger" id="contactArchiveSelectedBtn"><i class="bi bi-archive"></i> Archive selected</button>
     <button type="button" class="btn btn-sm btn-link" id="contactClearSelectionBtn">Clear selection</button>
 </div>
+<?php endif; ?>
 
 <div id="contactMessagesAlert"></div>
 <div id="contactMessagesEmpty" class="alert alert-info" style="display:none;">No contact messages found.</div>
@@ -90,7 +99,9 @@ contact_messages_ensure_table($conn);
     <table class="table table-hover align-middle mb-0" id="contactMessagesTable" data-skip-table-search="1">
         <thead class="table-light">
             <tr>
+                <?php if (!$contactReadOnly): ?>
                 <th class="contact-check-col"><input type="checkbox" class="form-check-input" id="contactSelectAll" aria-label="Select all shown messages"></th>
+                <?php endif; ?>
                 <th>Received</th>
                 <th>Name</th>
                 <th>Email</th>
@@ -130,10 +141,12 @@ contact_messages_ensure_table($conn);
                     <dd class="col-sm-9"><div id="contactModalMessage" class="border rounded p-3 bg-light"></div></dd>
                 </dl>
             </div>
+            <?php if (!$contactReadOnly): ?>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-primary" id="contactModalMarkReadBtn">Mark as Read</button>
                 <button type="button" class="btn btn-outline-danger" id="contactModalArchiveBtn">Archive</button>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -182,6 +195,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (contactDot) contactDot.classList.remove('is-active');
 
     const secretaryCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+    const READ_ONLY = <?php echo $contactReadOnly ? 'true' : 'false'; ?>;
     const tbody = document.getElementById('contactMessagesBody');
     const emptyEl = document.getElementById('contactMessagesEmpty');
     const alertEl = document.getElementById('contactMessagesAlert');
@@ -412,9 +426,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const archived = String(row.status) === 'archived';
             if (selectedIds.has(id)) tr.classList.add('table-active');
             tr.innerHTML =
+                (READ_ONLY ? '' :
                 '<td class="contact-check-col"><input type="checkbox" class="form-check-input contact-row-check" data-id="' + id + '"' +
                     (selectedIds.has(id) ? ' checked' : '') + (archived ? ' disabled title="Already archived"' : '') +
-                    ' aria-label="Select message from ' + escapeHtml(row.full_name) + '"></td>' +
+                    ' aria-label="Select message from ' + escapeHtml(row.full_name) + '"></td>') +
                 '<td class="contact-when">' + formatWhenCell(row.created_at) + '</td>' +
                 '<td>' + escapeHtml(row.full_name) + '</td>' +
                 '<td><a class="contact-email-cell" href="mailto:' + escapeHtml(row.email) + '" title="' + escapeHtml(row.email) + '">' + escapeHtml(row.email) + '</a></td>' +
@@ -422,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 '<td>' + statusBadge(row.status) + '</td>' +
                 '<td class="text-end">' +
                     '<button type="button" class="btn btn-sm btn-outline-primary me-1 contact-view-btn" data-id="' + row.message_id + '">View</button>' +
-                    (String(row.status) === 'new'
+                    (READ_ONLY ? '' : String(row.status) === 'new'
                         ? '<button type="button" class="btn btn-sm btn-outline-success contact-read-btn" data-id="' + row.message_id + '">Mark Read</button>'
                         : (String(row.status) !== 'archived'
                             ? '<button type="button" class="btn btn-sm btn-outline-secondary contact-archive-btn" data-id="' + row.message_id + '">Archive</button>'
@@ -525,7 +540,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         contactModal.show();
 
-        if (String(activeMessage.status) === 'new') {
+        // Only the secretary's viewing counts as reading - an admin looking leaves it unread.
+        if (!READ_ONLY && String(activeMessage.status) === 'new') {
             updateMessage('mark_read', activeMessage.message_id)
                 .then(function() {
                     activeMessage.status = 'read';

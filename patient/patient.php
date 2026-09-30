@@ -278,6 +278,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/page-skeleton.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/main.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/portal-dropdown.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/portal-search.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-appointments-services.js') ?>"></script>
@@ -314,148 +315,27 @@ switch ($role_key) {
             syncPatientMobileLayout();
             window.addEventListener('resize', syncPatientMobileLayout);
 
-            const searchInput = document.getElementById('patientSearch');
-
-            if (searchInput) {
-                const portalBaseFile = 'patient.php';
-                const pageKeywordMap = {
-                    dashboard: ['home', 'overview', 'summary'],
-                    appointments: ['booking', 'schedule', 'calendar'],
-                    services: ['procedures', 'pricing', 'clinic services'],
-                    clinic_records: ['medical record', 'history', 'completed appointments'],
-                    transactions: ['billing', 'payments', 'history'],
-                    settings: ['preferences', 'configuration'],
-                    profile: ['account', 'my profile']
-                };
-
-                const styleId = 'portalSearchSuggestionStyles';
-                if (!document.getElementById(styleId)) {
-                    const style = document.createElement('style');
-                    style.id = styleId;
-                    style.textContent = '' +
-                        '.search-suggest-menu{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #dbe4f0;border-radius:10px;box-shadow:0 10px 24px rgba(24,45,74,.14);max-height:280px;overflow:auto;z-index:1200;display:none;}' +
-                        '.search-suggest-item{display:block;width:100%;text-align:left;border:0;background:transparent;padding:10px 12px;cursor:pointer;}' +
-                        '.search-suggest-item:hover,.search-suggest-item.active{background:#eef5ff;}' +
-                        '.search-suggest-title{font-size:14px;color:#153b66;font-weight:600;}' +
-                        '.search-suggest-meta{font-size:12px;color:#6b7f95;}' +
-                        '.search-suggest-empty{padding:10px 12px;font-size:13px;color:#71839a;}' +
-                        '.search-suggest-item mark{background:#fff3bf;padding:0 1px;border-radius:2px;}';
-                    document.head.appendChild(style);
-                }
-
-                const wrap = searchInput.closest('.header-search-wrap');
-                const menu = document.createElement('div');
-                menu.className = 'search-suggest-menu';
-                if (wrap) {
-                    wrap.appendChild(menu);
-                }
-
-                const linkNodes = document.querySelectorAll('#sidebar-nav a.nav-link[href*="page="], .dropdown-menu a.dropdown-item[href*="page="]');
-                const seen = new Set();
-                const pages = [];
-
-                linkNodes.forEach((a) => {
-                    let urlObj;
-                    try {
-                        urlObj = new URL(a.href, window.location.origin);
-                    } catch (err) {
-                        return;
-                    }
-                    const page = (urlObj.searchParams.get('page') || '').trim();
-                    if (!page) return;
-
-                    const title = (a.textContent || '').replace(/\s+/g, ' ').trim() || page.replace(/_/g, ' ');
-                    const key = page + '|' + title.toLowerCase();
-                    if (seen.has(key)) return;
-                    seen.add(key);
-
-                    const keywords = [title, page.replace(/_/g, ' ')].concat(pageKeywordMap[page] || []);
-                    const normalized = Array.from(new Set(keywords.map((k) => String(k).toLowerCase().trim()).filter(Boolean)));
-
-                    pages.push({
-                        title: title,
-                        page: page,
-                        href: portalBaseFile + '?page=' + encodeURIComponent(page),
-                        keywords: normalized
-                    });
-                });
-
-                const highlightText = (text, term) => {
-                    if (!term) return text;
-                    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    return text.replace(new RegExp('(' + escaped + ')', 'ig'), '<mark>$1</mark>');
-                };
-
-                const findMatches = (term) => {
-                    const q = (term || '').trim().toLowerCase();
-                    if (!q) return pages.slice(0, 6);
-                    const tokens = q.split(/\s+/).filter(Boolean);
-                    return pages.filter((p) => {
-                        const hay = (p.title + ' ' + p.page + ' ' + p.keywords.join(' ')).toLowerCase();
-                        return tokens.every((t) => hay.indexOf(t) !== -1);
-                    }).slice(0, 6);
-                };
-
-                let currentSuggestions = [];
-                const renderMenu = (term) => {
-                    const header = document.getElementById('header');
-                    if (header && !header.classList.contains('header-search-open') && window.innerWidth <= 991) {
-                        menu.style.display = 'none';
-                        return;
-                    }
-                    currentSuggestions = findMatches(term);
-                    if (!currentSuggestions.length) {
-                        menu.innerHTML = '<div class="search-suggest-empty">No page matches in this portal.</div>';
-                        menu.style.display = 'block';
-                        return;
-                    }
-                    menu.innerHTML = currentSuggestions.map((s, idx) => {
-                        const meta = s.keywords.slice(0, 4).join(' • ');
-                        return '<button type="button" class="search-suggest-item' + (idx === 0 ? ' active' : '') + '" data-href="' + s.href + '">' +
-                            '<div class="search-suggest-title">' + highlightText(s.title, term) + '</div>' +
-                            '<div class="search-suggest-meta">' + highlightText(meta, term) + '</div>' +
-                            '</button>';
-                    }).join('');
-                    menu.style.display = 'block';
-                };
-
-                const navigateFirst = () => {
-                    const first = currentSuggestions[0];
-                    if (first && first.href) window.location.href = first.href;
-                };
-
-                searchInput.addEventListener('input', function () {
-                    renderMenu(searchInput.value || '');
-                });
-
-                searchInput.addEventListener('focus', function () {
-                    if (window.innerWidth <= 991) {
-                        const header = document.getElementById('header');
-                        if (header && !header.classList.contains('header-search-open')) return;
-                    }
-                    renderMenu(searchInput.value || '');
-                });
-
-                searchInput.addEventListener('keydown', function (e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        if (menu.style.display === 'none') renderMenu(searchInput.value || '');
-                        navigateFirst();
-                    }
-                    if (e.key === 'Escape') {
-                        menu.style.display = 'none';
-                    }
-                });
-
-                menu.addEventListener('click', function (e) {
-                    const btn = e.target.closest('.search-suggest-item');
-                    if (!btn) return;
-                    const href = btn.getAttribute('data-href');
-                    if (href) window.location.href = href;
-                });
-
-                document.addEventListener('click', function (e) {
-                    if (!wrap || !wrap.contains(e.target)) menu.style.display = 'none';
+            // Header page search - shared logic in assets/js/portal-search.js.
+            if (typeof window.initPortalSearch === 'function') {
+                window.initPortalSearch({
+                    inputId: 'patientSearch',
+                    keywords: {
+                        "dashboard": ["home", "overview", "summary"],
+                        "appointments": ["book", "booking", "schedule", "calendar", "reschedule", "cancel"],
+                        "services": ["procedures", "pricing", "treatments", "clinic services"],
+                        "clinic_records": ["medical record", "history", "completed appointments", "dental chart"],
+                        "transactions": ["billing", "payments", "invoices", "receipts", "balance"],
+                        "notifications": ["alerts", "updates"],
+                        "settings": ["preferences", "configuration", "password"],
+                        "profile": ["account", "my profile"]
+                    },
+                    sections: [
+                        {
+                            "title": "Notifications",
+                            "href": "patient.php?page=notifications",
+                            "keywords": ["alerts", "updates"]
+                        }
+                    ]
                 });
             }
 

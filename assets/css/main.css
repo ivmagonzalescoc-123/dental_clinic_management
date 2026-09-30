@@ -2186,19 +2186,25 @@ table a:hover {
 
     /* Reset desktop collapsed styles on mobile so labels show.
        Margin stays flush-right (0) so the connected-to-background look
-       (see .sidebar-nav .nav-link base rule) holds on mobile too. */
+       (see .sidebar-nav .nav-link base rule) holds on mobile too.
+       Applied in BOTH states (closed and open): toggle-sidebar is what opens
+       the drawer on mobile, so sizing links only in the open state made every
+       item shrink ~4px as the drawer slid in, nudging the list upward. */
+    body .sidebar-nav .nav-link,
     body.toggle-sidebar .sidebar-nav .nav-link {
         justify-content: flex-start;
         padding: 10px 14px !important;
         margin: 2px 0 2px 8px !important;
         position: static;
     }
+    body .sidebar-nav .nav-link i,
     body.toggle-sidebar .sidebar-nav .nav-link i {
         margin-right: 10px;
         font-size: 16px;
         width: 20px;
         text-align: center;
     }
+    body .sidebar-nav .nav-link span,
     body.toggle-sidebar .sidebar-nav .nav-link span {
         display: inline !important;
         max-width: none !important;

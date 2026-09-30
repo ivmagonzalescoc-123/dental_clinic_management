@@ -3,7 +3,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/treatment_plan_helpers.php';
 header('Content-Type: application/json');
 
-if (!in_array($_SESSION['role'] ?? '', ['doctor', 'secretary'], true) || empty($_SESSION['user_id'])) {
+if (!in_array($_SESSION['role'] ?? '', ['doctor', 'secretary', 'admin'], true) || empty($_SESSION['user_id'])) {
     http_response_code(403);
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;

@@ -5,7 +5,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_hel
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
-if (!in_array($role, ['doctor','secretary'])) {
+if (!in_array($role, ['doctor','secretary','admin'])) {
     http_response_code(403);
     echo json_encode(['success'=>false,'message'=>'Forbidden']);
     exit;
