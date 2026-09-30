@@ -112,11 +112,15 @@ $aboutPoints = [
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 1998.">
     <title>Azucena's Dental Clinic | Home</title>
+    <link rel="icon" type="image/png" href="<?= asset_url('assets/img/clinic-logo.png') ?>">
+    <link rel="apple-touch-icon" href="<?= asset_url('assets/img/clinic-logo.png') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?= asset_url('assets/css/app-toast.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('assets/css/app-request.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('assets/css/overlay-scrollbars.css') ?>">
+    <script src="<?= asset_url('assets/js/overlay-scrollbars.js') ?>" defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <?php if ($googleClientId !== ''): ?>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -912,6 +916,10 @@ $aboutPoints = [
                 <a href="#hero" class="hover:text-white transition-colors">Home</a>
                 <a href="#services" class="hover:text-white transition-colors">Services</a>
                 <a href="#contact" class="hover:text-white transition-colors">Contact</a>
+                <a href="https://www.facebook.com/azucenadentalcliniccdo/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 hover:text-white transition-colors" aria-label="Azucena's Dental Clinic on Facebook">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12.06C22 6.5 17.52 2 12 2S2 6.5 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.52 1.49-3.91 3.78-3.91 1.1 0 2.24.2 2.24.2v2.47h-1.26c-1.24 0-1.63.78-1.63 1.57v1.88h2.78l-.44 2.91h-2.34V22c4.78-.76 8.43-4.92 8.43-9.94z"/></svg>
+                    Facebook
+                </a>
             </div>
         </div>
     </footer>
@@ -1177,8 +1185,6 @@ $aboutPoints = [
                         </div>
                     </div>
                 </div>
-
-                <p class="text-xs text-slate-500">Your verification code will be sent by email. An SMS option is offered after you request your code.</p>
 
                 <div>
                     <label class="flex items-start gap-2 cursor-pointer">

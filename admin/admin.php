@@ -104,6 +104,8 @@ switch ($role_key) {
 
     <!-- Template Main CSS File -->
     <link href="<?= asset_url('../assets/css/main.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/overlay-scrollbars.css') ?>" rel="stylesheet">
+    <script src="<?= asset_url('../assets/js/overlay-scrollbars.js') ?>" defer></script>
     <link href="<?= asset_url('../assets/css/app-toast.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/module-content-ux.css') ?>" rel="stylesheet">
@@ -337,6 +339,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/app-confirm.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/password-toggle.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/dental-calendar.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/page-skeleton.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/main.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/portal-dropdown.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>

@@ -1,0 +1,72 @@
+/*
+ * Overlay scrollbars (paired with assets/js/overlay-scrollbars.js).
+ * Native scrollbars are hidden only once the script has added .ovs-enabled,
+ * so pages keep normal scrollbars if the script fails or on touch devices.
+ * Opt an element out with the data-native-scrollbar attribute.
+ */
+html.ovs-enabled,
+html.ovs-enabled *:not([data-native-scrollbar]):not(select) {
+    scrollbar-width: none !important;
+}
+html.ovs-enabled::-webkit-scrollbar,
+html.ovs-enabled *:not([data-native-scrollbar]):not(select)::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.ovs-bar {
+    position: fixed;
+    z-index: 2147483000;
+    box-sizing: border-box;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.ovs-bar[hidden] {
+    display: none;
+}
+.ovs-bar.is-visible {
+    opacity: 1;
+}
+
+.ovs-thumb {
+    position: absolute;
+    border-radius: 999px;
+    background: rgba(15, 30, 53, 0.38);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+    transition: background 0.15s ease, left 0.15s ease, right 0.15s ease, top 0.15s ease, bottom 0.15s ease;
+    will-change: transform;
+}
+.ovs-bar--y .ovs-thumb {
+    top: 0;
+    left: 2px;
+    right: 2px;
+}
+.ovs-bar--x .ovs-thumb {
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+}
+.ovs-bar.is-visible .ovs-thumb {
+    pointer-events: auto;
+}
+.ovs-bar--y .ovs-thumb:hover,
+.ovs-bar--y.is-dragging .ovs-thumb {
+    left: 0;
+    right: 0;
+}
+.ovs-bar--x .ovs-thumb:hover,
+.ovs-bar--x.is-dragging .ovs-thumb {
+    top: 0;
+    bottom: 0;
+}
+.ovs-thumb:hover,
+.ovs-bar.is-dragging .ovs-thumb {
+    background: rgba(27, 122, 163, 0.75);
+}
+
+html.ovs-dragging,
+html.ovs-dragging * {
+    user-select: none !important;
+}

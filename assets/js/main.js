@@ -367,10 +367,8 @@
       return false
     }
 
-    // Generic content-shaped placeholder shown in #main while an AJAX nav
-    // fetch is in flight. Doesn't match every module's real layout, but a
-    // hero + KPI row + panel skeleton approximates the common dashboard
-    // shape far better than a blocking full-screen spinner did.
+    // Fallback placeholder shown in #main while an AJAX nav fetch is in flight,
+    // used only if page-skeleton.js (per-page layout skeletons) isn't loaded.
     var SKELETON_MAIN_HTML =
       '<div class="dental-skeleton-block dental-skeleton-hero"></div>' +
       '<div class="dental-skeleton-kpi-row">' +
@@ -428,7 +426,15 @@
 
       var skeletonTarget = document.querySelector('#main')
       if (skeletonTarget) {
-        skeletonTarget.innerHTML = SKELETON_MAIN_HTML
+        if (window.DentalPageSkeleton) {
+          // Snapshot the page being left, then show the next page's own layout.
+          DentalPageSkeleton.capture(skeletonTarget, window.location.href)
+          DentalPageSkeleton.show(skeletonTarget, url)
+        } else {
+          skeletonTarget.innerHTML = SKELETON_MAIN_HTML
+        }
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
       }
 
       fetch(url, { credentials: 'same-origin', signal: currentAbort.signal })
