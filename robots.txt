@@ -1,0 +1,20 @@
+# Azucena's Dental Clinic - rules for search engine crawlers.
+# Only the public landing page should be indexed; staff/patient areas and APIs are private.
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /doctor/
+Disallow: /secretary/
+Disallow: /patient/
+Disallow: /assets/api/
+Disallow: /config/
+Disallow: /includes/
+Disallow: /scripts/
+Disallow: /backups/
+Disallow: /logs/
+Disallow: /sql/
+Disallow: /docs/
+Disallow: /ws-server/
+Disallow: /vendor/
+
+Sitemap: https://www.azucenaclinic.online/sitemap.xml

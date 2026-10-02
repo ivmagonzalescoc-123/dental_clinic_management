@@ -1,21 +1,5 @@
 <?php
 
-if (!function_exists('get_clinical_setting')) {
-    function get_clinical_setting($conn, $key, $default = null)
-    {
-        $stmt = $conn->prepare('SELECT setting_value FROM clinic_settings WHERE setting_key = ? LIMIT 1');
-        if (!$stmt) return $default;
-        $stmt->bind_param('s', $key);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $row = $res ? $res->fetch_assoc() : null;
-        $stmt->close();
-        if (!$row || !isset($row['setting_value'])) return $default;
-        $val = $row['setting_value'];
-        return is_numeric($val) ? (float)$val : $val;
-    }
-}
-
 if (!function_exists('billing_table_exists')) {
     function billing_table_exists($conn, $tableName)
     {
@@ -161,15 +145,7 @@ if (!function_exists('billing_ensure_tables')) {
 
         billing_migrate_billing_columns($conn);
 
-        $conn->query("CREATE TABLE IF NOT EXISTS clinic_settings (
-            setting_key VARCHAR(100) NOT NULL,
-            setting_value TEXT DEFAULT NULL,
-            description VARCHAR(255) DEFAULT NULL,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (setting_key)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci");
-
-        // Consultation used to be a hidden clinic_settings value that create_secretary_record.php
+        // Consultation used to be a hidden consultation_fee setting that create_secretary_record.php
         // auto-applied whenever nothing else was billed. It's now a normal selectable service
         // (like any other item in the services list) so it has to be explicitly added during
         // booking or the visit — seed it once as a real services row instead.

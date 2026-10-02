@@ -24,6 +24,14 @@ RewriteEngine On
 RewriteCond %{HTTP_HOST} ^azucenaclinic\.online$ [NC]
 RewriteRule ^ https://www.azucenaclinic.online%{REQUEST_URI} [L,R=301]
 
+# "/index.php" and "/" are the same page; send plain visits to "/" so only one
+# address gets indexed. Only bare GETs on the live domain (keeps ?timeout=1, POSTs, localhost).
+RewriteCond %{HTTP_HOST} ^www\.azucenaclinic\.online$ [NC]
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{QUERY_STRING} ^$
+RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
+RewriteRule ^index\.php$ https://www.azucenaclinic.online/ [L,R=301]
+
 # Force HTTPS on live hosts (skip local XAMPP)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]

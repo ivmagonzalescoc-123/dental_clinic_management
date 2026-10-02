@@ -25,12 +25,6 @@ while ($row = $res->fetch_assoc()) {
     print_r($row);
 }
 
-echo "\n=== Clinic Settings ===" . PHP_EOL;
-$res = $conn->query("SELECT * FROM clinic_settings");
-while ($row = $res->fetch_assoc()) {
-    print_r($row);
-}
-
 echo "\n=== Timeslots ===" . PHP_EOL;
 $res = $conn->query("SELECT COUNT(*) as count FROM timeslot");
 print_r($res->fetch_assoc());

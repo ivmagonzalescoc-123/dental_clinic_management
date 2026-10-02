@@ -8,13 +8,13 @@
         <mxCell id="yRwlljrILqDDostc0-zi-1" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;fillColor=#d5e8d4;strokeColor=#82b366;" value="Start" vertex="1">
           <mxGeometry height="50" width="180" x="400" y="20" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Patient logs into portal&#xa;(index.php)" vertex="1">
+        <mxCell id="yRwlljrILqDDostc0-zi-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Patient opens portal&#xa;(index.php)" vertex="1">
           <mxGeometry height="60" width="220" x="380" y="100" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Cloudflare Turnstile passed,&#xa;credentials valid &amp;&#xa;session OK?" vertex="1">
+        <mxCell id="yRwlljrILqDDostc0-zi-3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Not rate-limited (20 tries/15 min),&#xa;Turnstile passed &amp;&#xa;credentials / Google valid?" vertex="1">
           <mxGeometry height="80" width="240" x="370" y="200" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" value="Show error message,&#xa;allow retry" vertex="1">
+        <mxCell id="yRwlljrILqDDostc0-zi-4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#f8cecc;strokeColor=#b85450;" value="Show error message&#xa;(or &quot;Too many attempts&quot;&#xa;lockout); allow retry" vertex="1">
           <mxGeometry height="60" width="220" x="740" y="205" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Patient Dashboard loaded" vertex="1">
@@ -92,7 +92,7 @@
         <mxCell id="yRwlljrILqDDostc0-zi-27" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="channel-1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="yRwlljrILqDDostc0-zi-28" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-2" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="yRwlljrILqDDostc0-zi-3">
+        <mxCell id="yRwlljrILqDDostc0-zi-28" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-2" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="remember-1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="yRwlljrILqDDostc0-zi-29" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-3" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="yRwlljrILqDDostc0-zi-5" value="Yes">
@@ -217,7 +217,7 @@
         <mxCell id="channel-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=11;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Booking channel?" vertex="1">
           <mxGeometry height="60" width="200" x="650" y="20" as="geometry" />
         </mxCell>
-        <mxCell id="channel-edge-1" edge="1" parent="1" source="channel-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="yRwlljrILqDDostc0-zi-2" value="Online (Guest)">
+        <mxCell id="channel-edge-1" edge="1" parent="1" source="channel-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="yRwlljrILqDDostc0-zi-2" value="Online (Patient)">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="channel-edge-2" edge="1" parent="1" source="channel-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;" target="walkin-start-1" value="Walk-in (Secretary)">
@@ -271,6 +271,36 @@
         <mxCell id="auto-reminder-edge-1" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-20" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="auto-reminder-note-1" value="parallel automated path">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
+        <mxCell id="remember-1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontSize=10;fillColor=#ffe6cc;strokeColor=#d79b00;" value="Valid &quot;Remember me&quot;&#xa;cookie? (30 days)" vertex="1">
+          <mxGeometry height="70" width="220" x="80" y="95" as="geometry" />
+        </mxCell>
+        <mxCell id="login-method-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Log in with username/email&#xa;+ password, or&#xa;&quot;Sign in with Google&quot; (OAuth)" vertex="1">
+          <mxGeometry height="60" width="220" x="80" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="remember-edge-no" edge="1" parent="1" source="remember-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;" target="login-method-1" value="No">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="login-method-edge-1" edge="1" parent="1" source="login-method-1" style="edgeStyle=orthogonalEdgeStyle;html=1;" target="yRwlljrILqDDostc0-zi-3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="remember-edge-yes" edge="1" parent="1" source="remember-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=10;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="yRwlljrILqDDostc0-zi-5" value="Yes (auto sign-in)">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="130" />
+              <mxPoint x="40" y="350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="tplan-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontSize=11;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Doctor creates treatment plan&#xa;(phased items) &amp; prints&#xa;cost estimate" vertex="1">
+          <mxGeometry height="60" width="220" x="80" y="1490" as="geometry" />
+        </mxCell>
+        <mxCell id="tplan-edge-1" edge="1" parent="1" source="yRwlljrILqDDostc0-zi-21" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;" target="tplan-1" value="if treatment needed">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="tplan-edge-2" edge="1" parent="1" source="tplan-1" style="edgeStyle=orthogonalEdgeStyle;html=1;fontSize=9;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="yRwlljrILqDDostc0-zi-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
       </root>
     </mxGraphModel>
   </diagram>

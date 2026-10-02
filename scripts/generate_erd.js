@@ -607,13 +607,6 @@ const contact_messages = addTable('t_cm', 'contact_messages', 2190, 285, [
   { name: 'created_at', dtype: 'TIMESTAMP' },
 ], C.other, 210);
 
-const clinic_settings = addTable('t_cs', 'clinic_settings', 2190, 630, [
-  { name: 'setting_key', type: 'PK', dtype: 'VARCHAR' },
-  { name: 'setting_value', dtype: 'TEXT' },
-  { name: 'description', dtype: 'VARCHAR' },
-  { name: 'updated_at', dtype: 'DATETIME' },
-], C.other);
-
 const rate_limit_hits = addTable('t_rlh', 'rate_limit_hits', 2190, 800, [
   { name: 'hit_id', type: 'PK', dtype: 'INT' },
   { name: 'bucket', dtype: 'VARCHAR' },

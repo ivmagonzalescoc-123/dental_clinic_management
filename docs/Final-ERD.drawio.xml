@@ -1340,21 +1340,6 @@
         <mxCell id="c400" value="created_at TIMESTAMP" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="280" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="t_cs" value="clinic_settings" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontColor=#475569;html=1;" vertex="1" parent="1">
-          <mxGeometry x="3270" y="630" width="200" height="130" as="geometry"/>
-        </mxCell>
-        <mxCell id="c401" value="PK setting_key VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
-          <mxGeometry x="0" y="30" width="200" height="25" as="geometry"/>
-        </mxCell>
-        <mxCell id="c402" value="setting_value TEXT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
-          <mxGeometry x="0" y="55" width="200" height="25" as="geometry"/>
-        </mxCell>
-        <mxCell id="c403" value="description VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
-          <mxGeometry x="0" y="80" width="200" height="25" as="geometry"/>
-        </mxCell>
-        <mxCell id="c404" value="updated_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
-          <mxGeometry x="0" y="105" width="200" height="25" as="geometry"/>
-        </mxCell>
         <mxCell id="t_rlh" value="rate_limit_hits" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontColor=#475569;html=1;" vertex="1" parent="1">
           <mxGeometry x="3270" y="800" width="210" height="130" as="geometry"/>
         </mxCell>

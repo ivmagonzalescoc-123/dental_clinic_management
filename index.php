@@ -36,8 +36,8 @@ $year = date('Y');
 $csrf_token = security_generate_csrf_token();
 $googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
 $turnstileSiteKey = (string)env('TURNSTILE_SITE_KEY', '');
-$clinicLogo = 'assets/img/clinic-logo.png';
-$pageBackgroundImage = 'assets/img/landing-background.jpg';
+$clinicLogo = 'assets/img/clinic-logo-96.webp';
+$pageBackgroundImage = 'assets/img/landing-background.webp';
 
 $pageBgSrc = $pageBackgroundImage;
 if (!preg_match('#^https?://#i', $pageBackgroundImage)) {
@@ -110,8 +110,8 @@ $aboutPoints = [
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Azucena's Dental Clinic - compassionate, state-of-the-art dental care in Cagayan de Oro City since 1998.">
-    <title>Azucena's Dental Clinic | Home</title>
+    <meta name="description" content="Azucena's Dental Clinic offers gentle, modern dental care in Cagayan de Oro City since 1998: cleanings, braces, veneers, whitening and kids' dentistry.">
+    <title>Azucena's Dental Clinic | Trusted Dentist in Cagayan de Oro</title>
     <!-- Main address for search engines (also collapses ?i=1 and non-www variants). -->
     <link rel="canonical" href="https://www.azucenaclinic.online/">
     <!-- Square icons in multiples of 48px, as Google Search requires for the site icon in results. -->
@@ -122,7 +122,12 @@ $aboutPoints = [
     <link rel="apple-touch-icon" href="<?= asset_url('assets/img/favicon-192.png') ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts load without blocking the first paint (display=swap shows system fonts until they arrive). -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+    <!-- Hero background is the largest thing on screen; start fetching it right away. -->
+    <link rel="preload" as="image" href="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>" fetchpriority="high">
     <link rel="stylesheet" href="<?= asset_url('assets/css/app-toast.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('assets/css/app-request.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('assets/css/overlay-scrollbars.css') ?>">
@@ -664,7 +669,7 @@ $aboutPoints = [
     <!-- Header -->
     <header id="siteHeader" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300" style="background: transparent; backdrop-filter: none; border-bottom: none; box-shadow: none;">
         <nav class="mx-auto flex max-w-6xl items-center justify-between px-6 h-16 lg:h-20">
-            <a href="index.php" class="flex items-center gap-2 group">
+            <a href="./" class="flex items-center gap-2 group">
                 <img
                     src="<?php echo htmlspecialchars($clinicLogo, ENT_QUOTES, 'UTF-8'); ?>"
                     alt="Azucena's Dental Clinic logo"
@@ -884,8 +889,9 @@ $aboutPoints = [
                         <div class="relative">
                             <div class="absolute -top-4 -left-4 h-full w-full rounded-3xl" style="background: rgba(27,122,163,0.08); z-index: 0;"></div>
                             <img
-                                src="assets/img/profile_picture.jpg"
+                                src="assets/img/profile_picture.webp"
                                 alt="Azucena's Dental Clinic"
+                                width="960" height="957" loading="lazy" decoding="async"
                                 class="relative z-10 w-full rounded-3xl object-cover"
                                 style="height: 520px; object-position: top;"
                             >
