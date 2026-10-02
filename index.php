@@ -1554,7 +1554,6 @@ $aboutPoints = [
                 <div>
                     <div class="flex items-center justify-between">
                         <label for="login-password" class="modal-label">Password</label>
-                        <button type="button" data-auth-switch="forgot" class="mb-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors">Forgot password?</button>
                     </div>
                     <div class="modal-input-wrap">
                         <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
@@ -1567,10 +1566,13 @@ $aboutPoints = [
                     </div>
                 </div>
 
-                <label for="login-remember" class="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-slate-600">
-                    <input type="checkbox" id="login-remember" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-primary">
-                    Remember me
-                </label>
+                <div class="flex items-center justify-between gap-3">
+                    <label for="login-remember" class="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-slate-600">
+                        <input type="checkbox" id="login-remember" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-primary">
+                        Remember me
+                    </label>
+                    <button type="button" data-auth-switch="forgot" class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">Forgot password?</button>
+                </div>
 
                 <?php if ($turnstileSiteKey !== ''): ?>
                 <div class="flex justify-center">
@@ -1603,9 +1605,7 @@ $aboutPoints = [
                 </button>
                 <?php endif; ?>
 
-                <p class="text-center text-xs text-slate-500">
-                    New patient? <button type="button" data-auth-switch="booking" class="font-bold text-primary hover:text-primary/80">Book an appointment</button>
-                </p>
+                
             </form>
             </div>
 
