@@ -662,6 +662,414 @@ $aboutPoints = [
             to { transform: rotate(360deg); }
         }
 
+        /* Booking tracker layout */
+        .track-section {
+            position: relative; overflow: hidden;
+            background:
+                radial-gradient(40rem 20rem at 10% 0%, rgba(27, 122, 163, 0.10), transparent 70%),
+                radial-gradient(36rem 18rem at 95% 100%, rgba(34, 197, 94, 0.10), transparent 70%),
+                linear-gradient(135deg, #eff8fb 0%, #f0fdf4 100%);
+        }
+        .track-search {
+            position: relative; display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 0.4rem 0.4rem 2.9rem;
+            border: 1.5px solid #dbe5ec; border-radius: 1rem; background: #fff;
+            box-shadow: 0 14px 34px -18px rgba(15, 30, 53, 0.3);
+            transition: border-color 0.2s ease;
+        }
+        .track-search:focus-within { border-color: #1b7aa3; }
+        .track-search-icon {
+            position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+            width: 1.2rem; height: 1.2rem; color: #94a3b8; pointer-events: none; transition: color 0.2s ease;
+        }
+        .track-search:focus-within .track-search-icon { color: #1b7aa3; }
+        .track-search input {
+            flex: 1; min-width: 0; height: 2.75rem; border: 0; outline: none; background: transparent;
+            font-size: 0.95rem; font-weight: 600; letter-spacing: 0.02em; color: #0f172a;
+        }
+        .track-search input::placeholder { font-weight: 400; letter-spacing: 0; color: #94a3b8; }
+        .track-btn {
+            flex-shrink: 0; height: 2.75rem; padding: 0 1.4rem; border-radius: 0.75rem;
+            font-size: 0.875rem; font-weight: 800; color: #fff; white-space: nowrap;
+            background: linear-gradient(135deg, #1b7aa3 0%, #2490bf 100%);
+            transition: opacity 0.2s ease;
+        }
+        .track-btn:hover:not(:disabled) { background: linear-gradient(135deg, #17698c 0%, #1f7fa9 100%); }
+        .track-btn:focus-visible { outline: 2px solid #1b7aa3; outline-offset: 2px; }
+        .track-btn:disabled { opacity: 0.75; cursor: not-allowed; }
+        .track-error {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            margin-left: auto; margin-right: auto; width: fit-content; max-width: 100%;
+            padding: 0.55rem 0.9rem; border-radius: 0.75rem;
+            border: 1px solid #fecaca; background: #fef2f2;
+            font-size: 0.85rem; font-weight: 600; color: #dc2626;
+            animation: trackCardIn 0.3s ease;
+        }
+        .track-error.hidden { display: none; }
+        .track-error::before {
+            content: ''; width: 1rem; height: 1rem; flex-shrink: 0;
+            background: currentColor;
+            -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z'/%3E%3C/svg%3E") center / contain no-repeat;
+                    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
+        .track-card {
+            overflow: hidden; border-radius: 1.25rem; background: #fff;
+            border: 1px solid rgba(27, 122, 163, 0.12);
+            box-shadow: 0 24px 50px -28px rgba(15, 30, 53, 0.35);
+        }
+        .track-card-head {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;
+            padding: 1.1rem 1.25rem; border-bottom: 1px dashed #e2e8f0;
+            background: linear-gradient(180deg, #f8fbfd 0%, #ffffff 100%);
+        }
+        @media (min-width: 640px) { .track-card-head { padding: 1.1rem 1.75rem; } }
+        .track-code {
+            margin-top: 0.15rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+            font-size: 1.3rem; font-weight: 800; letter-spacing: 0.06em; color: #0f1e35;
+        }
+        .track-card-foot {
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            padding: 0.7rem 1.25rem; border-top: 1px solid #f1f5f9; background: #f8fafc;
+            font-size: 0.72rem; font-weight: 600; color: #64748b; text-align: center;
+        }
+        .track-card-foot.hidden { display: none; }
+        .track-live-dot {
+            position: relative; width: 0.5rem; height: 0.5rem; flex-shrink: 0;
+            border-radius: 9999px; background: #22c55e;
+        }
+        .track-live-dot::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; background: #22c55e;
+            animation: trackLivePing 1.6s ease-out infinite;
+        }
+        @keyframes trackLivePing {
+            from { opacity: 0.7; transform: scale(1); }
+            to { opacity: 0; transform: scale(2.6); }
+        }
+        .track-steps { display: flex; align-items: flex-start; }
+        .track-step { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; width: 6.5rem; }
+        .track-step-caption { margin-top: 0.2rem; font-size: 0.68rem; line-height: 1.3; color: #94a3b8; text-align: center; }
+        .track-line { flex: 1; padding-top: 1.375rem; min-width: 1rem; }
+        .track-step-circle svg { width: 1.3rem; height: 1.3rem; }
+        .track-step-circle.border-dashed { border-style: solid; background: #f8fafc; }
+        /* The next step still waiting on the clinic gets a soft "in progress" pulse. */
+        .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed {
+            border-color: #1b7aa3; color: #1b7aa3; background: #fff;
+            animation: trackStepWait 1.8s ease-in-out infinite;
+        }
+        @keyframes trackStepWait {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(27, 122, 163, 0.28); }
+            50% { box-shadow: 0 0 0 7px rgba(27, 122, 163, 0); }
+        }
+        .track-step-circle.bg-green-500 { box-shadow: 0 8px 18px -8px rgba(34, 197, 94, 0.8); }
+        .track-step-circle.bg-red-500 { box-shadow: 0 8px 18px -8px rgba(239, 68, 68, 0.8); }
+        @media (max-width: 420px) {
+            .track-step { width: 5.25rem; }
+            .track-step-caption { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .track-live-dot::after, .track-error,
+            .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed { animation: none; }
+        }
+
+        /* ===== Booking appointment panel ===== */
+        .booking-panel { max-width: 36rem; }
+        .booking-steps { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; }
+        .booking-steps li {
+            display: flex; align-items: center; gap: 0.4rem;
+            font-size: 0.72rem; font-weight: 700; color: #94a3b8;
+            transition: color 0.3s ease;
+            white-space: nowrap;
+        }
+        .booking-steps .step-dot {
+            display: flex; align-items: center; justify-content: center;
+            width: 1.4rem; height: 1.4rem; border-radius: 9999px;
+            font-size: 0.68rem;
+            border: 1.5px solid #cbd5e1; background: #fff; color: #94a3b8;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+        }
+        .booking-steps .step-bar {
+            flex: 1; height: 3px; min-width: 1rem; border-radius: 9999px;
+            background: #e2e8f0; overflow: hidden; position: relative;
+        }
+        .booking-steps .step-bar::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, #1b7aa3, #22c55e);
+            transform: scaleX(0); transform-origin: left center;
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .booking-steps .step-bar.is-filled::after { transform: scaleX(1); }
+        .booking-steps li.is-active { color: #0f1e35; }
+        .booking-steps li.is-active .step-dot {
+            border-color: #1b7aa3; background: #1b7aa3; color: #fff;
+            box-shadow: 0 0 0 4px rgba(27, 122, 163, 0.15);
+            transform: scale(1.05);
+        }
+        .booking-steps li.is-done { color: #15803d; }
+        .booking-steps li.is-done .step-dot { border-color: #22c55e; background: #22c55e; color: #fff; }
+
+        .booking-section-label {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+            color: #1b7aa3;
+        }
+        .booking-section-label::after { content: ''; flex: 1; height: 1px; background: #e8eef4; }
+        .modal-label { display: block; margin-bottom: 0.35rem; font-size: 0.75rem; font-weight: 700; color: #475569; }
+        .modal-input-wrap { position: relative; }
+        .modal-input-wrap > .modal-input-icon {
+            pointer-events: none; position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%);
+            width: 1.05rem; height: 1.05rem; color: #94a3b8; transition: color 0.2s ease;
+        }
+        .modal-input-wrap:focus-within > .modal-input-icon { color: #1b7aa3; }
+        .modal-input {
+            display: block; width: 100%; height: 2.75rem;
+            border: 1px solid #e2e8f0; border-radius: 0.75rem;
+            background: #f8fafc; padding: 0 0.85rem 0 2.4rem;
+            font-size: 0.875rem; color: #0f172a;
+        }
+        .modal-input::placeholder { color: #94a3b8; }
+        .modal-input:hover { border-color: #cbd5e1; }
+        .modal-input:focus,
+        .modal-group:focus-within {
+            border-color: #1b7aa3;
+            background-color: #fff;
+            box-shadow: none;
+        }
+        .modal-group {
+            display: flex; align-items: stretch; height: 2.75rem;
+            border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #f8fafc;
+            overflow: hidden;
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .modal-group:hover { border-color: #cbd5e1; }
+        .modal-group:has(.field-invalid) { border-color: #ef4444; background: #fff; }
+        .modal-group .auth-field,
+        .modal-group .auth-field:focus,
+        .modal-group .auth-field.field-invalid {
+            border: 0 !important; background: transparent !important; box-shadow: none !important; outline: none;
+        }
+        .modal-group select { padding: 0 0.4rem 0 0.75rem; font-size: 0.85rem; font-weight: 600; color: #334155; cursor: pointer; border-right: 1px solid #e2e8f0 !important; }
+        .modal-group input { min-width: 0; flex: 1; padding: 0 0.75rem; font-size: 0.875rem; color: #0f172a; }
+        .booking-time .book-time-field {
+            width: 2.25rem; flex: none; padding: 0; text-align: center;
+            font-weight: 700; font-variant-numeric: tabular-nums;
+            border: 0; background: transparent; outline: none;
+        }
+        .booking-time .book-time-field:focus { color: #1b7aa3; }
+        .booking-time .meridiem-btn {
+            margin: 0.3rem 0.3rem 0.3rem auto; padding: 0 0.7rem;
+            border-radius: 0.5rem; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.04em;
+            color: #1b7aa3; background: rgba(27, 122, 163, 0.1);
+            transition: background-color 0.2s ease, transform 0.15s ease;
+        }
+        .booking-time .meridiem-btn:hover { background: rgba(27, 122, 163, 0.18); }
+        .booking-time .meridiem-btn:active { transform: scale(0.94); }
+
+        /* Switch toggle */
+        .booking-switch {
+            appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0;
+            width: 2.25rem; height: 1.3rem; border-radius: 9999px; background: #cbd5e1; cursor: pointer;
+            transition: background-color 0.25s ease;
+        }
+        .booking-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: calc(1.3rem - 4px); height: calc(1.3rem - 4px); border-radius: 9999px; background: #fff;
+            box-shadow: 0 1px 3px rgba(15, 30, 53, 0.25);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .booking-switch:checked { background: #1b7aa3; }
+        .booking-switch:checked::after { transform: translateX(0.95rem); }
+        .booking-switch:focus-visible { outline: 2px solid #1b7aa3; outline-offset: 2px; }
+
+        /* Complaint chips (the checkbox stays the real, submitted control) */
+        #book-complaint-grid:not(.hidden),
+        #book-reason-wrap:not(.hidden) { animation: bookingReveal 0.3s ease; }
+        @keyframes bookingReveal {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .booking-chip {
+            position: relative; display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.4rem 0.75rem; border-radius: 9999px;
+            border: 1px solid #e2e8f0; background: #fff;
+            font-size: 0.78rem; font-weight: 600; color: #475569; cursor: pointer; user-select: none;
+            transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, transform 0.15s ease;
+        }
+        .booking-chip:hover { border-color: #1b7aa3; color: #1b7aa3; }
+        .booking-chip:active { transform: scale(0.97); }
+        .booking-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+        .booking-chip .chip-check {
+            width: 0; height: 0.85rem; overflow: hidden; opacity: 0;
+            transition: width 0.2s ease, opacity 0.2s ease;
+        }
+        .booking-chip:has(input:checked) { border-color: #1b7aa3; background: #1b7aa3; color: #fff; }
+        .booking-chip:has(input:checked) .chip-check { width: 0.85rem; opacity: 1; }
+        .booking-chip:has(input:focus-visible) { outline: 2px solid #1b7aa3; outline-offset: 2px; }
+
+        /* Primary button with built-in loading state */
+        .modal-btn {
+            position: relative; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            width: 100%; height: 3rem; border-radius: 0.9rem;
+            font-size: 0.9rem; font-weight: 800; color: #fff;
+            background: linear-gradient(135deg, #1b7aa3 0%, #2490bf 100%);
+            box-shadow: 0 10px 22px -10px rgba(27, 122, 163, 0.75);
+            transition: opacity 0.2s ease;
+        }
+        .modal-btn:hover:not(:disabled) { background: linear-gradient(135deg, #17698c 0%, #1f7fa9 100%); }
+        .modal-btn:focus-visible { outline: 2px solid #1b7aa3; outline-offset: 3px; }
+        .modal-btn:disabled { opacity: 0.75; cursor: not-allowed; }
+        .modal-btn .btn-spinner { display: none; }
+        .modal-btn.is-loading .btn-spinner { display: inline-block; }
+
+        /* Step transitions inside the booking panel */
+        .booking-step-in { animation: bookingStepIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .booking-step-out { animation: bookingStepOut 0.2s ease forwards; pointer-events: none; }
+        @keyframes bookingStepIn {
+            from { opacity: 0; transform: translateY(14px) scale(0.99); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes bookingStepOut {
+            to { opacity: 0; transform: translateY(-10px) scale(0.99); }
+        }
+
+        /* OTP: boxes start stacked in the center, then spread left/right */
+        .otp-stage {
+            --otp-w: 2.6rem; --otp-gap: 0.45rem;
+            position: relative; display: flex; justify-content: center;
+        }
+        @media (min-width: 400px) { .otp-stage { --otp-w: 2.9rem; --otp-gap: 0.6rem; } }
+        .otp-stage .otp-boxes { gap: var(--otp-gap); }
+        .otp-stage .otp-box {
+            --i: 0;
+            width: var(--otp-w); height: calc(var(--otp-w) * 1.2);
+            border-radius: 0.8rem; border: 1.5px solid #e2e8f0; background: #f8fafc;
+            font-size: 1.35rem; font-weight: 800; color: #0f172a; text-align: center;
+            caret-color: #1b7aa3;
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+            --otp-from: calc((2.5 - var(--i)) * (var(--otp-w) + var(--otp-gap)));
+        }
+        .otp-stage .otp-box:focus { border-color: #1b7aa3; background: #fff; box-shadow: none; outline: none; }
+        .otp-stage .otp-box:not(:placeholder-shown) { border-color: rgba(27, 122, 163, 0.55); background: #fff; }
+        .otp-stage .otp-box:nth-child(1) { --i: 0; }
+        .otp-stage .otp-box:nth-child(2) { --i: 1; }
+        .otp-stage .otp-box:nth-child(3) { --i: 2; z-index: 2; }
+        .otp-stage .otp-box:nth-child(4) { --i: 3; z-index: 2; }
+        .otp-stage .otp-box:nth-child(5) { --i: 4; }
+        .otp-stage .otp-box:nth-child(6) { --i: 5; }
+        .otp-stage.is-spreading .otp-box { animation: otpSpread 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .otp-stage.is-merging .otp-box { animation: otpMerge 0.45s cubic-bezier(0.55, 0, 0.45, 1) forwards; }
+        @keyframes otpSpread {
+            0%   { transform: translateX(var(--otp-from)) scale(0.4); opacity: 0; }
+            30%  { transform: translateX(var(--otp-from)) scale(1); opacity: 1; }
+            100% { transform: translateX(0) scale(1); opacity: 1; }
+        }
+        @keyframes otpMerge {
+            0%   { transform: translateX(0) scale(1); opacity: 1; }
+            65%  { transform: translateX(var(--otp-from)) scale(1); opacity: 1; }
+            100% { transform: translateX(var(--otp-from)) scale(0.3); opacity: 0; }
+        }
+
+        /* Shield the merged boxes turn into: fills green and draws a check once verified */
+        .otp-shield {
+            position: absolute; left: 50%; top: 50%;
+            width: 4.25rem; height: 4.25rem; margin: -2.125rem 0 0 -2.125rem;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 9999px; color: #1b7aa3; background: #fff;
+            box-shadow: 0 12px 28px -12px rgba(15, 30, 53, 0.35), 0 0 0 1px rgba(27, 122, 163, 0.12);
+            opacity: 0; transform: scale(0.3); pointer-events: none;
+            transition: color 0.35s ease;
+        }
+        .otp-shield svg { width: 2.5rem; height: 2.5rem; overflow: visible; }
+        .otp-shield .shield-body { fill: rgba(27, 122, 163, 0.12); transition: fill 0.35s ease; }
+        .otp-shield .shield-check { stroke-dasharray: 22; stroke-dashoffset: 22; }
+        .otp-shield::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit;
+            border: 2px solid #22c55e; opacity: 0;
+        }
+        .otp-stage.is-sealing .otp-shield { animation: shieldPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .otp-stage.is-verified .otp-shield { opacity: 1; transform: scale(1); color: #16a34a; animation: shieldBeat 0.45s ease; }
+        .otp-stage.is-verified .otp-shield .shield-body { fill: #16a34a; }
+        .otp-stage.is-verified .otp-shield .shield-check { animation: shieldCheck 0.4s ease-out 0.15s forwards; }
+        .otp-stage.is-verified .otp-shield::before { animation: shieldRing 0.7s ease-out 0.2s; }
+        @keyframes shieldPop {
+            from { opacity: 0; transform: scale(0.3); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shieldBeat {
+            0%, 100% { transform: scale(1); }
+            40% { transform: scale(1.12); }
+        }
+        @keyframes shieldCheck {
+            to { stroke-dashoffset: 0; }
+        }
+        @keyframes shieldRing {
+            from { opacity: 0.8; transform: scale(1); }
+            to { opacity: 0; transform: scale(1.7); }
+        }
+        #booking-otp-section .otp-fade { transition: opacity 0.3s ease, transform 0.3s ease; }
+        #booking-otp-section.is-verifying { pointer-events: none; }
+        #booking-otp-section.is-verifying .otp-fade { opacity: 0; transform: translateY(6px); }
+
+        .otp-mail-icon {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            width: 3.5rem; height: 3.5rem; margin: 0 auto 0.85rem;
+            border-radius: 1rem; color: #1b7aa3; background: rgba(27, 122, 163, 0.1);
+        }
+        .otp-mail-icon::after {
+            content: ''; position: absolute; inset: -6px; border-radius: 1.3rem;
+            border: 2px solid rgba(27, 122, 163, 0.25);
+            animation: otpPulse 2s ease-out infinite;
+        }
+        @keyframes otpPulse {
+            0% { opacity: 1; transform: scale(0.92); }
+            100% { opacity: 0; transform: scale(1.18); }
+        }
+
+        /* Success: verified shield badge + tracking code reveal */
+        .booking-success-badge {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            width: 4.5rem; height: 4.5rem; margin: 0 auto 1rem; border-radius: 9999px;
+            color: #16a34a; background: #f0fdf4; box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.1);
+        }
+        .booking-success-badge svg { width: 2.4rem; height: 2.4rem; overflow: visible; }
+        .booking-step-in .booking-success-badge { animation: forgotPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .booking-ticket {
+            position: relative; margin-top: 1.25rem; padding: 1.1rem 1.25rem;
+            border-radius: 1rem; border: 1.5px dashed rgba(34, 197, 94, 0.45);
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+        }
+        .booking-ticket::before, .booking-ticket::after {
+            content: ''; position: absolute; top: 50%; width: 1rem; height: 1rem; margin-top: -0.5rem;
+            border-radius: 9999px; background: #fff; border: 1.5px dashed rgba(34, 197, 94, 0.45);
+        }
+        .booking-ticket::before { left: -0.55rem; clip-path: inset(0 0 0 50%); }
+        .booking-ticket::after { right: -0.55rem; clip-path: inset(0 50% 0 0); }
+        .booking-ref {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+            font-size: 1.6rem; font-weight: 800; letter-spacing: 0.08em; color: #15803d;
+        }
+        .booking-ref .ref-char { display: inline-block; animation: refCharIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+        @keyframes refCharIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.6); filter: blur(3px); }
+            to { opacity: 1; transform: none; filter: none; }
+        }
+        .booking-stagger > * { animation: bookingStepIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+        .booking-stagger > *:nth-child(2) { animation-delay: 0.08s; }
+        .booking-stagger > *:nth-child(3) { animation-delay: 0.16s; }
+        .booking-stagger > *:nth-child(4) { animation-delay: 0.3s; }
+        .booking-stagger > *:nth-child(5) { animation-delay: 0.4s; }
+        .booking-stagger > *:nth-child(6) { animation-delay: 0.5s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .otp-stage.is-spreading .otp-box, .otp-stage.is-merging .otp-box,
+            .otp-stage.is-sealing .otp-shield, .otp-stage.is-verified .otp-shield,
+            .otp-stage.is-verified .otp-shield::before, .otp-mail-icon::after,
+            .booking-step-in, .booking-step-out, .booking-stagger > *, .booking-ref .ref-char,
+            .booking-step-in .booking-success-badge,
+            #book-complaint-grid:not(.hidden), #book-reason-wrap:not(.hidden) { animation: none; }
+            .otp-stage.is-verified .otp-shield .shield-check { animation: none; stroke-dashoffset: 0; }
+        }
+
     </style>
 </head>
 <body class="font-sans antialiased text-foreground bg-background">
@@ -776,67 +1184,76 @@ $aboutPoints = [
         </section>
 
         <!-- Track Your Booking -->
-        <section id="track-booking" class="py-16" style="background: linear-gradient(135deg, #eff8fb 0%, #f0fdf4 100%);">
+        <section id="track-booking" class="track-section py-20">
             <div class="mx-auto max-w-6xl px-6">
-                <div class="reveal mx-auto max-w-xl text-center">
+                <div class="reveal mx-auto max-w-2xl text-center">
                     <span class="inline-block text-primary text-sm tracking-widest uppercase" style="font-weight: 600;">Appointment Status</span>
                     <h2 class="mt-3 font-display text-foreground" style="font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 600;">Track Your Appointment</h2>
-                    <p class="mt-3 text-muted-foreground leading-relaxed">Enter your appointment number to check the status of your appointment request.</p>
+                    <p class="mt-3 text-muted-foreground leading-relaxed">Enter the reference number from your booking confirmation to see where your request is.</p>
 
-                    <div class="mt-6 flex items-center gap-2">
-                        <div class="relative flex-1">
-                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-                            </span>
-                            <input type="text" id="bookingTrackInput" placeholder="Enter appointment number (e.g. 1001)" class="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all">
-                        </div>
-                        <button type="button" id="bookingTrackBtn" class="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:opacity-90 active:scale-95 transition-all duration-200 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed">
+                    <div class="track-search mt-8">
+                        <svg class="track-search-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                        <input type="text" id="bookingTrackInput" placeholder="Enter your reference number" aria-label="Reference number" autocomplete="off" spellcheck="false">
+                        <button type="button" id="bookingTrackBtn" class="track-btn">
                             <span id="bookingTrackBtnLabel">Track</span>
                         </button>
                     </div>
+                    <p class="mt-3 text-xs text-muted-foreground">You can find it in the email we sent after you booked.</p>
+
+                    <div id="bookingTrackError" class="track-error mt-4 hidden" role="alert"></div>
 
                     <!-- Progress Steps (hidden by default) -->
-                    <div id="bookingTrackResult" class="mt-6 hidden">
-                        <div class="rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm">
-                            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                                <h3 class="text-xs font-semibold text-slate-500">
-                                    Tracking Code <span id="trackBookingId" class="ml-1 font-mono text-sm font-bold text-slate-900"></span>
-                                </h3>
+                    <div id="bookingTrackResult" class="mt-8 hidden">
+                        <div class="track-card text-left">
+                            <div class="track-card-head">
+                                <div class="min-w-0">
+                                    <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Reference Number</p>
+                                    <p id="trackBookingId" class="track-code truncate"></p>
+                                </div>
                                 <span id="trackBookingStatus" class="track-status-badge"><span class="dot"></span><span id="trackBookingStatusText"></span></span>
                             </div>
-                            <p id="trackBookingDesc" class="mt-2.5 text-sm text-slate-600 leading-relaxed"></p>
-                            <p id="trackBookingReason" class="mt-1 text-xs text-red-600 hidden"></p>
 
-                            <!-- Steps -->
-                            <div class="flex items-start mt-5">
-                                <!-- Step 1 -->
-                                <div class="flex flex-col items-center" style="min-width:80px;">
-                                    <div id="step1Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">1</div>
-                                    <span id="step1Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Booking<br>Created</span>
+                            <div class="px-5 pb-6 pt-5 sm:px-7">
+                                <p id="trackBookingDesc" class="text-sm text-slate-600 leading-relaxed"></p>
+                                <p id="trackBookingReason" class="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600 hidden"></p>
+
+                                <!-- Steps -->
+                                <div class="track-steps mt-7">
+                                    <!-- Step 1 -->
+                                    <div class="track-step">
+                                        <div id="step1Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg></div>
+                                        <span id="step1Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Booking Created</span>
+                                        <span class="track-step-caption">Request received</span>
+                                    </div>
+                                    <!-- Line 1 -->
+                                    <div class="track-line">
+                                        <div id="line1" class="h-1 w-full rounded-full bg-slate-200 transition-colors duration-300"></div>
+                                    </div>
+                                    <!-- Step 2 -->
+                                    <div class="track-step">
+                                        <div id="step2Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg></div>
+                                        <span id="step2Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Booking Confirmed</span>
+                                        <span class="track-step-caption">Approved by the clinic</span>
+                                    </div>
+                                    <!-- Line 2 -->
+                                    <div class="track-line">
+                                        <div id="line2" class="h-1 w-full rounded-full bg-slate-200 transition-colors duration-300"></div>
+                                    </div>
+                                    <!-- Step 3 -->
+                                    <div class="track-step">
+                                        <div id="step3Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg></div>
+                                        <span id="step3Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Visit Clinic</span>
+                                        <span class="track-step-caption">Checked in at the clinic</span>
+                                    </div>
                                 </div>
-                                <!-- Line 1 -->
-                                <div class="flex-1 flex items-center pt-5 px-1">
-                                    <div id="line1" class="h-0.5 w-full bg-slate-200 transition-colors duration-300"></div>
-                                </div>
-                                <!-- Step 2 -->
-                                <div class="flex flex-col items-center" style="min-width:80px;">
-                                    <div id="step2Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">2</div>
-                                    <span id="step2Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Booking<br>Confirmed</span>
-                                </div>
-                                <!-- Line 2 -->
-                                <div class="flex-1 flex items-center pt-5 px-1">
-                                    <div id="line2" class="h-0.5 w-full bg-slate-200 transition-colors duration-300"></div>
-                                </div>
-                                <!-- Step 3 -->
-                                <div class="flex flex-col items-center" style="min-width:80px;">
-                                    <div id="step3Circle" class="flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300">3</div>
-                                    <span id="step3Label" class="mt-2 text-xs font-medium text-slate-400 text-center leading-tight">Visit<br>Clinic</span>
-                                </div>
+                            </div>
+
+                            <div id="trackLive" class="track-card-foot hidden">
+                                <span class="track-live-dot" aria-hidden="true"></span>
+                                Live &middot; this updates automatically when the clinic changes your status
                             </div>
                         </div>
                     </div>
-
-                    <div id="bookingTrackError" class="mt-4 hidden text-sm text-red-500 font-medium"></div>
                 </div>
             </div>
         </section>
@@ -1103,38 +1520,36 @@ $aboutPoints = [
 
         <!-- Login -->
         <section id="authPanelLogin" class="auth-panel hidden max-w-md" aria-label="Login">
-            <div class="auth-header flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
-                <div class="flex-1 text-center">
-                    <h2 class="text-xl font-bold text-slate-900">Welcome back</h2>
-                    <p class="text-xs text-slate-500">Sign in to your account</p>
+            <div class="auth-header border-b border-slate-100 px-5 pt-5 pb-4 sm:px-7">
+                <div class="relative flex items-center justify-center">
+                    <h2 class="px-8 text-center text-2xl font-bold leading-tight text-slate-900">Login</h2>
+                    <button type="button" data-auth-close class="absolute right-0 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
             </div>
 
             <div class="auth-body">
-            <form id="login-form" class="space-y-4 px-5 py-4 sm:px-7" novalidate>
-                <div class="space-y-1.5">
-                    <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label>
-                    <div class="relative">
-                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                        </span>
-                        <input type="email" id="login-email" name="email" autocomplete="username" required placeholder="Enter your email"
-                            class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400">
+            <form id="login-form" class="space-y-4 px-5 py-5 sm:px-7" novalidate>
+                <div>
+                    <label for="login-email" class="modal-label">Email</label>
+                    <div class="modal-input-wrap">
+                        <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                        <input type="email" id="login-email" name="email" autocomplete="username" required placeholder="you@example.com"
+                            class="auth-field modal-input">
                     </div>
                     <p class="auth-field-msg" id="login-email-error"></p>
                 </div>
 
-                <div class="space-y-1.5">
-                    <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label>
-                    <div class="relative">
-                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
-                        </span>
+                <div>
+                    <div class="flex items-center justify-between">
+                        <label for="login-password" class="modal-label">Password</label>
+                        <button type="button" data-auth-switch="forgot" class="mb-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors">Forgot password?</button>
+                    </div>
+                    <div class="modal-input-wrap">
+                        <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
                         <input type="password" id="login-password" name="password" autocomplete="current-password" required placeholder="Enter your password"
-                            class="auth-field block w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2.5 pl-10 pr-12 text-sm text-slate-900 placeholder:text-slate-400">
+                            class="auth-field modal-input" style="padding-right: 2.75rem;">
                         <button type="button" data-toggle-password="login-password" class="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-primary transition-colors" aria-label="Show password" aria-pressed="false">
                             <svg data-icon="eye" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <svg data-icon="eye-off" class="hidden h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
@@ -1142,45 +1557,45 @@ $aboutPoints = [
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
-                    <label for="login-remember" class="inline-flex cursor-pointer select-none items-center gap-2 text-slate-600">
-                        <input type="checkbox" id="login-remember" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-primary">
-                        Remember me
-                    </label>
-                    <button type="button" data-auth-switch="forgot" class="font-medium text-primary hover:text-primary transition-colors">Forgot Password?</button>
-                </div>
+                <label for="login-remember" class="inline-flex cursor-pointer select-none items-center gap-2 text-sm text-slate-600">
+                    <input type="checkbox" id="login-remember" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 accent-primary">
+                    Remember me
+                </label>
 
-                <div class="space-y-2">
-                    <?php if ($turnstileSiteKey !== ''): ?>
+                <?php if ($turnstileSiteKey !== ''): ?>
+                <div class="flex justify-center">
                     <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileSiteKey, ENT_QUOTES); ?>" data-theme="light" id="loginTurnstile"></div>
-                    <?php else: ?>
-                    <p class="text-xs text-red-600">Bot verification is not configured (missing TURNSTILE_SITE_KEY).</p>
-                    <?php endif; ?>
                 </div>
+                <?php else: ?>
+                <p class="text-xs text-red-600">Bot verification is not configured (missing TURNSTILE_SITE_KEY).</p>
+                <?php endif; ?>
 
-                <button type="submit" class="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                    LOGIN
+                <button type="submit" class="modal-btn">
+                    Log In
                 </button>
 
                 <?php if ($googleClientId !== ''): ?>
                 <div class="flex items-center gap-3">
                     <div class="flex-1 h-px bg-slate-200"></div>
-                    <span class="text-xs font-medium text-slate-400">or</span>
+                    <span class="text-xs font-medium text-slate-400">or continue with</span>
                     <div class="flex-1 h-px bg-slate-200"></div>
                 </div>
-                <div class="flex justify-center">
-                    <button type="button" id="google-login-btn"
-                        class="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
-                        title="Sign in with Google" aria-label="Sign in with Google">
-                        <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                    </button>
-                </div>
+                <button type="button" id="google-login-btn"
+                    class="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                    title="Sign in with Google" aria-label="Sign in with Google">
+                    <svg viewBox="0 0 24 24" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Google
+                </button>
                 <?php endif; ?>
+
+                <p class="text-center text-xs text-slate-500">
+                    New patient? <button type="button" data-auth-switch="booking" class="font-bold text-primary hover:text-primary/80">Book an appointment</button>
+                </p>
             </form>
             </div>
 
@@ -1193,179 +1608,222 @@ $aboutPoints = [
         </section>
 
         <!-- Book Appointment (Guest) -->
-        <section id="authPanelBooking" class="auth-panel hidden max-w-lg" aria-label="Book appointment">
-            <div class="auth-header flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-7">
-                <div class="flex-1 text-center">
-                    <h2 class="text-xl font-bold text-slate-900">Book an Appointment</h2>
-                    <p class="text-xs text-slate-500">Schedule your visit with us</p>
+        <section id="authPanelBooking" class="auth-panel booking-panel hidden" aria-label="Book appointment">
+            <div class="auth-header border-b border-slate-100 px-5 pt-5 pb-4 sm:px-7">
+                <div class="relative flex items-center justify-center">
+                    <h2 class="px-8 text-center text-2xl font-bold leading-tight text-slate-900">Book an Appointment</h2>
+                    <button type="button" data-auth-close class="absolute right-0 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
-                <button type="button" data-auth-close class="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
+                <ol class="booking-steps" id="booking-steps" aria-label="Booking progress">
+                    <li data-step="1" class="is-active"><span class="step-dot">1</span><span>Details</span></li>
+                    <li aria-hidden="true" class="step-bar" data-bar="1"></li>
+                    <li data-step="2"><span class="step-dot">2</span><span>Verify</span></li>
+                    <li aria-hidden="true" class="step-bar" data-bar="2"></li>
+                    <li data-step="3"><span class="step-dot">3</span><span>Confirmed</span></li>
+                </ol>
             </div>
 
             <div class="auth-body">
             <!-- Step 1: Booking Form -->
-            <form id="booking-form" class="space-y-3 px-5 py-4 sm:px-7" novalidate>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <div>
-                        <label for="book-first-name" class="mb-1 block text-xs font-semibold text-slate-600">First Name</label>
-                        <input type="text" id="book-first-name" name="first_name" required placeholder="First name"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
-                        <p class="auth-field-msg" id="book-first-name-error"></p>
-                    </div>
-                    <div>
-                        <label for="book-last-name" class="mb-1 block text-xs font-semibold text-slate-600">Last Name</label>
-                        <input type="text" id="book-last-name" name="last_name" required placeholder="Last name"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
-                        <p class="auth-field-msg" id="book-last-name-error"></p>
-                    </div>
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <div>
-                        <label for="book-email" class="mb-1 block text-xs font-semibold text-slate-600">Email</label>
-                        <input type="email" id="book-email" name="email" required placeholder="you@example.com" autocomplete="email"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
-                        <p class="auth-field-msg" id="book-email-error"></p>
-                    </div>
-                    <div>
-                        <label for="book-phone" class="mb-1 block text-xs font-semibold text-slate-600">Phone</label>
-                        <div class="flex">
-                            <select id="book-phone-code" name="phone_code"
-                                class="auth-field shrink-0 rounded-l-lg border border-slate-200 bg-slate-50/50 px-2 py-2.5 text-sm text-slate-700 border-r-0 cursor-pointer focus:border-primary focus:ring-0 focus:outline-none"
-                                style="min-width: 70px; max-width: 70px;">
-                                <option value="+63" selected>+63</option>
-                                <option value="+1">+1</option>
-                                <option value="+44">+44</option>
-                                <option value="+61">+61</option>
-                                <option value="+81">+81</option>
-                                <option value="+82">+82</option>
-                                <option value="+86">+86</option>
-                                <option value="+91">+91</option>
-                                <option value="+65">+65</option>
-                                <option value="+60">+60</option>
-                                <option value="+62">+62</option>
-                                <option value="+66">+66</option>
-                                <option value="+84">+84</option>
-                                <option value="+971">+971</option>
-                                <option value="+966">+966</option>
-                                <option value="+49">+49</option>
-                                <option value="+33">+33</option>
-                                <option value="+34">+34</option>
-                                <option value="+39">+39</option>
-                                <option value="+55">+55</option>
-                                <option value="+52">+52</option>
-                                <option value="+27">+27</option>
-                                <option value="+234">+234</option>
-                                <option value="+254">+254</option>
-                            </select>
-                            <input type="tel" id="book-phone" name="phone_number" required placeholder="9XX XXX XXXX" autocomplete="tel" inputmode="numeric" maxlength="10"
-                                class="auth-field w-full rounded-r-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400">
+            <form id="booking-form" class="space-y-5 px-5 py-5 sm:px-7" novalidate>
+                <div class="space-y-3">
+                    <p class="booking-section-label">Patient information</p>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label for="book-first-name" class="modal-label">First Name</label>
+                            <div class="modal-input-wrap">
+                                <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                                <input type="text" id="book-first-name" name="first_name" required placeholder="Juan" autocomplete="given-name"
+                                    class="auth-field modal-input">
+                            </div>
+                            <p class="auth-field-msg" id="book-first-name-error"></p>
                         </div>
-                        <p class="auth-field-msg" id="book-phone-error"></p>
+                        <div>
+                            <label for="book-last-name" class="modal-label">Last Name</label>
+                            <div class="modal-input-wrap">
+                                <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                                <input type="text" id="book-last-name" name="last_name" required placeholder="Dela Cruz" autocomplete="family-name"
+                                    class="auth-field modal-input">
+                            </div>
+                            <p class="auth-field-msg" id="book-last-name-error"></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label for="book-email" class="modal-label">Email</label>
+                            <div class="modal-input-wrap">
+                                <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                                <input type="email" id="book-email" name="email" required placeholder="you@example.com" autocomplete="email"
+                                    class="auth-field modal-input">
+                            </div>
+                            <p class="auth-field-msg" id="book-email-error"></p>
+                        </div>
+                        <div>
+                            <label for="book-phone" class="modal-label">Phone</label>
+                            <div class="modal-group">
+                                <select id="book-phone-code" name="phone_code" aria-label="Country code"
+                                    class="auth-field shrink-0">
+                                    <option value="+63" selected>+63</option>
+                                    <option value="+1">+1</option>
+                                    <option value="+44">+44</option>
+                                    <option value="+61">+61</option>
+                                    <option value="+81">+81</option>
+                                    <option value="+82">+82</option>
+                                    <option value="+86">+86</option>
+                                    <option value="+91">+91</option>
+                                    <option value="+65">+65</option>
+                                    <option value="+60">+60</option>
+                                    <option value="+62">+62</option>
+                                    <option value="+66">+66</option>
+                                    <option value="+84">+84</option>
+                                    <option value="+971">+971</option>
+                                    <option value="+966">+966</option>
+                                    <option value="+49">+49</option>
+                                    <option value="+33">+33</option>
+                                    <option value="+34">+34</option>
+                                    <option value="+39">+39</option>
+                                    <option value="+55">+55</option>
+                                    <option value="+52">+52</option>
+                                    <option value="+27">+27</option>
+                                    <option value="+234">+234</option>
+                                    <option value="+254">+254</option>
+                                </select>
+                                <input type="tel" id="book-phone" name="phone_number" required placeholder="9XX XXX XXXX" autocomplete="tel" inputmode="numeric" maxlength="10"
+                                    class="auth-field">
+                            </div>
+                            <p class="auth-field-msg" id="book-phone-error"></p>
+                        </div>
+                    </div>
+
                     <div>
-                        <label for="book-dob" class="mb-1 block text-xs font-semibold text-slate-600">Birthdate</label>
-                        <input type="date" id="book-dob" name="date_of_birth" required
-                            min="1900-01-01" max="<?php echo date('Y-m-d'); ?>"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
+                        <label for="book-dob" class="modal-label">Birthdate</label>
+                        <div class="modal-input-wrap">
+                            <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.87c1.355 0 2.697.055 4.024.165C17.155 8.51 18 9.473 18 10.608v2.513m-3-4.87v-1.5m-6 1.5v-1.5m12 9.75l-1.5.75a3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0 3.354 3.354 0 00-3 0 3.354 3.354 0 01-3 0L3 16.5m15-3.38a48.474 48.474 0 00-6-.37c-2.032 0-4.034.125-6 .37m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.17c0 .62-.504 1.124-1.125 1.124H4.125A1.125 1.125 0 013 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 016 13.12M12.265 3.11a.375.375 0 11-.53 0L12 2.845l.265.265z"/></svg>
+                            <input type="date" id="book-dob" name="date_of_birth" required
+                                min="1900-01-01" max="<?php echo date('Y-m-d'); ?>"
+                                class="auth-field modal-input text-slate-700">
+                        </div>
                         <p class="auth-field-msg" id="book-dob-error"></p>
                     </div>
-                    <div>
-                        <label for="book-pref-date" class="mb-1 block text-xs font-semibold text-slate-600">Appointment Date</label>
-                        <input type="date" id="book-pref-date" name="preferred_date" required
-                            min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+30 days')); ?>"
-                            class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm text-slate-700">
-                        <p class="auth-field-msg" id="book-pref-date-error"></p>
-                    </div>
-                    <div>
-                        <label class="mb-1 block text-xs font-semibold text-slate-600">Time</label>
-                        <div class="flex items-center gap-0">
-                            <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="9"
-                                class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border border-slate-200 rounded-l-lg px-1 py-2.5 outline-none focus:border-primary transition-colors">
-                            <span class="text-base font-bold text-slate-400 px-0.5">:</span>
-                            <input type="text" id="book-minute" inputmode="numeric" maxlength="2" placeholder="00"
-                                class="book-time-field w-10 text-center text-sm font-semibold text-slate-800 bg-slate-50/80 border-y border-slate-200 px-1 py-2.5 outline-none focus:border-primary transition-colors">
-                            <button type="button" id="btn-meridiem" class="px-3 py-2.5 text-xs font-bold bg-slate-50/80 text-primary border border-slate-200 rounded-r-lg cursor-pointer hover:bg-primary/5 transition-colors">AM</button>
+                </div>
+
+                <div class="space-y-3">
+                    <p class="booking-section-label">Preferred schedule</p>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div>
+                            <label for="book-pref-date" class="modal-label">Appointment Date</label>
+                            <div class="modal-input-wrap">
+                                <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                                <input type="date" id="book-pref-date" name="preferred_date" required
+                                    min="<?php echo date('Y-m-d'); ?>" max="<?php echo date('Y-m-d', strtotime('+30 days')); ?>"
+                                    class="auth-field modal-input text-slate-700">
+                            </div>
+                            <p class="auth-field-msg" id="book-pref-date-error"></p>
                         </div>
-                        <input type="hidden" id="book-time" name="preferred_time" value="9:00 AM">
-                        <p class="auth-field-msg" id="book-time-error"></p>
+                        <div>
+                            <label for="book-hour" class="modal-label">Time <span class="font-medium text-slate-400">(9:00 AM – 4:30 PM)</span></label>
+                            <div class="modal-group booking-time items-center pl-3">
+                                <svg class="mr-1.5 h-[1.05rem] w-[1.05rem] shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="9" aria-label="Hour" class="book-time-field">
+                                <span class="text-base font-bold text-slate-400">:</span>
+                                <input type="text" id="book-minute" inputmode="numeric" maxlength="2" placeholder="00" aria-label="Minute" class="book-time-field">
+                                <button type="button" id="btn-meridiem" class="meridiem-btn" aria-label="Toggle AM/PM">AM</button>
+                            </div>
+                            <input type="hidden" id="book-time" name="preferred_time" value="9:00 AM">
+                            <p class="auth-field-msg" id="book-time-error"></p>
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="flex items-center gap-2 cursor-pointer group mb-1">
-                        <input type="checkbox" id="book-has-complaint" class="rounded border-slate-300 text-primary focus:ring-primary/40">
-                        <span class="text-xs font-semibold text-slate-600 group-hover:text-primary transition-colors">Do you have a specific complaint or concern?</span>
+                <div class="space-y-3">
+                    <p class="booking-section-label">Reason for visit</p>
+                    <label for="book-has-complaint" class="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 hover:border-slate-300 transition-colors">
+                        <span>
+                            <span class="block text-sm font-semibold text-slate-700">I have a specific concern</span>
+                            <span class="block text-xs text-slate-500">Let the dentist know what's bothering you</span>
+                        </span>
+                        <input type="checkbox" id="book-has-complaint" class="booking-switch">
                     </label>
-                    <div id="book-complaint-grid" class="hidden grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-3">
+                    <div id="book-complaint-grid" class="hidden">
+                        <div class="flex flex-wrap gap-2">
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Toothache" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Toothache
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Broken / Chipped Tooth" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Broken / Chipped Tooth
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Swollen Gums" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Swollen Gums
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Bleeding Gums" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Bleeding Gums
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Sensitive Teeth" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Sensitive Teeth
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Loose Tooth" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Loose Tooth
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Tooth Decay / Cavity" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Tooth Decay / Cavity
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Jaw Pain" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Jaw Pain
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Difficulty Chewing" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Difficulty Chewing
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Bad Breath" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Bad Breath
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" name="complaint[]" value="Abscess / Pus" class="complaint-check">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Abscess / Pus
+                            </label>
+                            <label class="booking-chip">
+                                <input type="checkbox" id="book-complaint-other" class="complaint-other-toggle">
+                                <svg class="chip-check" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                                Other / Additional Details
+                            </label>
+                        </div>
 
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Toothache" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Toothache</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Broken / Chipped Tooth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Broken / Chipped Tooth</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Swollen Gums" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Swollen Gums</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Bleeding Gums" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Bleeding Gums</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Sensitive Teeth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Sensitive Teeth</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Loose Tooth" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Loose Tooth</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Tooth Decay / Cavity" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Tooth Decay / Cavity</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Jaw Pain" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Jaw Pain</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Difficulty Chewing" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Difficulty Chewing</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Bad Breath" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Bad Breath</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group">
-                            <input type="checkbox" name="complaint[]" value="Abscess / Pus" class="complaint-check rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Abscess / Pus</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer group col-span-2">
-                            <input type="checkbox" id="book-complaint-other" class="complaint-other-toggle rounded border-slate-300 text-primary focus:ring-primary/40">
-                            <span class="text-sm text-slate-700 group-hover:text-primary transition-colors">Other / Additional Details</span>
-                        </label>
-
-                        <div id="book-reason-wrap" class="hidden col-span-2 mt-1">
-                            <textarea id="book-reason" name="reason" rows="2" placeholder="Any other details about your condition..."
-                                class="auth-field w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
+                        <div id="book-reason-wrap" class="hidden mt-3">
+                            <textarea id="book-reason" name="reason" rows="3" placeholder="Any other details about your condition..."
+                                class="auth-field block w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm placeholder:text-slate-400 resize-none"></textarea>
                         </div>
                     </div>
                 </div>
 
                 <div>
-                    <label class="flex items-start gap-2 cursor-pointer">
-                        <input type="checkbox" id="reg-terms" required class="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary/40">
-                        <span class="text-xs text-slate-600">
+                    <label class="flex items-start gap-2.5 cursor-pointer">
+                        <input type="checkbox" id="reg-terms" required class="mt-0.5 h-4 w-4 rounded border-slate-300 accent-primary">
+                        <span class="text-xs leading-relaxed text-slate-600">
                             I have read and agree to the
-                            <button type="button" id="openTermsModal" class="font-semibold text-primary hover:text-primary/80 underline">Terms and Conditions</button>.
+                            <button type="button" id="openTermsModal" class="font-semibold text-primary hover:text-primary/80 underline underline-offset-2">Terms and Conditions</button>.
                         </span>
                     </label>
                     <p class="auth-field-msg" id="reg-terms-error"></p>
@@ -1373,8 +1831,9 @@ $aboutPoints = [
 
                 <div id="booking-alert" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
 
-                <button type="submit" id="booking-submit-btn" class="block w-full rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                    Book an Appointment
+                <button type="submit" id="booking-submit-btn" class="modal-btn">
+                    <span class="track-spinner btn-spinner" aria-hidden="true"></span>
+                    <span data-btn-label>Book Appointment</span>
                 </button>
 
                 <p class="text-center text-xs text-slate-500">
@@ -1383,83 +1842,98 @@ $aboutPoints = [
             </form>
 
             <!-- Step 2: OTP Verification (hidden by default) -->
-            <div id="booking-otp-section" class="hidden px-5 py-5 sm:px-7 text-center">
-                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-50">
-                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+            <div id="booking-otp-section" class="hidden px-5 py-6 sm:px-7 text-center">
+                <div class="otp-fade">
+                    <div class="otp-mail-icon" aria-hidden="true">
+                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900" id="otp-channel-heading">Check Your Email</h3>
+                    <p class="mx-auto mt-1 max-w-xs text-sm text-slate-500">Enter the 6-digit code we sent to <strong id="otp-email-display" class="block truncate font-semibold text-slate-700"></strong></p>
                 </div>
-                <h3 class="text-base font-bold text-slate-900" id="otp-channel-heading">Check Your Email</h3>
-                <p class="mt-1 text-sm text-slate-500">Code sent to <strong id="otp-email-display"></strong></p>
 
-                <div class="mt-4">
+                <div class="otp-stage mt-6" id="booking-otp-stage">
                     <input type="hidden" id="booking-otp">
-                    <div class="otp-boxes flex justify-center gap-2" id="booking-otp-boxes" data-otp-target="booking-otp">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                        <input type="text" inputmode="numeric" maxlength="1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                    <div class="otp-boxes flex justify-center" id="booking-otp-boxes" data-otp-target="booking-otp" role="group" aria-label="6-digit verification code">
+                        <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder=" " aria-label="Digit 1" class="otp-box">
+                        <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" placeholder=" " aria-label="Digit 2" class="otp-box">
+                        <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" placeholder=" " aria-label="Digit 3" class="otp-box">
+                        <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" placeholder=" " aria-label="Digit 4" class="otp-box">
+                        <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" placeholder=" " aria-label="Digit 5" class="otp-box">
+                        <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" placeholder=" " aria-label="Digit 6" class="otp-box">
+                    </div>
+                    <div class="otp-shield" aria-hidden="true">
+                        <svg viewBox="0 0 48 48">
+                            <path class="shield-body" d="M24 4.5 39.5 10v11.6c0 9.9-6.6 18.4-15.5 21.4C15.1 40 8.5 31.5 8.5 21.6V10z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                            <path class="shield-check" d="M17 23.5l5 5 9-10" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </div>
                 </div>
 
-                <div id="otp-alert" class="mt-3 hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
+                <div class="otp-fade">
+                    <div id="otp-alert" class="mt-4 hidden rounded-lg border px-3 py-2 text-sm" role="alert"></div>
 
-                <button type="button" id="verify-otp-btn" class="mt-4 block w-full rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
-                    Confirm Appointment
-                </button>
+                    <button type="button" id="verify-otp-btn" class="modal-btn mt-5">
+                        <span class="track-spinner btn-spinner" aria-hidden="true"></span>
+                        <span data-btn-label>Confirm Appointment</span>
+                    </button>
 
-                <div class="mt-2 flex items-center justify-center gap-3 text-sm">
-                    <button type="button" id="resend-otp-btn" class="font-medium text-primary hover:text-primary/80 transition-colors">
-                        Resend code
-                    </button>
-                    <span class="text-slate-300">|</span>
-                    <button type="button" id="resend-otp-sms-btn" class="font-medium text-primary hover:text-primary/80 transition-colors">
-                        Send via SMS
-                    </button>
+                    <div class="mt-4 flex items-center justify-center gap-1 text-xs text-slate-500">
+                        <span>Didn't get it?</span>
+                        <button type="button" id="resend-otp-btn" class="rounded-md px-1.5 py-1 font-semibold text-primary hover:bg-primary/5 transition-colors disabled:opacity-60">Resend code</button>
+                        <span class="text-slate-300" aria-hidden="true">&middot;</span>
+                        <button type="button" id="resend-otp-sms-btn" class="rounded-md px-1.5 py-1 font-semibold text-primary hover:bg-primary/5 transition-colors disabled:opacity-60">Send via SMS</button>
+                    </div>
+
+                    <p class="mt-5 rounded-xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">Already have a booking, or need a different date? Contact the clinic directly at <a href="tel:+639179843031" class="font-bold text-slate-600 hover:text-primary transition-colors whitespace-nowrap">0917 984 3031</a> instead of submitting a new request.</p>
                 </div>
-
-                <p class="mt-4 text-xs text-slate-400">Already have a booking, or need a different date? Contact the clinic directly at <strong class="text-slate-500">+63 (88) 000 0000</strong> instead of submitting a new request.</p>
             </div>
 
             <!-- Step 3: Success (hidden by default) -->
-            <div id="booking-success-section" class="hidden px-5 py-6 sm:px-8 text-center">
-                <!-- Animated check -->
-                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50" style="box-shadow: 0 0 0 6px rgba(34,197,94,0.1);">
-                    <svg class="h-8 w-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                </div>
-
-                <h3 class="text-lg font-bold text-slate-900">Booking Request Received!</h3>
-                <p class="mt-1.5 text-sm text-slate-500">A copy has been sent to your inbox. We'll notify you once the clinic reviews and approves your request.</p>
-
-                <!-- Tracking number card -->
-                <div class="mt-5 rounded-xl border border-green-200 bg-green-50/60 px-5 py-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-green-700 mb-2">Your Reference Number</p>
-                    <div class="flex items-center justify-center gap-2">
-                        <span id="booking-ref-display" class="text-2xl font-bold text-green-700 tracking-wide" style="font-family: 'Courier New', monospace;">—</span>
-                        <button type="button" id="copyBookingRefBtn" class="rounded-md border border-green-300 bg-white px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors" title="Copy to clipboard">
-                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
-                        </button>
+            <div id="booking-success-section" class="hidden px-5 py-7 sm:px-8 text-center">
+                <div class="booking-stagger">
+                    <div class="booking-success-badge" aria-hidden="true">
+                        <svg viewBox="0 0 48 48">
+                            <path d="M24 4.5 39.5 10v11.6c0 9.9-6.6 18.4-15.5 21.4C15.1 40 8.5 31.5 8.5 21.6V10z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                            <path d="M17 23.5l5 5 9-10" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </div>
-                </div>
 
-                <!-- Next steps -->
-                <div class="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left">
-                    <p class="text-xs font-semibold text-slate-700 mb-2">What happens next?</p>
-                    <div class="space-y-2">
-                        <div class="flex items-start gap-2.5">
-                            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">1</span>
-                            <p class="text-xs text-slate-600 leading-relaxed">We'll review your booking and send a confirmation to your email.</p>
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900">Booking Request Received!</h3>
+                        <p class="mx-auto mt-1.5 max-w-sm text-sm text-slate-500">A copy has been sent to your inbox. We'll notify you once the clinic reviews and approves your request.</p>
+                    </div>
+
+                    <!-- Tracking number card -->
+                    <div class="booking-ticket">
+                        <p class="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-green-700">Your Reference Number</p>
+                        <div class="flex items-center justify-center gap-2.5">
+                            <span id="booking-ref-display" class="booking-ref">—</span>
+                            <button type="button" id="copyBookingRefBtn" class="rounded-lg border border-green-200 bg-white p-2 text-green-700 shadow-sm hover:bg-green-50 transition-colors" title="Copy to clipboard" aria-label="Copy reference number">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
+                            </button>
                         </div>
-                        <div class="flex items-start gap-2.5">
-                            <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">2</span>
-                            <p class="text-xs text-slate-600 leading-relaxed">Use your reference number to track your appointment status anytime.</p>
+                        <p class="mt-1.5 text-[11px] text-slate-500">Keep this to track your appointment status.</p>
+                    </div>
+
+                    <!-- Next steps -->
+                    <div class="mt-5 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-left">
+                        <p class="mb-2.5 text-xs font-bold text-slate-700">What happens next?</p>
+                        <div class="space-y-2.5">
+                            <div class="flex items-start gap-2.5">
+                                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">1</span>
+                                <p class="text-xs text-slate-600 leading-relaxed">We'll review your booking and send a confirmation to your email.</p>
+                            </div>
+                            <div class="flex items-start gap-2.5">
+                                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[10px] font-bold">2</span>
+                                <p class="text-xs text-slate-600 leading-relaxed">Use your reference number to track your appointment status anytime.</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <button type="button" data-auth-close class="mt-5 w-full rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white hover:bg-primary/90 transition-colors">
-                    Done
-                </button>
+                    <button type="button" data-auth-close class="modal-btn mt-5">
+                        Done
+                    </button>
+                </div>
             </div>
             </div>
         </section>
@@ -1783,6 +2257,9 @@ $aboutPoints = [
             var POLL_INTERVAL_MS = 4000;
             var activeController = null; // aborts a stale in-flight request when a newer one starts
             var cardShown = false;
+            var liveEl = document.getElementById('trackLive');
+            // Pending-state icons for each step (restored by resetSteps).
+            var TRACK_STEP_ICONS = ["<svg fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.8\" stroke=\"currentColor\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5\"/></svg>","<svg fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.8\" stroke=\"currentColor\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z\"/></svg>","<svg fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.8\" stroke=\"currentColor\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M15 10.5a3 3 0 11-6 0 3 3 0 016 0z\"/><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z\"/></svg>"];
 
             function sleep(ms) {
                 return new Promise(function(resolve) { setTimeout(resolve, ms); });
@@ -1845,13 +2322,13 @@ $aboutPoints = [
                 [1,2,3].forEach(function(i) {
                     var c = document.getElementById('step' + i + 'Circle');
                     var l = document.getElementById('step' + i + 'Label');
-                    c.className = 'flex items-center justify-center w-10 h-10 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300';
-                    c.innerHTML = i;
-                    l.className = 'mt-2 text-xs font-medium text-slate-400 text-center leading-tight';
+                    c.className = 'track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300';
+                    c.innerHTML = TRACK_STEP_ICONS[i - 1];
+                    l.className = 'mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight';
                 });
                 ['line1','line2'].forEach(function(id) {
                     var el = document.getElementById(id);
-                    if (el) el.className = 'h-0.5 w-full bg-slate-200 transition-colors duration-300';
+                    if (el) el.className = 'h-1 w-full rounded-full bg-slate-200 transition-colors duration-300';
                 });
                 prevSteps = { step1: false, step2: false, step3: false };
             }
@@ -1859,10 +2336,12 @@ $aboutPoints = [
             function stopPolling() {
                 if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
                 pollQuery = null;
+                if (liveEl) liveEl.classList.add('hidden');
             }
 
             function scheduleNextPoll() {
                 if (!pollQuery) return;
+                if (liveEl) liveEl.classList.remove('hidden');
                 pollTimer = setTimeout(function() {
                     fetchTracking(pollQuery.id, pollQuery.isNumeric, { silent: true });
                 }, POLL_INTERVAL_MS);
@@ -2144,6 +2623,7 @@ $aboutPoints = [
             if (bookingForm) bookingForm.reset();
             const otpInput = document.getElementById('booking-otp');
             if (otpInput) otpInput.value = '';
+            resetBookingUi();
         }
 
         document.querySelectorAll('[data-auth-open]').forEach(function(btn) {
@@ -2416,6 +2896,132 @@ $aboutPoints = [
 
         let bookingEmail = '';
         let bookingId = 0;
+
+        // ----- Booking UI transitions (visual only; the request logic below is unchanged) -----
+        // Bumped on every reset so a pending animation step can't reveal a section
+        // after the dialog was closed mid-transition.
+        let bookingUiToken = 0;
+        const bookingReduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function bookingDelay(ms) { return bookingReduceMotion ? 0 : ms; }
+
+        function restartAnimation(el, className) {
+            if (!el) return;
+            el.classList.remove(className);
+            void el.offsetWidth;
+            el.classList.add(className);
+        }
+
+        function setBookingStep(step) {
+            document.querySelectorAll('#booking-steps [data-step]').forEach(function(li) {
+                const n = parseInt(li.getAttribute('data-step'), 10);
+                li.classList.toggle('is-done', n < step);
+                li.classList.toggle('is-active', n === step);
+                if (n === step) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+            });
+            document.querySelectorAll('#booking-steps [data-bar]').forEach(function(bar) {
+                bar.classList.toggle('is-filled', parseInt(bar.getAttribute('data-bar'), 10) < step);
+            });
+        }
+
+        function setBookingBtnLoading(btn, loading, label) {
+            if (!btn) return;
+            btn.disabled = loading;
+            btn.classList.toggle('is-loading', loading);
+            const labelEl = btn.querySelector('[data-btn-label]');
+            if (labelEl) labelEl.textContent = label; else btn.textContent = label;
+        }
+
+        // Fade the current step out, then bring the next one in.
+        function swapBookingStep(fromEl, toEl, onShown) {
+            const token = bookingUiToken;
+            if (fromEl) fromEl.classList.add('booking-step-out');
+            setTimeout(function() {
+                if (token !== bookingUiToken) return;
+                if (fromEl) fromEl.classList.add('hidden');
+                if (fromEl) fromEl.classList.remove('booking-step-out');
+                if (toEl) {
+                    toEl.classList.remove('hidden');
+                    restartAnimation(toEl, 'booking-step-in');
+                    const body = toEl.closest('.auth-body');
+                    if (body) body.scrollTop = 0;
+                }
+                if (onShown) onShown();
+            }, bookingDelay(200));
+        }
+
+        // OTP boxes appear as a single box in the center that spreads out left and right.
+        function playOtpSpread() {
+            const stage = document.getElementById('booking-otp-stage');
+            if (!stage) return;
+            stage.classList.remove('is-merging', 'is-sealing', 'is-verified');
+            restartAnimation(stage, 'is-spreading');
+        }
+
+        // Boxes collapse back into the center, become a shield, and the shield turns green with a check.
+        function playBookingVerify(onDone) {
+            const token = bookingUiToken;
+            const section = document.getElementById('booking-otp-section');
+            const stage = document.getElementById('booking-otp-stage');
+            if (document.activeElement && section && section.contains(document.activeElement)) {
+                document.activeElement.blur();
+            }
+            if (section) section.classList.add('is-verifying');
+            if (stage) {
+                stage.classList.remove('is-spreading');
+                stage.classList.add('is-merging');
+            }
+            const steps = [
+                [380, function() { if (stage) stage.classList.add('is-sealing'); }],
+                [420, function() { if (stage) stage.classList.add('is-verified'); setBookingStep(3); }],
+                [800, function() { if (onDone) onDone(); }]
+            ];
+            let elapsed = 0;
+            steps.forEach(function(step) {
+                elapsed += bookingDelay(step[0]);
+                setTimeout(function() {
+                    if (token !== bookingUiToken) return;
+                    step[1]();
+                }, elapsed);
+            });
+        }
+
+        // Re-renders the reference number one character at a time.
+        function revealTrackingCode() {
+            const el = document.getElementById('booking-ref-display');
+            if (!el || bookingReduceMotion) return;
+            const text = el.textContent;
+            el.setAttribute('aria-label', text);
+            el.textContent = '';
+            text.split('').forEach(function(ch, i) {
+                const span = document.createElement('span');
+                span.className = 'ref-char';
+                span.setAttribute('aria-hidden', 'true');
+                span.style.animationDelay = (0.35 + i * 0.05) + 's';
+                span.textContent = ch;
+                el.appendChild(span);
+            });
+        }
+
+        function resetBookingUi() {
+            bookingUiToken++;
+            const otpSection = document.getElementById('booking-otp-section');
+            const stage = document.getElementById('booking-otp-stage');
+            if (otpSection) otpSection.classList.remove('is-verifying', 'booking-step-in', 'booking-step-out');
+            if (stage) stage.classList.remove('is-spreading', 'is-merging', 'is-sealing', 'is-verified');
+            document.querySelectorAll('#booking-otp-boxes .otp-box').forEach(function(box) { box.value = ''; });
+            ['booking-form', 'booking-success-section'].forEach(function(id) {
+                document.getElementById(id)?.classList.remove('booking-step-in', 'booking-step-out');
+            });
+            ['booking-alert', 'otp-alert', 'book-complaint-grid', 'book-reason-wrap'].forEach(function(id) {
+                document.getElementById(id)?.classList.add('hidden');
+            });
+            const refEl = document.getElementById('booking-ref-display');
+            if (refEl) { refEl.textContent = '—'; refEl.removeAttribute('aria-label'); }
+            setBookingBtnLoading(document.getElementById('booking-submit-btn'), false, 'Book Appointment');
+            setBookingBtnLoading(document.getElementById('verify-otp-btn'), false, 'Confirm Appointment');
+            setBookingStep(1);
+        }
 
         // ----- Booking inline validation (on blur) -----
         function showFieldError(inputId, errorId, message) {
@@ -2690,8 +3296,7 @@ $aboutPoints = [
             }
             clearFieldError('reg-terms', 'reg-terms-error');
 
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Sending...';
+            setBookingBtnLoading(submitBtn, true, 'Sending code…');
 
             try {
                 const fd = new FormData();
@@ -2718,10 +3323,13 @@ $aboutPoints = [
                     bookingOtpChannel = 'email';
                     updateOtpChannelHeading();
                     // Show OTP section
-                    document.getElementById('booking-form').classList.add('hidden');
-                    document.getElementById('booking-otp-section').classList.remove('hidden');
                     document.getElementById('otp-email-display').textContent = email;
-                    document.querySelector('#booking-otp-boxes .otp-box')?.focus();
+                    document.getElementById('booking-alert')?.classList.add('hidden');
+                    setBookingStep(2);
+                    swapBookingStep(document.getElementById('booking-form'), document.getElementById('booking-otp-section'), function() {
+                        playOtpSpread();
+                        document.querySelector('#booking-otp-boxes .otp-box')?.focus({ preventScroll: true });
+                    });
                 } else {
                     if (data.code === 'account_exists') {
                         setBookingAlert(data.message, 'warning');
@@ -2734,8 +3342,7 @@ $aboutPoints = [
                 setBookingAlert('An error occurred. Please try again.', 'error');
                 console.error('Booking error:', error);
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Request Appointment';
+                setBookingBtnLoading(submitBtn, false, 'Book Appointment');
             }
         });
 
@@ -2754,8 +3361,8 @@ $aboutPoints = [
                 return;
             }
 
-            btn.disabled = true;
-            btn.textContent = 'Verifying...';
+            setBookingBtnLoading(btn, true, 'Verifying…');
+            otpAlert?.classList.add('hidden');
 
             try {
                 const fd = new FormData();
@@ -2768,10 +3375,11 @@ $aboutPoints = [
                 const data = await response.json();
 
                 if (data.success) {
-                    // Show success
-                    document.getElementById('booking-otp-section').classList.add('hidden');
-                    document.getElementById('booking-success-section').classList.remove('hidden');
+                    // Show success: boxes merge into a shield, it gets verified, then the reference number is revealed
                     document.getElementById('booking-ref-display').textContent = data.tracking_code || ('#' + (data.booking_id || ''));
+                    playBookingVerify(function() {
+                        swapBookingStep(document.getElementById('booking-otp-section'), document.getElementById('booking-success-section'), revealTrackingCode);
+                    });
 
                     // Copy button
                     document.getElementById('copyBookingRefBtn')?.addEventListener('click', function() {
@@ -2796,6 +3404,9 @@ $aboutPoints = [
                         otpAlert.textContent = data.message || 'Verification failed.';
                         otpAlert.classList.remove('hidden');
                     }
+                    const otpBoxes = document.getElementById('booking-otp-boxes');
+                    restartAnimation(otpBoxes, 'is-shaking');
+                    setTimeout(function() { otpBoxes?.classList.remove('is-shaking'); }, 400);
                 }
             } catch (error) {
                 if (otpAlert) {
@@ -2804,8 +3415,7 @@ $aboutPoints = [
                     otpAlert.classList.remove('hidden');
                 }
             } finally {
-                btn.disabled = false;
-                btn.textContent = 'Verify & Confirm Booking';
+                setBookingBtnLoading(btn, false, 'Confirm Appointment');
             }
         });
 
@@ -2852,6 +3462,7 @@ $aboutPoints = [
                     otpAlert.textContent = data.message || (ok ? ('New code sent via ' + (bookingOtpChannel === 'sms' ? 'SMS.' : 'email.')) : 'Could not resend code.');
                     otpAlert.classList.remove('hidden');
                 }
+                if (data.success) playOtpSpread();
                 if (data.code === 'sms_unavailable') {
                     bookingOtpChannel = 'email';
                     updateOtpChannelHeading();
