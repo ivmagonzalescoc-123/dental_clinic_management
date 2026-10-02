@@ -1033,6 +1033,14 @@ $aboutPoints = [
         }
         .booking-success-badge svg { width: 2.4rem; height: 2.4rem; overflow: visible; }
         .booking-step-in .booking-success-badge { animation: forgotPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        /* Password reset "done" step: same shield, check draws in once it appears */
+        .success-shield { position: relative; box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.1); }
+        .success-shield .shield-check { stroke-dasharray: 22; stroke-dashoffset: 22; animation: shieldCheck 0.4s ease-out 0.3s forwards; }
+        .success-shield::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit;
+            border: 2px solid #22c55e; opacity: 0;
+            animation: shieldRing 0.7s ease-out 0.4s;
+        }
         .booking-ticket {
             position: relative; margin-top: 1.25rem; padding: 1.1rem 1.25rem;
             border-radius: 1rem; border: 1.5px dashed rgba(34, 197, 94, 0.45);
@@ -1067,7 +1075,9 @@ $aboutPoints = [
             .booking-step-in, .booking-step-out, .booking-stagger > *, .booking-ref .ref-char,
             .booking-step-in .booking-success-badge,
             #book-complaint-grid:not(.hidden), #book-reason-wrap:not(.hidden) { animation: none; }
-            .otp-stage.is-verified .otp-shield .shield-check { animation: none; stroke-dashoffset: 0; }
+            .otp-stage.is-verified .otp-shield .shield-check,
+            .success-shield .shield-check { animation: none; stroke-dashoffset: 0; }
+            .success-shield::before { animation: none; }
         }
 
     </style>
@@ -1990,13 +2000,15 @@ $aboutPoints = [
 
                     <div>
                         <input type="hidden" id="reset-otp">
-                        <div class="otp-boxes flex justify-center gap-2" id="reset-otp-boxes" data-otp-target="reset-otp" role="group" aria-label="6-digit reset code">
-                            <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 2" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 3" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 4" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 5" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
-                            <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 6" class="otp-box h-12 w-11 rounded-lg border border-slate-200 bg-slate-50/50 text-center text-xl font-bold text-slate-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40">
+                        <div class="otp-stage" id="reset-otp-stage">
+                            <div class="otp-boxes flex justify-center" id="reset-otp-boxes" data-otp-target="reset-otp" role="group" aria-label="6-digit reset code">
+                                <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" aria-label="Digit 1" placeholder=" " class="otp-box">
+                                <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 2" placeholder=" " class="otp-box">
+                                <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 3" placeholder=" " class="otp-box">
+                                <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 4" placeholder=" " class="otp-box">
+                                <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 5" placeholder=" " class="otp-box">
+                                <input type="text" inputmode="numeric" autocomplete="off" maxlength="1" aria-label="Digit 6" placeholder=" " class="otp-box">
+                            </div>
                         </div>
                         <p class="auth-field-msg text-center" id="reset-otp-error" role="alert"></p>
                         <p id="forgot-expiry" class="mt-2 text-center text-xs text-slate-500"></p>
@@ -2063,8 +2075,11 @@ $aboutPoints = [
 
                 <!-- Done -->
                 <div data-forgot-step="done" class="forgot-step hidden px-5 py-8 text-center sm:px-7">
-                    <div class="forgot-success-icon mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                        <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                    <div class="forgot-success-icon success-shield mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                        <svg class="h-9 w-9" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M24 4.5 39.5 10v11.6c0 9.9-6.6 18.4-15.5 21.4C15.1 40 8.5 31.5 8.5 21.6V10z" fill="currentColor" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+                            <path class="shield-check" d="M17 23.5l5 5 9-10" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </div>
                     <h3 class="mt-4 text-base font-bold text-slate-900">Password updated</h3>
                     <p class="mt-1.5 text-sm text-slate-600">For your security, you've been signed out on other devices. Log in with your new password.</p>
@@ -2951,8 +2966,8 @@ $aboutPoints = [
         }
 
         // OTP boxes appear as a single box in the center that spreads out left and right.
-        function playOtpSpread() {
-            const stage = document.getElementById('booking-otp-stage');
+        function playOtpSpread(stageId) {
+            const stage = document.getElementById(typeof stageId === 'string' ? stageId : 'booking-otp-stage');
             if (!stage) return;
             stage.classList.remove('is-merging', 'is-sealing', 'is-verified');
             restartAnimation(stage, 'is-spreading');
@@ -3555,6 +3570,8 @@ $aboutPoints = [
 
         function showResetOtpError(message) {
             clearResetOtp();
+            // An error should read as a shake, not a fresh spread-in.
+            document.getElementById('reset-otp-stage')?.classList.remove('is-spreading');
             resetOtpBoxes?.classList.add('is-invalid', 'is-shaking');
             setTimeout(function() { resetOtpBoxes?.classList.remove('is-shaking'); }, 400);
             setForgotFieldError(null, resetOtpError, message);
@@ -3584,6 +3601,7 @@ $aboutPoints = [
             if (step === 'password') focusTarget = resetPasswordInput;
             if (step === 'done') focusTarget = document.getElementById('forgot-done-btn');
             if (focusTarget) setTimeout(function() { focusTarget.focus(); }, 60);
+            if (step === 'code') playOtpSpread('reset-otp-stage');
         }
 
         function tickForgotTimer() {
@@ -3741,6 +3759,7 @@ $aboutPoints = [
                 const result = await sendForgotCode(forgotState.email);
                 if (result.ok) {
                     onForgotCodeSent(forgotState.email);
+                    playOtpSpread('reset-otp-stage');
                     setAlert('A new code is on its way. Check your inbox.', 'success');
                     getResetOtpBoxes()[0]?.focus();
                 } else {

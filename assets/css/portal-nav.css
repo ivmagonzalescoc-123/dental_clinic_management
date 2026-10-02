@@ -1,0 +1,148 @@
+/**
+ * Navigation active-state indicators (all four portals).
+ *
+ * Instead of each link painting its own active background, one indicator per
+ * nav glides to whichever item is active (assets/js/main.js, "Sliding nav
+ * indicators"). Only transform/opacity are animated, so it stays cheap on
+ * low-end phones — page content itself is never animated.
+ */
+
+/* ---- Sidebar: sliding white highlight ---- */
+.sidebar-nav { position: relative; }
+.sidebar-nav .nav-link { z-index: 1; }
+
+.sidebar-active-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    list-style: none;
+    pointer-events: none;
+    background: #fff;
+    border-radius: 8px 0 0 8px;
+    opacity: 0;
+}
+.sidebar-nav.has-active-indicator .sidebar-active-indicator { opacity: 1; }
+.sidebar-nav.indicator-animate .sidebar-active-indicator {
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), width 0.3s ease, height 0.3s ease, opacity 0.2s ease;
+}
+/* The indicator now draws the white fill, so the link itself stays transparent. */
+ul.sidebar-nav.has-active-indicator .nav-link.active,
+ul.sidebar-nav.has-active-indicator .nav-link.active:hover,
+ul.sidebar-nav.has-active-indicator .nav-link.active:focus {
+    background-color: transparent !important;
+}
+
+/* ---- Mobile sidebar drawer (admin / doctor / secretary) ---- */
+@media (max-width: 991.98px) {
+    #sidebar { transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+
+    body:not(.patient-portal)::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: 1044;
+        background: rgba(15, 30, 53, 0.4);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+    /* Tapping the backdrop lands on <body>, which main.js already treats as
+       "outside the sidebar" and closes the drawer. */
+    body.toggle-sidebar:not(.patient-portal)::after {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+}
+
+/* ---- Patient bottom navigation ---- */
+@media (max-width: 991.98px) {
+    .patient-mobile-nav {
+        align-items: flex-end;
+        overflow: visible;
+    }
+
+    .patient-mobile-nav-item,
+    .patient-mobile-nav-item:hover,
+    .patient-mobile-nav-item:focus,
+    .patient-mobile-nav-item.active,
+    .patient-mobile-nav-item.active:hover,
+    .patient-mobile-nav-item.active:focus {
+        background: transparent;
+    }
+    .patient-mobile-nav-item {
+        position: relative;
+        z-index: 1;
+        transition: color 0.2s ease;
+    }
+    .patient-mobile-nav-item:active { opacity: 1; }
+    .patient-mobile-nav-item.active,
+    .patient-mobile-nav-item.active:hover,
+    .patient-mobile-nav-item.active:focus { color: #1b7aa3; }
+
+    .patient-mobile-nav-item:not(.patient-mobile-nav-item--main) i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.4rem;
+        height: 2rem;
+        transition: color 0.2s ease;
+    }
+    /* White icon on the solid pill; the short delay lets the pill arrive first so
+       the icon never flashes white over the bare bar. */
+    .patient-mobile-nav-item.active:not(.patient-mobile-nav-item--main) i {
+        color: #fff;
+        transition: color 0.2s ease 0.1s;
+    }
+    .patient-mobile-nav-item.active:not(.patient-mobile-nav-item--main) span { font-weight: 700; }
+
+    /* One solid pill that slides behind the active icon. */
+    .patient-mobile-nav-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        width: 3.4rem;
+        height: 2rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #1b7aa3 0%, #2490bf 100%);
+        box-shadow: 0 6px 14px -6px rgba(27, 122, 163, 0.7);
+        pointer-events: none;
+        opacity: 0;
+    }
+    .patient-mobile-nav-indicator.is-visible { opacity: 1; }
+    .patient-mobile-nav.indicator-animate .patient-mobile-nav-indicator {
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease;
+    }
+
+    /* Dashboard: larger raised circle in the middle. */
+    .patient-mobile-nav-item--main { justify-content: flex-end; gap: 4px; }
+    .patient-mobile-nav-item--main .patient-mobile-nav-fab {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.6rem;
+        height: 3.6rem;
+        max-width: none;
+        margin-top: -1.9rem;
+        border-radius: 9999px;
+        color: #fff;
+        background: linear-gradient(135deg, #1b7aa3 0%, #2a9fd0 100%);
+        border: 4px solid #fff;
+        box-shadow: 0 10px 22px -8px rgba(27, 122, 163, 0.75);
+        overflow: visible;
+        transition: box-shadow 0.25s ease;
+    }
+    .patient-mobile-nav-item--main .patient-mobile-nav-fab i { font-size: 1.5rem; }
+    .patient-mobile-nav-item--main.active .patient-mobile-nav-fab {
+        box-shadow: 0 0 0 4px rgba(27, 122, 163, 0.18), 0 12px 24px -8px rgba(27, 122, 163, 0.85);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sidebar-nav.indicator-animate .sidebar-active-indicator,
+    .patient-mobile-nav.indicator-animate .patient-mobile-nav-indicator,
+    #sidebar, body:not(.patient-portal)::after { transition: none !important; }
+}

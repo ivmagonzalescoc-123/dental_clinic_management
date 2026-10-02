@@ -71,6 +71,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/appointment-services.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/patient-mobile.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/portal-nav.css') ?>" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -231,17 +232,17 @@ switch ($role_key) {
     </footer>
 
     <nav class="patient-mobile-nav d-lg-none" aria-label="Patient navigation">
-        <a class="patient-mobile-nav-item" href="patient.php?page=dashboard" data-page="dashboard">
-            <i class="bi bi-grid" aria-hidden="true"></i>
-            <span>Home</span>
+        <a class="patient-mobile-nav-item" href="patient.php?page=services" data-page="services">
+            <i class="bi bi-receipt" aria-hidden="true"></i>
+            <span>Services</span>
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=appointments" data-page="appointments">
             <i class="bi bi-calendar2-week" aria-hidden="true"></i>
             <span>Book</span>
         </a>
-        <a class="patient-mobile-nav-item" href="patient.php?page=services" data-page="services">
-            <i class="bi bi-receipt" aria-hidden="true"></i>
-            <span>Services</span>
+        <a class="patient-mobile-nav-item patient-mobile-nav-item--main" href="patient.php?page=dashboard" data-page="dashboard">
+            <span class="patient-mobile-nav-fab"><i class="bi bi-grid-fill" aria-hidden="true"></i></span>
+            <span>Dashboard</span>
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=clinic_records" data-page="clinic_records">
             <i class="bi bi-journal-medical" aria-hidden="true"></i>

@@ -159,6 +159,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/overlay-scrollbars.js') ?>" defer></script>
     <link href="<?= asset_url('../assets/css/app-toast.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/portal-nav.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/module-content-ux.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/appointment-services.css') ?>" rel="stylesheet">

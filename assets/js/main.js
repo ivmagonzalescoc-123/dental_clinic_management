@@ -210,7 +210,7 @@
   })
 
   /**
-   * AJAX sidebar navigation (desktop only)
+   * AJAX portal navigation (desktop and mobile) — swaps #main instead of reloading the page
    */
   ;(function() {
     var isNavigating = false
@@ -268,6 +268,9 @@
         if (href.includes('page=' + page)) {
           link.classList.add('active')
         }
+      })
+      document.querySelectorAll('.patient-mobile-nav-item').forEach(function(item) {
+        item.classList.toggle('active', item.getAttribute('data-page') === page)
       })
     }
 
@@ -414,7 +417,8 @@
       })
     }
 
-    function ajaxNavigate(url) {
+    function ajaxNavigate(url, opts) {
+      var pushHistory = !(opts && opts.push === false)
       if (currentAbort) {
         currentAbort.abort()
       }
@@ -455,6 +459,13 @@
           var newMain = doc.querySelector('#main')
           var currentMain = document.querySelector('#main')
 
+          // Not a portal page (e.g. the session expired and we got the login page):
+          // load it for real instead of leaving the skeleton on screen.
+          if (!newMain) {
+            window.location.href = url
+            return
+          }
+
           if (newMain && currentMain) {
             currentMain.innerHTML = newMain.innerHTML
             reExecuteScripts(currentMain)
@@ -463,7 +474,8 @@
           var page = pageFromUrl(url)
           updateActiveNav(page)
 
-          history.pushState({ page: page }, '', url)
+          if (pushHistory) history.pushState({ page: page }, '', url)
+          loadedUrl = urlWithoutHash(window.location.href)
           document.documentElement.scrollTop = 0
           document.body.scrollTop = 0
           isNavigating = false
@@ -482,7 +494,8 @@
     window.ajaxNavigate = ajaxNavigate
 
     document.addEventListener('click', function(e) {
-      if (window.innerWidth <= 991) return
+      if (e.defaultPrevented) return
+      if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
 
       var link = e.target.closest('a')
       if (!link) return
@@ -502,11 +515,13 @@
         fullUrl = href
       }
 
+      // Mobile drawer (clinic portals): slide it shut while the next page loads.
+      if (window.innerWidth <= 991) document.body.classList.remove('toggle-sidebar')
+
       ajaxNavigate(fullUrl)
     })
 
     document.addEventListener('submit', function(e) {
-      if (window.innerWidth <= 991) return
       // A page script already handled this submit itself (e.g. a fetch-based form,
       // or Bootstrap validation blocking an invalid form) — don't navigate anyway.
       if (e.defaultPrevented) return
@@ -527,10 +542,132 @@
       ajaxNavigate(url)
     })
 
+    // Back/forward: render the URL the browser moved to, without a reload. A pure
+    // #hash change keeps the same page, so it's left alone.
+    function urlWithoutHash(u) { return String(u).split('#')[0] }
+    var loadedUrl = urlWithoutHash(window.location.href)
     window.addEventListener('popstate', function() {
-      if (window.innerWidth <= 991) return
-      location.reload()
+      var target = urlWithoutHash(window.location.href)
+      if (target === loadedUrl) return
+      ajaxNavigate(target, { push: false })
     })
+  })()
+
+  /**
+   * Sliding nav indicators (see assets/css/portal-nav.css)
+   * One highlight per nav follows whichever item carries .active, instead of each
+   * link painting its own background. Watching the class (not the clicks) means it
+   * stays in sync with every place that sets .active (updateActiveNav, page scripts).
+   */
+  ;(function() {
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    function enableAnimationNextFrame(el) {
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { el.classList.add('indicator-animate') })
+      })
+    }
+
+    // Sidebar: white highlight sized to the active link.
+    var sideNav = document.querySelector('.sidebar-nav')
+    if (sideNav) {
+      var sideInd = document.createElement('li')
+      sideInd.className = 'sidebar-active-indicator'
+      sideInd.setAttribute('aria-hidden', 'true')
+      sideNav.appendChild(sideInd)
+
+      var sidePlaced = false
+      var placeSide = function() {
+        var link = sideNav.querySelector('.nav-link.active')
+        if (!link) {
+          sideNav.classList.remove('has-active-indicator')
+          return
+        }
+        sideInd.style.width = link.offsetWidth + 'px'
+        sideInd.style.height = link.offsetHeight + 'px'
+        sideInd.style.transform = 'translate(' + link.offsetLeft + 'px,' + link.offsetTop + 'px)'
+        sideNav.classList.add('has-active-indicator')
+        // Only start animating once there's a real position to glide from.
+        if (!sidePlaced && !reduceMotion) enableAnimationNextFrame(sideNav)
+        sidePlaced = true
+      }
+
+      var sideQueued = false
+      var queueSide = function() {
+        if (sideQueued) return
+        sideQueued = true
+        requestAnimationFrame(function() { sideQueued = false; placeSide() })
+      }
+
+      new MutationObserver(queueSide).observe(sideNav, { subtree: true, attributes: true, attributeFilter: ['class'] })
+      // Collapse/expand and window resizes change the link box.
+      if (window.ResizeObserver) new ResizeObserver(queueSide).observe(sideNav)
+      placeSide()
+    }
+
+    // Patient bottom nav: pill behind the active icon. Dashboard (the raised center
+    // button) has its own look, so the pill fades out there.
+    var bottomNav = document.querySelector('.patient-mobile-nav')
+    if (bottomNav) {
+      var pill = document.createElement('span')
+      pill.className = 'patient-mobile-nav-indicator'
+      pill.setAttribute('aria-hidden', 'true')
+      bottomNav.appendChild(pill)
+
+      var pillPlaced = false
+      var placePill = function() {
+        var item = bottomNav.querySelector('.patient-mobile-nav-item.active')
+        if (!item || !item.offsetWidth) {
+          pill.classList.remove('is-visible')
+          return
+        }
+        var anchor = item.querySelector('.patient-mobile-nav-fab') || item.querySelector('i') || item
+        var navRect = bottomNav.getBoundingClientRect()
+        var r = anchor.getBoundingClientRect()
+        var x = r.left + r.width / 2 - navRect.left - pill.offsetWidth / 2
+        var y = r.top + r.height / 2 - navRect.top - pill.offsetHeight / 2
+        pill.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+        pill.classList.toggle('is-visible', !item.classList.contains('patient-mobile-nav-item--main'))
+        if (!pillPlaced && !reduceMotion) enableAnimationNextFrame(bottomNav)
+        pillPlaced = true
+      }
+
+      var pillQueued = false
+      var queuePill = function() {
+        if (pillQueued) return
+        pillQueued = true
+        requestAnimationFrame(function() { pillQueued = false; placePill() })
+      }
+
+      new MutationObserver(queuePill).observe(bottomNav, { subtree: true, attributes: true, attributeFilter: ['class'] })
+      window.addEventListener('resize', queuePill)
+
+      // Mobile taps are full page loads: move the highlight right away so it glides
+      // while the next page is fetched (navigation itself is not delayed).
+      bottomNav.addEventListener('click', function(e) {
+        if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
+        var item = e.target.closest('.patient-mobile-nav-item')
+        if (!item) return
+        bottomNav.querySelectorAll('.patient-mobile-nav-item').forEach(function(el) {
+          el.classList.toggle('active', el === item)
+        })
+      })
+
+      // Coming back via the back button can restore this page with the tapped item
+      // still highlighted; re-sync it to the page actually shown.
+      window.addEventListener('pageshow', function(e) {
+        if (!e.persisted) return
+        var page = new URLSearchParams(window.location.search).get('page') || 'dashboard'
+        bottomNav.classList.remove('indicator-animate')
+        bottomNav.querySelectorAll('.patient-mobile-nav-item').forEach(function(el) {
+          el.classList.toggle('active', el.getAttribute('data-page') === page)
+        })
+        pillPlaced = false
+        placePill()
+      })
+
+      placePill()
+    }
   })()
 
   /**

@@ -1478,6 +1478,8 @@ document.getElementById('histPrintBtn')?.addEventListener('click', function () {
     }
     printBody.querySelector('#histOdontogramFullscreenBtn')?.remove();
     printBody.querySelector('#histOdontogramFullscreenCloseBtn')?.remove();
+    // The print window doesn't load the stylesheet that hides this overlay.
+    printBody.querySelectorAll('.odontogram-rotate-prompt').forEach(function (el) { el.remove(); });
 
     const title = 'Clinical Record — ' + (document.getElementById('histPatientName').textContent || 'Patient');
 
