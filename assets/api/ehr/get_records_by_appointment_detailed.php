@@ -3,6 +3,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/treatment_plan_helpers.php';
 header('Content-Type: application/json');
 
 $role = $_SESSION['role'] ?? '';
@@ -336,5 +337,8 @@ echo json_encode([
     'follow_up_appointments' => $followUpAppointments,
     'prescriptions' => $prescriptions,
     'services_availed' => $servicesAvailed,
+    // Treatment plan items done on / planned at this visit — tracked apart from the
+    // billed services above.
+    'treatments' => treatment_plan_for_appointment($conn, $appointment_id),
     'read_only_for_doctor' => ($role === 'doctor'),
 ]);

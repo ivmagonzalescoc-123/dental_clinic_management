@@ -6,6 +6,11 @@
  * "Services Performed", which is what billing is built from — the plan itself is an
  * estimate and is never billed directly.
  *
+ * Each item remembers the visit it was planned on (source_appointment_id) and the
+ * visit it was done on (completed_appointment_id), so every clinic record can show
+ * "treatments done this visit" and "planned for next visits" separately from the
+ * billed services.
+ *
  * Deliberately a separate table from the legacy `treatment_plans`: that one is written
  * by the secretary record flow to store the follow-up interval/visit-count JSON, and
  * mixing plan items into it would break follow-up auto-booking.
@@ -94,6 +99,67 @@ if (!function_exists('treatment_plan_list')) {
         }
         $stmt->close();
         return $items;
+    }
+}
+
+if (!function_exists('treatment_plan_for_appointment')) {
+    /**
+     * Treatments tied to one visit, for the clinic record / history views:
+     *  - done:    items completed on this visit
+     *  - planned: items planned on this visit but not done on it (with their current
+     *             status, so a later completion shows when it happened)
+     */
+    function treatment_plan_for_appointment(mysqli $conn, int $appointmentId): array
+    {
+        $out = ['done' => [], 'planned' => []];
+        if ($appointmentId <= 0) return $out;
+        treatment_plan_ensure_table($conn);
+        $stmt = $conn->prepare("
+            SELECT i.item_id, i.service_id, s.service_name, i.tooth_number, i.phase, i.estimated_cost,
+                   i.notes, i.status, i.source_appointment_id, i.completed_appointment_id,
+                   ca.appointment_date AS completed_appointment_date
+            FROM patient_treatment_plan_items i
+            LEFT JOIN services s ON s.service_id = i.service_id
+            LEFT JOIN appointments ca ON ca.appointment_id = i.completed_appointment_id
+            WHERE i.completed_appointment_id = ? OR i.source_appointment_id = ?
+            ORDER BY i.phase ASC, i.item_id ASC
+        ");
+        $stmt->bind_param('ii', $appointmentId, $appointmentId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $item = [
+                'item_id' => (int)$row['item_id'],
+                'service_name' => (string)($row['service_name'] ?? ''),
+                'tooth_number' => $row['tooth_number'],
+                'phase' => (int)$row['phase'],
+                'phase_label' => treatment_plan_phase_label((int)$row['phase']),
+                'estimated_cost' => (float)$row['estimated_cost'],
+                'notes' => $row['notes'],
+                'status' => (string)$row['status'],
+                'completed_appointment_date' => $row['completed_appointment_date'],
+            ];
+            if ((int)$row['completed_appointment_id'] === $appointmentId) {
+                $out['done'][] = $item;
+            } else {
+                $out['planned'][] = $item;
+            }
+        }
+        $stmt->close();
+        return $out;
+    }
+}
+
+if (!function_exists('treatment_plan_services')) {
+    /** Active services for the plan's add/edit form. */
+    function treatment_plan_services(mysqli $conn): array
+    {
+        $rows = [];
+        $res = $conn->query('SELECT service_id, service_name, initial_price FROM services WHERE is_active = 1 ORDER BY service_name ASC');
+        while ($res && ($r = $res->fetch_assoc())) {
+            $rows[] = ['service_id' => (int)$r['service_id'], 'name' => (string)$r['service_name'], 'price' => (float)$r['initial_price']];
+        }
+        return $rows;
     }
 }
 

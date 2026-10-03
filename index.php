@@ -123,9 +123,9 @@ $aboutPoints = [
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <!-- Fonts load without blocking the first paint (display=swap shows system fonts until they arrive). -->
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
     <!-- Hero background is the largest thing on screen; start fetching it right away. -->
     <link rel="preload" as="image" href="<?php echo htmlspecialchars($pageBgSrc, ENT_QUOTES, 'UTF-8'); ?>" fetchpriority="high">
     <link rel="stylesheet" href="<?= asset_url('assets/css/app-toast.css') ?>">
@@ -144,8 +144,8 @@ $aboutPoints = [
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Nunito', 'system-ui', 'sans-serif'],
-                        display: ['Lora', 'Georgia', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
                     },
                     colors: {
                         primary: {
@@ -240,51 +240,16 @@ $aboutPoints = [
         }
         .hero-tooth.is-ready .hero-tooth-canvas { opacity: 1; transform: none; }
         .hero-tooth.is-dragging .hero-tooth-canvas { cursor: grabbing; }
-        .hero-tooth-hint {
-            position: absolute;
-            left: 50%;
-            bottom: 0;
-            transform: translate(-50%, 6px);
-            display: inline-flex;
-            align-items: center;
-            gap: 0.4rem;
-            white-space: nowrap;
-            padding: 0.4rem 0.85rem;
-            border-radius: 9999px;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 0.75rem;
-            font-weight: 500;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s ease, transform 0.5s ease;
-        }
-        .hero-tooth.is-ready .hero-tooth-hint { opacity: 1; transform: translate(-50%, 0); transition-delay: 1s; }
-        .hero-tooth.is-ready.hint-dismissed .hero-tooth-hint { opacity: 0; transition-delay: 0s; }
+
+        /* Headings share the body font; tighter tracking keeps large sizes crisp. */
+        .font-display { letter-spacing: -0.02em; }
 
         .nav-link {
-            position: relative;
             color: rgba(255,255,255,0.85);
-            transition: color 0.25s ease;
+            transition: color 0.2s ease;
         }
-        .nav-link::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -4px;
-            height: 2px;
-            width: 0;
-            background-color: #1b7aa3;
-            transition: width 0.25s ease;
-        }
-        .nav-link:hover::after,
-        .nav-link.active::after {
-            width: 100%;
-        }
-        nav[aria-label="Main"] .nav-link:hover {
+        nav[aria-label="Main"] .nav-link:hover,
+        nav[aria-label="Main"] .nav-link.active {
             color: #ffffff;
         }
         .header-scrolled .nav-link {
@@ -295,9 +260,6 @@ $aboutPoints = [
         }
         .header-scrolled .nav-link.active {
             color: #1b7aa3 !important;
-        }
-        .header-scrolled .nav-link::after {
-            background-color: #1b7aa3;
         }
 
         .auth-overlay {
@@ -725,7 +687,7 @@ $aboutPoints = [
         @media (min-width: 640px) { .track-card-head { padding: 1.1rem 1.75rem; } }
         .track-code {
             margin-top: 0.15rem;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+            font-variant-numeric: tabular-nums;
             font-size: 1.3rem; font-weight: 800; letter-spacing: 0.06em; color: #0f1e35;
         }
         .track-card-foot {
@@ -748,7 +710,6 @@ $aboutPoints = [
         }
         .track-steps { display: flex; align-items: flex-start; }
         .track-step { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; width: 6.5rem; }
-        .track-step-caption { margin-top: 0.2rem; font-size: 0.68rem; line-height: 1.3; color: #94a3b8; text-align: center; }
         .track-line { flex: 1; padding-top: 1.375rem; min-width: 1rem; }
         .track-step-circle svg { width: 1.3rem; height: 1.3rem; }
         .track-step-circle.border-dashed { border-style: solid; background: #f8fafc; }
@@ -761,15 +722,41 @@ $aboutPoints = [
             0%, 100% { box-shadow: 0 0 0 0 rgba(27, 122, 163, 0.28); }
             50% { box-shadow: 0 0 0 7px rgba(27, 122, 163, 0); }
         }
+        /* Spinning arc around the waiting step, so it reads as "in progress". */
+        .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed { position: relative; }
+        .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed::before {
+            content: ''; position: absolute; inset: -6px; border-radius: 9999px;
+            border: 2px solid transparent; border-top-color: #1b7aa3; border-right-color: rgba(27, 122, 163, 0.35);
+            animation: liveSpin 1.2s linear infinite;
+        }
+        /* The line from the last finished step to the waiting one: a light that travels toward it. */
+        .track-step:has(> .track-step-circle.bg-green-500) + .track-line > .bg-slate-200 { position: relative; overflow: hidden; }
+        .track-step:has(> .track-step-circle.bg-green-500) + .track-line > .bg-slate-200::after,
+        .booking-steps li.is-active + .step-bar:not(.is-filled)::before {
+            content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 45%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(34, 197, 94, 0), #22c55e 55%, #1b7aa3);
+            animation: liveTravel 1.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+        }
+        @keyframes liveTravel {
+            0%   { transform: translateX(-100%); opacity: 0; }
+            15%  { opacity: 1; }
+            85%  { opacity: 1; }
+            100% { transform: translateX(225%); opacity: 0; }
+        }
+        @keyframes liveSpin { to { transform: rotate(360deg); } }
         .track-step-circle.bg-green-500 { box-shadow: 0 8px 18px -8px rgba(34, 197, 94, 0.8); }
         .track-step-circle.bg-red-500 { box-shadow: 0 8px 18px -8px rgba(239, 68, 68, 0.8); }
         @media (max-width: 420px) {
             .track-step { width: 5.25rem; }
-            .track-step-caption { display: none; }
         }
         @media (prefers-reduced-motion: reduce) {
             .track-live-dot::after, .track-error,
-            .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed { animation: none; }
+            .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed,
+            .track-step:has(> .track-step-circle.bg-green-500) + .track-line + .track-step > .track-step-circle.border-dashed::before,
+            .track-step:has(> .track-step-circle.bg-green-500) + .track-line > .bg-slate-200::after,
+            .booking-steps li.is-active + .step-bar:not(.is-filled)::before,
+            .booking-steps li.is-active:has(+ .step-bar) .step-dot { animation: none; }
         }
 
         /* ===== Booking appointment panel ===== */
@@ -805,6 +792,8 @@ $aboutPoints = [
             box-shadow: 0 0 0 4px rgba(27, 122, 163, 0.15);
             transform: scale(1.05);
         }
+        .booking-steps li.is-active:has(+ .step-bar) .step-dot { animation: trackStepWait 1.8s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .booking-steps li.is-active:has(+ .step-bar) .step-dot { animation: none; } }
         .booking-steps li.is-done { color: #15803d; }
         .booking-steps li.is-done .step-dot { border-color: #22c55e; background: #22c55e; color: #fff; }
 
@@ -1053,7 +1042,7 @@ $aboutPoints = [
         .booking-ticket::before { left: -0.55rem; clip-path: inset(0 0 0 50%); }
         .booking-ticket::after { right: -0.55rem; clip-path: inset(0 50% 0 0); }
         .booking-ref {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Courier New', monospace;
+            font-variant-numeric: tabular-nums;
             font-size: 1.6rem; font-weight: 800; letter-spacing: 0.08em; color: #15803d;
         }
         .booking-ref .ref-char { display: inline-block; animation: refCharIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
@@ -1181,10 +1170,6 @@ $aboutPoints = [
                     data-module="<?= asset_url('assets/js/hero-tooth.js') ?>"
                     data-model="<?= asset_url('assets/models/hero-tooth.bin') ?>">
                     <div class="hero-tooth-halo" aria-hidden="true"></div>
-                    <div class="hero-tooth-hint" aria-hidden="true">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
-                        Drag to rotate &middot; Tap to scan
-                    </div>
                 </div>
             </div>
 
@@ -1233,7 +1218,6 @@ $aboutPoints = [
                                     <div class="track-step">
                                         <div id="step1Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg></div>
                                         <span id="step1Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Booking Created</span>
-                                        <span class="track-step-caption">Request received</span>
                                     </div>
                                     <!-- Line 1 -->
                                     <div class="track-line">
@@ -1243,7 +1227,6 @@ $aboutPoints = [
                                     <div class="track-step">
                                         <div id="step2Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z"/></svg></div>
                                         <span id="step2Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Booking Confirmed</span>
-                                        <span class="track-step-caption">Approved by the clinic</span>
                                     </div>
                                     <!-- Line 2 -->
                                     <div class="track-line">
@@ -1253,7 +1236,6 @@ $aboutPoints = [
                                     <div class="track-step">
                                         <div id="step3Circle" class="track-step-circle flex items-center justify-center w-12 h-12 rounded-full border-2 border-dashed border-slate-300 text-slate-400 text-xs font-bold transition-all duration-300"><svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg></div>
                                         <span id="step3Label" class="mt-2.5 text-xs font-medium text-slate-400 text-center leading-tight">Visit Clinic</span>
-                                        <span class="track-step-caption">Checked in at the clinic</span>
                                     </div>
                                 </div>
                             </div>
@@ -1338,7 +1320,7 @@ $aboutPoints = [
 
                     <div class="reveal reveal-delay-1">
                         <span class="inline-block text-primary text-sm mb-3 tracking-widest uppercase" style="font-weight: 600;">About Us</span>
-                        <h2 class="text-foreground mb-5" style="font-family: 'Lora', Georgia, serif; font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 600;">Caring for Smiles With Heart & Expertise</h2>
+                        <h2 class="font-display text-foreground mb-5" style="font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 600;">Caring for Smiles With Heart & Expertise</h2>
                         <p class="text-muted-foreground leading-relaxed mb-5">
                             Azucena's Dental Clinic has been actively serving our community since 1998. With a dedicated team of experienced doctors and modern technology, we focus on delivering exceptional dental care with compassion and professionalism.
                         </p>
@@ -1666,7 +1648,7 @@ $aboutPoints = [
                             <label for="book-email" class="modal-label">Email</label>
                             <div class="modal-input-wrap">
                                 <svg class="modal-input-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
-                                <input type="email" id="book-email" name="email" required placeholder="you@example.com" autocomplete="email"
+                                <input type="email" id="book-email" name="email" required placeholder="example@gmail.com" autocomplete="email"
                                     class="auth-field modal-input">
                             </div>
                             <p class="auth-field-msg" id="book-email-error"></p>
@@ -1734,7 +1716,7 @@ $aboutPoints = [
                             <p class="auth-field-msg" id="book-pref-date-error"></p>
                         </div>
                         <div>
-                            <label for="book-hour" class="modal-label">Time <span class="font-medium text-slate-400">(9:00 AM – 4:30 PM)</span></label>
+                            <label for="book-hour" class="modal-label">Clinic Time <span class="font-medium text-slate-400">: 9 AM – 4:30 PM</span></label>
                             <div class="modal-group booking-time items-center pl-3">
                                 <svg class="mr-1.5 h-[1.05rem] w-[1.05rem] shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.7" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <input type="text" id="book-hour" inputmode="numeric" maxlength="2" placeholder="9" aria-label="Hour" class="book-time-field">
@@ -4120,8 +4102,7 @@ $aboutPoints = [
                 // import() treats "assets/..." as a bare module name, so resolve it first.
                 import(new URL(stage.dataset.module, document.baseURI).href).then(function(mod) {
                     return mod.mountHeroTooth(stage, {
-                        modelUrl: new URL(stage.dataset.model, document.baseURI).href,
-                        onInteract: function() { stage.classList.add('hint-dismissed'); }
+                        modelUrl: new URL(stage.dataset.model, document.baseURI).href
                     });
                 }).then(function() {
                     stage.removeAttribute('aria-hidden');

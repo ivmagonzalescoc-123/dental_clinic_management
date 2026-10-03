@@ -21,4 +21,5 @@ echo json_encode([
     'success' => true,
     'items' => $items,
     'totals' => treatment_plan_totals($items),
+    'services' => treatment_plan_services($conn),
 ]);

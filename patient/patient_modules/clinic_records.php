@@ -380,8 +380,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 field('Reason for visit', record.reason, 'Not recorded') +
                 field('Clinical summary', record.summary, 'No summary recorded.') +
                 field('Doctor notes', record.doctor_notes, 'No doctor notes recorded.')) +
-            section('bi-bandaid', 'Services & treatment', servicesHtml) +
+            section('bi-receipt', 'Services availed', servicesHtml) +
             '</div>');
+
+        // Treatment plan items done on this visit, and the ones planned for later visits.
+        if (window.TreatmentPlan) {
+            sections.push(section('bi-list-check', 'Treatments', window.TreatmentPlan.renderVisit(data.treatments)));
+        }
 
         sections.push(section('bi-capsule', 'Prescriptions',
             prescriptions.length
@@ -493,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 '.cr-hero{display:flex;align-items:center;gap:12px;border:1px solid #dee2e6;border-radius:8px;padding:10px;margin-bottom:12px;} .cr-hero__name{font-weight:700;} .cr-hero__contact{font-size:12px;color:#6c757d;} .cr-hero__chips{margin-top:4px;} .cr-chip{display:inline-block;font-size:12px;margin-right:10px;color:#475569;} .cr-chip i{display:none;}' +
                 '.cr-section{border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:12px;break-inside:avoid;} .cr-section__title{font-size:13px;margin:0 0 8px;text-transform:uppercase;color:#1b7aa3;} .cr-section__title i{display:none;}' +
                 '.cr-field{margin-bottom:6px;} .cr-field__label{font-size:12px;font-weight:600;color:#6c757d;} .cr-empty,.is-empty{color:#94a3b8;font-style:italic;}' +
+                '.tp-phase-title{font-size:12px;font-weight:600;color:#6c757d;margin:6px 0 4px;} .tp-list{list-style:none;padding:0;margin:0;} .tp-item{display:flex;gap:10px;align-items:center;padding:4px 0;border-bottom:1px dashed #dee2e6;font-size:13px;} .tp-main{flex:1;} .tp-name{font-weight:600;} .tp-notes{font-size:11px;color:#6c757d;} .tp-tooth{min-width:24px;font-weight:700;} .tp-tooth i{display:none;} .tp-badge{font-size:11px;color:#475569;} .tp-empty{color:#94a3b8;font-style:italic;}' +
                 '.cr-service-list{list-style:none;padding:0;margin:0;} .cr-service-list li{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #dee2e6;} .cr-footnote{font-size:11px;color:#94a3b8;}' +
                 '.media-gallery-card{break-inside:avoid;} .media-gallery-thumb-btn{display:block;width:100%;border:0;background:none;padding:0;} .media-gallery-thumb-overlay,.media-gallery-card a{display:none !important;} .media-gallery-thumb-img{display:block;width:100%;max-width:180px;height:130px;object-fit:cover;border:1px solid #dee2e6;padding:2px;border-radius:4px;}' +
                 '</style></head><body>' +

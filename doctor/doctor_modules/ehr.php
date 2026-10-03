@@ -1462,6 +1462,7 @@ function loadPdRecordDetail(recordId) {
                     '<div class="dpp-field"><div class="dpp-field-label">Doctor\'s Notes</div><div class="dpp-field-value">' + escapeHtml(rec.doctor_notes || '—') + '</div></div>' +
                     '<div class="dpp-field"><div class="dpp-field-label">Services</div><div class="dpp-field-value">' + servicesHtml + '</div></div>' +
                 '</div>' +
+                (window.TreatmentPlan ? '<div class="pf-section mb-2"><div class="pf-section__title"><i class="bi bi-list-check"></i> Treatments</div>' + window.TreatmentPlan.renderVisit(data.treatments) + '</div>' : '') +
                 '<div id="pdRecordFindings"></div>';
 
             const findingsEl = document.getElementById('pdRecordFindings');

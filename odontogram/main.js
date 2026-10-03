@@ -28,7 +28,6 @@ import {
   applyDetailVisualStatus,
   initToothDetailPanel,
   setActiveDetailSurface,
-  setToothDetailReadonly,
   showToothDetail,
 } from "./tooth-detail-2d.js";
 
@@ -101,7 +100,7 @@ function setView(view) {
     if (readonlyMode) {
       viewHintEl.textContent = isChart
         ? "View only — select a tooth, then inspect surfaces in the bar above the chart."
-        : "View only — double-click a tooth for close-up; double-click it again, press Esc or tap \"All teeth\" to return.";
+        : "View only — double-click a tooth for close-up and pick a surface to inspect it; double-click again, press Esc or tap \"All teeth\" to return.";
     } else {
       viewHintEl.textContent = isChart
         ? "Click a tooth on the arch, pick a surface in the bar above, then apply a legend code."
@@ -150,7 +149,6 @@ function initChartDetailPanel() {
   chartToothDetailEl.dataset.ready = "1";
   initToothDetailPanel(chartToothDetailEl, {
     legendByCode: LEGEND_BY_CODE,
-    readonly: readonlyMode,
     onSurfaceClick: (surface) => {
       if (!selectedTooth) return;
       selectSurface(selectedTooth, surface);
@@ -787,7 +785,8 @@ function updateIsolationStatusPanel() {
   const fdi = isolatedToothFdi;
   const entry = toothState[fdi] || createEmptyToothEntry();
   const surfaces = entry.surfaces || {};
-  const selectable = !readonlyMode;
+  // Picking a surface only changes the view, so it works in read mode too.
+  const selectable = true;
 
   const rows = SURFACE_KEYS.map((key) => {
     const codes = formatSurfaceCodes(surfaces[key]);
@@ -824,7 +823,7 @@ function bindIsolationPanelEvents() {
   isolationStatusEl.dataset.bound = "1";
 
   isolationStatusEl.addEventListener("click", (e) => {
-    if (readonlyMode || !isolatedToothFdi) return;
+    if (!isolatedToothFdi) return;
     const row = e.target.closest("[data-surface-key]");
     if (!row) return;
     selectSurface(isolatedToothFdi, row.dataset.surfaceKey);
@@ -1164,7 +1163,6 @@ function setReadonlyMode(on) {
   }
 
   odontogramEl?.classList.toggle("odontogram--readonly", readonlyMode);
-  setToothDetailReadonly(readonlyMode);
   updateStatusUI();
   setView(activeView);
 }

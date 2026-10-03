@@ -1,5 +1,6 @@
 /**
- * Doctor "My Patients" page: a searchable patient list and a tabbed Patient Chart modal.
+ * Doctor "My Patients" page: a searchable patient list and a tabbed Patient Chart that
+ * replaces the list in place (Back returns to it), so the chart gets the full page.
  *
  *   DoctorPatients.init(config)   — config is built by doctor/doctor_modules/patients.php
  *
@@ -171,11 +172,10 @@
         if (p.age != null) sub.push(p.age + ' yrs');
         if (p.gender) sub.push(esc(p.gender));
         if (p.phone_number) sub.push(esc(p.phone_number));
-        var chips = p.alerts.slice(0, 2).map(function (a) {
-            return '<span class="dp-flag dp-flag--alert"><i class="bi bi-exclamation-triangle-fill"></i>' + esc(a) + '</span>';
-        });
-        if (p.alerts.length > 2) chips.push('<span class="dp-flag dp-flag--alert">+' + (p.alerts.length - 2) + ' more</span>');
-        if (s.inClinic) chips.unshift('<span class="dp-flag dp-flag--live"><i class="bi bi-dot"></i>In clinic today</span>');
+        // Medical alerts (diabetic, allergies, ...) stay out of the list and show only
+        // once the doctor opens the patient's chart.
+        var chips = [];
+        if (s.inClinic) chips.push('<span class="dp-flag dp-flag--live"><i class="bi bi-dot"></i>In clinic today</span>');
 
         var nextHtml = s.next
             ? '<strong>' + esc(relative(s.next.date) || fmtDate(s.next.date, false)) + '</strong><small>' + esc(timeRange(s.next) || fmtDate(s.next.date)) + '</small>'
@@ -219,27 +219,54 @@
         }
     }
 
-    // ---------- chart modal ----------
+    // ---------- chart view ----------
     function patientById(id) {
         for (var i = 0; i < state.patients.length; i++) if (state.patients[i].patient_id === id) return state.patients[i];
         return null;
     }
+    function chartEl() {
+        return document.getElementById('dpChartView');
+    }
+    function scrollToTop() {
+        try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
+    }
     function openChart(patientId, tab) {
         var p = patientById(patientId);
-        var modalEl = document.getElementById('dpChartModal');
-        if (!p || !modalEl) return;
+        var view = chartEl();
+        var listView = document.getElementById('dpListView');
+        if (!p || !view) return;
         state.current = { patient: p, loaded: {}, profiling: null, plan: null };
+        // Remember where the doctor was in the list so Back returns to the same spot.
+        if (listView && !listView.hidden) state.listScroll = window.scrollY || 0;
         renderIdentity(p);
-        modalEl.querySelectorAll('.dp-pane').forEach(function (pane) {
-            if (pane.getAttribute('data-dp-pane') !== 'plan') pane.innerHTML = '';
+        view.querySelectorAll('.dp-pane').forEach(function (pane) {
+            // Treatments and Charting hold static hosts (the plan widget, the chart iframe).
+            var name = pane.getAttribute('data-dp-pane');
+            if (name !== 'plan' && name !== 'charting') pane.innerHTML = '';
         });
         var planHost = document.getElementById('dpTreatmentPlan');
         if (planHost) planHost.innerHTML = '';
+        if (listView) listView.hidden = true;
+        view.hidden = false;
         showTab(tab || 'overview');
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        scrollToTop();
+        var back = view.querySelector('[data-dp-back]');
+        if (back) back.focus({ preventScroll: true });
+    }
+    function closeChart() {
+        var view = chartEl();
+        var listView = document.getElementById('dpListView');
+        if (!view || view.hidden) return;
+        var id = state.current ? state.current.patient.patient_id : null;
+        toggleChartFullscreen(true);
+        state.current = null;
+        view.hidden = true;
+        if (listView) listView.hidden = false;
+        window.scrollTo(0, state.listScroll || 0);
+        var row = id && document.querySelector('#dpList .dp-row[data-patient-id="' + id + '"]');
+        if (row) row.focus({ preventScroll: true });
     }
     function renderIdentity(p) {
-        var s = p._sum;
         var meta = [];
         if (p.age != null) meta.push(p.age + ' yrs');
         if (p.gender) meta.push(esc(p.gender));
@@ -251,49 +278,41 @@
         var flags = p.alerts.map(function (a) { return '<span class="dp-flag dp-flag--alert"><i class="bi bi-exclamation-triangle-fill"></i>' + esc(a) + '</span>'; })
             .concat(p.notices.map(function (n) { return '<span class="dp-flag dp-flag--notice"><i class="bi bi-info-circle"></i>' + esc(n) + '</span>'; }));
 
-        var stats = [
-            ['Visits', String(s.visits)],
-            ['Last visit', s.last ? fmtDate(s.last.date) : '—'],
-            ['Next', s.next ? fmtDate(s.next.date) + (timeRange(s.next) ? ' · ' + fmtTime(s.next.start) : '') : '—']
-        ];
-
         document.getElementById('dpChartIdentity').innerHTML =
             avatar(p, 'dp-avatar dp-avatar--lg') +
             '<div class="dp-chart__who">' +
-                '<h5 class="modal-title" id="dpChartName">' + esc(fullName(p)) + '</h5>' +
+                '<h3 class="dp-chart__name" id="dpChartName">' + esc(fullName(p)) + '</h3>' +
                 '<div class="dp-chart__meta">' + meta.join(' · ') + (contact.length ? '<span class="dp-chart__contact">' + contact.join('') + '</span>' : '') + '</div>' +
                 (flags.length ? '<div class="dp-chart__flags">' + flags.join('') + '</div>' : '<div class="dp-chart__flags"><span class="dp-flag dp-flag--ok"><i class="bi bi-check-circle-fill"></i>No medical alerts on file</span></div>') +
-            '</div>' +
-            '<dl class="dp-chart__stats">' + stats.map(function (st) {
-                return '<div><dt>' + esc(st[0]) + '</dt><dd>' + esc(st[1]) + '</dd></div>';
-            }).join('') + '</dl>';
+            '</div>';
     }
     function showTab(name) {
-        var modalEl = document.getElementById('dpChartModal');
-        modalEl.querySelectorAll('.dp-tab').forEach(function (t) {
+        var view = chartEl();
+        view.querySelectorAll('.dp-tab').forEach(function (t) {
             var on = t.getAttribute('data-dp-tab') === name;
             t.classList.toggle('is-active', on);
             t.setAttribute('aria-selected', on ? 'true' : 'false');
         });
-        modalEl.querySelectorAll('.dp-pane').forEach(function (pane) {
+        view.querySelectorAll('.dp-pane').forEach(function (pane) {
             pane.classList.toggle('is-active', pane.getAttribute('data-dp-pane') === name);
         });
-        var body = modalEl.querySelector('.dp-chart__body');
-        if (body) body.scrollTop = 0;
         loadTab(name);
+        if (name === 'charting') postToChartFrame({ type: 'odontogram_resize' });
     }
     function loadTab(name) {
         var cur = state.current;
         if (!cur || cur.loaded[name]) return;
         cur.loaded[name] = true;
         if (name === 'overview') renderOverview(cur);
-        else if (name === 'visits') renderVisits(cur);
+        else if (name === 'appointments') renderAppointments(cur);
+        else if (name === 'records') renderRecords(cur);
+        else if (name === 'charting') renderCharting(cur);
         else if (name === 'plan') mountPlan(cur);
-        else if (name === 'medical') renderMedical(cur);
+        else if (name === 'profiling') renderProfiling(cur);
         else if (name === 'photos') renderPhotos(cur);
     }
     function pane(name) {
-        return document.querySelector('#dpChartModal [data-dp-pane="' + name + '"]');
+        return document.querySelector('#dpChartView [data-dp-pane="' + name + '"]');
     }
     function stillCurrent(cur) {
         return state.current === cur;
@@ -321,140 +340,235 @@
     }
 
     // ---- Overview ----
+    // Records newest first (only visits that have a clinical record).
+    function recordsOf(p) {
+        return p.appointments.filter(function (a) { return a.record_id; }).sort(function (a, b) {
+            return (b.date + (b.start || '')).localeCompare(a.date + (a.start || ''));
+        });
+    }
+    function peso(v) {
+        return '₱' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function statTile(goto, icon, label, valueHtml, subHtml, extraCls) {
+        return '<button type="button" class="dp-stat' + (extraCls ? ' ' + extraCls : '') + '" data-dp-goto="' + goto + '">' +
+            '<span class="dp-stat__icon"><i class="bi ' + icon + '"></i></span>' +
+            '<span class="dp-stat__body"><span class="dp-stat__label">' + esc(label) + '</span>' +
+            '<strong class="dp-stat__value">' + valueHtml + '</strong>' +
+            '<span class="dp-stat__sub">' + subHtml + '</span></span>' +
+        '</button>';
+    }
+    function cardHead(icon, title, actionHtml) {
+        return '<div class="dp-card__head"><h6 class="dp-card__title"><i class="bi ' + icon + '"></i> ' + esc(title) + '</h6>' + (actionHtml || '') + '</div>';
+    }
+    function linkBtn(attr, label) {
+        return '<button type="button" class="dp-link" ' + attr + '>' + esc(label) + ' <i class="bi bi-arrow-right"></i></button>';
+    }
     function renderOverview(cur) {
         var el = pane('overview');
         var p = cur.patient, s = p._sum;
-        var nextCard = s.next
-            ? '<div class="dp-kv"><strong>' + esc(fmtDate(s.next.date)) + '</strong>' + (relative(s.next.date) ? ' <span class="dp-pill">' + esc(relative(s.next.date)) + '</span>' : '') + '</div>' +
-              '<div class="dp-muted">' + esc(timeRange(s.next) || 'Time to be assigned') + ' · ' + (s.next.is_online ? 'Online' : 'In-person') + '</div>' +
-              (s.next.services.length ? '<div class="dp-tags">' + s.next.services.map(function (n) { return '<span class="dp-tag">' + esc(n) + '</span>'; }).join('') + '</div>' : '') +
-              '<div class="mt-2">' + statusBadge(s.next.status) + '</div>'
+        var latest = recordsOf(p)[0] || null;
+
+        var stats =
+            statTile('appointments', 'bi-check2-circle', 'Completed visits', esc(String(s.visits)),
+                esc(s.visits ? recordsOf(p).length + ' with clinical records' : 'No visits yet')) +
+            statTile('records', 'bi-clock-history', 'Last visit', esc(s.last ? fmtDate(s.last.date) : '—'),
+                esc(s.last ? (relative(s.last.date) || (s.last.services[0] || 'Visit')) : 'No visits yet')) +
+            statTile('appointments', 'bi-calendar-event', 'Next appointment', esc(s.next ? fmtDate(s.next.date) : '—'),
+                esc(s.next ? [relative(s.next.date), fmtTime(s.next.start)].filter(Boolean).join(' · ') || 'Time to be assigned' : 'None booked'),
+                s.next ? 'is-accent' : '') +
+            statTile('plan', 'bi-list-check', 'Open treatments', '<span id="dpStatPlan">…</span>', '<span id="dpStatPlanSub">Loading</span>');
+
+        var next = s.next
+            ? '<div class="dp-next">' +
+                '<div class="dp-next__date"><strong>' + esc(fmtDate(s.next.date, false)) + '</strong><small>' + esc(s.next.date.slice(0, 4)) + '</small></div>' +
+                '<div class="dp-next__main">' +
+                    '<div class="dp-next__title">' + esc(s.next.services.length ? s.next.services.join(', ') : (meaningful(s.next.reason) ? s.next.reason : 'Appointment')) + '</div>' +
+                    '<div class="dp-muted">' + esc([timeRange(s.next) || 'Time to be assigned', s.next.is_online ? 'Online' : 'In-person'].join(' · ')) + '</div>' +
+                    '<div class="mt-1">' + statusBadge(s.next.status) + '</div>' +
+                '</div>' +
+              '</div>'
             : emptyNote('bi-calendar-x', 'No upcoming appointment with you.');
-        var lastCard = s.last
-            ? '<div class="dp-kv"><strong>' + esc(fmtDate(s.last.date)) + '</strong>' + (relative(s.last.date) ? ' <span class="dp-pill">' + esc(relative(s.last.date)) + '</span>' : '') + '</div>' +
-              (s.last.services.length ? '<div class="dp-tags">' + s.last.services.map(function (n) { return '<span class="dp-tag">' + esc(n) + '</span>'; }).join('') + '</div>' : '') +
-              '<div class="dp-last-detail" id="dpLastVisitDetail">' + (s.last.record_id ? skeleton(2) : '<div class="dp-muted">No clinical record for this visit.</div>') + '</div>' +
-              (s.last.record_id ? '<button type="button" class="btn btn-sm btn-outline-primary mt-2" data-dp-open-visit="' + s.last.appointment_id + '"><i class="bi bi-journal-text"></i> Open full record</button>' : '')
-            : emptyNote('bi-clock-history', 'No completed visits yet.');
 
         el.innerHTML =
-            '<div class="dp-grid">' +
-                '<article class="dp-card"><h6 class="dp-card__title"><i class="bi bi-calendar-event"></i> Next appointment</h6>' + nextCard + '</article>' +
-                '<article class="dp-card"><h6 class="dp-card__title"><i class="bi bi-clock-history"></i> Last visit</h6>' + lastCard + '</article>' +
-                '<article class="dp-card"><h6 class="dp-card__title"><i class="bi bi-list-check"></i> Treatment plan</h6><div id="dpOverviewPlan">' + skeleton(2) + '</div></article>' +
-                '<article class="dp-card"><h6 class="dp-card__title"><i class="bi bi-heart-pulse"></i> Medical summary</h6><div id="dpOverviewMedical">' + skeleton(3) + '</div></article>' +
+            '<div class="dp-stats">' + stats + '</div>' +
+            '<div class="dp-ov">' +
+                '<article class="dp-card dp-ov__main">' +
+                    cardHead('bi-journal-medical', 'Latest clinical record', latest ? linkBtn('data-dp-open-record="' + latest.appointment_id + '"', 'Open record') : '') +
+                    '<div id="dpOvRecord">' + (latest ? skeleton(4) : emptyNote('bi-journal-x', 'No clinical records yet.')) + '</div>' +
+                '</article>' +
+                '<div class="dp-ov__side">' +
+                    '<article class="dp-card">' + cardHead('bi-calendar-event', 'Up next', linkBtn('data-dp-goto="appointments"', 'All appointments')) + next + '</article>' +
+                    '<article class="dp-card">' + cardHead('bi-list-check', 'Pending treatments', linkBtn('data-dp-goto="plan"', 'Manage')) + '<div id="dpOvPlan">' + skeleton(3) + '</div></article>' +
+                    '<article class="dp-card">' + cardHead('bi-heart-pulse', 'Health at a glance', linkBtn('data-dp-goto="profiling"', 'Profiling')) + '<div id="dpOvHealth">' + skeleton(3) + '</div></article>' +
+                '</div>' +
             '</div>';
 
-        if (s.last && s.last.record_id) {
-            loadVisit(s.last.appointment_id).then(function (j) {
+        if (latest) {
+            loadVisit(latest.appointment_id).then(function (j) {
                 if (!stillCurrent(cur)) return;
-                var box = document.getElementById('dpLastVisitDetail');
-                if (!box) return;
-                var rec = j.record || {};
-                var findings = toothFindingList(rec.odontogram);
-                var bits = [];
-                if (findings.length) bits.push('<div><span class="dp-muted">Teeth:</span> ' + findings.slice(0, 4).map(function (f) { return '<span class="dp-tag dp-tag--tooth">#' + esc(f.tooth) + ' ' + esc(f.text) + '</span>'; }).join('') + (findings.length > 4 ? ' <span class="dp-muted">+' + (findings.length - 4) + ' more</span>' : '') + '</div>');
-                if (meaningful(rec.doctor_notes)) bits.push('<div class="dp-quote">' + esc(rec.doctor_notes) + '</div>');
-                if ((j.prescriptions || []).length) bits.push('<div><span class="dp-muted">Prescribed:</span> ' + j.prescriptions.map(function (rx) { return esc(rx.medicine_name) + (rx.dosage ? ' ' + esc(rx.dosage) : ''); }).join(', ') + '</div>');
-                box.innerHTML = bits.join('') || '<div class="dp-muted">No findings or notes recorded.</div>';
+                var box = document.getElementById('dpOvRecord');
+                if (box) box.innerHTML = recordSummary(latest, j);
             }).catch(function () {
-                var box = document.getElementById('dpLastVisitDetail');
-                if (box && stillCurrent(cur)) box.innerHTML = '<div class="dp-muted">Could not load the visit record.</div>';
+                var box = document.getElementById('dpOvRecord');
+                if (box && stillCurrent(cur)) box.innerHTML = emptyNote('bi-wifi-off', 'Could not load the latest record.');
             });
         }
 
         loadPlan(cur).then(function (j) {
             if (!stillCurrent(cur)) return;
-            var box = document.getElementById('dpOverviewPlan');
-            if (!box) return;
             var items = j.items || [];
             var open = items.filter(function (i) { return i.status === 'proposed' || i.status === 'accepted'; });
-            var doneCount = items.filter(function (i) { return i.status === 'completed'; }).length;
-            if (!items.length) { box.innerHTML = '<div class="dp-muted">No treatment plan yet.</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" data-dp-goto="plan"><i class="bi bi-plus-lg"></i> Start a plan</button>'; return; }
-            var total = open.reduce(function (sum, i) { return sum + Number(i.estimated_cost || 0); }, 0);
-            box.innerHTML =
-                '<div class="dp-kv"><strong>' + open.length + ' pending</strong> · ' + doneCount + ' done</div>' +
-                (open.length ? '<ul class="dp-mini-list">' + open.slice(0, 4).map(function (i) {
-                    return '<li><span>' + esc(i.service_name || 'Service') + (i.tooth_number ? ' <span class="dp-muted">#' + esc(i.tooth_number) + '</span>' : '') + '</span><span class="dp-pill dp-pill--' + esc(i.status) + '">' + esc(i.status) + '</span></li>';
-                }).join('') + '</ul>' : '') +
-                (open.length ? '<div class="dp-muted">Remaining estimate: ₱' + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</div>' : '') +
-                '<button type="button" class="btn btn-sm btn-outline-primary mt-2" data-dp-goto="plan">Open treatment plan</button>';
+            var remaining = open.reduce(function (sum, i) { return sum + Number(i.estimated_cost || 0); }, 0);
+            var statEl = document.getElementById('dpStatPlan');
+            var statSub = document.getElementById('dpStatPlanSub');
+            if (statEl) statEl.textContent = String(open.length);
+            if (statSub) statSub.textContent = open.length ? peso(remaining) + ' remaining' : (items.length ? 'All done' : 'No plan yet');
+            var box = document.getElementById('dpOvPlan');
+            if (!box) return;
+            if (!open.length) {
+                box.innerHTML = emptyNote('bi-clipboard-check', items.length ? 'Nothing pending. All planned treatments are done or declined.' : 'No treatment plan yet.');
+                return;
+            }
+            box.innerHTML = '<ul class="dp-plan-list">' + open.slice(0, 5).map(function (i) {
+                return '<li>' +
+                    '<span class="dp-plan-list__tooth" title="' + (i.tooth_number ? 'Tooth ' + esc(i.tooth_number) : 'Whole mouth') + '">' + (i.tooth_number ? esc(i.tooth_number) : '<i class="bi bi-circle"></i>') + '</span>' +
+                    '<span class="dp-plan-list__name">' + esc(i.service_name || 'Treatment') + '</span>' +
+                    '<span class="dp-pill dp-pill--' + esc(i.status) + '">' + esc(i.status) + '</span>' +
+                '</li>';
+            }).join('') + '</ul>' +
+            (open.length > 5 ? '<div class="dp-muted mt-1">+' + (open.length - 5) + ' more</div>' : '');
         }).catch(function () {
-            var box = document.getElementById('dpOverviewPlan');
-            if (box && stillCurrent(cur)) box.innerHTML = '<div class="dp-muted">Could not load the treatment plan.</div>';
+            var statEl = document.getElementById('dpStatPlan');
+            if (statEl && stillCurrent(cur)) { statEl.textContent = '—'; document.getElementById('dpStatPlanSub').textContent = 'Unavailable'; }
+            var box = document.getElementById('dpOvPlan');
+            if (box && stillCurrent(cur)) box.innerHTML = emptyNote('bi-wifi-off', 'Could not load the treatment plan.');
         });
 
         loadProfiling(cur).then(function (j) {
             if (!stillCurrent(cur)) return;
-            var box = document.getElementById('dpOverviewMedical');
+            var box = document.getElementById('dpOvHealth');
             if (!box) return;
             var prof = j.profiling || {};
             var rows = [
-                ['Allergies', prof.allergies], ['Medications', prof.medications], ['Medical history', prof.medical_history],
-                ['Dental anxiety', prof.dental_anxiety], ['Smoking', prof.smoking]
+                ['Allergies', prof.allergies], ['Medications', prof.medications], ['Medical history', prof.medical_history]
             ].filter(function (r) { return meaningful(r[1]); });
-            var alerts = p.alerts.length
-                ? '<div class="dp-flags-block">' + p.alerts.map(function (a) { return '<span class="dp-flag dp-flag--alert"><i class="bi bi-exclamation-triangle-fill"></i>' + esc(a) + '</span>'; }).join('') + '</div>'
-                : '<div class="dp-flag dp-flag--ok mb-2"><i class="bi bi-check-circle-fill"></i>No flagged conditions</div>';
-            box.innerHTML = alerts +
-                (rows.length ? '<dl class="dp-dl">' + rows.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl>' : '<div class="dp-muted">No medical history details on file.</div>') +
-                '<button type="button" class="btn btn-sm btn-outline-primary mt-2" data-dp-goto="medical">Full medical profile</button>';
+            box.innerHTML = (p.alerts.length
+                    ? '<div class="dp-flags-block">' + p.alerts.map(function (a) { return '<span class="dp-flag dp-flag--alert"><i class="bi bi-exclamation-triangle-fill"></i>' + esc(a) + '</span>'; }).join('') + '</div>'
+                    : '<div class="dp-flag dp-flag--ok mb-2"><i class="bi bi-check-circle-fill"></i>No flagged conditions</div>') +
+                (rows.length ? '<dl class="dp-dl">' + rows.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl>' : '');
         }).catch(function () {
-            var box = document.getElementById('dpOverviewMedical');
-            if (box && stillCurrent(cur)) box.innerHTML = '<div class="dp-muted">Could not load the medical profile.</div>';
+            var box = document.getElementById('dpOvHealth');
+            if (box && stillCurrent(cur)) box.innerHTML = emptyNote('bi-wifi-off', 'Could not load the profiling.');
         });
     }
-
-    // ---- Visits & Records ----
-    function renderVisits(cur) {
-        var el = pane('visits');
-        var appts = cur.patient.appointments.slice().sort(function (a, b) {
-            return (b.date + (b.start || '')).localeCompare(a.date + (a.start || ''));
-        });
-        if (!appts.length) { el.innerHTML = emptyNote('bi-journal-x', 'No appointments with this patient yet.'); return; }
-        el.innerHTML = '<ol class="dp-timeline">' + appts.map(function (a) {
-            var future = a.date >= state.cfg.today && DONE.indexOf(a.status) === -1;
-            return '<li class="dp-visit' + (future ? ' is-future' : '') + '" data-appointment-id="' + a.appointment_id + '">' +
-                '<button type="button" class="dp-visit__head" aria-expanded="false" data-dp-visit="' + a.appointment_id + '">' +
-                    '<span class="dp-visit__date"><strong>' + esc(fmtDate(a.date, false)) + '</strong><small>' + esc(a.date.slice(0, 4)) + '</small></span>' +
-                    '<span class="dp-visit__main">' +
-                        '<span class="dp-visit__title">' + esc(a.services.length ? a.services.join(', ') : (meaningful(a.reason) ? a.reason : 'Appointment')) + '</span>' +
-                        '<span class="dp-visit__sub">' + esc([timeRange(a), a.is_online ? 'Online' : 'In-person', a.record_id ? 'Clinical record' : ''].filter(Boolean).join(' · ')) + '</span>' +
-                    '</span>' +
-                    statusBadge(a.status) +
-                    '<i class="bi bi-chevron-down dp-visit__chev" aria-hidden="true"></i>' +
-                '</button>' +
-                '<div class="dp-visit__body" hidden></div>' +
-            '</li>';
-        }).join('') + '</ol>';
+    // Compact digest of one record for the Overview card.
+    function recordSummary(appt, j) {
+        var rec = j.record || {};
+        var rows = [];
+        var head = '<div class="dp-rec-sum__date"><strong>' + esc(fmtDate(appt.date)) + '</strong>' +
+            (relative(appt.date) ? ' <span class="dp-pill">' + esc(relative(appt.date)) + '</span>' : '') + '</div>';
+        var services = (j.services_availed || []).map(function (s) { return s.description; }).filter(Boolean);
+        if (!services.length) services = appt.services;
+        if (services.length) rows.push(['Services', '<div class="dp-tags">' + services.map(function (n) { return '<span class="dp-tag">' + esc(n) + '</span>'; }).join('') + '</div>']);
+        var done = ((j.treatments || {}).done || []);
+        if (done.length) rows.push(['Treatments done', '<div class="dp-tags">' + done.map(function (t) { return '<span class="dp-tag dp-tag--done"><i class="bi bi-check2"></i> ' + esc(t.service_name || 'Treatment') + (t.tooth_number ? ' #' + esc(t.tooth_number) : '') + '</span>'; }).join('') + '</div>']);
+        var findings = toothFindingList(rec.odontogram);
+        if (findings.length) rows.push(['Tooth findings', '<div class="dp-tags">' + findings.slice(0, 6).map(function (f) { return '<span class="dp-tag dp-tag--tooth">#' + esc(f.tooth) + (f.text ? ' ' + esc(f.text) : '') + '</span>'; }).join('') + (findings.length > 6 ? '<span class="dp-muted">+' + (findings.length - 6) + ' more</span>' : '') + '</div>']);
+        if (meaningful(rec.doctor_notes)) rows.push(['Doctor notes', '<div class="dp-quote">' + esc(rec.doctor_notes) + '</div>']);
+        var rx = j.prescriptions || [];
+        if (rx.length) rows.push(['Prescribed', esc(rx.map(function (r) { return r.medicine_name + (r.dosage ? ' ' + r.dosage : ''); }).join(', '))]);
+        if (rec.follow_up_date) rows.push(['Follow-up', esc(fmtDate(rec.follow_up_date))]);
+        return '<div class="dp-rec-sum">' + head +
+            (rows.length
+                ? '<dl class="dp-rec-sum__rows">' + rows.map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + r[1] + '</dd>'; }).join('') + '</dl>'
+                : '<div class="dp-muted mt-2">No findings, notes or prescriptions recorded.</div>') +
+        '</div>';
     }
-    function toggleVisit(appointmentId, forceOpen) {
-        var item = document.querySelector('#dpChartModal .dp-visit[data-appointment-id="' + appointmentId + '"]');
-        if (!item) return;
-        var head = item.querySelector('.dp-visit__head');
-        var body = item.querySelector('.dp-visit__body');
-        var open = forceOpen === true ? true : body.hidden;
-        body.hidden = !open;
-        head.setAttribute('aria-expanded', open ? 'true' : 'false');
-        item.classList.toggle('is-open', open);
-        if (!open || body.getAttribute('data-loaded')) return;
-        body.setAttribute('data-loaded', '1');
 
-        var appt = null;
-        state.current.patient.appointments.forEach(function (a) { if (a.appointment_id === appointmentId) appt = a; });
-        if (!appt || !appt.record_id) {
-            body.innerHTML = visitBasics(appt) + emptyNote('bi-journal', appt && appt.date >= state.cfg.today ? 'This visit has not happened yet.' : 'No clinical record was saved for this visit.');
-            return;
-        }
-        body.innerHTML = skeleton(4);
+    // ---- Appointments ----
+    function apptRow(a) {
+        var future = a.date >= state.cfg.today && DONE.indexOf(a.status) === -1 && CLOSED.indexOf(a.status) === -1;
+        var title = a.services.length ? a.services.join(', ') : (meaningful(a.reason) ? a.reason : 'Appointment');
+        var sub = [timeRange(a), a.is_online ? 'Online' : 'In-person'];
+        if (a.services.length && meaningful(a.reason)) sub.push(a.reason);
+        var action = a.record_id
+            ? '<button type="button" class="dp-link" data-dp-open-record="' + a.appointment_id + '"><i class="bi bi-journal-text"></i> View record</button>'
+            : '<span class="dp-muted dp-appt__none">' + (future ? '' : 'No record') + '</span>';
+        return '<li class="dp-appt' + (future ? ' is-future' : '') + '">' +
+            '<span class="dp-appt__date"><strong>' + esc(fmtDate(a.date, false)) + '</strong><small>' + esc(a.date.slice(0, 4)) + '</small></span>' +
+            '<span class="dp-appt__main"><span class="dp-appt__title">' + esc(title) + '</span>' +
+                '<span class="dp-appt__sub">' + esc(sub.filter(Boolean).join(' · ')) + (future && relative(a.date) ? ' <span class="dp-pill">' + esc(relative(a.date)) + '</span>' : '') + '</span></span>' +
+            statusBadge(a.status) +
+            '<span class="dp-appt__action">' + action + '</span>' +
+        '</li>';
+    }
+    function renderAppointments(cur) {
+        var el = pane('appointments');
+        var appts = cur.patient.appointments;
+        if (!appts.length) { el.innerHTML = emptyNote('bi-calendar-x', 'No appointments with this patient yet.'); return; }
+        var today = state.cfg.today;
+        var upcoming = appts.filter(function (a) { return a.date >= today && DONE.indexOf(a.status) === -1 && CLOSED.indexOf(a.status) === -1; })
+            .sort(function (a, b) { return (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')); });
+        var past = appts.filter(function (a) { return upcoming.indexOf(a) === -1; })
+            .sort(function (a, b) { return (b.date + (b.start || '')).localeCompare(a.date + (a.start || '')); });
+        el.innerHTML =
+            '<div class="dp-group"><h6 class="dp-group__title">Upcoming <span class="dp-group__count">' + upcoming.length + '</span></h6>' +
+                (upcoming.length ? '<ul class="dp-appts">' + upcoming.map(apptRow).join('') + '</ul>' : emptyNote('bi-calendar-x', 'No upcoming appointments.')) + '</div>' +
+            '<div class="dp-group"><h6 class="dp-group__title">Past <span class="dp-group__count">' + past.length + '</span></h6>' +
+                (past.length ? '<ul class="dp-appts">' + past.map(apptRow).join('') + '</ul>' : emptyNote('bi-clock-history', 'No past appointments.')) + '</div>';
+    }
+
+    // ---- Medical Records (list + full record side by side) ----
+    function renderRecords(cur) {
+        var el = pane('records');
+        var recs = recordsOf(cur.patient);
+        if (!recs.length) { el.innerHTML = emptyNote('bi-journal-x', 'No clinical records for this patient yet.'); return; }
+        el.innerHTML = '<div class="dp-records">' +
+            '<nav class="dp-records__list" aria-label="Clinical records">' + recs.map(function (a) {
+                return '<button type="button" class="dp-rec-item" data-dp-record="' + a.appointment_id + '">' +
+                    '<strong>' + esc(fmtDate(a.date)) + '</strong>' +
+                    '<span>' + esc(a.services.length ? a.services.join(', ') : (meaningful(a.reason) ? a.reason : 'Visit')) + '</span>' +
+                    (a.record_status ? '<small>' + esc(humanStatus(a.record_status)) + '</small>' : '') +
+                '</button>';
+            }).join('') + '</nav>' +
+            '<div class="dp-records__detail" id="dpRecordDetail" aria-live="polite"></div>' +
+        '</div>';
+        selectRecord(cur.pendingRecord || recs[0].appointment_id);
+        cur.pendingRecord = null;
+    }
+    function selectRecord(appointmentId) {
         var cur = state.current;
-        loadVisit(appointmentId).then(function (j) {
-            if (stillCurrent(cur)) body.innerHTML = visitBasics(appt) + visitDetail(j);
-        }).catch(function () {
-            if (!stillCurrent(cur)) return;
-            body.removeAttribute('data-loaded');
-            body.innerHTML = emptyNote('bi-wifi-off', 'Could not load this record. Close and reopen the visit to retry.');
+        var detail = document.getElementById('dpRecordDetail');
+        if (!cur || !detail) return;
+        var appt = null;
+        cur.patient.appointments.forEach(function (a) { if (a.appointment_id === appointmentId) appt = a; });
+        if (!appt) return;
+        document.querySelectorAll('#dpChartView .dp-rec-item').forEach(function (b) {
+            var on = Number(b.getAttribute('data-dp-record')) === appointmentId;
+            b.classList.toggle('is-active', on);
+            if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
         });
+        detail.innerHTML = skeleton(5);
+        loadVisit(appointmentId).then(function (j) {
+            if (!stillCurrent(cur)) return;
+            detail.innerHTML =
+                '<div class="dp-rec-head"><div><h5 class="dp-rec-head__title">Visit on ' + esc(fmtDate(appt.date)) + '</h5>' +
+                '<div class="dp-muted">' + esc([timeRange(appt), appt.is_online ? 'Online' : 'In-person'].filter(Boolean).join(' · ')) + '</div></div>' +
+                '<div class="dp-rec-head__side">' + statusBadge(appt.status) +
+                '<button type="button" class="dp-link" data-dp-open-chart="' + appt.appointment_id + '"><i class="bi bi-grid-3x3-gap"></i> View chart</button></div></div>' +
+                visitBasics(appt) + visitDetail(j);
+        }).catch(function () {
+            if (stillCurrent(cur)) detail.innerHTML = emptyNote('bi-wifi-off', 'Could not load this record. Select it again to retry.');
+        });
+    }
+    // Jump to a record from anywhere in the chart.
+    function openRecord(appointmentId) {
+        var cur = state.current;
+        if (!cur) return;
+        if (cur.loaded.records) { showTab('records'); selectRecord(appointmentId); }
+        else { cur.pendingRecord = appointmentId; showTab('records'); }
+        var detail = document.getElementById('dpRecordDetail');
+        if (detail && window.innerWidth < 992) detail.scrollIntoView({ block: 'start' });
     }
     function visitBasics(appt) {
         if (!appt) return '';
@@ -491,7 +605,9 @@
         if (meta.length) html += '<div class="dp-meta-line">' + meta.join(' · ') + '</div>';
 
         var services = (j.services_availed || []).map(function (s) { return s.description; }).filter(Boolean);
-        if (services.length) html += section('Services done', 'bi-clipboard2-check', '<div class="dp-tags">' + services.map(function (n) { return '<span class="dp-tag">' + esc(n) + '</span>'; }).join('') + '</div>');
+        var tr = j.treatments || {};
+        if (global.TreatmentPlan && ((tr.done || []).length || (tr.planned || []).length)) html += section('Treatments', 'bi-list-check', global.TreatmentPlan.renderVisit(tr));
+        if (services.length) html += section('Services availed', 'bi-receipt', '<div class="dp-tags">' + services.map(function (n) { return '<span class="dp-tag">' + esc(n) + '</span>'; }).join('') + '</div>');
 
         var teeth = toothFindingList(rec.odontogram);
         if (teeth.length) {
@@ -527,6 +643,108 @@
         return html || emptyNote('bi-journal', 'The record has no findings, notes, or prescriptions.');
     }
 
+    // ---- Charting (read-only odontogram, 2D + 3D) ----
+    var chartFrameReady = null;
+    function chartFrame() {
+        return document.getElementById('dpChartingFrame');
+    }
+    // The iframe loads on first use only, then stays loaded for every patient.
+    function ensureChartFrame() {
+        if (chartFrameReady) return chartFrameReady;
+        var frame = chartFrame();
+        if (!frame) return Promise.reject(new Error('missing frame'));
+        chartFrameReady = new Promise(function (resolve) {
+            frame.addEventListener('load', function () { resolve(frame); }, { once: true });
+            frame.src = frame.getAttribute('data-src');
+        });
+        return chartFrameReady;
+    }
+    function postToChartFrame(msg) {
+        if (!chartFrameReady) return;
+        chartFrameReady.then(function (frame) {
+            if (frame.contentWindow) frame.contentWindow.postMessage(msg, '*');
+        });
+    }
+    function chartedTeeth(odontogram) {
+        return Object.keys(odontogram || {}).filter(function (t) {
+            var e = odontogram[t] || {};
+            return Object.keys(e.surfaces || {}).some(function (k) { return (e.surfaces[k] || []).length; }) || meaningful(e.comment);
+        }).length;
+    }
+    function renderCharting(cur) {
+        var dates = document.getElementById('dpChartingDates');
+        var note = document.getElementById('dpChartingNote');
+        var viewport = document.getElementById('dpChartingViewport');
+        var fsBtn = document.getElementById('dpChartingFullscreen');
+        var recs = recordsOf(cur.patient);
+        if (!dates) return;
+        if (!recs.length) {
+            dates.innerHTML = '';
+            note.innerHTML = emptyNote('bi-grid-3x3-gap', 'No charted visits yet. The chart appears here once a clinical record is saved.');
+            viewport.hidden = true;
+            fsBtn.hidden = true;
+            return;
+        }
+        viewport.hidden = false;
+        fsBtn.hidden = false;
+        dates.innerHTML = recs.map(function (a, i) {
+            return '<button type="button" class="dp-date-pill" data-dp-chart="' + a.appointment_id + '">' +
+                esc(fmtDate(a.date)) + (i === 0 ? ' <span>Latest</span>' : '') + '</button>';
+        }).join('');
+        selectCharting(cur.pendingChart || recs[0].appointment_id);
+        cur.pendingChart = null;
+    }
+    function selectCharting(appointmentId) {
+        var cur = state.current;
+        var note = document.getElementById('dpChartingNote');
+        if (!cur || !note) return;
+        var appt = null;
+        cur.patient.appointments.forEach(function (a) { if (a.appointment_id === appointmentId) appt = a; });
+        if (!appt) return;
+        document.querySelectorAll('#dpChartingDates .dp-date-pill').forEach(function (b) {
+            var on = Number(b.getAttribute('data-dp-chart')) === appointmentId;
+            b.classList.toggle('is-active', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        note.innerHTML = '<span class="dp-muted"><i class="bi bi-hourglass-split"></i> Loading chart…</span>';
+        Promise.all([loadVisit(appointmentId), ensureChartFrame()]).then(function (res) {
+            if (!stillCurrent(cur)) return;
+            var odontogram = (res[0].record || {}).odontogram || {};
+            var n = chartedTeeth(odontogram);
+            note.innerHTML = '<span><strong>' + esc(fmtDate(appt.date)) + '</strong> · ' +
+                esc(appt.services.length ? appt.services.join(', ') : 'Visit') + '</span>' +
+                '<span class="dp-muted">' + (n ? n + ' charted ' + (n === 1 ? 'tooth' : 'teeth') : 'No teeth charted on this visit') + ' · read-only</span>';
+            res[1].contentWindow.postMessage({ type: 'load_odontogram', toothState: odontogram, readonly: true }, '*');
+        }).catch(function () {
+            if (stillCurrent(cur)) note.innerHTML = emptyNote('bi-wifi-off', 'Could not load this chart. Select the date again to retry.');
+        });
+    }
+    function openChartFor(appointmentId) {
+        var cur = state.current;
+        if (!cur) return;
+        if (cur.loaded.charting) { showTab('charting'); selectCharting(appointmentId); }
+        else { cur.pendingChart = appointmentId; showTab('charting'); }
+    }
+    function chartViewport() {
+        return document.getElementById('dpChartingViewport');
+    }
+    function syncChartFullscreenUI() {
+        var vp = chartViewport();
+        if (!vp || !global.OdontogramFullscreen) return;
+        var active = global.OdontogramFullscreen.isActive(vp);
+        var close = document.getElementById('dpChartingFsClose');
+        var btn = document.getElementById('dpChartingFullscreen');
+        if (close) close.hidden = !active;
+        if (btn) btn.querySelector('span').textContent = active ? 'Exit full screen' : 'Full screen';
+        postToChartFrame({ type: 'odontogram_resize' });
+    }
+    function toggleChartFullscreen(forceExit) {
+        var vp = chartViewport();
+        if (!vp || !global.OdontogramFullscreen) return;
+        if (forceExit || global.OdontogramFullscreen.isActive(vp)) global.OdontogramFullscreen.exit(vp);
+        else global.OdontogramFullscreen.request(vp);
+    }
+
     // ---- Treatment plan ----
     function mountPlan(cur) {
         var host = document.getElementById('dpTreatmentPlan');
@@ -541,17 +759,17 @@
         });
     }
 
-    // ---- Medical ----
-    function renderMedical(cur) {
-        var el = pane('medical');
+    // ---- Profiling ----
+    function renderProfiling(cur) {
+        var el = pane('profiling');
         el.innerHTML = skeleton(5);
         loadProfiling(cur).then(function (j) {
             if (!stillCurrent(cur)) return;
             el.innerHTML = typeof global.renderDoctorPatientProfile === 'function'
                 ? global.renderDoctorPatientProfile(j.patient || {}, j.profiling || {}, fullName(cur.patient), { showHeader: false })
-                : emptyNote('bi-exclamation-circle', 'Unable to display the medical profile.');
+                : emptyNote('bi-exclamation-circle', 'Unable to display the profiling.');
         }).catch(function () {
-            if (stillCurrent(cur)) el.innerHTML = emptyNote('bi-wifi-off', 'Could not load the medical profile.');
+            if (stillCurrent(cur)) el.innerHTML = emptyNote('bi-wifi-off', 'Could not load the profiling.');
         });
     }
 
@@ -615,41 +833,53 @@
             if (row) openChart(Number(row.getAttribute('data-patient-id')));
         });
 
-        var modalEl = document.getElementById('dpChartModal');
-        if (modalEl) {
-            modalEl.addEventListener('click', function (e) {
+        var viewEl = chartEl();
+        if (viewEl) {
+            viewEl.addEventListener('click', function (e) {
+                if (e.target.closest('[data-dp-back]')) { closeChart(); return; }
                 var tab = e.target.closest('[data-dp-tab]');
                 if (tab) { showTab(tab.getAttribute('data-dp-tab')); return; }
                 var go = e.target.closest('[data-dp-goto]');
                 if (go) { showTab(go.getAttribute('data-dp-goto')); return; }
-                var openVisit = e.target.closest('[data-dp-open-visit]');
-                if (openVisit) {
-                    var id = Number(openVisit.getAttribute('data-dp-open-visit'));
-                    showTab('visits');
-                    toggleVisit(id, true);
-                    var item = modalEl.querySelector('.dp-visit[data-appointment-id="' + id + '"]');
-                    if (item) item.scrollIntoView({ block: 'nearest' });
-                    return;
-                }
-                var visit = e.target.closest('[data-dp-visit]');
-                if (visit) { toggleVisit(Number(visit.getAttribute('data-dp-visit'))); return; }
+                var openRec = e.target.closest('[data-dp-open-record]');
+                if (openRec) { openRecord(Number(openRec.getAttribute('data-dp-open-record'))); return; }
+                var recItem = e.target.closest('[data-dp-record]');
+                if (recItem) { selectRecord(Number(recItem.getAttribute('data-dp-record'))); return; }
+                var openChartBtn = e.target.closest('[data-dp-open-chart]');
+                if (openChartBtn) { openChartFor(Number(openChartBtn.getAttribute('data-dp-open-chart'))); return; }
+                var chartPill = e.target.closest('[data-dp-chart]');
+                if (chartPill) { selectCharting(Number(chartPill.getAttribute('data-dp-chart'))); return; }
+                if (e.target.closest('#dpChartingFullscreen')) { toggleChartFullscreen(); return; }
+                if (e.target.closest('#dpChartingFsClose')) { toggleChartFullscreen(true); return; }
                 var photo = e.target.closest('[data-dp-photo]');
                 if (photo && typeof global.openMediaLightbox === 'function') {
                     global.openMediaLightbox(photo.getAttribute('data-dp-photo'), 'clinical-photo');
                 }
             });
             // Arrow keys move between tabs, as expected for a tablist.
-            modalEl.addEventListener('keydown', function (e) {
+            viewEl.addEventListener('keydown', function (e) {
                 var tab = e.target.closest('.dp-tab');
                 if (!tab || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
-                var tabs = Array.prototype.slice.call(modalEl.querySelectorAll('.dp-tab'));
+                var tabs = Array.prototype.slice.call(viewEl.querySelectorAll('.dp-tab'));
                 var i = tabs.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : -1);
                 var next = tabs[(i + tabs.length) % tabs.length];
                 next.focus();
                 showTab(next.getAttribute('data-dp-tab'));
             });
-            modalEl.addEventListener('hidden.bs.modal', function () { state.current = null; });
         }
+        document.addEventListener('fullscreenchange', syncChartFullscreenUI);
+        document.addEventListener('webkitfullscreenchange', syncChartFullscreenUI);
+        document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
+            if (e.target && e.target.id === 'dpChartingViewport') syncChartFullscreenUI();
+        });
+        // Escape also returns to the list, unless a dialog (e.g. the photo lightbox) is open
+        // or the chart is full screen (Escape leaves full screen first).
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape' || !state.current || document.querySelector('.modal.show')) return;
+            var vp = chartViewport();
+            if (vp && global.OdontogramFullscreen && global.OdontogramFullscreen.isActive(vp)) { toggleChartFullscreen(true); return; }
+            closeChart();
+        });
     }
 
     function init(cfg) {
@@ -661,6 +891,7 @@
             sort: 'recent',
             query: String((cfg && cfg.query) || ''),
             current: null,
+            listScroll: 0,
             visitCache: {}
         };
         patients.forEach(function (p) { p._sum = summarize(p); });

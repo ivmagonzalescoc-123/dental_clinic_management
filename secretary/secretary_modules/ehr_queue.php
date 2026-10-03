@@ -286,7 +286,7 @@ $csrf_token = security_generate_csrf_token();
                         </div>
                         <div class="pf-section">
                             <div id="secretaryTreatmentPlan"></div>
-                            <small class="text-muted d-block mt-2">Record the patient's decision (Accept / Decline) after discussing the estimate. Only work the doctor marks done is billed below.</small>
+                            <small class="text-muted d-block mt-2">Add or edit planned treatments and record the patient's decision (Accept / Decline) after discussing the estimate. Only work the doctor marks done is billed below.</small>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-7">

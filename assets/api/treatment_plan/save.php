@@ -31,11 +31,15 @@ if ($patientId <= 0) {
     tp_respond(['success' => false, 'message' => 'Missing patient.'], 400);
 }
 
-// Only the doctor decides what's clinically planned and what was actually done;
-// the front desk records the patient's decision (accept/decline) after discussing cost.
-$doctorOnly = ['add', 'delete', 'complete', 'uncomplete'];
+// Both the doctor and the secretary can plan treatments. Only the doctor marks what
+// was actually done at chairside; only the secretary edits existing items (she owns
+// the plan's details and cost after discussing it with the patient).
+$doctorOnly = ['complete', 'uncomplete'];
 if (in_array($action, $doctorOnly, true) && $role !== 'doctor') {
     tp_respond(['success' => false, 'message' => 'Only the doctor can do that.'], 403);
+}
+if ($action === 'edit' && $role !== 'secretary') {
+    tp_respond(['success' => false, 'message' => 'Only the secretary can edit plan items.'], 403);
 }
 
 function tp_load_item(mysqli $conn, int $itemId, int $patientId): ?array
@@ -61,42 +65,61 @@ function tp_load_open_appointment(mysqli $conn, int $appointmentId, int $patient
     return $row;
 }
 
+/** Validates the add/edit form fields shared by both actions. */
+function tp_read_item_fields(mysqli $conn): array
+{
+    $serviceId = (int)($_POST['service_id'] ?? 0);
+    $tooth = trim((string)($_POST['tooth_number'] ?? ''));
+    $phase = (int)($_POST['phase'] ?? 1);
+    $notes = trim((string)($_POST['notes'] ?? ''));
+
+    if ($phase < 1 || $phase > 3) $phase = 1;
+    if (!treatment_plan_valid_tooth($tooth)) {
+        tp_respond(['success' => false, 'message' => 'Tooth must be an FDI number (e.g. 36), or left blank for the whole mouth.'], 422);
+    }
+    if (mb_strlen($notes) > 255) $notes = mb_substr($notes, 0, 255);
+
+    $stmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ? AND is_active = 1 LIMIT 1');
+    $stmt->bind_param('i', $serviceId);
+    $stmt->execute();
+    $svc = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$svc) {
+        tp_respond(['success' => false, 'message' => 'Select a valid service.'], 422);
+    }
+
+    $costRaw = trim((string)($_POST['estimated_cost'] ?? ''));
+    $cost = $costRaw === '' ? (float)$svc['initial_price'] : (float)$costRaw;
+    if ($cost < 0 || $cost > 10000000) {
+        tp_respond(['success' => false, 'message' => 'Enter a valid estimated cost.'], 422);
+    }
+
+    return [$serviceId, $tooth === '' ? null : $tooth, $phase, $cost, $notes === '' ? null : $notes];
+}
+
 $itemId = (int)($_POST['item_id'] ?? 0);
 
 switch ($action) {
     case 'add': {
-        $serviceId = (int)($_POST['service_id'] ?? 0);
-        $tooth = trim((string)($_POST['tooth_number'] ?? ''));
-        $phase = (int)($_POST['phase'] ?? 1);
-        $notes = trim((string)($_POST['notes'] ?? ''));
+        [$serviceId, $toothDb, $phase, $cost, $notesDb] = tp_read_item_fields($conn);
         $sourceAppt = (int)($_POST['appointment_id'] ?? 0);
-
-        if ($phase < 1 || $phase > 3) $phase = 1;
-        if (!treatment_plan_valid_tooth($tooth)) {
-            tp_respond(['success' => false, 'message' => 'Tooth must be an FDI number (e.g. 36), or left blank for the whole mouth.'], 422);
-        }
-        if (mb_strlen($notes) > 255) $notes = mb_substr($notes, 0, 255);
-
-        $stmt = $conn->prepare('SELECT initial_price FROM services WHERE service_id = ? AND is_active = 1 LIMIT 1');
-        $stmt->bind_param('i', $serviceId);
-        $stmt->execute();
-        $svc = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-        if (!$svc) {
-            tp_respond(['success' => false, 'message' => 'Select a valid service.'], 422);
-        }
-
-        $costRaw = trim((string)($_POST['estimated_cost'] ?? ''));
-        $cost = $costRaw === '' ? (float)$svc['initial_price'] : (float)$costRaw;
-        if ($cost < 0 || $cost > 10000000) {
-            tp_respond(['success' => false, 'message' => 'Enter a valid estimated cost.'], 422);
-        }
-
-        $toothDb = $tooth === '' ? null : $tooth;
-        $notesDb = $notes === '' ? null : $notes;
         $sourceDb = $sourceAppt > 0 ? $sourceAppt : null;
         $stmt = $conn->prepare('INSERT INTO patient_treatment_plan_items (patient_id, service_id, tooth_number, phase, estimated_cost, notes, source_appointment_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
         $stmt->bind_param('iisidsii', $patientId, $serviceId, $toothDb, $phase, $cost, $notesDb, $sourceDb, $userId);
+        $stmt->execute();
+        $stmt->close();
+        break;
+    }
+
+    case 'edit': {
+        $item = tp_load_item($conn, $itemId, $patientId);
+        if (!$item) tp_respond(['success' => false, 'message' => 'Plan item not found.'], 404);
+        if ($item['status'] === 'completed') {
+            tp_respond(['success' => false, 'message' => 'Completed treatments are part of the visit record and cannot be edited.'], 422);
+        }
+        [$serviceId, $toothDb, $phase, $cost, $notesDb] = tp_read_item_fields($conn);
+        $stmt = $conn->prepare('UPDATE patient_treatment_plan_items SET service_id = ?, tooth_number = ?, phase = ?, estimated_cost = ?, notes = ?, updated_at = NOW() WHERE item_id = ?');
+        $stmt->bind_param('isidsi', $serviceId, $toothDb, $phase, $cost, $notesDb, $itemId);
         $stmt->execute();
         $stmt->close();
         break;

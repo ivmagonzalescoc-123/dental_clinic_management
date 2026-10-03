@@ -49,7 +49,7 @@ switch ($role_key) {
     <!-- Google Fonts -->
     <link href="https://fonts.gstatic.com" rel="preconnect">
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
     <!-- Vendor CSS Files -->
@@ -278,6 +278,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/dental-calendar.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/page-skeleton.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/main.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/treatment-plan.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/portal-dropdown.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/portal-search.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>

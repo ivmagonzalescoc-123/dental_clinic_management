@@ -1074,11 +1074,15 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 .tp-actions { flex: 0 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; justify-content: flex-end; }
 .tp-actions .btn { padding: 2px 8px; font-size: 0.76rem; }
 .tp-done-note { font-size: 0.76rem; color: #166534; }
+.tp-item--editing { display: block; background: #f8fbfd; }
+.tp-item--editing .tp-add-form { margin-bottom: 0; }
+.tp-edit-btns { display: flex; gap: 4px; }
+.tp-visit .tp-phase-title { margin-top: 2px; }
 .tp-empty { padding: 14px; text-align: center; color: #64748b; font-size: 0.85rem; border: 1px dashed #d6e2ee; border-radius: 10px; }
 
 @media (max-width: 991.98px) {
   .tp-add-form { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .tp-add-form .tp-add-service, .tp-add-form .tp-add-btn { grid-column: 1 / -1; }
+  .tp-add-form .tp-add-service, .tp-add-form .tp-add-btn, .tp-add-form .tp-edit-btns { grid-column: 1 / -1; }
   .tp-item { flex-wrap: wrap; }
   .tp-main { flex-basis: calc(100% - 180px); }
   .tp-actions { flex-basis: 100%; justify-content: flex-start; padding-left: 44px; }

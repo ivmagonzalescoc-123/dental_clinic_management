@@ -660,6 +660,10 @@ if ($stmt) {
                                             <span class="hist-section-title">Services Availed</span>
                                             <ul id="histServices" class="mb-0 small"></ul>
                                         </div>
+                                        <div class="hist-section mt-2">
+                                            <span class="hist-section-title">Treatments</span>
+                                            <div id="histTreatments" class="small"></div>
+                                        </div>
                                     </div>
                                 </div>
                                 <!-- Row 6: Images (full width) -->
@@ -1303,6 +1307,7 @@ async function openHistoryModal(appointmentId) {
     document.getElementById('histApptDate').textContent = '';
     document.getElementById('histNotes').textContent = '';
     document.getElementById('histServices').innerHTML = '';
+    document.getElementById('histTreatments').innerHTML = '';
     currentHistoryRecordData = null;
     const histPresBodyEl = document.querySelector('#histPrescriptions tbody');
     if (histPresBodyEl && typeof DentalUI !== 'undefined') DentalUI.showSkeleton(histPresBodyEl, 3);
@@ -1415,6 +1420,7 @@ async function openHistoryModal(appointmentId) {
 
         // services availed for this appointment
         populateServicesAvailedList(document.getElementById('histServices'), j.services_availed || []);
+        if (window.TreatmentPlan) document.getElementById('histTreatments').innerHTML = window.TreatmentPlan.renderVisit(j.treatments);
 
         // images
         const imgWrap = document.getElementById('histImages');

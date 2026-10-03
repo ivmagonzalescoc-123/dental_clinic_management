@@ -24,7 +24,6 @@ let placeholderEl = null;
 let bodyEl = null;
 let currentFdi = null;
 let onSurfaceClick = null;
-let readonly = false;
 
 function addSurfacePolygon(parent, surface, points, labels, interactive) {
   const poly = document.createElementNS(SVG_NS, "polygon");
@@ -94,12 +93,12 @@ function renderDetailSvg(fdi, entry) {
   root.setAttribute("ry", String(layout.rootH / 2));
   root.setAttribute("fill", surfaceFillColor(surfaces.root));
   root.setAttribute("stroke", surfaceStroke(surfaces.root));
-  root.setAttribute("pointer-events", readonly ? "none" : "all");
+  root.setAttribute("pointer-events", "all");
   if (surfaces.root?.length) root.setAttribute("fill-opacity", "0.88");
 
   const polys = crownSurfacePolygons(fdi, layout.cx, layout.crownY, layout.crownW, layout.crownH);
   for (const key of ["M", "D", "B", "L", "O"]) {
-    addSurfacePolygon(hits, key, polys[key], surfaces[key], !readonly);
+    addSurfacePolygon(hits, key, polys[key], surfaces[key], true);
   }
   hits.appendChild(root);
 
@@ -118,13 +117,11 @@ function renderDetailSvg(fdi, entry) {
   svg.appendChild(g);
   svgHost.appendChild(svg);
 
-  if (!readonly) {
-    svg.addEventListener("click", (ev) => {
-      const target = ev.target.closest("[data-surface]");
-      if (!target) return;
-      onSurfaceClick?.(target.getAttribute("data-surface"));
-    });
-  }
+  svg.addEventListener("click", (ev) => {
+    const target = ev.target.closest("[data-surface]");
+    if (!target) return;
+    onSurfaceClick?.(target.getAttribute("data-surface"));
+  });
 }
 
 function surfaceChipLabel(key) {
@@ -154,9 +151,6 @@ function renderSurfaceList(fdi, entry, selectedSurface, legendByCode) {
       ${codeHtml}
     `;
 
-    if (readonly) {
-      return `<div class="chart-surface-chip${activeClass}" data-surface-key="${key}">${inner}</div>`;
-    }
     return `<button type="button" class="chart-surface-chip${activeClass}" data-surface-key="${key}">${inner}</button>`;
   }).join("");
 }
@@ -164,7 +158,6 @@ function renderSurfaceList(fdi, entry, selectedSurface, legendByCode) {
 export function initToothDetailPanel(container, options = {}) {
   rootEl = container;
   onSurfaceClick = options.onSurfaceClick;
-  readonly = !!options.readonly;
   legendByCode = options.legendByCode || {};
 
   rootEl.innerHTML = `
@@ -187,7 +180,6 @@ export function initToothDetailPanel(container, options = {}) {
   listEl = rootEl.querySelector("#toothDetailSurfaces");
 
   listEl?.addEventListener("click", (e) => {
-    if (readonly) return;
     const row = e.target.closest("[data-surface-key]");
     if (!row) return;
     onSurfaceClick?.(row.dataset.surfaceKey);
@@ -195,10 +187,6 @@ export function initToothDetailPanel(container, options = {}) {
 }
 
 let legendByCode = {};
-
-export function setToothDetailReadonly(on) {
-  readonly = !!on;
-}
 
 export function showToothDetail(fdi, entry, selectedSurface) {
   if (!rootEl) return;

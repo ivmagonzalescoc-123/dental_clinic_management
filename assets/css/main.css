@@ -40,7 +40,7 @@
     --warning: #f59e0b;
     --info: #1b7aa3;
     --radius-card: 14px;
-    --font-body: 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Plus Jakarta Sans', 'Segoe UI', Roboto, sans-serif;
 
     /* Type scale — shared by every portal (admin/doctor/secretary/patient
        all load this file). Use these tokens instead of one-off font-size
@@ -108,7 +108,7 @@ body {
 }
 
 #header .logo span {
-    font-family: 'Lora', Georgia, serif;
+    font-family: var(--font-body);
     font-size: 15px;
     font-weight: 700;
     display: block;
@@ -121,7 +121,7 @@ body {
     font-size: 11px;
     color: #6c757d;
     line-height: 1.2;
-    font-family: 'Nunito', system-ui, sans-serif;
+    font-family: var(--font-body);
     font-weight: 500;
 }
 
