@@ -327,6 +327,7 @@
         else if (name === 'plan') mountPlan(cur);
         else if (name === 'profiling') renderProfiling(cur);
         else if (name === 'photos') renderPhotos(cur);
+        else if (name === 'ledger') renderLedger(cur);
     }
     function pane(name) {
         return document.querySelector('#dpChartView [data-dp-pane="' + name + '"]');
@@ -826,6 +827,15 @@
             el.innerHTML = (html || emptyNote('bi-image', 'No clinical photos yet.')) +
                 (failed ? '<div class="dp-muted mt-2">' + failed + ' visit(s) could not be loaded.</div>' : '');
         });
+    }
+
+    // ---- Ledger (secretary/admin): charges, discounts and payments with a running balance ----
+    function renderLedger(cur) {
+        var el = pane('ledger');
+        if (!el) return;
+        if (!global.PatientLedger) { el.innerHTML = emptyNote('bi-exclamation-circle', 'The ledger did not load. Refresh the page.'); return; }
+        el.setAttribute('data-pl-title', 'Transaction ledger — ' + fullName(cur.patient));
+        global.PatientLedger.load(el, cur.patient.patient_id);
     }
 
     // ---------- wiring ----------

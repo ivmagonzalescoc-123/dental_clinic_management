@@ -1135,3 +1135,135 @@ if (!function_exists('billing_record_payment')) {
         return billing_sync_from_payments($conn, $billingId, $recordedBy);
     }
 }
+
+if (!function_exists('billing_patient_ledger')) {
+    /**
+     * A patient's transaction ledger: every charge, discount and payment across all of
+     * their bills, oldest first, each with the running balance after it.
+     *
+     * Built from billing / billing_line_items / payments; nothing is stored separately, so
+     * it always matches what Billing shows. Each bill contributes a charge (the subtotal),
+     * a discount when one was applied, and one line per payment.
+     */
+    function billing_patient_ledger(mysqli $conn, int $patientId): array
+    {
+        $bills = [];
+        $stmt = $conn->prepare(
+            'SELECT b.billing_id, b.appointment_id, b.subtotal_amount, b.total_amount, b.amount_paid, b.balance,
+                    b.discount_type, b.discount_percent, b.status, b.created_at, a.appointment_date
+             FROM billing b
+             INNER JOIN appointments a ON a.appointment_id = b.appointment_id
+             WHERE a.patient_id = ?
+             ORDER BY b.created_at ASC, b.billing_id ASC'
+        );
+        if (!$stmt) {
+            return ['entries' => [], 'totals' => ['charges' => 0.0, 'discounts' => 0.0, 'payments' => 0.0, 'balance' => 0.0]];
+        }
+        $stmt->bind_param('i', $patientId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) {
+            $bills[(int)$row['billing_id']] = $row + ['items' => []];
+        }
+        $stmt->close();
+
+        if ($bills) {
+            $ids = array_keys($bills);
+            $in = implode(',', array_fill(0, count($ids), '?'));
+            $types = str_repeat('i', count($ids));
+
+            $istmt = $conn->prepare("SELECT billing_id, description FROM billing_line_items WHERE billing_id IN ($in) ORDER BY item_id ASC");
+            if ($istmt) {
+                $istmt->bind_param($types, ...$ids);
+                $istmt->execute();
+                $ires = $istmt->get_result();
+                while ($it = $ires->fetch_assoc()) {
+                    $bills[(int)$it['billing_id']]['items'][] = (string)$it['description'];
+                }
+                $istmt->close();
+            }
+        }
+
+        $entries = [];
+        foreach ($bills as $bid => $b) {
+            $subtotal = (float)$b['subtotal_amount'];
+            $total = (float)$b['total_amount'];
+            // Older bills may predate the subtotal column; treat the total as the charge.
+            if ($subtotal <= 0 && $total > 0) {
+                $subtotal = $total;
+            }
+            $items = array_values(array_unique(array_filter($b['items'])));
+            $entries[] = [
+                'date' => (string)$b['created_at'],
+                'type' => 'charge',
+                'billing_id' => $bid,
+                'description' => $items ? implode(', ', $items) : 'Visit charges',
+                'visit_date' => (string)$b['appointment_date'],
+                'reference' => 'Bill #' . $bid,
+                'charge' => round($subtotal, 2),
+                'credit' => 0.0,
+                'order' => 0,
+            ];
+            $discount = round($subtotal - $total, 2);
+            if ($discount > 0) {
+                $entries[] = [
+                    'date' => (string)$b['created_at'],
+                    'type' => 'discount',
+                    'billing_id' => $bid,
+                    'description' => billing_discount_label($b['discount_type'], (float)$b['discount_percent']),
+                    'visit_date' => (string)$b['appointment_date'],
+                    'reference' => 'Bill #' . $bid,
+                    'charge' => 0.0,
+                    'credit' => $discount,
+                    'order' => 1,
+                ];
+            }
+        }
+
+        if ($bills) {
+            $pstmt = $conn->prepare("SELECT payment_id, billing_id, amount, payment_method, or_number, notes, paid_at FROM payments WHERE billing_id IN ($in) ORDER BY paid_at ASC, payment_id ASC");
+            if ($pstmt) {
+                $pstmt->bind_param($types, ...$ids);
+                $pstmt->execute();
+                $pres = $pstmt->get_result();
+                while ($pay = $pres->fetch_assoc()) {
+                    $method = trim((string)($pay['payment_method'] ?? ''));
+                    $method = $method === '' ? 'Payment' : ucwords(str_replace('_', ' ', $method)) . ' payment';
+                    $or = trim((string)($pay['or_number'] ?? ''));
+                    $entries[] = [
+                        'date' => (string)$pay['paid_at'],
+                        'type' => 'payment',
+                        'billing_id' => (int)$pay['billing_id'],
+                        'description' => $method,
+                        'visit_date' => (string)($bills[(int)$pay['billing_id']]['appointment_date'] ?? ''),
+                        'reference' => $or !== '' && strtoupper($or) !== 'N/A' ? 'OR #' . $or : 'Bill #' . (int)$pay['billing_id'],
+                        'charge' => 0.0,
+                        'credit' => round((float)$pay['amount'], 2),
+                        'order' => 2,
+                    ];
+                }
+                $pstmt->close();
+            }
+        }
+
+        usort($entries, function ($a, $b) {
+            return [$a['date'], $a['billing_id'], $a['order']] <=> [$b['date'], $b['billing_id'], $b['order']];
+        });
+
+        $balance = 0.0;
+        $totals = ['charges' => 0.0, 'discounts' => 0.0, 'payments' => 0.0];
+        foreach ($entries as &$e) {
+            $balance = round($balance + $e['charge'] - $e['credit'], 2);
+            $e['balance'] = $balance;
+            if ($e['type'] === 'charge') $totals['charges'] += $e['charge'];
+            elseif ($e['type'] === 'discount') $totals['discounts'] += $e['credit'];
+            else $totals['payments'] += $e['credit'];
+            unset($e['order']);
+        }
+        unset($e);
+        $totals = array_map(function ($v) { return round($v, 2); }, $totals);
+        $totals['balance'] = $balance;
+
+        return ['entries' => $entries, 'totals' => $totals];
+    }
+}

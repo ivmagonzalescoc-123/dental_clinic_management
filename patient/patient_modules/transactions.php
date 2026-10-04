@@ -1,6 +1,13 @@
 <div class="container-fluid patient-transactions-page">
-    <h1 class="h3 mb-3 text-gray-800">Billing</h1>
+    <div class="pt-head">
+        <h1 class="h3 mb-0 text-gray-800">Billing</h1>
+        <div class="pt-switch" role="tablist" aria-label="Billing view">
+            <button type="button" class="pt-switch__btn is-active" role="tab" aria-selected="true" data-pt-view="visits"><i class="bi bi-calendar3"></i> By visit</button>
+            <button type="button" class="pt-switch__btn" role="tab" aria-selected="false" data-pt-view="ledger"><i class="bi bi-journal-text"></i> Ledger</button>
+        </div>
+    </div>
 
+    <div data-pt-pane="visits">
     <div class="unified-table-search-toolbar patient-transaction-search-toolbar">
         <div class="unified-table-search-wrap module-search-inline patient-transaction-search-wrap">
             <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
@@ -18,7 +25,55 @@
     </div>
 
     <div id="transactionAccordion"></div>
+    </div>
+
+    <!-- Every charge, discount and payment in date order, with the running balance. -->
+    <div data-pt-pane="ledger" hidden>
+        <div id="patientLedger" data-pl-title="My transaction ledger"></div>
+    </div>
 </div>
+
+<style>
+.pt-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; }
+.pt-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: #eef2f6; }
+.pt-switch__btn {
+    display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: #475569;
+    border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 0.84rem; font-weight: 600; cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+.pt-switch__btn.is-active { background: #fff; color: #17698c; box-shadow: 0 1px 3px rgba(15, 23, 42, .1); }
+.pt-switch__btn:focus-visible { outline: 2px solid rgba(27, 122, 163, .4); outline-offset: 1px; }
+@media (max-width: 575.98px) {
+    .pt-switch { width: 100%; }
+    .pt-switch__btn { flex: 1 1 0; justify-content: center; }
+}
+</style>
+
+<script>
+// By visit / Ledger switch. The ledger loads the first time it is opened.
+(function () {
+    var page = document.querySelector('.patient-transactions-page');
+    if (!page) return;
+    var ledgerLoaded = false;
+    page.querySelectorAll('[data-pt-view]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var view = btn.getAttribute('data-pt-view');
+            page.querySelectorAll('[data-pt-view]').forEach(function (b) {
+                var on = b === btn;
+                b.classList.toggle('is-active', on);
+                b.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            page.querySelectorAll('[data-pt-pane]').forEach(function (p) {
+                p.hidden = p.getAttribute('data-pt-pane') !== view;
+            });
+            if (view === 'ledger' && !ledgerLoaded && window.PatientLedger) {
+                ledgerLoaded = true;
+                window.PatientLedger.load(document.getElementById('patientLedger'));
+            }
+        });
+    });
+})();
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

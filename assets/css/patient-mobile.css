@@ -53,25 +53,25 @@ body.patient-portal {
         -webkit-overflow-scrolling: touch;
     }
 
-    body.patient-portal table:not(.patient-appt-history-table) {
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) {
         display: table !important;
         width: 100%;
     }
 
-    body.patient-portal table:not(.patient-appt-history-table) thead {
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) thead {
         display: table-header-group !important;
     }
 
-    body.patient-portal table:not(.patient-appt-history-table) tbody {
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) tbody {
         display: table-row-group !important;
     }
 
-    body.patient-portal table:not(.patient-appt-history-table) tr {
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) tr {
         display: table-row !important;
     }
 
-    body.patient-portal table:not(.patient-appt-history-table) th,
-    body.patient-portal table:not(.patient-appt-history-table) td {
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) th,
+    body.patient-portal table:not(.patient-appt-history-table):not(.pl-table) td {
         display: table-cell !important;
         white-space: normal !important;
     }

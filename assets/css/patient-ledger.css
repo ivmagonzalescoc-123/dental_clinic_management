@@ -1,0 +1,72 @@
+/* Transaction ledger (assets/js/patient-ledger.js): staff Patient Chart tab + patient Billing page. */
+.pl-ledger { min-width: 0; }
+
+.pl-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+.pl-tile { display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 10px 14px; min-width: 0; }
+.pl-tile__label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; }
+.pl-tile__value { font-size: 1.05rem; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-tile.is-due { background: #fff7ed; border-color: #fed7aa; }
+.pl-tile.is-due .pl-tile__value { color: #c2410c; }
+.pl-tile.is-clear { background: #f0fdf4; border-color: #bbf7d0; }
+.pl-tile.is-clear .pl-tile__value { color: #15803d; }
+
+.pl-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.pl-count { font-size: 0.8rem; color: #64748b; }
+.pl-print {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid #cfe3ec; background: #fff; color: #17698c;
+    border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.pl-print:hover { background: #f3fafd; border-color: #1b7aa3; }
+
+.pl-table-wrap { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; overflow: hidden; }
+.pl-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.pl-table th { padding: 9px 12px; background: #f8fafc; border-bottom: 1px solid #e5eaf0; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; text-align: left; white-space: nowrap; }
+.pl-table td { padding: 10px 12px; border-bottom: 1px solid #eef2f6; vertical-align: top; color: #0f172a; }
+.pl-table tbody tr:last-child td { border-bottom: 0; }
+.pl-num { text-align: right !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pl-date { white-space: nowrap; color: #475569; }
+.pl-desc { min-width: 180px; }
+.pl-type { display: inline-flex; align-items: center; gap: 4px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; }
+.pl-text { display: block; margin-top: 1px; }
+.pl-sub { display: block; font-size: 0.76rem; color: #94a3b8; }
+.pl-ref { white-space: nowrap; color: #475569; font-size: 0.82rem; }
+.pl-row--charge .pl-type { color: #17698c; }
+.pl-row--discount .pl-type { color: #7c3aed; }
+.pl-row--payment .pl-type { color: #15803d; }
+.pl-credit { color: #15803d; }
+.pl-balance { font-weight: 700; }
+.pl-table tfoot td { background: #f8fafc; border-top: 1px solid #e5eaf0; border-bottom: 0; font-weight: 700; }
+
+.pl-empty { display: flex; align-items: center; gap: 10px; padding: 18px; border: 1px dashed #d6dee8; border-radius: 12px; color: #64748b; background: #fafcfe; }
+.pl-empty i { font-size: 1.3rem; color: #94a3b8; }
+.pl-loading { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
+.pl-loading span { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, #eef2f6 25%, #f8fafc 37%, #eef2f6 63%); background-size: 400% 100%; animation: pl-shimmer 1.2s ease infinite; }
+.pl-loading span:nth-child(2) { width: 80%; }
+.pl-loading span:nth-child(3) { width: 60%; }
+@keyframes pl-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+@media (max-width: 991.98px) {
+    .pl-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* Phones: each transaction becomes a small card. */
+@media (max-width: 767.98px) {
+    .pl-table thead { display: none; }
+    .pl-table, .pl-table tbody, .pl-table tr, .pl-table td { display: block; width: 100%; }
+    .pl-table tbody tr { padding: 10px 12px; border-bottom: 1px solid #eef2f6; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; }
+    .pl-table td { padding: 0; border: 0; }
+    .pl-table .pl-desc { grid-column: 1; grid-row: 1 / span 2; min-width: 0; }
+    .pl-table .pl-date { grid-column: 1; font-size: 0.78rem; }
+    .pl-table .pl-ref { grid-column: 1; font-size: 0.76rem; }
+    .pl-table .pl-charge, .pl-table .pl-credit { grid-column: 2; grid-row: 1; font-weight: 700; }
+    .pl-table .pl-charge:empty, .pl-table .pl-credit:empty { display: none; }
+    .pl-table .pl-balance { grid-column: 2; grid-row: 2; font-weight: 600; font-size: 0.78rem; color: #64748b; }
+    .pl-table .pl-balance::before { content: 'Bal. '; font-weight: 400; }
+    .pl-table tfoot { display: block; width: 100%; }
+    .pl-table tfoot tr { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; background: #f8fafc; border-top: 1px solid #e5eaf0; }
+    .pl-table tfoot td { display: none; background: none; border: 0; padding: 0; }
+    .pl-table tfoot td:first-child, .pl-table tfoot td:last-child { display: block; width: auto; }
+}
+@media print {
+    .pl-print, .pl-bar { display: none !important; }
+    .pl-table-wrap, .pl-tile { break-inside: avoid; }
+}

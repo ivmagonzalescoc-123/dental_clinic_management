@@ -113,6 +113,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/patient-ledger.css') ?>" rel="stylesheet">
 </head>
 
 <body class="admin-portal">
@@ -381,6 +382,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/doctor-patient-profile.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->

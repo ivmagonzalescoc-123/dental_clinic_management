@@ -165,6 +165,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/appointment-services.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/patient-ledger.css') ?>" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">
@@ -420,6 +421,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->

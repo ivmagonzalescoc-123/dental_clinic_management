@@ -24,6 +24,8 @@ $isDoctorView = $patientsRole === 'doctor';
 $today = date('Y-m-d');
 $pmCsrf = (string)($csrf_token ?? security_generate_csrf_token());
 $canManagePatients = capabilities_can($patientsRole === 'admin' ? 'manage_users' : 'patient.manage');
+// The ledger shows money, so only the roles that work Billing see it.
+$canViewLedger = in_array($patientsRole, ['secretary', 'admin'], true);
 
 if (!function_exists('pm_clean_na')) {
     // The patients table stores "N/A" for blank optional fields.
@@ -215,6 +217,7 @@ if ($tres) {
 $patientsConfig = [
     'role' => $patientsRole,
     'canManage' => $canManagePatients,
+    'canViewLedger' => $canViewLedger,
     'patients' => array_values($patients),
     'services' => $services,
     'toothLabels' => $toothLabels,
@@ -290,6 +293,9 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
         <button type="button" class="dp-tab" role="tab" aria-selected="false" data-dp-tab="plan"><i class="bi bi-list-check"></i> Treatments</button>
         <button type="button" class="dp-tab" role="tab" aria-selected="false" data-dp-tab="profiling"><i class="bi bi-person-vcard"></i> Profiling</button>
         <button type="button" class="dp-tab" role="tab" aria-selected="false" data-dp-tab="photos"><i class="bi bi-images"></i> Photos</button>
+        <?php if ($canViewLedger): ?>
+        <button type="button" class="dp-tab" role="tab" aria-selected="false" data-dp-tab="ledger"><i class="bi bi-journal-text"></i> Ledger</button>
+        <?php endif; ?>
     </div>
     <div class="dp-chart__body">
         <section class="dp-pane is-active" data-dp-pane="overview" role="tabpanel"></section>
@@ -316,6 +322,9 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
         <section class="dp-pane" data-dp-pane="plan" role="tabpanel"><div class="tp-host" id="dpTreatmentPlan"></div></section>
         <section class="dp-pane" data-dp-pane="profiling" role="tabpanel"></section>
         <section class="dp-pane" data-dp-pane="photos" role="tabpanel"></section>
+        <?php if ($canViewLedger): ?>
+        <section class="dp-pane" data-dp-pane="ledger" role="tabpanel"></section>
+        <?php endif; ?>
     </div>
 </div>
 
