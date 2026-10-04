@@ -329,6 +329,11 @@
 .pa-modal__avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .pa-tabs { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid #e5eaf0; background: #fff; }
 .pa-modal__body { background: #f8fafc; padding: 16px 20px; }
+/* Bootstrap only scrolls .modal-body; these custom bodies need the same, or the footer
+   (Create / Save) is pushed off small screens. */
+.pa-modal .modal-content { display: flex; flex-direction: column; }
+.pa-modal__head, .pa-tabs, .pa-modal__foot { flex: 0 0 auto; }
+.modal-dialog-scrollable .pa-modal__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .pa-modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; background: #fff; border-top: 1px solid #eef2f6; }
 .pa-pane { display: none; }
 .pa-pane.is-active { display: block; animation: dp-fade .18s ease; }
@@ -369,6 +374,19 @@
     .pa-grid, .pa-facts, .pa-account { grid-template-columns: minmax(0, 1fr); }
     .pa-field--wide { grid-column: auto; }
     .pa-modal__head, .pa-modal__body, .pa-modal__foot { padding-left: 14px; padding-right: 14px; }
+    /* Full-screen on phones: square corners, compact header, buttons share the footer. */
+    .pa-modal .modal-content { border-radius: 0; }
+    .pa-modal__head { align-items: flex-start; padding-top: 14px; padding-bottom: 12px; border-bottom: 1px solid #eef2f6; }
+    .pa-modal__icon, .pa-modal__avatar { flex-basis: 38px; height: 38px; font-size: 1.1rem; }
+    .pa-modal__title { font-size: 1rem; }
+    .pa-modal__sub { font-size: 0.78rem; }
+    .pa-tabs { padding: 0 8px; }
+    .pa-modal__foot { padding-top: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    .pa-modal__foot .btn { flex: 1 1 0; }
+    .pa-actions .btn, .pa-card > .btn { width: 100%; }
+    .pa-temp { flex-wrap: wrap; }
+    .pa-temp .btn { width: 100%; }
+    .dp-add-btn { width: 100%; justify-content: center; }
 }
 @media (min-width: 768px) and (max-width: 991.98px) {
     .pa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

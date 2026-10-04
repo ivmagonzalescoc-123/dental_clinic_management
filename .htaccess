@@ -32,10 +32,13 @@ RewriteCond %{QUERY_STRING} ^$
 RewriteCond %{THE_REQUEST} \s/index\.php[\s?] [NC]
 RewriteRule ^index\.php$ https://www.azucenaclinic.online/ [L,R=301]
 
-# Force HTTPS on live hosts (skip local XAMPP)
+# Force HTTPS on live hosts (skip local XAMPP and devices on the same LAN/hotspot)
 RewriteCond %{HTTPS} off
 RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]
 RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:\d+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^10\.\d+\.\d+\.\d+(:\d+)?$
+RewriteCond %{HTTP_HOST} !^192\.168\.\d+\.\d+(:\d+)?$
+RewriteCond %{HTTP_HOST} !^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Block direct web access to internal folders

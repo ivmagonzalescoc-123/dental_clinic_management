@@ -322,7 +322,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
 <?php if ($canManagePatients): ?>
 <!-- Add Patient -->
 <div class="modal fade pa-modal" id="paAddModal" tabindex="-1" aria-labelledby="paAddTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="pa-modal__head">
                 <span class="pa-modal__icon" aria-hidden="true"><i class="bi bi-person-plus"></i></span>
@@ -371,7 +371,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
 
 <!-- Patient settings: edit details and manage the portal account -->
 <div class="modal fade pa-modal" id="paSettingsModal" tabindex="-1" aria-labelledby="paSettingsTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="pa-modal__head">
                 <span class="pa-modal__avatar" id="paSettingsAvatar" aria-hidden="true"></span>
