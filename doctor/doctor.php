@@ -230,9 +230,9 @@ switch ($role_key) {
             </li>
 
             <li class="nav-item">
-                <a class="nav-link collapsed" href="doctor.php?page=ehr" data-tooltip="Session" title="Session">
+                <a class="nav-link collapsed" href="doctor.php?page=ehr" data-tooltip="Patient Visit" title="Patient Visit">
                     <i class="bi bi-journal-medical"></i>
-                    <span>Session</span>
+                    <span>Patient Visit</span>
                 </a>
             </li>
             <!-- Session link removed from sidebar (access via direct URL remains) -->
@@ -358,6 +358,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/clinical-assessment-fields.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
@@ -385,9 +386,9 @@ switch ($role_key) {
                         "dashboard": ["home", "overview", "summary"],
                         "appointments": ["booking", "bookings", "calendar", "visits"],
                         "schedule": ["availability", "calendar", "time slots", "leave"],
-                        "patients": ["patient list", "profiles", "history", "charts"],
+                        "patients": ["patient list", "profiles", "history", "charts", "add patient", "patient accounts"],
                         "arrivals": ["today", "queue", "checked in", "waiting"],
-                        "ehr": ["session", "treatment", "charting", "odontogram", "clinical notes"],
+                        "ehr": ["patient visit", "visit", "session", "treatment", "charting", "odontogram", "clinical notes", "complete visit"],
                         "records": ["clinical records", "history", "odontogram"],
                         "notifications": ["alerts", "updates"],
                         "settings": ["preferences", "configuration", "password"],

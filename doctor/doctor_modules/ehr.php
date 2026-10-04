@@ -98,25 +98,35 @@ if ($sstmt) {
 }
 
 ?>
-<div class="card border-0 shadow-none">
+<?php $queueCount = $appointment_id ? 0 : count($queueItems); ?>
+<div class="ses is-idle" id="sesRoot">
     <input type="hidden" name="appointment_id" id="appointment_id_hidden" value="<?php echo (int) $appointment_id; ?>">
     <input type="hidden" name="schedule_id" id="schedule_id_hidden"
         value="<?php echo isset($_GET['schedule_id']) ? (int) $_GET['schedule_id'] : ''; ?>">
 
-    <!-- Patient bar: queue selector + a compact patient card once someone is picked.
-         The card's avatar/name are a single "open full details" affordance (with a
-         explicit labeled button alongside so it's discoverable without a hover hint). -->
-    <div class="ehr-patient-bar mb-3">
-        <div class="ehr-patient-select">
-            <label class="form-label fw-bold" style="font-size:0.8rem;">Select Patient</label>
-            <select id="queueSelector" class="form-select form-select-sm" style="font-size:0.82rem;">
-                <option value="">-- Select patient --</option>
+    <header class="ses-head">
+        <div>
+            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, then chart their teeth, record findings and notes, and add the services done and any photos. Save the chart any time. Complete visit sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, then chart their teeth, record findings and notes, and add the services done and any photos. Save the chart any time. Complete visit sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
+        </div>
+        <?php if (!$appointment_id): ?>
+        <span class="ses-head__queue"><i class="bi bi-people" aria-hidden="true"></i> <?php echo $queueCount; ?> in today's queue</span>
+        <?php endif; ?>
+    </header>
+
+    <!-- Who is in the chair: queue picker, then a compact patient card once someone is picked.
+         The avatar and the "Patient details" button both open the full details modal. -->
+    <section class="ses-patient">
+        <div class="ses-patient__pick">
+            <label class="ses-label" for="queueSelector">Patient in the chair</label>
+            <select id="queueSelector" class="form-select">
+                <option value=""><?php echo ($queueCount || $appointment_id) ? "Choose a patient from today's queue" : "No patients in today's queue"; ?></option>
                 <?php foreach ($queueItems as $qi): ?>
                     <?php
                         $display = trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) && strtoupper(trim((string)$qi['middle_name'])) !== 'N/A' ? $qi['middle_name'] . ' ' : '') . $qi['last_name']);
-                        if (!empty($qi['is_emergency'])) $display .= ' (EMERGENCY)';
-                        if (!empty($qi['record_id'])) $display .= ' — Record';
                         $qiStartTime = !empty($qi['start_time']) ? date('g:i A', strtotime($qi['start_time'])) : '';
+                        if ($qiStartTime !== '') $display = $qiStartTime . ' · ' . $display;
+                        if (!empty($qi['is_emergency'])) $display .= ' (Emergency)';
+                        if (!empty($qi['record_id'])) $display .= ' · record started';
                     ?>
                     <option value="<?php echo (int) $qi['appointment_id']; ?>" data-emergency="<?php echo !empty($qi['is_emergency']) ? '1' : '0'; ?>" data-has-record="<?php echo !empty($qi['record_id']) ? '1' : '0'; ?>" data-patient-id="<?php echo (int) $qi['patient_id']; ?>" data-patient-name="<?php echo htmlspecialchars(trim($qi['first_name'] . ' ' . (!empty($qi['middle_name']) && strtoupper(trim((string)$qi['middle_name'])) !== 'N/A' ? $qi['middle_name'] . ' ' : '') . $qi['last_name']), ENT_QUOTES); ?>" data-reason="<?php echo htmlspecialchars((string) ($qi['reason'] ?? ''), ENT_QUOTES); ?>" data-notes="<?php echo htmlspecialchars((string) ($qi['notes'] ?? ''), ENT_QUOTES); ?>" data-appt-date="<?php echo htmlspecialchars((string) ($qi['appointment_date'] ?? ''), ENT_QUOTES); ?>" data-appt-time="<?php echo htmlspecialchars($qiStartTime, ENT_QUOTES); ?>" data-email="<?php echo htmlspecialchars((string) ($qi['email'] ?? ''), ENT_QUOTES); ?>" data-phone="<?php echo htmlspecialchars((string) ($qi['phone_number'] ?? ''), ENT_QUOTES); ?>" data-online="<?php echo !empty($qi['is_online_appointment']) ? '1' : '0'; ?>" data-status="<?php echo htmlspecialchars((string) ($qi['appointment_status'] ?? ''), ENT_QUOTES); ?>" data-profile-image="<?php echo htmlspecialchars((string) ($qi['profile_image'] ?? ''), ENT_QUOTES); ?>">
                         <?php echo htmlspecialchars($display); ?>
@@ -134,73 +144,65 @@ if ($sstmt) {
                 <div class="ehr-patient-name" id="ehrPatientName">—</div>
                 <div class="ehr-patient-chips" id="ehrPatientChips"></div>
             </div>
-            <button type="button" class="btn btn-outline-secondary btn-sm ehr-patient-details-btn" onclick="openDoctorPatientDetailsModal()">
-                <i class="bi bi-person-lines-fill"></i> Patient Details
+            <button type="button" class="ses-btn ses-btn--ghost ehr-patient-details-btn" onclick="openDoctorPatientDetailsModal()">
+                <i class="bi bi-person-lines-fill"></i> Patient details
             </button>
+        </div>
+    </section>
+
+    <div class="ses-idle-note" id="sesIdleNote">
+        <i class="bi bi-person-check" aria-hidden="true"></i>
+        <div>
+            <strong>Choose a patient to start their visit.</strong>
         </div>
     </div>
 
-    <!-- Session toolbar: grouped by purpose (photos vs. charting/findings) instead of
-         one flat row of lookalike buttons. -->
-    <div class="ehr-toolbar mb-3">
-        <div class="ehr-toolbar-group">
-            <span class="ehr-toolbar-label">Photos</span>
-            <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('finishPhotoUpload').click()" title="Upload photo">
-                <i class="fas fa-upload"></i> Upload
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#cameraModal" title="Take a photo">
-                <i class="fas fa-camera"></i> Camera
-            </button>
-        </div>
-        <div class="ehr-toolbar-group ms-auto">
-            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#chartingSection">
-                <i class="bi bi-tooth"></i> Charting
-            </button>
-            <button type="button" id="viewClinicalFindingsBtn" class="btn btn-primary btn-sm" disabled onclick="openDoctorClinicalFindingsModal()">
-                <i class="bi bi-clipboard2-pulse"></i> Clinical Findings
-            </button>
-        </div>
-    </div>
-
-    <!-- Photo Gallery (compact thumbnails with click to view) -->
-    <div id="photoGalleryContainer" class="d-flex flex-wrap gap-2 mb-3" style="min-height:40px;">
-        <span class="text-muted small" id="noPhotosMsg">No photos uploaded</span>
-    </div>
-
-    <!-- Charting Section (hidden by default) -->
-    <div class="collapse mb-3" id="chartingSection">
-        <div class="p-2 border rounded bg-light">
-            <div class="d-flex align-items-center justify-content-between mb-2">
-                <label class="form-label fw-bold mb-0"><i class="bi bi-tooth"></i> Odontogram / Charting</label>
-                <div class="d-flex gap-2">
-                    <button type="button" id="saveChartBtn" class="btn btn-success btn-sm">
-                        <i class="bi bi-save"></i> Save Chart
+    <div class="ses-work" id="sesWork">
+        <!-- Dental chart: the full odontogram, opened on demand. -->
+        <section class="ses-card">
+            <div class="ses-card__head">
+                <span class="ses-card__icon"><i class="bi bi-grid-3x3-gap"></i></span>
+                <div class="ses-card__heading">
+                    <h3 class="ses-card__title">Dental chart</h3>
+                </div>
+                <div class="ses-card__actions">
+                    <button type="button" class="ses-btn ses-btn--ghost collapsed" id="sesChartToggle" data-bs-toggle="collapse" data-bs-target="#chartingSection" aria-expanded="false" aria-controls="chartingSection">
+                        <i class="bi bi-chevron-down ses-chev"></i> <span class="ses-chart-toggle-label">Open chart</span>
                     </button>
-                    <button type="button" id="openOdontogramFullscreenBtn" class="btn btn-secondary btn-sm">Full Screen</button>
                 </div>
             </div>
-            <div id="odontogramViewport" class="odontogram-viewport">
-                <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                    <i class="bi bi-x-lg"></i> Close
-                </button>
-                <div id="odontogramContainer"></div>
-                <?php odontogram_render_rotate_prompt(); ?>
+            <div class="collapse" id="chartingSection">
+                <div class="ses-chart">
+                    <div class="ses-chart__bar">
+                        <button type="button" id="openOdontogramFullscreenBtn" class="ses-btn ses-btn--ghost">Full screen</button>
+                        <button type="button" id="saveChartBtn" class="ses-btn ses-btn--primary">
+                            <i class="bi bi-save"></i> Save chart
+                        </button>
+                    </div>
+                    <div id="odontogramViewport" class="odontogram-viewport">
+                        <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
+                            <i class="bi bi-x-lg"></i> Close
+                        </button>
+                        <div id="odontogramContainer"></div>
+                        <?php odontogram_render_rotate_prompt(); ?>
+                    </div>
+                    <input type="hidden" id="odontogram_data" name="odontogram">
+                </div>
             </div>
-            <input type="hidden" id="odontogram_data" name="odontogram">
-            <small class="text-muted d-block mt-1">Save Chart stores this odontogram immediately so it is not lost, no matter which screen is used to finish the appointment.</small>
-        </div>
-    </div>
+        </section>
 
-    <!-- Row 3: Services -->
-    <div class="mb-3 p-2 border rounded bg-light">
-        <div class="d-flex align-items-center gap-2 mb-2">
-            <label class="form-label fw-bold mb-0"><i class="fas fa-list-check"></i> Services Performed</label>
-        </div>
-        <div class="row g-1 mb-2">
-            <div class="col-12">
-                <select id="ehrServiceSelect" class="form-select form-select-sm">
-                    <option value="">-- Select Service --</option>
+        <div class="ses-grid">
+            <!-- Services done this visit: what billing is built from. -->
+            <section class="ses-card">
+                <div class="ses-card__head">
+                    <span class="ses-card__icon"><i class="bi bi-receipt"></i></span>
+                    <div class="ses-card__heading">
+                        <h3 class="ses-card__title">Services done this visit</h3>
+                    </div>
+                </div>
+                <label class="visually-hidden" for="ehrServiceSelect">Add a service</label>
+                <select id="ehrServiceSelect" class="form-select">
+                    <option value="">Add a service…</option>
                     <?php foreach ($services as $svc): ?>
                         <option value="<?php echo (int)$svc['service_id']; ?>"
                             data-price="<?php echo (float)$svc['initial_price']; ?>"
@@ -209,27 +211,64 @@ if ($sstmt) {
                         </option>
                     <?php endforeach; ?>
                 </select>
+                <table class="ses-services" data-skip-table-search="1">
+                    <thead class="visually-hidden">
+                        <tr><th>Service</th><th>Price</th><th>Remove</th></tr>
+                    </thead>
+                    <tbody id="ehrServicesBody">
+                        <tr><td colspan="3" class="ses-services__empty">No services added yet.</td></tr>
+                    </tbody>
+                    <tfoot id="ehrServicesFoot">
+                    </tfoot>
+                </table>
+            </section>
+
+            <div class="ses-stack">
+                <!-- Clinical findings + doctor's notes (modal). -->
+                <section class="ses-card">
+                    <div class="ses-card__head">
+                        <span class="ses-card__icon"><i class="bi bi-clipboard2-pulse"></i></span>
+                        <div class="ses-card__heading">
+                            <h3 class="ses-card__title">Findings &amp; notes</h3>
+                        </div>
+                        <div class="ses-card__actions">
+                            <button type="button" id="viewClinicalFindingsBtn" class="ses-btn ses-btn--primary" disabled onclick="openDoctorClinicalFindingsModal()">
+                                <i class="bi bi-pencil-square"></i> Record
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Clinical photos: uploaded with the visit when it is completed. -->
+                <section class="ses-card">
+                    <div class="ses-card__head">
+                        <span class="ses-card__icon"><i class="bi bi-images"></i></span>
+                        <div class="ses-card__heading">
+                            <h3 class="ses-card__title">Photos</h3>
+                        </div>
+                        <div class="ses-card__actions">
+                            <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
+                            <button type="button" class="ses-btn ses-btn--ghost" onclick="document.getElementById('finishPhotoUpload').click()" title="Upload photos">
+                                <i class="bi bi-upload"></i> Upload
+                            </button>
+                            <button type="button" class="ses-btn ses-btn--ghost" data-bs-toggle="modal" data-bs-target="#cameraModal" title="Take a photo">
+                                <i class="bi bi-camera"></i> Camera
+                            </button>
+                        </div>
+                    </div>
+                    <div id="photoGalleryContainer" class="ses-photos">
+                        <span class="ses-photos__empty" id="noPhotosMsg">No photos yet.</span>
+                    </div>
+                </section>
             </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered mb-0">
-                <thead class="table-light">
-                    <tr><th>Service</th><th style="width:100px;text-align:right;">Price</th><th style="width:35px;"></th></tr>
-                </thead>
-                <tbody id="ehrServicesBody">
-                    <tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>
-                </tbody>
-                <tfoot id="ehrServicesFoot">
-                </tfoot>
-            </table>
-        </div>
-    </div>
 
-    <!-- Row 4: Treatment Plan (multi-visit; estimate only — billed via Services Performed when done) -->
-    <div class="mb-3 p-2 border rounded bg-light">
-        <div id="ehrTreatmentPlan">
-            <div class="tp-empty">Select a patient to see their treatment plan.</div>
-        </div>
+        <!-- Treatment plan (multi-visit; an estimate only — billed via the services above when done). -->
+        <section class="ses-card ses-card--plan">
+            <div id="ehrTreatmentPlan">
+                <div class="tp-empty">Select a patient to see their treatment plan.</div>
+            </div>
+        </section>
     </div>
     <!-- Camera Modal -->
     <div class="modal fade" id="cameraModal" tabindex="-1" aria-hidden="true">
@@ -274,13 +313,13 @@ if ($sstmt) {
             </div>
         </div>
     </div>
-
-    <div class="d-flex justify-content-center mt-3">
-        <button type="button" id="submitFinishAppointmentBtn" class="btn btn-primary btn-sm" style="font-size:0.82rem;">
-            <i class="fas fa-check"></i> Finalize Session
+    <div class="ses-finish" id="sesFinish">
+        <div class="ses-finish__text">
+            <strong>Done with this patient?</strong>
+        </div>
+        <button type="button" id="submitFinishAppointmentBtn" class="ses-btn ses-btn--primary ses-btn--lg">
+            <i class="bi bi-check2-circle"></i> Complete visit
         </button>
-    </div>
-    </form>
     </div>
 </div>
 
@@ -380,83 +419,160 @@ if ($sstmt) {
 ?>
 
 <style>
-.ehr-services-total-row {
-    background: #f8f9fa;
+/* ---------- Patient Visit page (.ses-*): same cards, type and colors as the Patients page ---------- */
+.ses { display: flex; flex-direction: column; gap: 14px; }
+.ses-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#main .ses-head__title { margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+.ses-head__queue {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+    background: #eff8fb; color: #17698c; font-size: 0.8rem; font-weight: 700; white-space: nowrap;
 }
-/* Patient bar: queue selector + compact avatar/name/chips card, replacing the old
-   "Selected Patient: ..." read-only box with something that also opens Patient Details. */
-.ehr-patient-bar {
-    display: flex;
-    align-items: flex-end;
-    gap: 1rem;
-    flex-wrap: wrap;
+
+.ses-label { display: block; margin-bottom: 5px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+
+/* Who is in the chair */
+.ses-patient {
+    display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap;
+    background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px;
 }
-.ehr-patient-select {
-    flex: 1 1 260px;
-    min-width: 220px;
-}
+.ses-patient__pick { flex: 1 1 280px; min-width: 0; }
 .ehr-patient-card {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    flex: 2 1 380px;
-    min-width: 280px;
-    background: #f8fafc;
-    border: 1px solid #e6ebf1;
-    border-radius: 10px;
-    padding: 0.5rem 0.75rem;
+    display: flex; align-items: center; gap: 12px; flex: 2 1 380px; min-width: 0;
+    background: #f8fafc; border: 1px solid #e5eaf0; border-radius: 12px; padding: 8px 12px;
 }
 .ehr-patient-avatar {
-    flex-shrink: 0;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    border: 2px solid #1b7aa3;
-    background: #e2e8f0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: 0;
-    cursor: pointer;
+    flex: 0 0 44px; height: 44px; border-radius: 50%; border: 0; padding: 0; overflow: hidden; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; background: #dcf0f7;
     transition: box-shadow .15s ease;
 }
-.ehr-patient-avatar:hover {
-    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.2);
+.ehr-patient-avatar:hover { box-shadow: 0 0 0 3px #cfe3ec; }
+.ehr-patient-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.ehr-patient-avatar i { font-size: 1.3rem; color: #17698c; }
+.ehr-patient-meta { flex: 1; min-width: 0; }
+.ehr-patient-name { font-weight: 700; font-size: 0.98rem; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ehr-patient-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.ehr-patient-details-btn { flex-shrink: 0; }
+.dpp-chip.ehr-chip--alert { background: #fef2f2; color: #b91c1c; }
+
+/* Nothing to work on until a patient is chosen */
+.ses-idle-note {
+    display: none; align-items: center; gap: 12px; padding: 18px; border: 1px dashed #d6dee8; border-radius: 12px;
+    background: #fafcfe; color: #64748b; font-size: 0.86rem;
 }
-.ehr-patient-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.ses-idle-note > i { font-size: 1.5rem; color: #94a3b8; }
+.ses-idle-note strong { display: block; color: #334155; font-size: 0.92rem; }
+.ses.is-idle .ses-idle-note { display: flex; }
+.ses.is-idle .ses-work, .ses.is-idle .ses-finish { opacity: .45; pointer-events: none; user-select: none; }
+
+/* Work area */
+.ses-work { display: flex; flex-direction: column; gap: 14px; transition: opacity .2s ease; }
+.ses-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+.ses-stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ses-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.ses-card__head { display: flex; align-items: center; gap: 12px; }
+.ses-card__head + * { margin-top: 12px; }
+.ses-card__icon {
+    flex: 0 0 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    background: #eff8fb; color: #1b7aa3; font-size: 1.05rem;
 }
-.ehr-patient-avatar i {
-    font-size: 1.3rem;
-    color: #94a3b8;
+.ses-card__heading { flex: 1 1 auto; min-width: 0; }
+#main .ses-card__title { margin: 0; font-size: 0.95rem; font-weight: 700; color: #0f172a; }
+.ses-card__actions { display: flex; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; }
+.ses-card--plan { padding: 14px 16px; }
+
+/* Page guide: the ! beside the title shows a summary on hover, or on tap/focus on touch. */
+.ses-tip {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+    width: 20px; height: 20px; margin-left: 2px; padding: 0; border: 0; border-radius: 50%;
+    background: none; color: #94a3b8; font-size: 0.9rem; line-height: 1; cursor: help;
 }
-.ehr-patient-meta {
-    flex: 1;
-    min-width: 0;
+.ses-tip:hover, .ses-tip:focus-visible { color: #1b7aa3; }
+.ses-tip:focus-visible { outline: 2px solid rgba(27, 122, 163, .4); outline-offset: 1px; }
+.ses-tip::after {
+    content: attr(data-tip); position: absolute; left: 50%; top: calc(100% + 8px); z-index: 20;
+    width: max-content; max-width: min(340px, 70vw); transform: translateX(-50%) translateY(4px);
+    padding: 7px 10px; border-radius: 8px; background: #0f172a; color: #fff;
+    font-size: 0.76rem; font-weight: 500; line-height: 1.4; text-align: left; text-transform: none; letter-spacing: 0; white-space: normal;
+    box-shadow: 0 8px 20px -8px rgba(15, 23, 42, .5);
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s ease, transform .15s ease, visibility .15s;
 }
-.ehr-patient-name {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: #0f172a;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.ses-tip:hover::after, .ses-tip:focus::after { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+/* Opens to the right of the icon so it stays on screen. */
+.ses-head__title .ses-tip::after { left: 0; transform: translateY(4px); }
+.ses-head__title .ses-tip:hover::after, .ses-head__title .ses-tip:focus::after { transform: translateY(0); }
+
+@media (max-width: 575.98px) {
+    /* On phones the bubble becomes a strip at the bottom of the screen, so it always fits. */
+    .ses .ses-tip::after,
+    .ses .ses-tip:hover::after, .ses .ses-tip:focus::after {
+        position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; z-index: 1080;
+        width: auto; max-width: none; transform: none; font-size: 0.82rem; padding: 10px 12px;
+    }
 }
-.ehr-patient-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    margin-top: 0.2rem;
+
+/* Buttons: one primary teal, one quiet outline */
+.ses-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+    border: 1px solid transparent; border-radius: 999px; padding: 6px 14px;
+    font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
-.ehr-patient-details-btn {
-    flex-shrink: 0;
-}.dpp-chip.ehr-chip--alert {
-    background: #fef2f2;
-    color: #b91c1c;
+.ses-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ses-btn:focus-visible { outline: 3px solid rgba(27, 122, 163, .35); outline-offset: 2px; }
+.ses-btn--primary { background: #1b7aa3; border-color: #1b7aa3; color: #fff; }
+.ses-btn--primary:not(:disabled):hover { background: #17698c; border-color: #17698c; }
+.ses-btn--ghost { background: #fff; border-color: #cfe3ec; color: #17698c; }
+.ses-btn--ghost:not(:disabled):hover { background: #f3fafd; border-color: #1b7aa3; }
+.ses-btn--lg { padding: 10px 22px; font-size: 0.92rem; }
+.ses-chev { transition: transform .2s ease; }
+#sesChartToggle:not(.collapsed) .ses-chev { transform: rotate(180deg); }
+
+/* Dental chart */
+.ses-chart { margin-top: 12px; }
+.ses-chart__bar { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 8px; }
+
+/* Services list */
+.ses-services { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 0.86rem; }
+.ses-services td { padding: 8px 4px; border-bottom: 1px dashed #e5eaf0; color: #0f172a; vertical-align: middle; }
+.ses-services td:nth-child(2) { text-align: right; white-space: nowrap; font-weight: 600; }
+.ses-services td:nth-child(3) { width: 34px; text-align: right; }
+.ses-services td:nth-child(3) .btn { color: #94a3b8 !important; font-size: 1.05rem; }
+.ses-services td:nth-child(3) .btn:hover { color: #dc2626 !important; }
+.ses-services__empty, .ses-services td.text-center { text-align: center; color: #94a3b8 !important; font-size: 0.84rem; padding: 14px 4px !important; border-bottom: 0 !important; }
+.ses-services tfoot td { border-bottom: 0; padding-top: 10px; font-size: 0.9rem !important; }
+.ehr-services-total-row td:first-child { color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 0.74rem !important; }
+.ehr-services-total-row td:nth-child(2) { color: #17698c; font-size: 1rem !important; }
+
+/* Photos */
+.ses-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+.ses-photos > div { border-radius: 10px !important; border-color: #e5eaf0 !important; }
+.ses-photos__empty, .ses-photos > .text-muted { font-size: 0.82rem; color: #94a3b8 !important; }
+
+/* Complete visit */
+.ses-finish {
+    position: sticky; bottom: 12px; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    background: #fff; border: 1px solid #cfe3ec; border-radius: 14px; padding: 12px 16px;
+    box-shadow: 0 10px 30px -18px rgba(15, 35, 60, .45);
 }
+.ses-finish__text { min-width: 0; font-size: 0.82rem; color: #64748b; }
+.ses-finish__text strong { display: block; color: #0f172a; font-size: 0.92rem; }
+
+@media (max-width: 991.98px) {
+    .ses-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 575.98px) {
+    .ses-card__head { flex-wrap: wrap; }
+    .ses-card__heading { flex: 1 1 0; }
+    .ses-card__actions { flex-basis: 100%; padding-left: 48px; }
+    .ehr-patient-card { flex-wrap: wrap; }
+    .ehr-patient-details-btn { flex-basis: 100%; }
+    .ses-finish .ses-btn { flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ses-work, .ses-chev, .ses-btn { transition: none; }
+}
+
 /* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
    for all three tabs instead of being repeated inside the Profile tab's content. */
 .pd-header-bar {
@@ -471,8 +587,7 @@ if ($sstmt) {
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    border: 2px solid #1b7aa3;
-    background: #e2e8f0;
+    background: #dcf0f7;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -485,34 +600,13 @@ if ($sstmt) {
 }
 .pd-header-avatar i {
     font-size: 1.5rem;
-    color: #94a3b8;
+    color: #17698c;
 }
 .pd-header-name {
     font-weight: 700;
     font-size: 1.05rem;
     color: #0f172a;
-}/* Session toolbar: grouped buttons with a small caption per group instead of one flat
-   row of lookalike buttons. */
-.ehr-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    flex-wrap: wrap;
 }
-.ehr-toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}
-.ehr-toolbar-label {
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #94a3b8;
-    margin-right: 0.15rem;
-}
-
 /* Clinical Findings & Patient Details modals (.pf-* classes) — same grouped-section/
    pill-selector look the secretary's Create Record form uses, scoped to these modals. */
 #doctorClinicalFindingsModal .pf-section,
@@ -875,7 +969,7 @@ if ($sstmt) {
             const active = isOdontogramFullscreen();
 
             if (closeBtn) closeBtn.style.display = active ? '' : 'none';
-            if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+            if (openBtn) openBtn.textContent = active ? 'Exit full screen' : 'Full screen';
             if (container) {
                 container.style.height = active ? '100%' : (ODONTOGRAM_IFRAME_HEIGHT + 'px');
             }
@@ -996,7 +1090,7 @@ if ($sstmt) {
             var tfoot = document.getElementById('ehrServicesFoot');
             if (!tbody) return;
             if (ehrSelectedServices.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted small py-1">No services added</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" class="ses-services__empty">No services added yet.</td></tr>';
                 if (tfoot) tfoot.innerHTML = '';
                 return;
             }
@@ -1095,7 +1189,7 @@ if ($sstmt) {
             var container = document.getElementById('photoGalleryContainer');
 
             if (uploadedPhotos.length === 0) {
-                container.innerHTML = '<span class="text-muted small" id="noPhotosMsg">No photos uploaded</span>';
+                container.innerHTML = '<span class="ses-photos__empty" id="noPhotosMsg">No photos yet.</span>';
                 return;
             }
 
@@ -1137,7 +1231,7 @@ if ($sstmt) {
         document.getElementById('saveChartBtn')?.addEventListener('click', async function() {
             const appointmentId = document.getElementById('appointment_id_hidden').value;
             if (!appointmentId) {
-                notifyDoctor('Please select a patient/appointment first.', 'warning');
+                notifyDoctor('Choose a patient first.', 'warning');
                 return;
             }
             if (ehrChartSaving) return;
@@ -1182,7 +1276,7 @@ if ($sstmt) {
         document.getElementById('submitFinishAppointmentBtn').addEventListener('click', async function() {
             const appointmentId = document.getElementById('appointment_id_hidden').value;
             if (!appointmentId) {
-                notifyDoctor('Please select a patient/appointment first.', 'warning');
+                notifyDoctor('Choose a patient first.', 'warning');
                 return;
             }
             if (ehrFinishSubmitting) return;
@@ -1236,14 +1330,14 @@ if ($sstmt) {
                     return;
                 }
                 if (!json.success) {
-                    notifyDoctor(json.message || 'Failed to finish appointment', 'danger');
+                    notifyDoctor(json.message || 'Could not complete the visit.', 'danger');
                     ehrFinishSubmitting = false;
                     this.disabled = false;
                     this.innerHTML = btnText;
                     return;
                 }
                 
-                notifyDoctor(json.already_processed || json.idempotent_replay ? 'Appointment was already finished.' : 'Appointment finished successfully', 'success');
+                notifyDoctor(json.already_processed || json.idempotent_replay ? 'This visit was already completed.' : 'Visit completed and sent to the secretary.', 'success');
                 if (json.upload_warnings && json.upload_warnings.length > 0) {
                     notifyDoctor('Upload warnings: ' + json.upload_warnings.join('; '), 'warning');
                 }
@@ -1251,7 +1345,7 @@ if ($sstmt) {
                 setTimeout(() => window.location.href = 'doctor.php?page=appointments', 1000);
             } catch (e) {
                 console.error(e);
-                notifyDoctor('Error saving appointment', 'danger');
+                notifyDoctor('Could not complete the visit. Please try again.', 'danger');
                 ehrFinishSubmitting = false;
                 this.disabled = false;
                 this.innerHTML = btnText;
@@ -1261,6 +1355,31 @@ if ($sstmt) {
         function notifyDoctor(message, type = 'info') {
             window.showToast(String(message || ''), type);
         }
+
+        // Page state: the work area stays dimmed until a patient is chosen, and the chart
+        // toggle names what it will do next.
+        function syncVisitIdle() {
+            const root = document.getElementById('sesRoot');
+            const appt = parseInt(document.getElementById('appointment_id_hidden').value || '0', 10);
+            if (root) root.classList.toggle('is-idle', !appt);
+        }
+        document.getElementById('queueSelector')?.addEventListener('change', syncVisitIdle);
+        syncVisitIdle();
+
+        const chartingSection = document.getElementById('chartingSection');
+        function setChartToggleLabel(open) {
+            const label = document.querySelector('#sesChartToggle .ses-chart-toggle-label');
+            if (label) label.textContent = open ? 'Hide chart' : 'Open chart';
+        }
+        chartingSection?.addEventListener('shown.bs.collapse', function (e) {
+            if (e.target !== chartingSection) return;
+            setChartToggleLabel(true);
+            showOdontogram();
+            setTimeout(notifyOdontogramResize, 50);
+        });
+        chartingSection?.addEventListener('hidden.bs.collapse', function (e) {
+            if (e.target === chartingSection) setChartToggleLabel(false);
+        });
 
     })();
 </script>

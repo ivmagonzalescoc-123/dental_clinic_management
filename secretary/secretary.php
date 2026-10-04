@@ -164,6 +164,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/appointment-services.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
 </head>
 
 <body class="secretary-portal">
@@ -243,9 +244,9 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link collapsed" href="secretary.php?page=manage_patients" data-tooltip="Patient Management" title="Patient Management">
-                    <i class="bi bi-person"></i>
-                    <span>Patient Management</span>
+                <a class="nav-link collapsed" href="secretary.php?page=patients" data-tooltip="Patients" title="Patients">
+                    <i class="bi bi-people"></i>
+                    <span>Patients</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -323,8 +324,9 @@ switch ($role_key) {
                                     case "dashboard":
                                         include "secretary_modules/dashboard.php";
                                         break;
-                                    case "manage_patients":
-                                        include "secretary_modules/manage_patients.php";
+                                    case "patients":
+                                    case "manage_patients": // old link
+                                        include "secretary_modules/patients.php";
                                         break;
                                     case "appointments":
                                         include "secretary_modules/appointments.php";
@@ -416,6 +418,8 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/doctor-patient-profile.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/clinical-assessment-fields.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
@@ -441,7 +445,7 @@ switch ($role_key) {
                     inputId: 'secretarySearch',
                     keywords: {
                         "dashboard": ["home", "overview", "summary"],
-                        "manage_patients": ["patients", "patient list", "registration", "walk-in", "accounts"],
+                        "patients": ["patient list", "registration", "walk-in", "accounts", "add patient", "charts", "history"],
                         "appointments": ["booking", "bookings", "requests", "calendar", "reschedule"],
                         "doctor_schedule": ["doctor", "availability", "calendar", "leave"],
                         "arrivals": ["check in", "queue", "today", "waiting"],

@@ -253,10 +253,10 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .dataTable-wrapper .dataTable-selector,
 #main .datatable-wrapper .datatable-input,
 #main .datatable-wrapper .datatable-selector {
-  border: 1px solid #c9deef;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 0.45rem 0.7rem;
-  background: #fff;
+  background: #f8fafc;
   color: #213548;
   font-size: 0.86rem;
   min-height: 36px;
@@ -267,6 +267,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .datatable-wrapper .datatable-input:focus,
 #main .datatable-wrapper .datatable-selector:focus {
   border-color: #1b7aa3;
+  background-color: #fff;
   box-shadow: none;
   outline: none;
 }
@@ -301,10 +302,10 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .form-control,
 #main .form-select,
 #main textarea.form-control {
-  border: 1px solid var(--ux-border);
-  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
   color: var(--ux-text);
-  background-color: var(--ux-surface);
+  background-color: #f8fafc;
   box-shadow: none;
   padding: 0.55rem 0.7rem;
   min-height: calc(1.5em + 1rem + 2px);
@@ -323,8 +324,20 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .form-select:focus,
 #main textarea.form-control:focus {
   border-color: #1b7aa3;
+  background-color: #fff;
   box-shadow: none;
   outline: none;
+}
+
+#main .form-control:not(:disabled):not([readonly]):not(:focus):hover,
+#main .form-select:not(:disabled):not(:focus):hover {
+  border-color: #cbd5e1;
+}
+
+#main .form-control.is-invalid,
+#main .form-select.is-invalid {
+  border-color: #ef4444;
+  background-color: #fff;
 }
 
 #main .ux-form-shell {
@@ -361,7 +374,6 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .modal .ux-form-grid .form-select {
   padding: 0.35rem 0.6rem;
   font-size: 0.875rem;
-  border-radius: 0.5rem;
 }
 
 #main .ux-form-grid textarea.form-control,
@@ -1580,9 +1592,9 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .appointments-view-filter,
 #main .datatable-top .form-select,
 #main .dataTable-top .form-select {
-  border: 1px solid #c9deef;
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
-  background: #fff;
+  background: #f8fafc;
   color: #213548;
   font-size: 0.86rem;
   font-weight: 500;
@@ -1597,6 +1609,7 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
 #main .datatable-top .form-select:focus,
 #main .dataTable-top .form-select:focus {
   border-color: #1b7aa3;
+  background-color: #fff;
   box-shadow: none;
   outline: none;
 }

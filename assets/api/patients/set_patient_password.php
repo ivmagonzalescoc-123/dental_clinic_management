@@ -8,18 +8,11 @@ include '../../../config/capabilities.php';
 include_once '../../../config/remember_me.php';
 
 security_start_session();
-check_session(['admin', 'secretary']);
+check_session(['admin', 'secretary', 'doctor']);
 
 $role = strtolower((string)($_SESSION['role'] ?? ''));
-if ($role === 'admin') {
-    capabilities_require_web('manage_users', '../../admin.php?page=manage_users&type=patients');
-} elseif ($role === 'secretary') {
-    capabilities_require_web('patient.manage', '../../secretary/secretary.php?page=manage_patients');
-} else {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Forbidden']);
-    exit;
-}
+// Admin needs user management; secretary and doctor need patient management.
+capabilities_require_json($role === 'admin' ? 'manage_users' : 'patient.manage');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

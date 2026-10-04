@@ -138,7 +138,7 @@ try {
 
     echo json_encode([
         'success'        => true,
-        'message'        => 'Session started',
+        'message'        => 'Visit started',
         'schedule_id'    => $schedule_id,
         'appointment_id' => $appointment_id,
     ]);

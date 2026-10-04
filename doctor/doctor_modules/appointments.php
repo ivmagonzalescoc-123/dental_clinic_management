@@ -48,7 +48,7 @@ function doctor_appointment_status_label(string $status): string
     $status = strtolower(trim($status));
     $labels = [
         'awaiting_secretary_records' => 'Awaiting secretary record',
-        'in_progress' => 'In session',
+        'in_progress' => 'In treatment',
         'arrived' => 'Arrived',
         'checked_in' => 'Checked in',
         'confirmed' => 'Confirmed',
@@ -1339,7 +1339,7 @@ async function openHistoryModal(appointmentId) {
             let bannerText = '';
             const apptStatus = String(appointmentMeta.status || '').toLowerCase();
             if (apptStatus === 'awaiting_secretary_records' || isDoctorSessionOnly) {
-                bannerText = 'Doctor session completed. This visit is waiting for the secretary to create the official record and follow-up date.';
+                bannerText = 'You completed this visit. It is waiting for the secretary to create the official record and follow-up date.';
             } else if (isFinalizedRecord || apptStatus === 'completed') {
                 bannerText = 'Official record filed. This history is read-only.';
             } else {
@@ -1681,7 +1681,7 @@ document.getElementById('rescheduleSaveBtn').addEventListener('click', async fun
                             </tbody>
                         </table>
                     </div>
-                    <small class="text-muted d-block mt-1">Add services performed during this session</small>
+                    <small class="text-muted d-block mt-1">Add services performed during this visit</small>
                 </div>
 
                 <!-- Submit Section -->

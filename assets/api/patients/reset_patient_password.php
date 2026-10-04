@@ -6,18 +6,45 @@ include '../../../config/capabilities.php';
 include_once '../../../config/remember_me.php';
 
 security_start_session();
-check_session(['admin', 'secretary']);
+check_session(['admin', 'secretary', 'doctor']);
 
 $role = strtolower((string)($_SESSION['role'] ?? ''));
-if ($role === 'admin') {
-    capabilities_require_web('manage_users', '../../../admin.php?page=manage_users&type=patients');
-    $redirectUrl = '../../../admin.php?page=manage_users&type=patients';
-} elseif ($role === 'secretary') {
-    capabilities_require_web('patient.manage', '../../../secretary/secretary.php?page=manage_patients');
-    $redirectUrl = '../../../secretary/secretary.php?page=manage_patients';
-} else {
+$portalPaths = [
+    'admin' => '../../../admin/admin.php?page=patients',
+    'secretary' => '../../../secretary/secretary.php?page=patients',
+    'doctor' => '../../../doctor/doctor.php?page=patients',
+];
+$redirectUrl = $portalPaths[$role] ?? null;
+
+// The Patients page posts with format=json and shows the password in its own modal;
+// a plain form post falls back to the redirect + session modal flow.
+$wantsJson = ($_POST['format'] ?? '') === 'json';
+
+function reset_patient_password_fail(string $message, string $type = 'danger', int $status = 400): void
+{
+    global $wantsJson, $redirectUrl;
+    if ($wantsJson) {
+        http_response_code($status);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => $message]);
+        exit;
+    }
+    $_SESSION['message'] = $message;
+    $_SESSION['message_type'] = $type;
+    header('Location: ' . $redirectUrl);
+    exit;
+}
+
+if ($redirectUrl === null) {
     http_response_code(403);
     exit;
+}
+
+$capability = $role === 'admin' ? 'manage_users' : 'patient.manage';
+if ($wantsJson) {
+    capabilities_require_json($capability);
+} else {
+    capabilities_require_web($capability, $redirectUrl);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -27,26 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $csrf = $_POST['csrf_token'] ?? '';
 if (!security_validate_csrf_token($csrf)) {
-    $_SESSION['message'] = 'Please refresh the page and try again.';
-    $_SESSION['message_type'] = 'danger';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('Please refresh the page and try again.');
 }
 
 $patientId = (int)($_POST['patient_id'] ?? $_POST['id'] ?? 0);
 if ($patientId <= 0) {
-    $_SESSION['message'] = 'Invalid patient selected for password reset.';
-    $_SESSION['message_type'] = 'danger';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('Invalid patient selected for password reset.');
 }
 
 $findStmt = $conn->prepare('SELECT patient_id, first_name, last_name, email FROM patients WHERE patient_id = ? LIMIT 1');
 if (!$findStmt) {
-    $_SESSION['message'] = 'An error occurred. Please try again.';
-    $_SESSION['message_type'] = 'danger';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('An error occurred. Please try again.', 'danger', 500);
 }
 $findStmt->bind_param('i', $patientId);
 $findStmt->execute();
@@ -55,18 +73,12 @@ $targetPatient = $found ? $found->fetch_assoc() : null;
 $findStmt->close();
 
 if (!$targetPatient) {
-    $_SESSION['message'] = 'Patient account not found.';
-    $_SESSION['message_type'] = 'danger';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('Patient account not found.', 'danger', 404);
 }
 
 $patientEmail = trim((string)($targetPatient['email'] ?? ''));
 if ($patientEmail === '') {
-    $_SESSION['message'] = 'This patient has no email on file. Add an email before generating a login password.';
-    $_SESSION['message_type'] = 'warning';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('This patient has no email on file. Add an email before generating a login password.', 'warning');
 }
 
 $temporaryPassword = security_generate_default_password();
@@ -82,30 +94,35 @@ $updStmt = $conn->prepare(
      WHERE patient_id = ?'
 );
 if (!$updStmt) {
-    $_SESSION['message'] = 'An error occurred. Please try again.';
-    $_SESSION['message_type'] = 'danger';
-    header('Location: ' . $redirectUrl);
-    exit;
+    reset_patient_password_fail('An error occurred. Please try again.', 'danger', 500);
 }
 $updStmt->bind_param('si', $temporaryHash, $patientId);
 $ok = $updStmt->execute();
 $updStmt->close();
-if ($ok) {
-    remember_me_forget_all($conn, 'patient', (int)$patientId);
+
+if (!$ok) {
+    reset_patient_password_fail('Failed to reset patient password.', 'danger', 500);
 }
 
-if ($ok) {
-    $displayName = trim((string)($targetPatient['first_name'] ?? '') . ' ' . (string)($targetPatient['last_name'] ?? ''));
-    security_set_generated_password_modal(
-        $temporaryPassword,
-        $displayName . ' (patient)',
-        'Temporary password generated for patient.',
-        false
-    );
-} else {
-    $_SESSION['message'] = 'Failed to reset patient password.';
-    $_SESSION['message_type'] = 'danger';
+remember_me_forget_all($conn, 'patient', (int)$patientId);
+$displayName = trim((string)($targetPatient['first_name'] ?? '') . ' ' . (string)($targetPatient['last_name'] ?? ''));
+
+if ($wantsJson) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => true,
+        'message' => 'Temporary password generated for patient.',
+        'password' => $temporaryPassword,
+        'account_label' => $displayName,
+    ]);
+    exit;
 }
 
+security_set_generated_password_modal(
+    $temporaryPassword,
+    $displayName . ' (patient)',
+    'Temporary password generated for patient.',
+    false
+);
 header('Location: ' . $redirectUrl);
 exit;

@@ -21,6 +21,7 @@ if (!function_exists('capabilities_role_map')) {
             ],
             'doctor' => [
                 'clinical.save',
+                'patient.manage',
                 'appointment.view_assigned',
                 'appointment.manage',
                 'arrivals.manage',

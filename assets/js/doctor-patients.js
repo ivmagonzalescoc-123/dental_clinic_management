@@ -1,8 +1,13 @@
 /**
- * Doctor "My Patients" page: a searchable patient list and a tabbed Patient Chart that
- * replaces the list in place (Back returns to it), so the chart gets the full page.
+ * Patients page (doctor "My Patients", secretary and admin "Patients"): a searchable patient
+ * list and a tabbed Patient Chart that replaces the list in place (Back returns to it), so
+ * the chart gets the full page.
  *
- *   DoctorPatients.init(config)   — config is built by doctor/doctor_modules/patients.php
+ *   DoctorPatients.init(config)   — config is built by includes/patients_module.php
+ *
+ * config.role is 'doctor', 'secretary' or 'admin'. Doctors see their own patients; staff see
+ * every patient, with the doctor shown on each appointment. When config.canManage is set, a
+ * settings button next to the patient's name opens assets/js/patient-account.js.
  *
  * The list and each patient's appointment timeline come from the page itself. Chart tabs
  * load their own data only when opened (profiling, treatment plan, per-visit records),
@@ -32,6 +37,9 @@
     };
 
     var state = null;
+    var documentBound = false;
+
+    function isDoctor() { return state.cfg.role === 'doctor' || !state.cfg.role; }
 
     // ---------- small helpers ----------
     function esc(v) {
@@ -83,6 +91,12 @@
     }
     function statusBadge(s) {
         return '<span class="badge bg-' + (STATUS_CLASS[s] || 'secondary') + ' dp-status">' + esc(humanStatus(s)) + '</span>';
+    }
+    // Staff see which doctor each appointment is with; a doctor only sees their own.
+    function doctorLabel(a) {
+        if (isDoctor() || !a || !String(a.doctor || '').trim()) return '';
+        var name = String(a.doctor).trim();
+        return /^dr\.?\s/i.test(name) ? name : 'Dr. ' + name;
     }
     function fullName(p) {
         var mid = String(p.middle_name || '').trim();
@@ -162,6 +176,7 @@
                 return an.localeCompare(bn);
             }
             if (sort === 'visits') return b._sum.visits - a._sum.visits;
+            if (sort === 'newest') return String(b.created_at || '').localeCompare(String(a.created_at || ''));
             var al = a._sum.last ? a._sum.last.date : '', bl = b._sum.last ? b._sum.last.date : '';
             return bl.localeCompare(al);
         });
@@ -214,7 +229,7 @@
         if (emptyEl) {
             emptyEl.hidden = shown.length > 0;
             emptyEl.innerHTML = state.patients.length === 0
-                ? emptyNote('bi-people', 'No patients yet. Patients appear here once they have an appointment with you.')
+                ? emptyNote('bi-people', isDoctor() ? 'No patients yet. Patients appear here once they have an appointment with you.' : 'No patients registered yet. Use Add Patient to create one.')
                 : emptyNote('bi-search', 'No patients match your search or filter.');
         }
     }
@@ -281,7 +296,9 @@
         document.getElementById('dpChartIdentity').innerHTML =
             avatar(p, 'dp-avatar dp-avatar--lg') +
             '<div class="dp-chart__who">' +
-                '<h3 class="dp-chart__name" id="dpChartName">' + esc(fullName(p)) + '</h3>' +
+                '<div class="dp-chart__title-row"><h3 class="dp-chart__name" id="dpChartName">' + esc(fullName(p)) + '</h3>' +
+                    (state.cfg.canManage ? '<button type="button" class="dp-settings-btn" data-pa-settings="' + p.patient_id + '" aria-label="Patient settings" title="Edit patient details and account"><i class="bi bi-gear"></i></button>' : '') +
+                '</div>' +
                 '<div class="dp-chart__meta">' + meta.join(' · ') + (contact.length ? '<span class="dp-chart__contact">' + contact.join('') + '</span>' : '') + '</div>' +
                 (flags.length ? '<div class="dp-chart__flags">' + flags.join('') + '</div>' : '<div class="dp-chart__flags"><span class="dp-flag dp-flag--ok"><i class="bi bi-check-circle-fill"></i>No medical alerts on file</span></div>') +
             '</div>';
@@ -383,11 +400,11 @@
                 '<div class="dp-next__date"><strong>' + esc(fmtDate(s.next.date, false)) + '</strong><small>' + esc(s.next.date.slice(0, 4)) + '</small></div>' +
                 '<div class="dp-next__main">' +
                     '<div class="dp-next__title">' + esc(s.next.services.length ? s.next.services.join(', ') : (meaningful(s.next.reason) ? s.next.reason : 'Appointment')) + '</div>' +
-                    '<div class="dp-muted">' + esc([timeRange(s.next) || 'Time to be assigned', s.next.is_online ? 'Online' : 'In-person'].join(' · ')) + '</div>' +
+                    '<div class="dp-muted">' + esc([timeRange(s.next) || 'Time to be assigned', s.next.is_online ? 'Online' : 'In-person', doctorLabel(s.next)].filter(Boolean).join(' · ')) + '</div>' +
                     '<div class="mt-1">' + statusBadge(s.next.status) + '</div>' +
                 '</div>' +
               '</div>'
-            : emptyNote('bi-calendar-x', 'No upcoming appointment with you.');
+            : emptyNote('bi-calendar-x', isDoctor() ? 'No upcoming appointment with you.' : 'No upcoming appointment.');
 
         el.innerHTML =
             '<div class="dp-stats">' + stats + '</div>' +
@@ -489,7 +506,7 @@
     function apptRow(a) {
         var future = a.date >= state.cfg.today && DONE.indexOf(a.status) === -1 && CLOSED.indexOf(a.status) === -1;
         var title = a.services.length ? a.services.join(', ') : (meaningful(a.reason) ? a.reason : 'Appointment');
-        var sub = [timeRange(a), a.is_online ? 'Online' : 'In-person'];
+        var sub = [timeRange(a), a.is_online ? 'Online' : 'In-person', doctorLabel(a)];
         if (a.services.length && meaningful(a.reason)) sub.push(a.reason);
         var action = a.record_id
             ? '<button type="button" class="dp-link" data-dp-open-record="' + a.appointment_id + '"><i class="bi bi-journal-text"></i> View record</button>'
@@ -505,7 +522,7 @@
     function renderAppointments(cur) {
         var el = pane('appointments');
         var appts = cur.patient.appointments;
-        if (!appts.length) { el.innerHTML = emptyNote('bi-calendar-x', 'No appointments with this patient yet.'); return; }
+        if (!appts.length) { el.innerHTML = emptyNote('bi-calendar-x', isDoctor() ? 'No appointments with this patient yet.' : 'This patient has no appointments yet.'); return; }
         var today = state.cfg.today;
         var upcoming = appts.filter(function (a) { return a.date >= today && DONE.indexOf(a.status) === -1 && CLOSED.indexOf(a.status) === -1; })
             .sort(function (a, b) { return (a.date + (a.start || '')).localeCompare(b.date + (b.start || '')); });
@@ -553,7 +570,7 @@
             if (!stillCurrent(cur)) return;
             detail.innerHTML =
                 '<div class="dp-rec-head"><div><h5 class="dp-rec-head__title">Visit on ' + esc(fmtDate(appt.date)) + '</h5>' +
-                '<div class="dp-muted">' + esc([timeRange(appt), appt.is_online ? 'Online' : 'In-person'].filter(Boolean).join(' · ')) + '</div></div>' +
+                '<div class="dp-muted">' + esc([timeRange(appt), appt.is_online ? 'Online' : 'In-person', doctorLabel(appt)].filter(Boolean).join(' · ')) + '</div></div>' +
                 '<div class="dp-rec-head__side">' + statusBadge(appt.status) +
                 '<button type="button" class="dp-link" data-dp-open-chart="' + appt.appointment_id + '"><i class="bi bi-grid-3x3-gap"></i> View chart</button></div></div>' +
                 visitBasics(appt) + visitDetail(j);
@@ -750,10 +767,13 @@
         var host = document.getElementById('dpTreatmentPlan');
         if (!host) return;
         if (!global.TreatmentPlan) { host.innerHTML = emptyNote('bi-exclamation-circle', 'The treatment plan tool did not load. Refresh the page.'); return; }
+        // Admin can review the plan; only the doctor and secretary change it (treatment_plan/save.php).
+        var role = state.cfg.role || 'doctor';
         global.TreatmentPlan.mount(host, {
             patientId: cur.patient.patient_id,
             appointmentId: 0,
-            role: 'doctor',
+            role: role,
+            readOnly: role !== 'doctor' && role !== 'secretary',
             csrfToken: state.cfg.csrfToken || global.doctorCsrfToken || '',
             services: state.cfg.services || []
         });
@@ -867,6 +887,10 @@
                 showTab(next.getAttribute('data-dp-tab'));
             });
         }
+        // The portals swap pages without reloading and re-run init, so document-level
+        // listeners are bound once; they read the live state.
+        if (documentBound) return;
+        documentBound = true;
         document.addEventListener('fullscreenchange', syncChartFullscreenUI);
         document.addEventListener('webkitfullscreenchange', syncChartFullscreenUI);
         document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
@@ -875,7 +899,11 @@
         // Escape also returns to the list, unless a dialog (e.g. the photo lightbox) is open
         // or the chart is full screen (Escape leaves full screen first).
         document.addEventListener('keydown', function (e) {
-            if (e.key !== 'Escape' || !state.current || document.querySelector('.modal.show')) return;
+            // Bootstrap drops .show before this runs, so also check where Escape came from
+            // and body.modal-open (removed only once the modal finishes hiding).
+            if (e.key !== 'Escape' || !state || !state.current || !chartEl()) return;
+            if (document.querySelector('.modal.show') || document.body.classList.contains('modal-open') ||
+                (e.target && e.target.closest && e.target.closest('.modal'))) return;
             var vp = chartViewport();
             if (vp && global.OdontogramFullscreen && global.OdontogramFullscreen.isActive(vp)) { toggleChartFullscreen(true); return; }
             closeChart();
@@ -900,5 +928,29 @@
         if (cfg.openPatientId && patientById(Number(cfg.openPatientId))) openChart(Number(cfg.openPatientId));
     }
 
-    global.DoctorPatients = { init: init, open: function (id, tab) { if (state) openChart(Number(id), tab); } };
+    // patient-account.js reads patients and hands back saved changes through these.
+    function getPatient(id) {
+        return state ? patientById(Number(id)) : null;
+    }
+    function updatePatient(id, fields) {
+        var p = getPatient(id);
+        if (!p) return;
+        Object.keys(fields || {}).forEach(function (k) { p[k] = fields[k]; });
+        if (p.date_of_birth && parseDay(p.date_of_birth)) {
+            var dob = parseDay(p.date_of_birth), today = parseDay(state.cfg.today);
+            var age = today.getFullYear() - dob.getFullYear();
+            if (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate())) age--;
+            p.age = age;
+        }
+        renderList();
+        if (state.current && state.current.patient === p) renderIdentity(p);
+    }
+
+    global.DoctorPatients = {
+        init: init,
+        open: function (id, tab) { if (state) openChart(Number(id), tab); },
+        getPatient: getPatient,
+        updatePatient: updatePatient,
+        role: function () { return state ? (state.cfg.role || 'doctor') : null; }
+    };
 })(window);

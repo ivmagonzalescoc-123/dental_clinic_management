@@ -1,4 +1,4 @@
-/* Doctor "My Patients" list + full-page Patient Chart (doctor/doctor_modules/patients.php). */
+/* Patients list + full-page Patient Chart (includes/patients_module.php), shared by the doctor, secretary and admin portals. */
 
 .dp-page__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .dp-page__sub { font-size: 0.85rem; color: #64748b; margin-top: 2px; }
@@ -181,12 +181,13 @@
 /* ---------- medical records: list + detail ---------- */
 .dp-records { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; align-items: start; }
 .dp-records__list { display: flex; flex-direction: column; gap: 6px; position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; }
-.dp-rec-item { display: flex; flex-direction: column; gap: 1px; text-align: left; width: 100%; background: #fff; border: 1px solid #e5eaf0; border-radius: 10px; padding: 9px 12px; font: inherit; color: inherit; border-left: 3px solid transparent; transition: border-color .15s ease, background-color .15s ease; }
+.dp-rec-item { display: flex; flex-direction: column; gap: 1px; text-align: left; width: 100%; background: #fff; border: 1px solid #e5eaf0; border-radius: 10px; padding: 9px 12px; font: inherit; color: inherit; transition: border-color .15s ease, background-color .15s ease; }
 .dp-rec-item strong { font-size: 0.88rem; color: #0f172a; }
 .dp-rec-item span { font-size: 0.8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dp-rec-item small { font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
 .dp-rec-item:hover { background: #f8fbfd; }
-.dp-rec-item.is-active { border-color: #a9d8ea; border-left-color: #1b7aa3; background: #f3fafd; }
+.dp-rec-item.is-active { border-color: #cfe3ec; background: #e8f4f9; }
+.dp-rec-item.is-active strong { color: #17698c; }
 .dp-rec-item:focus-visible { outline: 2px solid rgba(27, 122, 163, .4); }
 .dp-records__detail { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 16px 18px; min-height: 240px; min-width: 0; }
 .dp-rec-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #eef2f6; }
@@ -294,4 +295,84 @@
 @media (prefers-reduced-motion: reduce) {
     .dp-row, .dp-pane.is-active, .dp-photo img, .dp-stat, .dp-link .bi-arrow-right,
     .dp-back, .dp-back__icon, .dp-back__icon .bi { transition: none; animation: none; }
+}
+
+/* ---------- Add Patient + patient settings (assets/js/patient-account.js) ---------- */
+.dp-add-btn { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; border-radius: 999px; padding: 7px 16px; font-weight: 600; font-size: 0.88rem; }
+
+.dp-chart__title-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.dp-chart__title-row .dp-chart__name { min-width: 0; overflow-wrap: anywhere; }
+.dp-settings-btn {
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    width: 32px; height: 32px; border-radius: 999px; border: 1px solid #cfe3ec; background: #fff; color: #1b7aa3;
+    font-size: 1rem; cursor: pointer; transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+.dp-settings-btn .bi { transition: transform .35s ease; }
+.dp-settings-btn:hover { background: #1b7aa3; border-color: #1b7aa3; color: #fff; }
+.dp-settings-btn:hover .bi { transform: rotate(60deg); }
+.dp-settings-btn:focus-visible { outline: 3px solid rgba(27, 122, 163, .35); outline-offset: 2px; }
+
+.pa-modal .modal-content { border: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px -20px rgba(15, 35, 60, .35); }
+.pa-modal__head { display: flex; align-items: center; gap: 12px; padding: 18px 20px 14px; background: #fff; }
+.pa-modal__head .btn-close { margin-left: auto; align-self: flex-start; }
+.pa-modal__heading { min-width: 0; }
+.pa-modal__title { margin: 0; font-size: 1.1rem; font-weight: 700; color: #0f172a; overflow-wrap: anywhere; }
+.pa-modal__sub { margin: 2px 0 0; font-size: 0.82rem; color: #64748b; overflow-wrap: anywhere; }
+.pa-modal__icon {
+    flex: 0 0 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    background: #eff8fb; color: #1b7aa3; font-size: 1.25rem;
+}
+.pa-modal__avatar {
+    position: relative; flex: 0 0 44px; height: 44px; border-radius: 50%; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center; background: #dcf0f7; color: #17698c; font-weight: 700;
+}
+.pa-modal__avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pa-tabs { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid #e5eaf0; background: #fff; }
+.pa-modal__body { background: #f8fafc; padding: 16px 20px; }
+.pa-modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; background: #fff; border-top: 1px solid #eef2f6; }
+.pa-pane { display: none; }
+.pa-pane.is-active { display: block; animation: dp-fade .18s ease; }
+
+.pa-section { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px; }
+.pa-section + .pa-section { margin-top: 12px; }
+.pa-section__title { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; }
+.pa-section__title i, .pa-card__title i { color: #1b7aa3; font-size: 0.9rem; }
+.pa-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 14px; }
+.pa-field { display: flex; flex-direction: column; gap: 5px; margin: 0; min-width: 0; }
+.pa-field--wide { grid-column: span 2; }
+.pa-field__label { font-size: 0.75rem; font-weight: 700; color: #475569; margin: 0; }
+.pa-field__label em { font-style: normal; color: #dc2626; }
+.pa-modal .form-control, .pa-modal .form-select { min-height: 2.6rem; font-size: 0.9rem; }
+.pa-modal .was-validated .form-control:invalid, .pa-modal .was-validated .form-select:invalid { border-color: #ef4444; background-color: #fff; }
+
+.pa-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.pa-alert { margin-top: 12px; padding: 9px 12px; border-radius: 10px; font-size: 0.84rem; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }
+.pa-alert--success { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
+.pa-alert--warning { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+.pa-alert--info { border-color: #cfe3ec; background: #eff8fb; color: #17698c; }
+
+.pa-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+.pa-facts > div { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 10px 14px; min-width: 0; }
+.pa-facts dt { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; }
+.pa-facts dd { margin: 2px 0 0; font-size: 0.88rem; font-weight: 600; color: #0f172a; overflow-wrap: anywhere; }
+.pa-account { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.pa-card { display: flex; flex-direction: column; gap: 10px; background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px; min-width: 0; }
+.pa-card > .btn { align-self: flex-start; }
+.pa-card .pa-alert { margin-top: 0; }
+.pa-card__title { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 0.9rem; font-weight: 700; color: #0f172a; }
+.pa-card__text { margin: 0; font-size: 0.8rem; color: #64748b; }
+.pa-temp { display: flex; gap: 8px; }
+.pa-temp .form-control { flex: 1 1 auto; min-width: 0; letter-spacing: .04em; }
+
+@media (max-width: 767.98px) {
+    .dp-page__header { flex-wrap: wrap; }
+    .pa-grid, .pa-facts, .pa-account { grid-template-columns: minmax(0, 1fr); }
+    .pa-field--wide { grid-column: auto; }
+    .pa-modal__head, .pa-modal__body, .pa-modal__foot { padding-left: 14px; padding-right: 14px; }
+}
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .pa-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .dp-settings-btn .bi, .pa-pane.is-active { transition: none; animation: none; }
 }

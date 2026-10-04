@@ -1668,11 +1668,47 @@ table a:hover {
     }
 }
 
-/* ========== FORM FOCUS STATES (override vendor Bootstrap's hardcoded blue) ========== */
+/* ========== FORM FIELDS (match the landing login / booking inputs) ==========
+   Thin solid border, soft slate fill, no glow ring. Applies to every text,
+   number, date, textarea and dropdown field across all portals, including
+   modals rendered outside #main. */
+.form-control:not([type="file"]):not([type="color"]):not(.form-control-plaintext),
+.form-select {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    background-color: #f8fafc;
+    color: #0f172a;
+    box-shadow: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.form-control::placeholder { color: #94a3b8; }
+
+.form-control:not(:disabled):not([readonly]):hover,
+.form-select:not(:disabled):hover {
+    border-color: #cbd5e1;
+}
+
 .form-control:focus,
 .form-select:focus {
-    border-color: #9dd2e6 !important;
-    box-shadow: 0 0 0 0.25rem rgba(27, 122, 163, 0.25) !important;
+    border-color: #1b7aa3 !important;
+    background-color: #fff;
+    box-shadow: none !important;
+    outline: none;
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid,
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: #ef4444 !important;
+    background-color: #fff;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    background-color: #f1f5f9;
+    color: #64748b;
 }
 
 /* ========== DROPDOWN MENU ========== */
@@ -1750,10 +1786,10 @@ table a:hover {
     -webkit-appearance: none;
     appearance: none;
     border-radius: 999px !important;
-    border: 1px solid #c9deef !important;
+    border: 1px solid #e2e8f0 !important;
     padding: 8px 34px 8px 36px !important;
     font-size: 0.9rem;
-    background: #f8fbff;
+    background: #f8fafc;
     width: 100%;
 }
 
@@ -2811,17 +2847,7 @@ table a:hover {
 #main .card-body .form-select {
     font-family: var(--font-body);
     font-size: 13.5px;
-    border-radius: 8px;
-    border-color: var(--border-color);
     padding: 8px 12px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-#main .section .form-control:focus,
-#main .section .form-select:focus,
-#main .card-body .form-control:focus,
-#main .card-body .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.15);
 }
 
 /* -- Alert consistency -- */

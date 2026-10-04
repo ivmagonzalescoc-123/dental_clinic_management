@@ -2092,14 +2092,15 @@ $reportNavQuery = array_merge(
 }
 .clinic-reports-filter .form-select,
 .clinic-reports-filter .form-control {
-    border-radius: 8px;
+    border-radius: 0.75rem;
     border: 1px solid #e2e8f0;
     font-size: 13px;
 }
 .clinic-reports-filter .form-select:focus,
 .clinic-reports-filter .form-control:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(27, 122, 163, 0.1);
+    border-color: #1b7aa3;
+    background-color: #fff;
+    box-shadow: none;
 }
 .dental-kpi-card {
     border-radius: 14px;
@@ -2592,7 +2593,7 @@ $reportNavQuery = array_merge(
 }
 .ai-chat-input {
     flex: 1;
-    border: 1.5px solid #e2e8f0;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
     padding: 9px 12px;
     font-size: 13px;
@@ -2609,7 +2610,7 @@ $reportNavQuery = array_merge(
 .ai-chat-input:focus {
     border-color: #1b7aa3;
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(27, 122, 163,0.1);
+    box-shadow: none;
 }
 .ai-chat-send {
     width: 38px;

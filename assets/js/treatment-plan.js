@@ -2,7 +2,8 @@
  * Treatment plan widget (doctor EHR + secretary EHR queue).
  *
  *   TreatmentPlan.mount(containerEl, {
- *     patientId, appointmentId, role: 'doctor' | 'secretary', csrfToken,
+ *     patientId, appointmentId, role: 'doctor' | 'secretary' | 'admin', csrfToken,
+ *     readOnly,                                   // view only: no add form or item actions
  *     services: [{ service_id, name, price }],   // optional; list.php sends them otherwise
  *     onCompleted(item), onUncompleted(item),     // doctor: sync "Services Performed"
  *     notify(message, type)
@@ -213,6 +214,7 @@
   }
 
   Widget.prototype.renderItem = function (i) {
+    if (this.opts.readOnly) return this.renderReadOnlyItem(i)
     if (this.editingId === i.item_id) {
       return '<li class="tp-item tp-item--editing">' + this.renderAddForm(i) + '</li>'
     }
@@ -258,6 +260,24 @@
       '</li>'
   }
 
+  Widget.prototype.renderReadOnlyItem = function (i) {
+    var st = STATUS[i.status] || { label: i.status, cls: '' }
+    var when = i.status === 'completed' && i.completed_appointment_date
+      ? '<span class="tp-done-note">' + esc(fmtDate(i.completed_appointment_date)) + '</span>'
+      : ''
+    return '' +
+      '<li class="tp-item tp-item--' + esc(i.status) + '">' +
+        '<span class="tp-tooth" title="' + (i.tooth_number ? 'Tooth ' + esc(i.tooth_number) : 'Whole mouth') + '">' + (i.tooth_number ? esc(i.tooth_number) : '<i class="bi bi-circle"></i>') + '</span>' +
+        '<div class="tp-main">' +
+          '<div class="tp-name">' + esc(i.service_name || ('Service #' + i.service_id)) + '</div>' +
+          (i.notes ? '<div class="tp-notes">' + esc(i.notes) + '</div>' : '') +
+        '</div>' +
+        '<span class="tp-badge ' + st.cls + '">' + esc(st.label) + '</span>' +
+        '<span class="tp-cost">' + esc(peso(i.estimated_cost)) + '</span>' +
+        '<div class="tp-actions">' + when + '</div>' +
+      '</li>'
+  }
+
   Widget.prototype.render = function () {
     var t = this.totals
     var head = '' +
@@ -275,7 +295,7 @@
     if (this.loadError) {
       body = '<div class="tp-empty text-danger">Couldn\'t load the treatment plan.</div>'
     } else if (!this.items.length) {
-      body = '<div class="tp-empty">No treatment plan yet. Add the procedures this patient needs, then give them the estimate.</div>'
+      body = '<div class="tp-empty">' + (this.opts.readOnly ? 'No treatment plan yet.' : 'No treatment plan yet. Add the procedures this patient needs, then give them the estimate.') + '</div>'
     } else {
       var byPhase = {}
       this.items.forEach(function (i) { (byPhase[i.phase] = byPhase[i.phase] || []).push(i) })
@@ -286,7 +306,7 @@
       }).join('')
     }
 
-    this.el.innerHTML = head + this.renderAddForm() + body
+    this.el.innerHTML = head + (this.opts.readOnly ? '' : this.renderAddForm()) + body
   }
 
   function fmtDate(d) {

@@ -155,7 +155,7 @@ function renderDocTable(rows, date) {
         if (isToday) {
             h += '<td>';
             if (canStart) {
-                h += '<button class="btn btn-sm btn-primary" onclick="doStartSession(' + row.appointment_id + ')"><i class="bi bi-play-circle"></i> Start Session</button>';
+                h += '<button class="btn btn-sm btn-primary" onclick="doStartSession(' + row.appointment_id + ')"><i class="bi bi-play-circle"></i> Start Visit</button>';
             } else if (ongoing) {
                 h += '<a class="btn btn-sm btn-outline-primary" href="doctor.php?page=ehr&appointment_id=' + row.appointment_id + '"><i class="bi bi-journal-medical"></i> Continue EHR</a>';
             } else if (isPending) {
@@ -172,7 +172,7 @@ function renderDocTable(rows, date) {
 }
 
 async function doStartSession(appointmentId) {
-    if (!(await showConfirmModal({ title: 'Start Session', message: 'Start session for this patient?', confirmText: 'Start Session' }))) return;
+    if (!(await showConfirmModal({ title: 'Start Visit', message: 'Start the visit for this patient?', confirmText: 'Start Visit' }))) return;
     const fd = new FormData();
     fd.append('appointment_id', appointmentId);
     fd.append('csrf_token', doctorCsrfToken);
@@ -184,7 +184,7 @@ async function doStartSession(appointmentId) {
             if (data.schedule_id) url += '&schedule_id=' + data.schedule_id;
             window.location.href = url;
         } else {
-            notifyDoctorArrival(data.message || 'Failed to start session', 'danger');
+            notifyDoctorArrival(data.message || 'Could not start the visit', 'danger');
         }
     } catch(e) { notifyDoctorArrival('Error: ' + e.message, 'danger'); }
 }

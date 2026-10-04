@@ -112,6 +112,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/module-content-ux.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
 </head>
 
 <body class="admin-portal">
@@ -183,6 +184,12 @@ switch ($role_key) {
                 <a class="nav-link collapsed" href="admin.php?page=dashboard" data-tooltip="Dashboard" title="Dashboard">
                     <i class="bi bi-grid"></i>
                     <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=patients" data-tooltip="Patients" title="Patients">
+                    <i class="bi bi-people"></i>
+                    <span>Patients</span>
                 </a>
             </li>
             <li class="nav-item">
@@ -267,6 +274,9 @@ switch ($role_key) {
                             switch ($page) {
                                 case "dashboard":
                                     include "admin_modules/dashboard.php";
+                                    break;
+                                case "patients":
+                                    include "admin_modules/patients.php";
                                     break;
                                 case "manage_users":
                                     include "admin_modules/manage_users.php";
@@ -367,6 +377,10 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/portal-search.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/profiling-display.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/treatment-plan.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/doctor-patient-profile.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
@@ -392,7 +406,8 @@ switch ($role_key) {
                     inputId: 'adminSearch',
                     keywords: {
                         "dashboard": ["home", "overview", "summary"],
-                        "manage_users": ["users", "accounts", "staff", "patients", "doctor", "secretary"],
+                        "patients": ["patient list", "patient accounts", "add patient", "charts", "profiles", "history"],
+                        "manage_users": ["users", "accounts", "staff", "doctor", "secretary"],
                         "services": ["procedures", "pricing", "clinic services", "treatments"],
                         "billing": ["invoices", "payments", "payment history", "balance", "receipts"],
                         "doctor_management": ["doctor", "dentist", "providers", "schedule"],
@@ -411,12 +426,6 @@ switch ($role_key) {
                             "title": "Clinic Users",
                             "href": "admin.php?page=manage_users&type=users",
                             "keywords": ["staff", "doctor", "secretary", "admin"],
-                            "parent": "Manage Users"
-                        },
-                        {
-                            "title": "Patients",
-                            "href": "admin.php?page=manage_users&type=patients",
-                            "keywords": ["patient accounts"],
                             "parent": "Manage Users"
                         },
                         {
