@@ -660,61 +660,64 @@
           <mxGeometry x="0" y="430" width="250" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_apt" value="appointments" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fce7f3;strokeColor=#f9a8d4;fontColor=#9d174d;html=1;" vertex="1" parent="1">
-          <mxGeometry x="1670" y="535" width="250" height="480" as="geometry"/>
+          <mxGeometry x="1670" y="535" width="250" height="505" as="geometry"/>
         </mxCell>
         <mxCell id="c199" value="PK appointment_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="30" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c200" value="appointment_date DATE" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c_apt_ref" value="reference_code VARCHAR UQ" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="55" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c201" value="FK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
+        <mxCell id="c200" value="appointment_date DATE" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="80" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c202" value="FK user_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
+        <mxCell id="c201" value="FK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="105" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c203" value="FK timeslot_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
+        <mxCell id="c202" value="FK user_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="130" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c204" value="FK booking_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
+        <mxCell id="c203" value="FK timeslot_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="155" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c205" value="FK rescheduled_from INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
+        <mxCell id="c204" value="FK booking_id INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="180" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c206" value="reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c205" value="FK rescheduled_from INT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="205" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c207" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c206" value="reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="230" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c208" value="is_online_appointment TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c207" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="255" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c209" value="is_emergency TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c208" value="is_online_appointment TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="280" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c210" value="needs_reassignment TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c209" value="is_emergency TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="305" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c211" value="notes TEXT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c210" value="needs_reassignment TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="330" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c212" value="cancellation_reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c211" value="notes TEXT" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="355" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c213" value="completed_by_doctor_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c212" value="cancellation_reason VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="380" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c214" value="session_started_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c213" value="completed_by_doctor_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="405" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c215" value="secretary_records_completed_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c214" value="session_started_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="430" width="250" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c216" value="created_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+        <mxCell id="c215" value="secretary_records_completed_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
           <mxGeometry x="0" y="455" width="250" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="c216" value="created_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#fce7f3;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_apt">
+          <mxGeometry x="0" y="480" width="250" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_arr" value="appointment_reschedule_requests" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#fce7f3;strokeColor=#f9a8d4;fontColor=#9d174d;html=1;" vertex="1" parent="1">
           <mxGeometry x="1670" y="1055" width="250" height="330" as="geometry"/>

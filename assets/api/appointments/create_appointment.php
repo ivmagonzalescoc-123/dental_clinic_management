@@ -22,6 +22,7 @@ try {
     include __DIR__ . '/availability_guard.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notifications.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/booking_helpers.php';
     if (!$conn) throw new Exception('Database connection failed');
 
     $csrfToken = $_POST['csrf_token'] ?? '';
@@ -292,6 +293,8 @@ try {
         $status = 'confirmed';
     }
 
+    // Before the transaction: adding the column (first run only) would commit it early.
+    appointments_ensure_reference_column($conn);
     $conn->begin_transaction();
 
     // Insert appointment (service is linked via selected_services, not appointments.service_id)
@@ -309,6 +312,7 @@ try {
     if (!$stmt->execute()) throw new Exception('Insert failed: ' . $stmt->error);
     $appointment_id = (int)$conn->insert_id;
     $stmt->close();
+    $referenceCode = appointment_assign_reference($conn, $appointment_id);
 
     // Preserve legacy payload support by storing any preselected service in selected_services.
     if ($service_id > 0) {
@@ -433,6 +437,7 @@ try {
         'success'        => true,
         'message'        => $responseMsg,
         'appointment_id' => $appointment_id,
+        'reference_code' => $referenceCode,
         'status'         => $status,
     ]);
 

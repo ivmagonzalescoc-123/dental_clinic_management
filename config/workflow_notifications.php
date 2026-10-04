@@ -2,6 +2,7 @@
 
 include_once __DIR__ . '/reminders.php';
 include_once __DIR__ . '/email_templates.php';
+include_once __DIR__ . '/booking_helpers.php';
 
 if (!function_exists('wf_get_secretary_user_ids')) {
     function wf_get_secretary_user_ids($conn)
@@ -286,7 +287,8 @@ if (!function_exists('wf_format_patient_appointment')) {
     function wf_format_patient_appointment($conn, $patientId, $appointmentId)
     {
         $name = wf_lookup_patient_name($conn, $patientId);
-        $id = (int)$appointmentId;
-        return $id > 0 ? ($name . ' (Appt #' . $id . ')') : $name;
+        // People see the appointment's reference number, never the internal ID.
+        $ref = (int)$appointmentId > 0 ? appointment_assign_reference($conn, (int)$appointmentId) : '';
+        return $ref !== '' ? ($name . ' (Ref ' . $ref . ')') : $name;
     }
 }

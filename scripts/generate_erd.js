@@ -328,6 +328,7 @@ const bookings = addTable('t_bk2', 'bookings', 1080, 40, [
 
 const appointments = addTable('t_apt', 'appointments', 1080, 535, [
   { name: 'appointment_id', type: 'PK', dtype: 'INT' },
+  { name: 'reference_code', dtype: 'VARCHAR UQ' },
   { name: 'appointment_date', dtype: 'DATE' },
   { name: 'patient_id', type: 'FK', dtype: 'INT' },
   { name: 'user_id', type: 'FK', dtype: 'INT' },

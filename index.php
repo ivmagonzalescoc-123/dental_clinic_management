@@ -1140,10 +1140,7 @@ $aboutPoints = [
 
             <div class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-24 pb-16 w-full lg:grid-cols-[1.15fr,0.85fr] lg:py-28">
                 <div class="reveal is-visible">
-                    <span class="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); backdrop-filter: blur(4px);">
-                        <span class="h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
-                        <span class="text-white/90" style="font-weight: 500;">Open at 9:00 AM Monday to Saturdays</span>
-                    </span>
+                    
 
                     <h1 class="mt-6 font-display text-white" style="font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.15; font-weight: 600;">
                         Your Smile Deserves the <br class="hidden sm:inline"> <span style="color: #9dd2e6;">Best Care</span>
@@ -2249,7 +2246,7 @@ $aboutPoints = [
             // visitor having to press "Track" again. Interval is short (4s) so status
             // changes made by the secretary/doctor feel near-real-time on the landing page.
             var pollTimer = null;
-            var pollQuery = null; // { id, isNumeric }
+            var pollQuery = null; // { id }
             var prevSteps = { step1: false, step2: false, step3: false };
             var POLL_INTERVAL_MS = 4000;
             var activeController = null; // aborts a stale in-flight request when a newer one starts
@@ -2340,7 +2337,7 @@ $aboutPoints = [
                 if (!pollQuery) return;
                 if (liveEl) liveEl.classList.remove('hidden');
                 pollTimer = setTimeout(function() {
-                    fetchTracking(pollQuery.id, pollQuery.isNumeric, { silent: true });
+                    fetchTracking(pollQuery.id, { silent: true });
                 }, POLL_INTERVAL_MS);
             }
 
@@ -2389,7 +2386,7 @@ $aboutPoints = [
                 cardShown = true;
             }
 
-            function fetchTracking(id, isNumeric, opts) {
+            function fetchTracking(id, opts) {
                 opts = opts || {};
                 var silent = !!opts.silent;
 
@@ -2405,21 +2402,21 @@ $aboutPoints = [
                 var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
                 activeController = controller;
 
-                var trackParam = isNumeric ? ('booking_id=' + encodeURIComponent(id)) : ('tracking_code=' + encodeURIComponent(id));
+                var trackParam = 'tracking_code=' + encodeURIComponent(id);
                 return fetch('assets/api/bookings/track_booking.php?' + trackParam, { signal: controller ? controller.signal : undefined })
                     .then(function(r) { return r.json(); })
                     .then(async function(data) {
                         if (!silent) setBtnBusy(false);
                         if (!data.success) {
                             if (!silent) {
-                                errorEl.textContent = data.message || 'Booking not found.';
+                                errorEl.textContent = data.message || 'No booking or appointment matches that reference number.';
                                 errorEl.classList.remove('hidden');
                             }
                             stopPolling();
                             return;
                         }
 
-                        document.getElementById('trackBookingId').textContent = data.tracking_code || data.booking_id;
+                        document.getElementById('trackBookingId').textContent = data.tracking_code || id;
                         var statusEl = document.getElementById('trackBookingStatus');
                         var statusTextEl = document.getElementById('trackBookingStatusText');
                         var descEl = document.getElementById('trackBookingDesc');
@@ -2479,7 +2476,7 @@ $aboutPoints = [
                         if (data.step3) {
                             stopPolling(); // reached the final step — done
                         } else {
-                            pollQuery = { id: id, isNumeric: isNumeric };
+                            pollQuery = { id: id };
                             scheduleNextPoll();
                         }
                     })
@@ -2496,13 +2493,11 @@ $aboutPoints = [
 
             function doTrack() {
                 var raw = (input.value || '').trim();
-                // Old-style plain numeric booking numbers (from links/emails sent before
-                // the tracking code existed) still work via booking_id; anything else is
-                // treated as the newer, unguessable alphanumeric tracking code.
-                var isNumeric = /^[0-9]+$/.test(raw);
-                var id = isNumeric ? raw : raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                // Only the reference number works (the same 8-character code for guest
+                // bookings and appointments); a pasted "Ref " prefix is ignored.
+                var id = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase().replace(/^REF(?=[A-Z0-9]{8}$)/, '');
                 if (!id) {
-                    errorEl.textContent = 'Please enter a valid booking reference number.';
+                    errorEl.textContent = 'Please enter your reference number.';
                     errorEl.classList.remove('hidden');
                     resultCard.classList.add('hidden');
                     return;
@@ -2513,7 +2508,7 @@ $aboutPoints = [
                 errorEl.classList.add('hidden');
                 resultCard.classList.add('hidden');
                 cardShown = false;
-                fetchTracking(id, isNumeric, { silent: false });
+                fetchTracking(id, { silent: false });
             }
 
             if (btn) btn.addEventListener('click', doTrack);
@@ -2527,7 +2522,7 @@ $aboutPoints = [
                 if (document.hidden) {
                     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
                 } else if (pollQuery && !pollTimer) {
-                    fetchTracking(pollQuery.id, pollQuery.isNumeric, { silent: true });
+                    fetchTracking(pollQuery.id, { silent: true });
                 }
             });
         })();
@@ -3373,14 +3368,14 @@ $aboutPoints = [
 
                 if (data.success) {
                     // Show success: boxes merge into a shield, it gets verified, then the reference number is revealed
-                    document.getElementById('booking-ref-display').textContent = data.tracking_code || ('#' + (data.booking_id || ''));
+                    document.getElementById('booking-ref-display').textContent = data.tracking_code || '';
                     playBookingVerify(function() {
                         swapBookingStep(document.getElementById('booking-otp-section'), document.getElementById('booking-success-section'), revealTrackingCode);
                     });
 
                     // Copy button
                     document.getElementById('copyBookingRefBtn')?.addEventListener('click', function() {
-                        const ref = data.tracking_code || ('#' + (data.booking_id || ''));
+                        const ref = data.tracking_code || '';
                         if (navigator.clipboard && navigator.clipboard.writeText) {
                             navigator.clipboard.writeText(ref);
                         } else {

@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 require_once __DIR__ . '/../../../config/database.php';
 require_once __DIR__ . '/../../../config/security.php';
+require_once __DIR__ . '/../../../config/booking_helpers.php';
 
 security_start_session();
 
@@ -33,12 +34,16 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
 
 $conn->query("ALTER TABLE appointments ADD INDEX IF NOT EXISTS idx_patient_date (patient_id, appointment_date DESC)");
 
-$historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+appointments_ensure_reference_column($conn);
+$historySql = "SELECT a.appointment_id, a.reference_code, a.appointment_date, a.reason, a.status, a.created_at,
                       a.user_id, a.timeslot_id,
                       u.first_name AS doctor_first_name, u.last_name AS doctor_last_name,
                       t.start_time, t.end_time,
                       (SELECT COUNT(*) FROM appointment_reschedule_requests rr
-                       WHERE rr.appointment_id = a.appointment_id AND rr.status = 'pending') AS pending_reschedule_count
+                       WHERE rr.appointment_id = a.appointment_id AND rr.status = 'pending') AS pending_reschedule_count,
+                      (SELECT GROUP_CONCAT(DISTINCT sv.service_name ORDER BY sv.service_name SEPARATOR ', ')
+                         FROM selected_services ss JOIN services sv ON sv.service_id = ss.service_id
+                        WHERE ss.appointment_id = a.appointment_id) AS services
                FROM appointments a
                LEFT JOIN users u ON u.user_id = a.user_id
                LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
@@ -60,6 +65,7 @@ $appointments = [];
 while ($row = $res->fetch_assoc()) {
     $appointments[] = [
         'appointment_id' => (int)$row['appointment_id'],
+        'reference_code' => (string)($row['reference_code'] ?? ''),
         'appointment_date' => $row['appointment_date'],
         'reason' => $row['reason'],
         'status' => $row['status'],
@@ -69,6 +75,7 @@ while ($row = $res->fetch_assoc()) {
         'start_time' => $row['start_time'],
         'end_time' => $row['end_time'],
         'pending_reschedule_count' => (int)($row['pending_reschedule_count'] ?? 0),
+        'services' => (string)($row['services'] ?? ''),
     ];
 }
 $stmt->close();

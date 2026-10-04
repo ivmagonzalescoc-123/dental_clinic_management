@@ -4,6 +4,8 @@ include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/booking_helpers.php';
+appointments_ensure_reference_column($conn);
 
 function appointment_can_transition_doctor(string $from, string $to): bool
 {
@@ -167,6 +169,7 @@ $allAppointments = [];
 $all_sql = "
     SELECT
         a.appointment_id,
+        a.reference_code,
         a.patient_id,
         a.appointment_date,
         a.reason,
@@ -208,6 +211,7 @@ $appointmentEntries = [];
 $generalSql = "
     SELECT
         a.appointment_id,
+        a.reference_code,
         a.patient_id,
         p.first_name,
         p.last_name,
@@ -423,6 +427,7 @@ if ($stmt) {
                                         <td class="record-col-cell">
                                             <button type="button" class="btn btn-sm btn-outline-secondary" onclick='openDoctorAppointmentDetailsModal(<?php echo htmlspecialchars(json_encode([
                                                 "appointment_id"      => (int)$appt["appointment_id"],
+                                                "reference_code"      => (string)($appt["reference_code"] ?? ""),
                                                 "patient_name"        => trim((string)$appt["first_name"] . " " . (string)$appt["last_name"]),
                                                 "email"                => (string)($appt["email"] ?? ""),
                                                 "phone_number"         => (string)($appt["phone_number"] ?? ""),
@@ -1233,7 +1238,7 @@ function openDoctorAppointmentDetailsModal(appt) {
     const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
     document.getElementById('docApptDetailsAvatar').textContent = initials;
 
-    setText('docApptDetailsRef', appt.appointment_id ? ('#' + appt.appointment_id) : '');
+    setText('docApptDetailsRef', appt.reference_code ? ('Ref ' + appt.reference_code) : '');
 
     let formattedDate = appt.appointment_date;
     if (formattedDate) {

@@ -2,6 +2,7 @@
 
 include_once __DIR__ . '/reminders.php';
 include_once dirname(__DIR__) . '/assets/api/appointments/availability_guard.php';
+include_once __DIR__ . '/booking_helpers.php';
 
 if (!function_exists('workflow_create_followup_appointment')) {
     /**
@@ -52,9 +53,11 @@ if (!function_exists('workflow_create_followup_appointment')) {
         $bookStartTime = (string)$slotRow['start_time'];
         $bookEndTime = (string)$slotRow['end_time'];
 
-        $followupReason = 'Follow-up from appointment #' . $sourceAppointmentId;
+        $sourceRef = appointment_assign_reference($conn, $sourceAppointmentId);
+        $sourceLabel = $sourceRef !== '' ? 'visit Ref ' . $sourceRef : 'a previous visit';
+        $followupReason = 'Follow-up from ' . $sourceLabel;
         $followupStatus = 'confirmed';
-        $followupNotes = 'Follow-up scheduled by secretary for appointment #' . $sourceAppointmentId;
+        $followupNotes = 'Follow-up scheduled by secretary for ' . $sourceLabel;
 
         $insAppt = $conn->prepare(
             'INSERT INTO appointments
@@ -81,6 +84,7 @@ if (!function_exists('workflow_create_followup_appointment')) {
         }
         $followupAppointmentId = (int)$conn->insert_id;
         $insAppt->close();
+        appointment_assign_reference($conn, $followupAppointmentId);
 
         $updSlot = $conn->prepare("UPDATE timeslot SET status = 'booked' WHERE timeslot_id = ? AND status = 'available'");
         if ($updSlot) {

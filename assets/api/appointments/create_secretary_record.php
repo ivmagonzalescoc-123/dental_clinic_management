@@ -172,6 +172,9 @@ try {
         $followUpDateDb = $followUpDate;
     }
 
+    // Follow-ups created below get a reference number; make sure the column exists first,
+    // since adding it later would commit this transaction early.
+    appointments_ensure_reference_column($conn);
     $conn->begin_transaction();
 
     ensure_clinical_records_profiling_column($conn);

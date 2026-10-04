@@ -2,6 +2,8 @@
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
+include_once dirname(dirname(__DIR__)) . '/config/booking_helpers.php';
+appointments_ensure_reference_column($conn);
 security_ensure_work_type_column($conn);
 appt_ensure_cancellation_reason_column($conn);
 
@@ -39,7 +41,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS appointment_reschedule_requests (
 // Fetch appointment history for this patient
 $appointment_history = [];
 if ($patient_id) {
-        $historySql = "SELECT a.appointment_id, a.appointment_date, a.reason, a.status, a.created_at,
+        $historySql = "SELECT a.appointment_id, a.reference_code, a.appointment_date, a.reason, a.status, a.created_at,
                                                     a.cancellation_reason,
                                                     a.user_id,
                                                     a.timeslot_id,
@@ -50,7 +52,10 @@ if ($patient_id) {
                                                             FROM appointment_reschedule_requests rr
                                                             WHERE rr.appointment_id = a.appointment_id
                                                                 AND rr.status = 'pending'
-                                                    ) AS pending_reschedule_count
+                                                    ) AS pending_reschedule_count,
+                      (SELECT GROUP_CONCAT(DISTINCT sv.service_name ORDER BY sv.service_name SEPARATOR ', ')
+                         FROM selected_services ss JOIN services sv ON sv.service_id = ss.service_id
+                        WHERE ss.appointment_id = a.appointment_id) AS services
                    FROM appointments a
                    LEFT JOIN users u ON u.user_id = a.user_id
                    LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
@@ -125,27 +130,50 @@ if ($patient_id) {
     color: #64748b;
     font-style: italic;
 }
-.patient-appt-history-search-toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    align-items: center;
-    margin-bottom: 0.85rem;
-    gap: 0.5rem 0.75rem;
+/* Appointment history: compact visit cards, same look as Clinic Records. */
+.ah { margin-top: 1.75rem; }
+.ah-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.ah-title { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; }
+.ah-title i { color: #1b7aa3; }
+.ah-sub { font-size: 0.82rem; color: #64748b; margin-top: 2px; }
+.ah-count { font-size: 0.8rem; font-weight: 700; color: #17698c; background: #eff8fb; border-radius: 999px; padding: 4px 12px; white-space: nowrap; }
+.ah-count:empty { display: none; }
+.ah-search { width: 100%; max-width: 420px; margin-bottom: 12px; }
+.ah-list { display: flex; flex-direction: column; gap: 8px; }
+.ah-row {
+    display: grid; grid-template-columns: 56px minmax(0, 1fr) auto auto; align-items: center; gap: 14px;
+    padding: 10px 14px; background: #fff; border: 1px solid #e5eaf0; border-radius: 12px;
 }
-.patient-appt-history-search-wrap {
-    width: min(340px, 100%);
-    flex: 1 1 220px;
+.ah-date {
+    width: 56px; height: 56px; border-radius: 12px; background: #f1f5f9; color: #475569;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1;
 }
-.patient-appt-history-search-meta {
-    font-size: 0.85rem;
-    color: #64748b;
-    flex: 1 1 100%;
-}
-@media (min-width: 576px) {
-    .patient-appt-history-search-meta {
-        flex: 0 0 auto;
-        margin-left: auto;
-    }
+.ah-date strong { font-size: 1.15rem; }
+.ah-date small { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.ah-row.is-upcoming { border-color: #cfe3ec; }
+.ah-row.is-upcoming .ah-date { background: #1b7aa3; }
+#main .ah-row.is-upcoming .ah-date strong, #main .ah-row.is-upcoming .ah-date small { color: #fff !important; }
+.ah-main { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.ah-name { font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ah-desc { font-size: 0.84rem; color: #334155; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.ah-meta { font-size: 0.78rem; color: #64748b; }
+.ah-meta .bi { color: #94a3b8; }
+.ah-date { height: 62px !important; }
+.ah-date .ah-dow { font-size: 0.6rem; opacity: .8; }
+.ah-status .badge { font-size: 0.74rem; }
+.ah-action:empty { display: none; }
+.ah-btn { border-radius: 999px; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
+.ah-pending { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+@media (max-width: 575.98px) {
+    .ah-head { align-items: flex-start; }
+    .ah-search { max-width: none; }
+    .ah-row { grid-template-columns: 52px minmax(0, 1fr); gap: 6px 12px; padding: 10px 12px; align-items: start; }
+    .ah-date { grid-row: 1 / span 2; }
+    .ah-status, .ah-action { grid-column: 2; }
+    .ah-status + .ah-action { margin-top: -2px; }
+    .ah-date { width: 52px; height: 52px; }
+    .ah-date small { font-size: 0.56rem; white-space: nowrap; }
+    .ah-name { white-space: normal; }
 }
 .patient-appt-booking-row {
     align-items: flex-start;
@@ -379,131 +407,51 @@ if ($patient_id) {
             </form>
         </div>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
-            <div>
-                <h6 class="mb-1">Appointment History</h6>
+        <section class="ah" aria-labelledby="apptHistoryTitle">
+            <div class="ah-head">
+                <div>
+                    <h6 class="ah-title" id="apptHistoryTitle"><i class="bi bi-clock-history" aria-hidden="true"></i> Appointment History</h6>
+                    <p class="ah-sub mb-0">Your past and upcoming appointments.</p>
+                </div>
+                <div id="patientApptHistorySearchMeta" class="ah-count"></div>
             </div>
-        </div>
-
-        <div class="unified-table-search-toolbar patient-appt-history-search-toolbar">
-            <div class="unified-table-search-wrap module-search-inline patient-appt-history-search-wrap">
+            <div class="unified-table-search-wrap module-search-inline ah-search">
                 <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
                 <input
                     type="search"
                     id="patientApptHistorySearch"
                     class="form-control unified-table-search-input"
-                    placeholder="Search appointment #, date, doctor, time, reason, or status..."
+                    placeholder="Search by date, reference no., doctor, reason, or status..."
                     autocomplete="off"
                     aria-label="Search appointment history"
                 >
                 <button type="button" class="unified-table-search-clear" id="patientApptHistorySearchClear" aria-label="Clear search" style="display:none;">&times;</button>
             </div>
-            <div id="patientApptHistorySearchMeta" class="patient-appt-history-search-meta"></div>
-        </div>
-
-        <div id="apptHistoryPane">
-            <div class="history-table-wrap table-responsive">
-                <table class="table table-hover align-middle patient-appt-history-table" data-skip-table-search="1">
-                    <thead>
-                        <tr>
-                            <th>Appointment #</th>
-                            <th>Date</th>
-                            <th>Doctor</th>
-                            <th>Time Slot</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="patientApptHistoryBody">
-                        <?php if (empty($appointment_history)): ?>
-                            <tr id="patientApptHistoryEmpty">
-                                <td colspan="7" class="text-center py-4 history-empty">No appointment history yet.</td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($appointment_history as $history): ?>
-                                <?php
-                                $statusKey = strtolower((string)($history['status'] ?? 'scheduled'));
-                                $statusLabel = ucwords(str_replace('_', ' ', $statusKey));
-                                $statusBadge = 'secondary';
-                                if ($statusKey === 'confirmed') {
-                                    $statusBadge = 'primary';
-                                } elseif ($statusKey === 'arrived') {
-                                    $statusBadge = 'success';
-                                } elseif ($statusKey === 'checked_in') {
-                                    $statusBadge = 'info';
-                                } elseif ($statusKey === 'in_progress') {
-                                    $statusBadge = 'warning';
-                                } elseif ($statusKey === 'completed') {
-                                    $statusBadge = 'success';
-                                } elseif ($statusKey === 'missed') {
-                                    $statusBadge = 'warning';
-                                } elseif ($statusKey === 'cancelled' || $statusKey === 'no_show') {
-                                    $statusBadge = 'danger';
-                                }
-
-                                $doctorName = trim((string)($history['doctor_first_name'] ?? '') . ' ' . (string)($history['doctor_last_name'] ?? ''));
-                                if ($doctorName === '') {
-                                    $doctorName = 'To be assigned';
-                                }
-
-                                $slotLabel = 'TBD';
-                                if (!empty($history['start_time']) && !empty($history['end_time'])) {
-                                    $slotLabel = date('g:i A', strtotime((string)$history['start_time'])) . ' - ' . date('g:i A', strtotime((string)$history['end_time']));
-                                }
-
-                                $apptDateRaw = (string)($history['appointment_date'] ?? '');
-                                $apptDateTs = $apptDateRaw !== '' ? strtotime($apptDateRaw) : false;
-                                $isFutureOrToday = ($apptDateTs !== false) ? (date('Y-m-d', $apptDateTs) >= date('Y-m-d')) : false;
-                                $slotEndRaw = (string)($history['end_time'] ?? '');
-                                $apptDateOnly = ($apptDateTs !== false) ? date('Y-m-d', $apptDateTs) : '';
-                                $slotEndTs = false;
-                                if ($apptDateOnly !== '' && $slotEndRaw !== '') {
-                                    $slotEndTs = strtotime($apptDateOnly . ' ' . $slotEndRaw);
-                                }
-                                $baseTimeTs = $slotEndTs !== false ? $slotEndTs : $apptDateTs;
-                                $isComputedMissed = in_array($statusKey, ['scheduled', 'confirmed'], true) && ($baseTimeTs !== false) && ($baseTimeTs < time());
-                                if ($isComputedMissed) {
-                                    $statusKey = 'missed';
-                                    $statusLabel = 'Missed';
-                                    $statusBadge = 'warning';
-                                }
-                                $hasPendingResched = ((int)($history['pending_reschedule_count'] ?? 0) > 0);
-                                $canRequestReschedule = in_array($statusKey, ['scheduled', 'confirmed', 'missed'], true) && !$hasPendingResched;
-                                ?>
-                                <tr class="patient-appt-history-row">
-                                    <td data-label="Appointment #">#<?php echo (int)($history['appointment_id'] ?? 0); ?></td>
-                                    <td data-label="Date"><?php echo !empty($history['appointment_date']) ? htmlspecialchars(date('M d, Y', strtotime((string)$history['appointment_date']))) : 'N/A'; ?></td>
-                                    <td data-label="Doctor"><?php echo htmlspecialchars($doctorName); ?></td>
-                                    <td data-label="Time Slot"><?php echo htmlspecialchars($slotLabel); ?></td>
-                                    <td data-label="Reason"><?php echo htmlspecialchars((string)($history['reason'] ?? '')); ?></td>
-                                    <td data-label="Status">
-                                        <span class="badge bg-<?php echo $statusBadge; ?>"><?php echo htmlspecialchars($statusLabel); ?></span>
-                                    </td>
-                                    <td data-label="Actions">
-                                        <?php if ($canRequestReschedule): ?>
-                                            <button
-                                                type="button"
-                                                class="btn btn-sm btn-outline-warning patient-resched-btn"
-                                                data-appointment-id="<?php echo (int)$history['appointment_id']; ?>"
-                                                data-doctor-id="<?php echo (int)($history['user_id'] ?? 0); ?>"
-                                                data-current-date="<?php echo htmlspecialchars($apptDateRaw); ?>"
-                                            >
-                                                <i class="bi bi-calendar2-week"></i> Request Reschedule
-                                            </button>
-                                        <?php elseif ($hasPendingResched): ?>
-                                            <span class="badge bg-warning text-dark">Reschedule Pending Approval</span>
-                                        <?php else: ?>
-                                            <span class="text-muted small">-</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+            <div id="apptHistoryPane">
+                <div class="ah-list" id="patientApptHistoryBody" aria-live="polite"></div>
             </div>
-        </div>
+            <?php
+        // Rendered by the same JS function as live updates, so the list never changes look
+        // (or drops fields) when it refreshes in the background.
+        $historyForJs = array_map(function ($h) {
+            return [
+                'appointment_id' => (int)$h['appointment_id'],
+                'reference_code' => (string)($h['reference_code'] ?? ''),
+                'appointment_date' => (string)($h['appointment_date'] ?? ''),
+                'reason' => (string)($h['reason'] ?? ''),
+                'status' => (string)($h['status'] ?? ''),
+                'user_id' => (int)($h['user_id'] ?? 0),
+                'doctor_first_name' => (string)($h['doctor_first_name'] ?? ''),
+                'doctor_last_name' => (string)($h['doctor_last_name'] ?? ''),
+                'start_time' => $h['start_time'] ?? null,
+                'end_time' => $h['end_time'] ?? null,
+                'pending_reschedule_count' => (int)($h['pending_reschedule_count'] ?? 0),
+                'services' => (string)($h['services'] ?? ''),
+            ];
+        }, $appointment_history);
+        ?>
+            <script>window.PATIENT_APPT_HISTORY = <?php echo json_encode($historyForJs, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;</script>
+        </section>
 
         <div class="modal fade" id="patientRescheduleModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-fullscreen-sm-down">
@@ -560,7 +508,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const bookPane = document.getElementById('apptBookPane');
     const historyPane = document.getElementById('apptHistoryPane');
     const historyBody = document.getElementById('patientApptHistoryBody');
-    const historyEmptyRow = document.getElementById('patientApptHistoryEmpty');
     const apptHistorySearchInput = document.getElementById('patientApptHistorySearch');
     const apptHistorySearchClear = document.getElementById('patientApptHistorySearchClear');
     const apptHistorySearchMeta = document.getElementById('patientApptHistorySearchMeta');
@@ -640,20 +587,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
     }
 
-    function historyCell(label, content) {
-        const td = document.createElement('td');
-        td.setAttribute('data-label', label);
-        if (content instanceof Node) {
-            td.appendChild(content);
-        } else {
-            td.textContent = String(content ?? '');
-        }
-        return td;
-    }
-
     function getHistoryDataRows() {
         if (!historyBody) return [];
-        return Array.from(historyBody.querySelectorAll('tr.patient-appt-history-row'));
+        return Array.from(historyBody.querySelectorAll('.patient-appt-history-row'));
     }
 
     function updateApptHistorySearchMeta(visibleCount, totalCount, query) {
@@ -679,13 +615,9 @@ document.addEventListener('DOMContentLoaded', function() {
     function showApptHistoryNoMatchRow() {
         if (!historyBody) return;
         clearApptHistoryNoMatchRow();
-        apptHistoryNoMatchRow = document.createElement('tr');
-        apptHistoryNoMatchRow.className = 'patient-appt-history-no-match history-empty-row';
-        const td = document.createElement('td');
-        td.colSpan = 7;
-        td.className = 'text-center py-4 history-empty';
-        td.textContent = 'No appointments match your search.';
-        apptHistoryNoMatchRow.appendChild(td);
+        apptHistoryNoMatchRow = document.createElement('div');
+        apptHistoryNoMatchRow.className = 'dp-note patient-appt-history-no-match';
+        apptHistoryNoMatchRow.innerHTML = '<i class="bi bi-search"></i><span>No appointments match your search.</span>';
         historyBody.appendChild(apptHistoryNoMatchRow);
     }
 
@@ -721,39 +653,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function appendHistoryRow(payload) {
         if (!historyBody || !payload) return;
-        if (historyEmptyRow && historyEmptyRow.parentNode) {
-            historyEmptyRow.parentNode.removeChild(historyEmptyRow);
-        }
-
-        const tr = document.createElement('tr');
-        tr.className = 'patient-appt-history-row';
-
-        tr.appendChild(historyCell('Appointment #', '#' + String(payload.appointmentId || 0)));
-        tr.appendChild(historyCell('Date', displayDateLabel(payload.date)));
-        tr.appendChild(historyCell('Doctor', String(payload.doctor || 'To be assigned')));
-        tr.appendChild(historyCell('Time Slot', String(payload.slot || 'TBD')));
-        tr.appendChild(historyCell('Reason', String(payload.reason || '')));
-
-        const badge = document.createElement('span');
-        badge.className = 'badge bg-' + statusBadgeClass(payload.status);
-        badge.textContent = statusLabel(payload.status);
-        tr.appendChild(historyCell('Status', badge));
-
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-sm btn-outline-warning patient-resched-btn';
-        btn.setAttribute('data-appointment-id', String(payload.appointmentId || ''));
-        btn.setAttribute('data-doctor-id', String(payload.doctorId || ''));
-        btn.setAttribute('data-current-date', String(payload.date || ''));
-        btn.innerHTML = '<i class="bi bi-calendar2-week"></i> Request Reschedule';
-        tr.appendChild(historyCell('Actions', btn));
-
-        if (historyBody.firstChild) {
-            historyBody.insertBefore(tr, historyBody.firstChild);
-        } else {
-            historyBody.appendChild(tr);
-        }
-
+        const empty = historyBody.querySelector('.patient-appt-history-empty');
+        if (empty) empty.remove();
+        historyBody.insertAdjacentHTML('afterbegin', buildHistoryRow({
+            appointment_id: payload.appointmentId,
+            reference_code: payload.reference,
+            appointment_date: payload.date,
+            reason: payload.reason,
+            status: payload.status,
+            user_id: payload.doctorId,
+            doctor_name: payload.doctor,
+            slot_label: payload.slot,
+            services: payload.services || '',
+            pending_reschedule_count: 0
+        }));
         if (apptHistorySearchInput) {
             filterAppointmentHistory(apptHistorySearchInput.value);
         }
@@ -1192,9 +1105,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const triggerBtn = document.querySelector('.patient-resched-btn[data-appointment-id="' + appointmentId + '"]');
                 if (triggerBtn) {
-                    const td = triggerBtn.closest('td');
-                    if (td) {
-                        td.innerHTML = '<span class="badge bg-warning text-dark">Reschedule Pending Approval</span>';
+                    const cell = triggerBtn.closest('.ah-action');
+                    if (cell) {
+                        cell.innerHTML = '<span class="ah-pending"><i class="bi bi-hourglass-split"></i> Reschedule requested</span>';
                     }
                 }
             } catch (err) {
@@ -1284,6 +1197,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Cache.invalidate('appointments');
                     appendHistoryRow({
                         appointmentId: resp.appointment_id,
+                        reference: resp.reference_code || '',
                         date: selectedDate,
                         doctor: selectedDoctor,
                         doctorId: doctorSelect ? String(doctorSelect.value || '') : '',
@@ -1353,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function computeHistoryHash(appointments) {
         return appointments.map(function(a) {
-            return a.appointment_id + ':' + a.appointment_date + ':' + a.status + ':' + (a.user_id || 0) + ':' + (a.start_time || '');
+            return a.appointment_id + ':' + (a.reference_code || '') + ':' + a.appointment_date + ':' + a.status + ':' + (a.user_id || 0) + ':' + (a.start_time || '') + ':' + (a.pending_reschedule_count || 0);
         }).join('|');
     }
 
@@ -1361,50 +1275,64 @@ document.addEventListener('DOMContentLoaded', function() {
         var statusKey = (a.status || 'scheduled').toLowerCase();
         var statusLabels = {
             'scheduled': 'Scheduled', 'confirmed': 'Confirmed', 'arrived': 'Arrived', 'checked_in': 'Checked In',
-            'in_progress': 'In Progress', 'completed': 'Completed', 'missed': 'Missed',
+            'in_progress': 'In Progress', 'completed': 'Completed', 'records_complete': 'Completed',
+            'awaiting_secretary_records': 'Completed', 'completed_by_doctor': 'Completed', 'missed': 'Missed',
             'cancelled': 'Cancelled', 'no_show': 'No Show', 'rescheduled': 'Rescheduled'
         };
         var statusBadges = {
             'scheduled': 'secondary', 'confirmed': 'primary', 'arrived': 'success', 'checked_in': 'info',
-            'in_progress': 'warning', 'completed': 'success', 'missed': 'warning',
+            'in_progress': 'warning', 'completed': 'success', 'records_complete': 'success',
+            'awaiting_secretary_records': 'success', 'completed_by_doctor': 'success', 'missed': 'warning',
             'cancelled': 'danger', 'no_show': 'danger', 'rescheduled': 'secondary'
         };
-        var now = new Date();
-        var apptDate = a.appointment_date ? new Date(a.appointment_date + 'T00:00:00') : null;
-        var isMissed = ['scheduled', 'confirmed'].indexOf(statusKey) >= 0 && apptDate && apptDate < new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        if (isMissed) { statusKey = 'missed'; }
+        var dayStr = String(a.appointment_date || '').slice(0, 10);
+        var apptDay = /^\d{4}-\d{2}-\d{2}$/.test(dayStr) ? new Date(dayStr + 'T00:00:00') : null;
+        // Missed = still scheduled/confirmed after the slot ended (or after the day, if no slot).
+        var endAt = apptDay && a.end_time ? new Date(dayStr + 'T' + String(a.end_time).slice(0, 8)) : null;
+        var cutoff = endAt || (apptDay ? new Date(apptDay.getTime() + 86400000) : null);
+        if (['scheduled', 'confirmed'].indexOf(statusKey) >= 0 && cutoff && cutoff < new Date()) statusKey = 'missed';
 
         var label = statusLabels[statusKey] || statusKey.replace(/_/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
         var badge = statusBadges[statusKey] || 'secondary';
+        var upcoming = ['scheduled', 'confirmed'].indexOf(statusKey) >= 0;
 
-        var doctorName = ((a.doctor_first_name || '') + ' ' + (a.doctor_last_name || '')).trim() || 'To be assigned';
-        var slotLabel = 'TBD';
-        if (a.start_time && a.end_time) {
-            slotLabel = formatTime12(a.start_time) + ' - ' + formatTime12(a.end_time);
-        }
-        var dateLabel = a.appointment_date ? new Date(a.appointment_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
+        var doctorName = (a.doctor_name || ((a.doctor_first_name || '') + ' ' + (a.doctor_last_name || ''))).trim();
+        doctorName = doctorName ? 'Dr. ' + doctorName.replace(/^dr\.?\s*/i, '') : 'Doctor to be assigned';
+        var slotLabel = a.slot_label || (a.start_time && a.end_time ? formatTime12(a.start_time) + ' \u2013 ' + formatTime12(a.end_time) : 'Time to be assigned');
+        var reason = String(a.reason || '').trim();
+        if (reason.toUpperCase() === 'N/A') reason = '';
+        var services = String(a.services || '').trim();
+        // What the visit is for: the services booked, else the reason given.
+        var title = services || reason || 'Dental appointment';
+        var description = services ? reason : '';
+
+        var dateHtml = apptDay
+            ? '<small class="ah-dow">' + escapeHtml(apptDay.toLocaleDateString(undefined, { weekday: 'short' })) + '</small><strong>' + apptDay.getDate() + '</strong><small>' + escapeHtml(apptDay.toLocaleDateString(undefined, { month: 'short' }) + ' ' + apptDay.getFullYear()) + '</small>'
+            : '<strong>\u2014</strong>';
+        var fullDate = apptDay ? apptDay.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : '';
 
         var hasPending = (a.pending_reschedule_count || 0) > 0;
         var canResched = ['scheduled', 'confirmed', 'missed'].indexOf(statusKey) >= 0 && !hasPending;
-
-        var actionsHtml = '';
+        var actionHtml = '';
         if (canResched) {
-            actionsHtml = '<button type="button" class="btn btn-sm btn-outline-warning patient-resched-btn" data-appointment-id="' + a.appointment_id + '" data-doctor-id="' + (a.user_id || 0) + '" data-current-date="' + (a.appointment_date || '') + '"><i class="bi bi-calendar2-week"></i> Request Reschedule</button>';
+            actionHtml = '<button type="button" class="btn btn-sm btn-outline-primary ah-btn patient-resched-btn" data-appointment-id="' + escapeHtml(a.appointment_id) + '" data-doctor-id="' + escapeHtml(a.user_id || 0) + '" data-current-date="' + escapeHtml(dayStr) + '"><i class="bi bi-calendar2-week"></i> Reschedule</button>';
         } else if (hasPending) {
-            actionsHtml = '<span class="badge bg-warning text-dark">Reschedule Pending Approval</span>';
-        } else {
-            actionsHtml = '<span class="text-muted small">-</span>';
+            actionHtml = '<span class="ah-pending"><i class="bi bi-hourglass-split"></i> Reschedule requested</span>';
         }
 
-        return '<tr class="patient-appt-history-row">' +
-            '<td data-label="Appointment #">#' + a.appointment_id + '</td>' +
-            '<td data-label="Date">' + escapeHtml(dateLabel) + '</td>' +
-            '<td data-label="Doctor">' + escapeHtml(doctorName) + '</td>' +
-            '<td data-label="Time Slot">' + escapeHtml(slotLabel) + '</td>' +
-            '<td data-label="Reason">' + escapeHtml(a.reason || '') + '</td>' +
-            '<td data-label="Status"><span class="badge bg-' + badge + '">' + escapeHtml(label) + '</span></td>' +
-            '<td data-label="Actions">' + actionsHtml + '</td>' +
-            '</tr>';
+        var sub = [slotLabel, doctorName];
+        if (a.reference_code) sub.push('Ref ' + a.reference_code);
+
+        return '<div class="ah-row patient-appt-history-row' + (upcoming ? ' is-upcoming' : '') + '">' +
+            '<span class="ah-date" title="' + escapeHtml(fullDate) + '">' + dateHtml + '</span>' +
+            '<span class="ah-main">' +
+                '<span class="ah-name">' + escapeHtml(title) + '</span>' +
+                (description ? '<span class="ah-desc">' + escapeHtml(description) + '</span>' : '') +
+                '<span class="ah-meta"><i class="bi bi-clock"></i> ' + escapeHtml(sub.join(' \u00b7 ')) + '</span>' +
+            '</span>' +
+            '<span class="ah-status"><span class="badge bg-' + badge + '">' + escapeHtml(label) + '</span></span>' +
+            '<span class="ah-action">' + actionHtml + '</span>' +
+        '</div>';
     }
 
     function formatTime12(timeStr) {
@@ -1428,7 +1356,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!historyBody) return;
         var html = '';
         if (appointments.length === 0) {
-            html = '<tr id="patientApptHistoryEmpty"><td colspan="7" class="text-center py-4 history-empty">No appointment history yet.</td></tr>';
+            html = '<div class="dp-note patient-appt-history-empty"><i class="bi bi-calendar-x"></i><span>No appointments yet. Book one above and it will appear here.</span></div>';
         } else {
             appointments.forEach(function(a) { html += buildHistoryRow(a); });
         }
@@ -1467,15 +1395,11 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) { /* silent */ }
     }
 
-    // Initialize hash from current DOM
+    // First render from the data the page was built with, then keep it live.
     (function() {
-        var rows = getHistoryDataRows();
-        var parts = [];
-        rows.forEach(function(row) {
-            var cells = row.querySelectorAll('td');
-            parts.push((cells[0] ? cells[0].textContent.replace('#','') : '') + ':' + (cells[1] ? cells[1].textContent : '') + ':' + (cells[5] ? cells[5].textContent.trim() : ''));
-        });
-        lastHistoryHash = parts.join('|');
+        var initial = Array.isArray(window.PATIENT_APPT_HISTORY) ? window.PATIENT_APPT_HISTORY : [];
+        updateHistoryTable(initial);
+        lastHistoryHash = computeHistoryHash(initial);
     })();
 
     // Fast polling: check for changes every 3 seconds

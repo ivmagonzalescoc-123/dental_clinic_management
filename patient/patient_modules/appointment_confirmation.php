@@ -1,5 +1,6 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
+include_once dirname(dirname(__DIR__)) . '/config/booking_helpers.php';
 
 $appointment_id = isset($_GET['appointment_id']) ? (int)$_GET['appointment_id'] : 0;
 $queue_number = isset($_GET['queue_number']) ? trim($_GET['queue_number']) : null;
@@ -12,6 +13,9 @@ if ($appointment_id > 0) {
         $res = $stmt->get_result();
         $appointment = $res ? $res->fetch_assoc() : null;
         $stmt->close();
+        if ($appointment) {
+            $appointment['reference_code'] = appointment_assign_reference($conn, (int)$appointment['appointment_id']);
+        }
     }
 }
 ?>
@@ -21,7 +25,7 @@ if ($appointment_id > 0) {
     <?php if (!$appointment): ?>
             <div class="alert alert-warning">Appointment not found.</div>
         <?php else: ?>
-            <p><strong>Appointment ID:</strong> <?php echo htmlspecialchars($appointment['appointment_id']); ?></p>
+            <p><strong>Reference No.:</strong> <?php echo htmlspecialchars((string)$appointment['reference_code'] ?: '—'); ?></p>
             <p><strong>Patient:</strong> <?php echo htmlspecialchars($appointment['p_first'] . ' ' . $appointment['p_last']); ?></p>
             <p><strong>Doctor:</strong> <?php echo htmlspecialchars($appointment['d_first'] . ' ' . $appointment['d_last']); ?></p>
             <p><strong>Date:</strong> <?php echo htmlspecialchars($appointment['appointment_date']); ?></p>

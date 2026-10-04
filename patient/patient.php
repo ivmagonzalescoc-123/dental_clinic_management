@@ -73,6 +73,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/portal-header-mobile.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/portal-nav.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/patient-ledger.css') ?>" rel="stylesheet">
+    <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
 </head>
 
 <body class="patient-portal">
@@ -288,6 +289,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/profiling-display.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/patient-clinic-records.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
     <script>

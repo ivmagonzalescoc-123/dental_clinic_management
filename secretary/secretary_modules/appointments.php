@@ -5,6 +5,8 @@ include_once dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/capabilities.php';
 include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/booking_helpers.php';
+appointments_ensure_reference_column($conn);
 include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
 include dirname(dirname(__DIR__)) . '/assets/api/appointments/availability_guard.php';
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
@@ -608,7 +610,7 @@ if ($appointments_result) {
     }
 }
 
-$pendingReqSql = "SELECT r.request_id, r.appointment_id, r.requested_date, r.requested_timeslot_id, r.request_note, r.created_at,
+$pendingReqSql = "SELECT r.request_id, r.appointment_id, a.reference_code, r.requested_date, r.requested_timeslot_id, r.request_note, r.created_at,
                          p.first_name, p.last_name,
                          COALESCE(u2.first_name, u1.first_name) AS req_doc_first,
                          COALESCE(u2.last_name, u1.last_name) AS req_doc_last,
@@ -2127,7 +2129,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     <tr>
                         <th>Requested At</th>
                         <th>Patient</th>
-                        <th>Appointment #</th>
+                        <th>Reference No.</th>
                         <th>Requested Date</th>
                         <th>Requested Slot</th>
                         <th>Doctor</th>
@@ -2151,7 +2153,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             <tr>
                                 <td><?php echo htmlspecialchars((string)$req['created_at']); ?></td>
                                 <td><?php echo htmlspecialchars(trim((string)$req['first_name'] . ' ' . (string)$req['last_name'])); ?></td>
-                                <td>#<?php echo (int)$req['appointment_id']; ?></td>
+                                <td><?php echo htmlspecialchars((string)($req['reference_code'] ?? '') ?: '—', ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo htmlspecialchars((string)$req['requested_date']); ?></td>
                                 <td><?php echo htmlspecialchars($slotText); ?></td>
                                 <td><?php echo htmlspecialchars(trim((string)$req['req_doc_first'] . ' ' . (string)$req['req_doc_last'])); ?></td>
@@ -2341,6 +2343,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#appointmentDetailsModal" onclick='openAppointmentDetailsModal(<?php echo htmlspecialchars(json_encode([
                                             "appointment_id" => (int)$appointment["appointment_id"],
+                                            "reference_code" => (string)($appointment["reference_code"] ?? ""),
                                             "patient_name" => trim((string)$appointment["first_name"] . " " . (string)$appointment["last_name"]),
                                             "email" => (string)($appointment["email"] ?? ""),
                                             "phone_number" => (string)($appointment["phone_number"] ?? ""),
@@ -2833,7 +2836,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 <div class="dpp-section">
                     <div class="dpp-section-title"><i class="bi bi-clipboard2-pulse"></i> Appointment Info</div>
                     <div class="dpp-field">
-                        <div class="dpp-field-label">Appointment No.</div>
+                        <div class="dpp-field-label">Reference No.</div>
                         <div class="dpp-field-value" id="apptDetailsId"></div>
                     </div>
                     <div class="dpp-field">
@@ -2903,7 +2906,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
         document.getElementById('apptDetailsPatientName').textContent = patientName;
         const initials = patientName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
         document.getElementById('apptDetailsAvatar').textContent = initials;
-        setText('apptDetailsId', appt.appointment_id ? String(appt.appointment_id) : '');
+        setText('apptDetailsId', appt.reference_code || '');
         setText('apptDetailsDoctor', appt.doctor_name);
         let formattedApptDate = appt.appointment_date;
         if (formattedApptDate) {

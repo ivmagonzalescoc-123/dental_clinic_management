@@ -10,6 +10,7 @@ include __DIR__ . '/../config/reminders.php';
 include __DIR__ . '/../config/system_logs.php';
 include __DIR__ . '/../config/billing_helpers.php';
 include_once __DIR__ . '/../config/email_templates.php';
+include_once __DIR__ . '/../config/booking_helpers.php';
 
 
 if (!function_exists('fetch_secretary_ids')) {
@@ -40,8 +41,12 @@ if (!function_exists('fetch_secretary_ids')) {
 }
 
 if (!function_exists('build_reminder_template')) {
-    function build_reminder_template($template, $appointmentId, $scheduledStart, $patientName, $doctorName)
+    function build_reminder_template($template, $appointmentId, $scheduledStart, $patientName, $doctorName, $conn = null)
     {
+        // Patients see the appointment's reference number, never the internal ID. The
+        // connection is passed in: this file is sometimes included inside a function.
+        $ref = $conn instanceof mysqli ? appointment_assign_reference($conn, (int)$appointmentId) : '';
+        $ref = $ref !== '' ? $ref : (string)$appointmentId;
         $t = strtolower((string)$template);
         $patientDisplay = trim((string)$patientName) !== '' ? trim((string)$patientName) : 'Patient';
         $doctorDisplay = trim((string)$doctorName) !== '' ? ('Dr. ' . trim((string)$doctorName)) : 'your doctor';
@@ -50,9 +55,9 @@ if (!function_exists('build_reminder_template')) {
             case 'appt_24h':
                 return [
                     'subject' => 'Appointment reminder: 24 hours before',
-                    'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is scheduled at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
-                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, '24h'),
-                    'sms' => "Reminder: You have a dental appointment tomorrow at {$scheduledStart} (ID #{$appointmentId}).",
+                    'email' => "Hello {$patientName},\n\nThis is a reminder that your dental appointment is scheduled at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Reference No.: {$ref}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, $ref, '24h'),
+                    'sms' => "Reminder: You have a dental appointment tomorrow at {$scheduledStart} (Ref {$ref}).",
                     'title' => 'Appointment reminder (24h)',
                     'body' => "{$patientDisplay} has an appointment tomorrow at {$scheduledStart}."
                 ];
@@ -78,9 +83,9 @@ if (!function_exists('build_reminder_template')) {
             case 'appt_1h':
                 return [
                     'subject' => 'Appointment reminder: 1 hour before',
-                    'email' => "Hello {$patientName},\n\nYour appointment starts in about 1 hour at {$scheduledStart}.\nAppointment ID: #{$appointmentId}\n\nIf you cannot attend, please contact the clinic as soon as possible.\n\nAzucena's Dental Clinic",
-                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, '1h'),
-                    'sms' => "Reminder: Appointment #{$appointmentId} starts in about 1 hour ({$scheduledStart}).",
+                    'email' => "Hello {$patientName},\n\nYour appointment starts in about 1 hour at {$scheduledStart}.\nReference No.: {$ref}\n\nIf you cannot attend, please contact the clinic as soon as possible.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, $ref, '1h'),
+                    'sms' => "Reminder: Your appointment (Ref {$ref}) starts in about 1 hour ({$scheduledStart}).",
                     'title' => 'Appointment in 1 hour',
                     'body' => "{$patientDisplay} has an appointment in about 1 hour ({$scheduledStart})."
                 ];
@@ -106,9 +111,9 @@ if (!function_exists('build_reminder_template')) {
             case 'appt_missed_patient':
                 return [
                     'subject' => 'Missed appointment alert',
-                    'email' => "Hello {$patientName},\n\nOur records show that your appointment time ({$scheduledStart}) may have been missed.\nAppointment ID: #{$appointmentId}\n\nPlease contact the clinic immediately so our secretary can help reschedule or confirm cancellation.\n\nAzucena's Dental Clinic",
-                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, 'missed'),
-                    'sms' => "Alert: It looks like you missed appointment #{$appointmentId} at {$scheduledStart}. Please contact the clinic to reschedule.",
+                    'email' => "Hello {$patientName},\n\nOur records show that your appointment time ({$scheduledStart}) may have been missed.\nReference No.: {$ref}\n\nPlease contact the clinic immediately so our secretary can help reschedule or confirm cancellation.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, $ref, 'missed'),
+                    'sms' => "Alert: It looks like you missed your appointment (Ref {$ref}) at {$scheduledStart}. Please contact the clinic to reschedule.",
                     'title' => 'Possible missed appointment',
                     'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} appears missed. Secretary follow-up may be needed."
                 ];
@@ -125,9 +130,9 @@ if (!function_exists('build_reminder_template')) {
             case 'appt_no_show_patient':
                 return [
                     'subject' => 'Appointment marked as no-show',
-                    'email' => "Hello {$patientName},\n\nBy end of day, appointment #{$appointmentId} has been marked as no-show.\nPlease contact the clinic so the secretary can help with next steps.\n\nAzucena's Dental Clinic",
-                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, (string)$appointmentId, 'no_show'),
-                    'sms' => "Update: Appointment #{$appointmentId} is now marked as no-show. Please contact the clinic for next steps.",
+                    'email' => "Hello {$patientName},\n\nBy end of day, your appointment (Ref {$ref}) has been marked as no-show.\nPlease contact the clinic so the secretary can help with next steps.\n\nAzucena's Dental Clinic",
+                    'html' => email_appointment_reminder_html($patientName, $scheduledStart, $doctorName, $ref, 'no_show'),
+                    'sms' => "Update: Your appointment (Ref {$ref}) is now marked as no-show. Please contact the clinic for next steps.",
                     'title' => 'Appointment marked no-show',
                     'body' => "Your appointment with {$doctorDisplay} at {$scheduledStart} was marked no-show."
                 ];
@@ -144,8 +149,8 @@ if (!function_exists('build_reminder_template')) {
             default:
                 return [
                     'subject' => 'Dental appointment reminder',
-                    'email' => "Hello {$patientName},\n\nThis is a reminder for your appointment at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Appointment ID: #{$appointmentId}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
-                    'sms' => "Reminder: Appointment #{$appointmentId} at {$scheduledStart}.",
+                    'email' => "Hello {$patientName},\n\nThis is a reminder for your appointment at {$scheduledStart}.\n" . ($doctorName !== '' ? ("Doctor: {$doctorName}\n") : '') . "Reference No.: {$ref}\n\nPlease arrive a few minutes early.\n\nAzucena's Dental Clinic",
+                    'sms' => "Reminder: Your appointment (Ref {$ref}) at {$scheduledStart}.",
                     'title' => 'Upcoming appointment reminder',
                     'body' => "{$patientDisplay} has an appointment at {$scheduledStart}. Please be prepared."
                 ];
@@ -296,7 +301,7 @@ while ($row = $res->fetch_assoc()) {
         $patientName = 'Patient';
     }
     $doctorName = trim((string)($row['doctor_first_name'] ?? '') . ' ' . (string)($row['doctor_last_name'] ?? ''));
-    $content = build_reminder_template($template, $appointmentId, $scheduledStart, $patientName, $doctorName);
+    $content = build_reminder_template($template, $appointmentId, $scheduledStart, $patientName, $doctorName, $conn);
     $title = (string)$content['title'];
     $body = (string)$content['body'];
     $staffLink = '/secretary/secretary.php?page=appointments';

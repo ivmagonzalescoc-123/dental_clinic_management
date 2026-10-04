@@ -320,7 +320,7 @@ if (!function_exists('email_appointment_reminder_html')) {
 <tr><td style="padding:0 32px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;"><tr><td style="padding:18px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
 <tr><td style="padding:4px 0;font-size:13px;color:#64748b;width:100px;vertical-align:top;"><strong style="color:#0f172a;">Doctor</strong></td><td style="padding:4px 0;font-size:13px;color:#334155;">{$doctorSafe}</td></tr>
 <tr><td style="padding:4px 0;font-size:13px;color:#64748b;vertical-align:top;"><strong style="color:#0f172a;">Date &amp; Time</strong></td><td style="padding:4px 0;font-size:13px;color:#334155;">{$dateSafe}</td></tr>
-<tr><td style="padding:4px 0;font-size:13px;color:#64748b;vertical-align:top;"><strong style="color:#0f172a;">Reference</strong></td><td style="padding:4px 0;font-size:13px;color:#334155;">#{$idSafe}</td></tr>
+<tr><td style="padding:4px 0;font-size:13px;color:#64748b;vertical-align:top;"><strong style="color:#0f172a;">Reference</strong></td><td style="padding:4px 0;font-size:13px;color:#334155;">{$idSafe}</td></tr>
 </table></td></tr></table></td></tr>
 <tr><td style="padding:0 32px 24px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:12px;"><tr><td style="padding:14px 18px;font-size:13px;line-height:1.6;color:#92400e;">{$note}</td></tr></table></td></tr>
 <tr><td style="padding:18px 32px 24px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;line-height:1.5;color:#94a3b8;">&copy; {$year} {$clinicSafe}</td></tr>
