@@ -722,9 +722,9 @@ if ($sstmt) {
 </style>
 
 <script>
-    const doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
-    const ODONTOGRAM_IFRAME_SRC = <?php echo json_encode(odontogram_embed_src()); ?>;
-    const ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
+    var doctorCsrfToken = <?php echo json_encode($csrf_token ?? ''); ?>;
+    var ODONTOGRAM_IFRAME_SRC = <?php echo json_encode(odontogram_embed_src()); ?>;
+    var ODONTOGRAM_IFRAME_HEIGHT = <?php echo (int) odontogram_embed_height_px(); ?>;
     // Basic EHR frontend behavior: materials list, save draft / finalize, prefill
     (function() {
         let uploadedPhotos = [];
@@ -1129,8 +1129,17 @@ if ($sstmt) {
         // Camera Modal Logic
         var cameraStream = null;
         document.getElementById('cameraModal')?.addEventListener('show.bs.modal', async function() {
+            // Browsers only allow the camera on HTTPS or localhost; on a plain-HTTP network
+            // address (e.g. http://192.168.x.x) navigator.mediaDevices doesn't exist at all.
+            if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                notifyDoctor('The camera only works on a secure (https://) address or on localhost. Open the system through its https:// link, or use Upload to add photos.', 'warning');
+                var modalEl = this;
+                setTimeout(function () { bootstrap.Modal.getInstance(modalEl)?.hide(); }, 0);
+                return;
+            }
             try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                // Rear camera on phones/tablets (for photographing teeth); laptops use their only camera.
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
                 var video = document.getElementById('cameraPreviewVideo');
                 video.srcObject = cameraStream;
                 video.style.display = 'block';
@@ -1140,7 +1149,16 @@ if ($sstmt) {
                 document.getElementById('confirmPhotoBtn').style.display = 'none';
                 document.getElementById('retakePhotoBtn').style.display = 'none';
             } catch (err) {
-                notifyDoctor('Camera access denied or unavailable', 'danger');
+                var name = err && err.name;
+                if (name === 'NotAllowedError' || name === 'SecurityError') {
+                    notifyDoctor('Camera permission is blocked. Click the camera/lock icon in the address bar, allow the camera for this site, then try again.', 'danger');
+                } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+                    notifyDoctor('No camera was found on this device. Use Upload to add photos instead.', 'warning');
+                } else if (name === 'NotReadableError') {
+                    notifyDoctor('The camera is being used by another app (e.g. Zoom or Messenger). Close it and try again.', 'warning');
+                } else {
+                    notifyDoctor('Camera unavailable: ' + (err && err.message ? err.message : 'unknown error'), 'danger');
+                }
             }
         });
 

@@ -292,7 +292,7 @@
       updateActiveNav(pageFromUrl(href))
     }, true)
 
-    function reExecuteScripts(container) {
+    function reExecuteScripts(container, targetUrl) {
       var extScripts = Array.from(container.querySelectorAll('script[src]'))
       var inlineScripts = Array.from(container.querySelectorAll('script:not([src])'))
 
@@ -307,6 +307,15 @@
           return origAddEL.call(this, type, listener, opts)
         }
 
+        // Safety net: a page script with a top-level let/const/class throws "already been
+        // declared" on its second AJAX visit and stops, leaving the page without data.
+        // Catch that and load the page normally instead.
+        var redeclared = false
+        var onScriptError = function(ev) {
+          if (/already been declared|redeclaration/i.test(String((ev && ev.message) || ''))) redeclared = true
+        }
+        window.addEventListener('error', onScriptError)
+
         // Re-insert as real <script> elements rather than eval(): the CSP allows
         // 'unsafe-inline' but not 'unsafe-eval', so eval'd page scripts were blocked.
         // An inserted inline script still runs synchronously in global scope.
@@ -317,7 +326,15 @@
           s.remove()
         })
 
+        window.removeEventListener('error', onScriptError)
         EventTarget.prototype.addEventListener = origAddEL
+
+        if (redeclared) {
+          console.warn('[ajax nav] page script redeclared a global; loading the page normally')
+          // The address bar still shows the previous page at this point, so go to the target URL.
+          window.location.href = targetUrl || window.location.href
+          return
+        }
 
         dcQueue.forEach(function(cb) {
           Promise.resolve().then(function() {
@@ -468,7 +485,7 @@
 
           if (newMain && currentMain) {
             currentMain.innerHTML = newMain.innerHTML
-            reExecuteScripts(currentMain)
+            reExecuteScripts(currentMain, url)
           }
 
           var page = pageFromUrl(url)

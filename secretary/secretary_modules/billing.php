@@ -559,7 +559,7 @@ if (!$hasAnyData) {
 </div>
 
 <script>
-    const BILLING_CSRF = '<?php echo htmlspecialchars($csrf_token); ?>';
+    var BILLING_CSRF = '<?php echo htmlspecialchars($csrf_token); ?>';
 
     function updatePaymentChangeDisplay() {
         const amount = Number(document.getElementById('paymentAmount').value || 0);
@@ -588,7 +588,7 @@ if (!$hasAnyData) {
         new bootstrap.Modal(document.getElementById('paymentModal')).show();
     }
 
-    let paymentSubmitting = false;
+    var paymentSubmitting = false;
 
     function notifyBilling(message, type) {
         if (typeof window.portalNotify === 'function') {

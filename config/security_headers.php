@@ -24,7 +24,9 @@ if (!function_exists('security_send_headers')) {
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: SAMEORIGIN');
         header('Referrer-Policy: strict-origin-when-cross-origin');
-        header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+        // camera=(self): the doctor's Patient Visit takes photos with the device camera.
+        // Other sites embedding these pages still can't use it.
+        header('Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()');
 
         // HSTS only over HTTPS on the live host; sending it on localhost would pin
         // the browser to https://localhost.
