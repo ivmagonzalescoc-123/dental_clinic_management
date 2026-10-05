@@ -123,13 +123,27 @@ if (!function_exists('check_session')) {
     // Get current user role
     $user_role = $_SESSION['role'] ?? '';
 
-    // Check if user role is allowed
+    // Check if user role is allowed. A signed-in user who opens another role's page
+    // keeps their session: API calls get a 403, page visits go back to their own portal.
     if (!in_array($user_role, $allowed_roles)) {
-        if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
-            close_session_log_rows($GLOBALS['conn']);
+        $portals = ['admin' => 'admin/admin.php', 'doctor' => 'doctor/doctor.php', 'secretary' => 'secretary/secretary.php', 'patient' => 'patient/patient.php'];
+        if (!isset($portals[$user_role])) {
+            if (isset($GLOBALS['conn']) && $GLOBALS['conn'] instanceof mysqli) {
+                close_session_log_rows($GLOBALS['conn']);
+            }
+            session_destroy();
+            header('Location: ../index.php');
+            exit;
         }
-        session_destroy();
-        header('Location: ../index.php');
+        if (strpos((string)($_SERVER['SCRIPT_NAME'] ?? ''), '/assets/api/') !== false) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Access denied for this action.']);
+            exit;
+        }
+        $_SESSION['message'] = 'That page is not available for your account.';
+        $_SESSION['message_type'] = 'warning';
+        header('Location: ' . app_detect_path() . '/' . $portals[$user_role]);
         exit;
     }
 

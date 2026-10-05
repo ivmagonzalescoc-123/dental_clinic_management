@@ -32,6 +32,22 @@ function contact_new_counts_by_source(mysqli $conn): array
     return $counts;
 }
 
+// Original HTML of one Gmail message, fetched when it is opened (kept out of the list payload).
+if ($method === 'GET' && isset($_GET['html_id'])) {
+    $htmlId = (int)$_GET['html_id'];
+    $html = null;
+    $stmt = $conn->prepare("SELECT html_body FROM contact_messages WHERE message_id = ? AND source = 'gmail' LIMIT 1");
+    if ($stmt) {
+        $stmt->bind_param('i', $htmlId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $html = $row['html_body'] ?? null;
+        $stmt->close();
+    }
+    echo json_encode(['success' => $html !== null, 'html' => $html]);
+    exit;
+}
+
 if ($method === 'GET') {
     $status = strtolower(trim((string)($_GET['status'] ?? 'all')));
     $allowedStatuses = ['all', 'new', 'read', 'archived'];
@@ -44,7 +60,7 @@ if ($method === 'GET') {
         $source = '';
     }
 
-    $sql = 'SELECT message_id, full_name, email, phone_number, message, status, source, read_by, read_at, created_at
+    $sql = 'SELECT message_id, full_name, email, phone_number, message, (html_body IS NOT NULL) AS has_html, status, source, read_by, read_at, created_at
             FROM contact_messages WHERE ' . contact_source_where($source);
     if ($status !== 'all') {
         $sql .= ' AND status = ?';
@@ -71,6 +87,17 @@ if ($method === 'GET') {
             $stmt->close();
         }
     }
+
+    // Gmail messages imported before subjects were decoded still read "Subject: =?UTF-8?Q?...?=".
+    foreach ($rows as &$row) {
+        $row['has_html'] = (bool)$row['has_html'];
+        if (($row['source'] ?? '') === 'gmail' && strpos((string)$row['message'], '=?') !== false) {
+            $parts = explode("\n", (string)$row['message'], 2);
+            $parts[0] = contact_messages_decode_header($parts[0]);
+            $row['message'] = implode("\n", $parts);
+        }
+    }
+    unset($row);
 
     echo json_encode([
         'success' => true,

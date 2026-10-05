@@ -13,7 +13,7 @@ function tp_respond(array $data, int $code = 200): void
 
 $role = $_SESSION['role'] ?? '';
 $userId = (int)($_SESSION['user_id'] ?? 0);
-if (!in_array($role, ['doctor', 'secretary'], true) || $userId <= 0) {
+if (!in_array($role, ['doctor', 'secretary', 'admin'], true) || $userId <= 0) {
     tp_respond(['success' => false, 'message' => 'Unauthorized'], 403);
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -38,7 +38,7 @@ $doctorOnly = ['complete', 'uncomplete'];
 if (in_array($action, $doctorOnly, true) && $role !== 'doctor') {
     tp_respond(['success' => false, 'message' => 'Only the doctor can do that.'], 403);
 }
-if ($action === 'edit' && $role !== 'secretary') {
+if ($action === 'edit' && !in_array($role, ['secretary', 'admin'], true)) {
     tp_respond(['success' => false, 'message' => 'Only the secretary can edit plan items.'], 403);
 }
 
@@ -69,13 +69,13 @@ function tp_load_open_appointment(mysqli $conn, int $appointmentId, int $patient
 function tp_read_item_fields(mysqli $conn): array
 {
     $serviceId = (int)($_POST['service_id'] ?? 0);
-    $tooth = trim((string)($_POST['tooth_number'] ?? ''));
+    $tooth = treatment_plan_normalize_teeth((string)($_POST['tooth_number'] ?? ''));
     $phase = (int)($_POST['phase'] ?? 1);
     $notes = trim((string)($_POST['notes'] ?? ''));
 
     if ($phase < 1 || $phase > 3) $phase = 1;
-    if (!treatment_plan_valid_tooth($tooth)) {
-        tp_respond(['success' => false, 'message' => 'Tooth must be an FDI number (e.g. 36), or left blank for the whole mouth.'], 422);
+    if ($tooth === null) {
+        tp_respond(['success' => false, 'message' => 'Each tooth must be a 2-digit FDI number (11–48, or 51–85 for baby teeth), separated by commas (e.g. 11, 12, 21). Leave blank for the whole mouth.'], 422);
     }
     if (mb_strlen($notes) > 255) $notes = mb_substr($notes, 0, 255);
 

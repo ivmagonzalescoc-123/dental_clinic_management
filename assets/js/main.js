@@ -577,15 +577,22 @@
       sideNav.appendChild(sideInd)
 
       var sidePlaced = false
-      var placeSide = function() {
+      var placeSide = function(instant) {
         var link = sideNav.querySelector('.nav-link.active')
         if (!link) {
           sideNav.classList.remove('has-active-indicator')
           return
         }
+        // Collapse/expand resizes the link every frame; animating each step makes the
+        // highlight trail behind the link, so follow it directly instead of gliding.
+        if (instant) sideInd.style.transition = 'none'
         sideInd.style.width = link.offsetWidth + 'px'
         sideInd.style.height = link.offsetHeight + 'px'
         sideInd.style.transform = 'translate(' + link.offsetLeft + 'px,' + link.offsetTop + 'px)'
+        if (instant) {
+          void sideInd.offsetWidth
+          sideInd.style.transition = ''
+        }
         sideNav.classList.add('has-active-indicator')
         // Only start animating once there's a real position to glide from.
         if (!sidePlaced && !reduceMotion) enableAnimationNextFrame(sideNav)
@@ -593,16 +600,50 @@
       }
 
       var sideQueued = false
-      var queueSide = function() {
+      var sideInstant = false
+      var queueSide = function(instant) {
+        if (instant === true) sideInstant = true
         if (sideQueued) return
         sideQueued = true
-        requestAnimationFrame(function() { sideQueued = false; placeSide() })
+        requestAnimationFrame(function() {
+          var snap = sideInstant
+          sideQueued = false
+          sideInstant = false
+          placeSide(snap)
+        })
       }
 
-      new MutationObserver(queueSide).observe(sideNav, { subtree: true, attributes: true, attributeFilter: ['class'] })
+      new MutationObserver(function() { queueSide(false) }).observe(sideNav, { subtree: true, attributes: true, attributeFilter: ['class'] })
       // Collapse/expand and window resizes change the link box.
-      if (window.ResizeObserver) new ResizeObserver(queueSide).observe(sideNav)
+      if (window.ResizeObserver) new ResizeObserver(function() { queueSide(true) }).observe(sideNav)
       placeSide()
+    }
+
+    // Collapsed sidebar: hover label drawn outside the rail (the rail scrolls, so it
+    // would clip a CSS ::after label).
+    if (sideNav) {
+      var tip = document.createElement('div')
+      tip.className = 'sidebar-flyout-tip'
+      tip.setAttribute('aria-hidden', 'true')
+      document.body.appendChild(tip)
+
+      var hideTip = function() { tip.classList.remove('is-visible') }
+      sideNav.addEventListener('mouseover', function(e) {
+        var link = e.target.closest('.nav-link[data-tooltip]')
+        if (!link || !document.body.classList.contains('toggle-sidebar') || window.innerWidth <= 991) {
+          hideTip()
+          return
+        }
+        var r = link.getBoundingClientRect()
+        tip.textContent = link.getAttribute('data-tooltip')
+        tip.style.left = (r.right + 10) + 'px'
+        tip.style.top = (r.top + r.height / 2) + 'px'
+        tip.classList.toggle('is-active', link.classList.contains('active'))
+        tip.classList.add('is-visible')
+      })
+      sideNav.addEventListener('mouseleave', hideTip)
+      document.getElementById('sidebar')?.addEventListener('scroll', hideTip, { passive: true })
+      document.addEventListener('click', hideTip)
     }
 
     // Patient bottom nav: pill behind the active icon. Dashboard (the raised center

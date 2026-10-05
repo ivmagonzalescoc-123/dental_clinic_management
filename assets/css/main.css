@@ -655,6 +655,11 @@ body {
     height: 60px;
     padding: 0 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+    /* #sidebar is the scroll container — keep the toggle pinned while the nav scrolls under it. */
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--sidebar-bg);
 }
 
 /* Teal-on-teal doesn't read — use a translucent white surface instead of
@@ -715,9 +720,11 @@ body.toggle-sidebar .toggle-icon-closed {
 }
 
 /* Sidebar toggle state for desktop */
+/* Stays a scroll container when collapsed so the rail keeps its scroll position
+   (overflow: visible reset it to the top). Hover labels are drawn outside the
+   rail by main.js (.sidebar-flyout-tip), so nothing needs to overflow it. */
 body.toggle-sidebar #sidebar {
     width: 70px;
-    overflow: visible;
 }
 
 body.toggle-sidebar .sidebar-toggle-area .toggle-sidebar-btn {
@@ -779,12 +786,12 @@ body.toggle-sidebar .sidebar-nav .nav-link .badge {
     display: none;
 }
 
-/* Collapsed sidebar: tooltip on hover */
-body.toggle-sidebar .sidebar-nav .nav-link::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: calc(100% + 10px);
-    top: 50%;
+/* Collapsed sidebar: tooltip on hover. Positioned (fixed) by main.js next to the
+   hovered link, since the scrollable rail would clip an ::after label. */
+.sidebar-flyout-tip {
+    position: fixed;
+    left: 0;
+    top: 0;
     transform: translateY(-50%);
     background: #1f3347;
     color: #fff;
@@ -801,12 +808,12 @@ body.toggle-sidebar .sidebar-nav .nav-link::after {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
-body.toggle-sidebar .sidebar-nav .nav-link:hover::after {
+.sidebar-flyout-tip.is-visible {
     opacity: 1;
     visibility: visible;
 }
 
-body.toggle-sidebar .sidebar-nav .nav-link.active::after {
+.sidebar-flyout-tip.is-active {
     background: var(--primary-color);
 }
 

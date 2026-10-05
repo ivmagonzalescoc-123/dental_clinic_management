@@ -33,7 +33,7 @@ function api_respond(array $data, int $code = 200): never {
 
 header('Content-Type: application/json');
 
-if (($_SESSION['role'] ?? '') !== 'secretary') {
+if (!in_array($_SESSION['role'] ?? '', ['secretary', 'admin'], true)) {
     api_respond(['success' => false, 'message' => 'Unauthorized'], 403);
 }
 
@@ -206,6 +206,7 @@ try {
         save_clinical_findings($conn, $clinicalRecordId, $patientId, $visitClinicalData);
 
         if (!empty($odontogramData)) {
+            odontogram_ensure_tooth_status_schema($conn);
             $conn->query("DELETE FROM tooth_status WHERE record_id = $clinicalRecordId");
 
             $codeToTypeId = [];
@@ -231,7 +232,8 @@ try {
                         // and violates the fk_tooth_status_type foreign key.
                         $commentOnlyTypeId = null;
                         $commentOnlySurface = '';
-                        $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $comment, $commentOrNull);
+                        $commentOnlyStatus = null; // the comment lives in notes; status is the chart code
+                        $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $commentOnlyStatus, $commentOrNull);
                         $tsStmt->execute();
                     }
                     continue;
@@ -240,7 +242,7 @@ try {
                     $codeList = is_array($codes) ? $codes : [$codes];
                     foreach ($codeList as $code) {
                         $code = (string)$code;
-                        $typeId = $codeToTypeId[$code] ?? 0;
+                        $typeId = $codeToTypeId[$code] ?? null;
                         $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
                         $tsStmt->execute();
                     }

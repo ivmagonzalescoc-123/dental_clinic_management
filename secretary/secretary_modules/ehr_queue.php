@@ -6,91 +6,128 @@ include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 include_once dirname(dirname(__DIR__)) . '/config/odontogram_helpers.php';
 include_once dirname(dirname(__DIR__)) . '/config/billing_helpers.php';
 include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
+include_once dirname(dirname(__DIR__)) . '/config/booking_helpers.php';
 $csrf_token = security_generate_csrf_token();
+appointments_ensure_reference_column($conn);
+
+// Visits the doctor has finished that still need the secretary's clinical record + billing.
+$ehrQueue = [];
+$ehrRes = $conn->query("
+    SELECT a.appointment_id, a.patient_id, a.appointment_date, a.reference_code, a.completed_by_doctor_at,
+           p.first_name, p.last_name, p.phone_number, p.profile_image, p.google_picture,
+           u.first_name AS doctor_first, u.last_name AS doctor_last,
+           t.start_time, t.end_time,
+           (SELECT COUNT(*) FROM appointment_media WHERE appointment_id = a.appointment_id) AS photo_count,
+           (SELECT COUNT(*) FROM appointment_doctor_notes WHERE appointment_id = a.appointment_id) AS note_count,
+           (SELECT GROUP_CONCAT(DISTINCT s.service_name ORDER BY s.service_name SEPARATOR ', ')
+              FROM selected_services ss JOIN services s ON s.service_id = ss.service_id
+             WHERE ss.appointment_id = a.appointment_id) AS services
+    FROM appointments a
+    LEFT JOIN patients p ON p.patient_id = a.patient_id
+    LEFT JOIN users u ON u.user_id = a.user_id
+    LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
+    WHERE a.status = 'awaiting_secretary_records'
+    ORDER BY a.completed_by_doctor_at ASC, a.appointment_id ASC
+");
+if ($ehrRes) {
+    while ($row = $ehrRes->fetch_assoc()) $ehrQueue[] = $row;
+}
+
+if (!function_exists('ehr_queue_time')) {
+    function ehr_queue_time(?string $t): string
+    {
+        return $t ? date('g:i A', strtotime($t)) : '';
+    }
+}
+if (!function_exists('ehr_queue_waiting')) {
+    /** "12 min ago", "3 h ago", "2 days ago" since the doctor finished the visit. */
+    function ehr_queue_waiting(?string $doneAt): string
+    {
+        if (!$doneAt) return '';
+        $mins = max(0, (int)floor((time() - strtotime($doneAt)) / 60));
+        if ($mins < 60) return $mins . ' min ago';
+        if ($mins < 1440) return floor($mins / 60) . ' h ago';
+        $days = (int)floor($mins / 1440);
+        return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
+    }
+}
 ?>
 
-<!-- EHR Queue - Secretary Clinical Record Creation -->
-<div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Patient</th>
-                        <th>Appointment Date</th>
-                        <th>Doctor Photos</th>
-                        <th>Doctor Notes</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $recordsQueueSql = "
-                        SELECT a.appointment_id, a.patient_id, a.appointment_date, a.status,
-                               p.first_name, p.last_name,
-                               (SELECT COUNT(*) FROM appointment_media WHERE appointment_id = a.appointment_id) AS photo_count,
-                               (SELECT COUNT(*) FROM appointment_doctor_notes WHERE appointment_id = a.appointment_id) AS note_count
-                        FROM appointments a
-                        LEFT JOIN patients p ON a.patient_id = p.patient_id
-                        WHERE a.status = 'awaiting_secretary_records'
-                        ORDER BY a.completed_by_doctor_at ASC
-                    ";
-                    $recordsQueueRes = $conn->query($recordsQueueSql);
-                    $hasRecordsQueue = false;
-                    
-                    if ($recordsQueueRes) {
-                        while ($rec = $recordsQueueRes->fetch_assoc()) {
-                            $hasRecordsQueue = true;
-                            $photoCount = (int)($rec['photo_count'] ?? 0);
-                            $noteCount = (int)($rec['note_count'] ?? 0);
-                            $patientName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? ''));
-                    ?>
-                    <tr>
-                        <td><strong><?php echo htmlspecialchars($patientName); ?></strong></td>
-                        <td><?php echo htmlspecialchars($rec['appointment_date']); ?></td>
-                        <td>
-                            <span class="badge bg-info"><?php echo $photoCount; ?> photo<?php echo $photoCount !== 1 ? 's' : ''; ?></span>
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary"><?php echo $noteCount; ?> note<?php echo $noteCount !== 1 ? 's' : ''; ?></span>
-                        </td>
-                        <td>
-                            <span class="badge bg-warning text-dark">Pending Records</span>
-                        </td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-primary" onclick="openSecretaryRecordModal(<?php echo $rec['appointment_id']; ?>, <?php echo $rec['patient_id']; ?>)">
-                                <i class="bi bi-pencil-square"></i> Create Record
-                            </button>
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    }
-                    
-                    if (!$hasRecordsQueue) {
-                        echo '<tr><td colspan="6" class="text-center text-muted py-4">No appointments awaiting clinical record creation.</td></tr>';
-                    }
-                    ?>
-                </tbody>
-            </table>
+<!-- EHR Queue: list of visits waiting for the secretary's record. Opening one replaces the
+     list in place (same pattern as Patients), with Back to return. -->
+<div id="ehrListView">
+<div class="card border-0 dp-page">
+    <div class="card-header dp-page__header">
+        <div>
+            <h2 class="card-title mb-0">EHR Queue <span class="badge rounded-pill text-bg-light border align-middle" style="font-size:0.75rem;"><?php echo count($ehrQueue); ?></span></h2>
+            <p class="dp-page__sub mb-0">Visits the doctor has finished. Open one to complete the clinical record and billing.</p>
         </div>
+    </div>
 
-<!-- Secretary Record Creation Modal -->
-<div class="modal fade" id="secretaryRecordModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white py-2 px-3">
-                <div class="d-flex align-items-center gap-3 me-auto pe-3">
-                    <div id="recordPatientAvatar" style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
-                        <i class="bi bi-person-fill" style="font-size:1.2rem;opacity:0.7;"></i>
-                    </div>
-                    <div>
-                        <h6 class="modal-title mb-0" id="secretaryRecordPatientName">Create Clinical Record</h6>
-                        <small id="secretaryRecordPatientDetails" class="text-white-50" style="font-size:0.72rem;"></small>
+    <?php if ($ehrQueue): ?>
+    <div class="card-body dp-toolbar">
+        <div class="unified-table-search-wrap module-search-inline dp-toolbar__search">
+            <i class="bi bi-search unified-table-search-icon" aria-hidden="true"></i>
+            <input type="search" id="ehrQueueSearch" class="form-control unified-table-search-input" placeholder="Search by patient, reference, doctor, or service..." aria-label="Search EHR queue" autocomplete="off">
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <div class="card-body pt-0">
+        <div class="dp-list" id="ehrQueueList">
+            <?php foreach ($ehrQueue as $rec):
+                $patientName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? '')) ?: 'Unknown patient';
+                $initials = strtoupper(substr((string)($rec['first_name'] ?? ''), 0, 1) . substr((string)($rec['last_name'] ?? ''), 0, 1)) ?: '?';
+                $photo = trim((string)($rec['profile_image'] ?? '')) ?: trim((string)($rec['google_picture'] ?? ''));
+                if ($photo !== '' && !preg_match('#^https?://#i', $photo)) $photo = '../' . ltrim($photo, '/');
+                $doctorName = trim(($rec['doctor_first'] ?? '') . ' ' . ($rec['doctor_last'] ?? ''));
+                $reference = appointment_reference_label($rec['reference_code'] ?? null);
+                $timeRange = trim(ehr_queue_time($rec['start_time']) . ($rec['end_time'] ? ' – ' . ehr_queue_time($rec['end_time']) : ''), ' –');
+                $photoCount = (int)$rec['photo_count'];
+                $noteCount = (int)$rec['note_count'];
+                $sub = array_filter([$reference, (string)($rec['phone_number'] ?? '')]);
+                $search = strtolower(implode(' ', [$patientName, $reference, $doctorName, (string)$rec['services'], (string)$rec['phone_number']]));
+            ?>
+            <button type="button" class="dp-row" data-ehr-open data-appointment-id="<?php echo (int)$rec['appointment_id']; ?>" data-patient-id="<?php echo (int)$rec['patient_id']; ?>" data-search="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>">
+                <span class="dp-avatar"><?php echo htmlspecialchars($initials); ?><?php if ($photo !== ''): ?><img src="<?php echo htmlspecialchars($photo, ENT_QUOTES, 'UTF-8'); ?>" alt="" loading="lazy" onerror="this.remove()"><?php endif; ?></span>
+                <span class="dp-row__main">
+                    <span class="dp-row__name"><?php echo htmlspecialchars($patientName); ?></span>
+                    <span class="dp-row__sub"><?php echo htmlspecialchars(implode(' · ', $sub)) ?: '&nbsp;'; ?></span>
+                    <span class="dp-row__flags">
+                        <span class="dp-flag dp-flag--notice"><i class="bi bi-hourglass-split"></i>Records pending<?php $w = ehr_queue_waiting($rec['completed_by_doctor_at']); echo $w !== '' ? ' · done ' . htmlspecialchars($w) : ''; ?></span>
+                        <?php if ($noteCount > 0): ?><span class="dp-flag dp-flag--ok"><i class="bi bi-journal-text"></i><?php echo $noteCount; ?> doctor note<?php echo $noteCount === 1 ? '' : 's'; ?></span><?php endif; ?>
+                    </span>
+                </span>
+                <span class="dp-row__stat"><small class="dp-row__label">Visit</small><strong><?php echo htmlspecialchars(date('M j, Y', strtotime($rec['appointment_date']))); ?></strong><small><?php echo htmlspecialchars($timeRange ?: '—'); ?></small></span>
+                <span class="dp-row__stat"><small class="dp-row__label">Doctor</small><strong><?php echo htmlspecialchars($doctorName !== '' ? 'Dr. ' . $doctorName : '—'); ?></strong><small title="<?php echo htmlspecialchars((string)$rec['services'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars((string)($rec['services'] ?: 'No services')); ?></small></span>
+                <span class="dp-row__stat dp-row__stat--count"><small class="dp-row__label">Photos</small><strong><?php echo $photoCount; ?></strong></span>
+                <i class="bi bi-chevron-right dp-row__chev" aria-hidden="true"></i>
+            </button>
+            <?php endforeach; ?>
+        </div>
+        <div class="dp-empty" id="ehrQueueEmpty" <?php echo $ehrQueue ? 'hidden' : ''; ?>>
+            <div class="dp-note"><i class="bi <?php echo $ehrQueue ? 'bi-search' : 'bi-inbox'; ?>"></i><span id="ehrQueueEmptyText"><?php echo $ehrQueue ? 'No visits match your search.' : 'No visits are waiting for records. Visits appear here once the doctor finishes them.'; ?></span></div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Create Record: replaces the queue in place (no modal) so the record gets the full page. -->
+<div class="card border-0 dp-page dp-chart" id="ehrRecordView" hidden>
+            <div class="dp-chart__header">
+                <div class="dp-chart__identity">
+                    <span class="dp-avatar dp-avatar--lg" id="recordPatientAvatar"><i class="bi bi-person-fill"></i></span>
+                    <div class="dp-chart__who">
+                        <h2 class="dp-chart__name" id="secretaryRecordPatientName">Create Clinical Record</h2>
+                        <div class="dp-chart__meta"><span class="text-muted">Create clinical record</span><span id="secretaryRecordPatientDetails"></span></div>
                     </div>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="dp-back" data-ehr-back aria-label="Back to EHR Queue" title="Back to EHR Queue (Esc)">
+                    <span class="dp-back__icon" aria-hidden="true"><i class="bi bi-arrow-left"></i></span>
+                    <span class="dp-back__text">Back</span>
+                </button>
             </div>
-            <div class="modal-body p-0">
+            <div>
                 <!-- Step Indicator / Tab Navigation -->
                 <ul class="nav ehr-stepper" id="recordTabs" role="tablist">
                     <li class="ehr-stepper__item">
@@ -122,7 +159,7 @@ $csrf_token = security_generate_csrf_token();
                     </li>
                 </ul>
 
-                <div class="tab-content p-3" style="max-height: calc(80vh - 120px); overflow-y: auto;">
+                <div class="tab-content p-3">
                     <!-- Visit Summary -->
                     <div class="tab-pane fade" id="tabNotes" role="tabpanel">
                         <div class="row g-3">
@@ -176,6 +213,13 @@ $csrf_token = security_generate_csrf_token();
                                     <div class="small text-muted mt-1">Set "Mo." + "Visits" &gt; 1 for a recurring case (e.g. braces adjustments) — all visits are booked up front, spaced that many months apart.</div>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Treatment plan belongs with the visit wrap-up: what was done this visit and
+                             what is planned next. Billing only charges the services actually done. -->
+                        <div class="pf-section mt-3 mb-0">
+                            <div id="secretaryTreatmentPlan"></div>
+                            <small class="text-muted d-block mt-2">Add or edit planned treatments and record the patient's decision (Accept / Decline) after discussing the estimate. Only work the doctor marks done is billed in the next step.</small>
                         </div>
                     </div>
 
@@ -284,10 +328,6 @@ $csrf_token = security_generate_csrf_token();
                         <div id="outstandingInstallmentBanner" class="alert alert-warning py-2 px-3 mb-3" style="display:none; font-size:0.85rem;">
                             <i class="bi bi-exclamation-triangle-fill"></i> <span id="outstandingInstallmentBannerText"></span>
                         </div>
-                        <div class="pf-section">
-                            <div id="secretaryTreatmentPlan"></div>
-                            <small class="text-muted d-block mt-2">Add or edit planned treatments and record the patient's decision (Accept / Decline) after discussing the estimate. Only work the doctor marks done is billed below.</small>
-                        </div>
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <div class="pf-section">
@@ -389,21 +429,29 @@ $csrf_token = security_generate_csrf_token();
                     </div>
                 </div>
             </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-outline-secondary btn-sm" id="recordBackBtn" style="display:none;"><i class="bi bi-arrow-left"></i> Back</button>
+            <div class="ehr-record-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="recordBackBtn" style="display:none;"><i class="bi bi-arrow-left"></i> Previous</button>
                 <button type="button" class="btn btn-success btn-sm" id="recordNextBtn">Next <i class="bi bi-arrow-right"></i></button>
                 <button type="button" class="btn btn-success btn-sm" id="submitSecretaryRecordBtn" style="display:none;"><i class="bi bi-check-lg"></i> Create Record</button>
             </div>
-        </div>
-    </div>
 </div>
 
 <style>
-#secretaryRecordModal .secretary-record-patient-name {
-    font-size: 1.2rem;
-    line-height: 1.35;
-    letter-spacing: 0.02em;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+/* Create Record view (in place of the queue) */
+#ehrRecordView #recordTabs.ehr-stepper { border-top: 1px solid #e5e9f0; }
+#ehrRecordView #secretaryRecordPatientDetails:empty { display: none; }
+/* Step buttons stay reachable at the bottom of the screen on long steps. */
+.ehr-record-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fff;
+    border-top: 1px solid #e5e9f0;
+    border-radius: 0 0 var(--bs-card-border-radius, 12px) var(--bs-card-border-radius, 12px);
 }
 
 /* EHR create-record step indicator */
@@ -484,9 +532,9 @@ $csrf_token = security_generate_csrf_token();
     background: #16a34a;
     transition: width 0.25s ease;
 }
-#secretaryRecordModal .form-label { margin-bottom: 2px; font-size: 0.82rem; }
-#secretaryRecordModal .form-check-sm .form-check-input { width: 16px; height: 16px; }
-#secretaryRecordModal .form-check-sm .form-check-label { font-size: 0.8rem; }
+#ehrRecordView .form-label { margin-bottom: 2px; font-size: 0.82rem; }
+#ehrRecordView .form-check-sm .form-check-input { width: 16px; height: 16px; }
+#ehrRecordView .form-check-sm .form-check-label { font-size: 0.8rem; }
 
 .odontogram-viewport {
     position: relative;
@@ -539,15 +587,15 @@ $csrf_token = security_generate_csrf_token();
 }/* Create Record tabs (Clinical Findings / Visit Summary / Billing): grouped sections +
    pill selectors, mirroring the profiling step's decluttered layout. Charting is left
    untouched — it's its own dedicated full-screen odontogram tool. */
-#secretaryRecordModal .pf-section {
+#ehrRecordView .pf-section {
     background: #f8fafc;
     border: 1px solid #e6ebf1;
     border-radius: 10px;
     padding: 0.85rem 1rem;
     margin-bottom: 0.85rem;
 }
-#secretaryRecordModal .pf-section:last-child { margin-bottom: 0; }
-#secretaryRecordModal .pf-section__title {
+#ehrRecordView .pf-section:last-child { margin-bottom: 0; }
+#ehrRecordView .pf-section__title {
     display: flex;
     align-items: center;
     gap: 0.4rem;
@@ -558,43 +606,43 @@ $csrf_token = security_generate_csrf_token();
     color: #16a34a;
     margin-bottom: 0.65rem;
 }
-#secretaryRecordModal .pf-grid-2 {
+#ehrRecordView .pf-grid-2 {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.65rem 1rem;
 }
-#secretaryRecordModal .pf-grid-3 {
+#ehrRecordView .pf-grid-3 {
     display: grid;
     grid-template-columns: 1fr;
     gap: 0.65rem 1rem;
 }
 @media (min-width: 768px) {
-    #secretaryRecordModal .pf-grid-2 { grid-template-columns: 1fr 1fr; }
-    #secretaryRecordModal .pf-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-    #secretaryRecordModal .pf-grid-2 .pf-span-2,
-    #secretaryRecordModal .pf-grid-3 .pf-span-2 { grid-column: span 2; }
-    #secretaryRecordModal .pf-grid-3 .pf-span-3 { grid-column: 1 / -1; }
+    #ehrRecordView .pf-grid-2 { grid-template-columns: 1fr 1fr; }
+    #ehrRecordView .pf-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    #ehrRecordView .pf-grid-2 .pf-span-2,
+    #ehrRecordView .pf-grid-3 .pf-span-2 { grid-column: span 2; }
+    #ehrRecordView .pf-grid-3 .pf-span-3 { grid-column: 1 / -1; }
 }
-#secretaryRecordModal .pf-field { margin-bottom: 0.65rem; }
-#secretaryRecordModal .pf-field:last-child { margin-bottom: 0; }
-#secretaryRecordModal .pf-field > label {
+#ehrRecordView .pf-field { margin-bottom: 0.65rem; }
+#ehrRecordView .pf-field:last-child { margin-bottom: 0; }
+#ehrRecordView .pf-field > label {
     display: block;
     font-size: 0.74rem;
     font-weight: 700;
     color: #475569;
     margin-bottom: 0.35rem;
 }
-#secretaryRecordModal .pf-pill-group {
+#ehrRecordView .pf-pill-group {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
 }
-#secretaryRecordModal .pf-pill-group input.pf-check {
+#ehrRecordView .pf-pill-group input.pf-check {
     position: absolute;
     clip: rect(0, 0, 0, 0);
     pointer-events: none;
 }
-#secretaryRecordModal .pf-pill {
+#ehrRecordView .pf-pill {
     display: inline-flex;
     align-items: center;
     padding: 0.3rem 0.7rem;
@@ -609,17 +657,17 @@ $csrf_token = security_generate_csrf_token();
     user-select: none;
     line-height: 1.3;
 }
-#secretaryRecordModal .pf-pill:hover {
+#ehrRecordView .pf-pill:hover {
     border-color: #16a34a;
     color: #16a34a;
 }
-#secretaryRecordModal .pf-check:checked + .pf-pill {
+#ehrRecordView .pf-check:checked + .pf-pill {
     background: #16a34a;
     border-color: #16a34a;
     color: #fff;
     box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
 }
-#secretaryRecordModal .pf-check:focus-visible + .pf-pill {
+#ehrRecordView .pf-check:focus-visible + .pf-pill {
     outline: 2px solid #16a34a;
     outline-offset: 1px;
 }</style>
@@ -1017,14 +1065,59 @@ document.addEventListener('odontogram:pseudofullscreenchange', function (e) {
 });
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && isSecretaryOdontogramFullscreen()) {
+        e.preventDefault(); // so the same Esc doesn't also close the record view below
         exitSecretaryOdontogramFullscreen();
     }
 });
 
-document.getElementById('secretaryRecordModal')?.addEventListener('hidden.bs.modal', function () {
-    if (isSecretaryOdontogramFullscreen()) {
-        exitSecretaryOdontogramFullscreen();
-    }
+// ---------- Queue list <-> Create Record view (in place, like Patients) ----------
+var ehrListScroll = 0;
+
+function showEhrRecordView() {
+    var list = document.getElementById('ehrListView');
+    var view = document.getElementById('ehrRecordView');
+    if (!view) return;
+    if (list && !list.hidden) ehrListScroll = window.scrollY || 0;
+    if (list) list.hidden = true;
+    view.hidden = false;
+    try { window.scrollTo({ top: 0, behavior: 'auto' }); } catch (e) { window.scrollTo(0, 0); }
+    view.querySelector('[data-ehr-back]')?.focus({ preventScroll: true });
+}
+
+function closeEhrRecordView() {
+    var list = document.getElementById('ehrListView');
+    var view = document.getElementById('ehrRecordView');
+    if (!view || view.hidden) return;
+    if (isSecretaryOdontogramFullscreen()) exitSecretaryOdontogramFullscreen();
+    view.hidden = true;
+    if (list) list.hidden = false;
+    window.scrollTo(0, ehrListScroll || 0);
+    var row = window.currentRecordAppointmentId && document.querySelector('#ehrQueueList [data-appointment-id="' + window.currentRecordAppointmentId + '"]');
+    if (row) row.focus({ preventScroll: true });
+}
+
+document.getElementById('ehrQueueList')?.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-ehr-open]');
+    if (row) openSecretaryRecordModal(parseInt(row.dataset.appointmentId, 10), parseInt(row.dataset.patientId, 10));
+});
+document.querySelector('#ehrRecordView [data-ehr-back]')?.addEventListener('click', closeEhrRecordView);
+document.addEventListener('keydown', function (e) {
+    // Esc first leaves odontogram full screen (handled above); a second Esc goes back.
+    if (e.key !== 'Escape' || e.defaultPrevented || isSecretaryOdontogramFullscreen() || document.querySelector('.modal.show')) return;
+    var view = document.getElementById('ehrRecordView');
+    if (view && !view.hidden) closeEhrRecordView();
+});
+
+document.getElementById('ehrQueueSearch')?.addEventListener('input', function () {
+    var q = this.value.trim().toLowerCase();
+    var shown = 0;
+    document.querySelectorAll('#ehrQueueList [data-ehr-open]').forEach(function (row) {
+        var match = !q || (row.dataset.search || '').indexOf(q) !== -1;
+        row.hidden = !match;
+        if (match) shown++;
+    });
+    var empty = document.getElementById('ehrQueueEmpty');
+    if (empty) empty.hidden = shown > 0;
 });
 
 syncSecretaryOdontogramFullscreenUI();
@@ -1248,7 +1341,7 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         // Pre-fill visit clinical exam from this appointment's clinical record
         const visitClinical = data.existing_visit_clinical || data.existing_profiling || {};
         Object.keys(visitClinical).forEach(key => {
-            const fields = document.querySelectorAll('#secretaryRecordModal [name="' + key + '"]');
+            const fields = document.querySelectorAll('#ehrRecordView [name="' + key + '"]');
             if (!fields.length) return;
             const field = fields[0];
             if (field.type === 'radio') {
@@ -1263,11 +1356,10 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
         });
 
         if (typeof initToggleableClinicalRadios === 'function') {
-            initToggleableClinicalRadios(document.getElementById('secretaryRecordModal'));
+            initToggleableClinicalRadios(document.getElementById('ehrRecordView'));
         }
         
-        const modal = new bootstrap.Modal(document.getElementById('secretaryRecordModal'));
-        modal.show();
+        showEhrRecordView();
     } catch (e) {
         console.error(e);
         notifySecretary('Unable to load appointment. Please try again.', 'danger');
@@ -1523,10 +1615,10 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
     try {
         // Collect visit clinical exam data for this appointment record
         const visitClinicalData = typeof collectVisitClinicalData === 'function'
-            ? collectVisitClinicalData('#secretaryRecordModal')
+            ? collectVisitClinicalData('#ehrRecordView')
             : {};
         if (typeof collectVisitClinicalData !== 'function') {
-            document.querySelectorAll('#secretaryRecordModal .visit-clinical-field').forEach(field => {
+            document.querySelectorAll('#ehrRecordView .visit-clinical-field').forEach(field => {
                 if (field.type === 'checkbox') {
                     visitClinicalData[field.name] = field.checked;
                 } else if (field.type === 'radio') {
@@ -1689,7 +1781,7 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             }
         }
 
-        bootstrap.Modal.getInstance(document.getElementById('secretaryRecordModal')).hide();
+        closeEhrRecordView();
 
         // Reload page to update queue — give extra time to actually read any extra toast
         // (scheduling error, installment info, recurring summary) before it's gone.

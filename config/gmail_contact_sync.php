@@ -8,6 +8,7 @@
 // allow enabling ext-imap.
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once __DIR__ . '/contact_messages_helpers.php';
 
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Message;
@@ -83,8 +84,8 @@ if (!function_exists('gmail_contact_sync_fetch')) {
         }
 
         $insert = $conn->prepare(
-            "INSERT IGNORE INTO contact_messages (full_name, email, phone_number, message, status, source, gmail_uid)
-             VALUES (?, ?, NULL, ?, 'new', 'gmail', ?)"
+            "INSERT IGNORE INTO contact_messages (full_name, email, phone_number, message, html_body, status, source, gmail_uid)
+             VALUES (?, ?, NULL, ?, ?, 'new', 'gmail', ?)"
         );
         if (!$insert) {
             return ['success' => false, 'imported' => 0, 'message' => 'Database error preparing insert.'];
@@ -97,19 +98,25 @@ if (!function_exists('gmail_contact_sync_fetch')) {
             /** @var Message $message */
             $from = $message->getFrom()->first();
             $fromEmail = $from ? strtolower((string)$from->mail) : '';
-            $fromName = $from ? trim((string)$from->personal) : '';
+            $fromName = $from ? trim(contact_messages_decode_header((string)$from->personal)) : '';
             if ($fromName === '') {
                 $fromName = $fromEmail;
             }
+            $fromName = mb_substr($fromName, 0, 150);
 
-            $subject = trim((string)$message->getSubject()) ?: '(no subject)';
+            // Gmail sends non-ASCII subjects (emoji, ñ, ’) MIME-encoded: "=?UTF-8?Q?...?=".
+            $subject = trim(contact_messages_decode_header((string)$message->getSubject())) ?: '(no subject)';
             $body = gmail_contact_sync_extract_text($message);
             $fullMessage = mb_substr(trim("Subject: {$subject}\n\n{$body}"), 0, 5000);
+
+            // Keep the original HTML (capped at 2 MB) so the email can be shown with its layout.
+            $html = trim((string)$message->getHTMLBody());
+            $htmlBody = ($html !== '' && strlen($html) <= 2 * 1024 * 1024) ? $html : null;
 
             $gmailUid = trim((string)$message->getMessageId()) ?: ('uid-' . $message->getUid());
             $gmailUid = mb_substr($gmailUid, 0, 255);
 
-            $insert->bind_param('ssss', $fromName, $fromEmail, $fullMessage, $gmailUid);
+            $insert->bind_param('sssss', $fromName, $fromEmail, $fullMessage, $htmlBody, $gmailUid);
             $insert->execute();
 
             if ($insert->affected_rows > 0) {

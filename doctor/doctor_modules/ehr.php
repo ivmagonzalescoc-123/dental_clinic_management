@@ -1389,7 +1389,7 @@ if ($sstmt) {
 // currently selected queue option, replacing the old separate "Profile" and
 // "Appointment" toolbar buttons. data-patient-id/data-patient-name/etc. were already
 // added to each <option>, so no extra lookup is needed to know who's selected.
-let pdCurrentPatientId = 0;
+var pdCurrentPatientId = 0;
 
 function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
@@ -1475,7 +1475,7 @@ function loadPdProfileTab(patientId, patientName) {
         });
 }
 
-const PD_STATUS_LABELS = {
+var PD_STATUS_LABELS = {
     scheduled: 'Pending', confirmed: 'Confirmed', arrived: 'Arrived', checked_in: 'Checked-In',
     completed: 'Completed', cancelled: 'Cancelled', in_progress: 'In Progress', no_show: 'No Show',
     awaiting_secretary_records: 'Awaiting Records', records_complete: 'Records Complete',
@@ -1603,7 +1603,7 @@ function loadPdRecordDetail(recordId) {
 // assets/api/ehr/save_clinical_findings.php, collected with the shared
 // collectVisitClinicalData() helper (assets/js/clinical-assessment-fields.js) using the
 // same 'visit-clinical-field' convention the secretary's Create Record form uses.
-const CLINICAL_FINDINGS_GROUPS = [
+var CLINICAL_FINDINGS_GROUPS = [
     {
         title: 'Occlusal Classification',
         optional: false,
@@ -1679,7 +1679,7 @@ function renderClinicalFindingsHtml(findings) {
     }).join('');
 }
 
-let doctorFindingsApptId = 0;
+var doctorFindingsApptId = 0;
 
 // Doctor's Notes sits second, right after Occlusal Classification. The section is one
 // persistent element (#doctor_notes is read on save/finish and filled on prefill), so it's

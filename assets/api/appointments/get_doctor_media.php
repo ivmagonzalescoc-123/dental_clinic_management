@@ -22,7 +22,7 @@ function api_respond(array $data, int $code = 200): never {
 
 header('Content-Type: application/json');
 
-if (($_SESSION['role'] ?? '') !== 'secretary') {
+if (!in_array($_SESSION['role'] ?? '', ['secretary', 'admin'], true)) {
     api_respond(['success' => false, 'message' => 'Unauthorized'], 403);
 }
 

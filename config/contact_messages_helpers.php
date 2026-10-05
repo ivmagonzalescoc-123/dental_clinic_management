@@ -21,6 +21,33 @@ if (!function_exists('contact_messages_ensure_table')) {
         $conn->query("ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'form' AFTER status");
         $conn->query("ALTER TABLE contact_messages ADD COLUMN IF NOT EXISTS gmail_uid VARCHAR(255) NULL AFTER source");
         $conn->query("CREATE UNIQUE INDEX IF NOT EXISTS idx_contact_gmail_uid ON contact_messages (gmail_uid)");
+
+        // Original HTML of an imported Gmail message, so it can be shown with its own layout.
+        // SHOW COLUMNS check instead of ADD COLUMN IF NOT EXISTS, which MySQL 8 doesn't support.
+        $col = $conn->query("SHOW COLUMNS FROM contact_messages LIKE 'html_body'");
+        if ($col && $col->num_rows === 0) {
+            $conn->query("ALTER TABLE contact_messages ADD COLUMN html_body MEDIUMTEXT NULL AFTER message");
+        }
+    }
+}
+
+if (!function_exists('contact_messages_decode_header')) {
+    /** Decodes MIME encoded-words like "=?UTF-8?Q?=E2=9C=85_Hello?=" into plain UTF-8 text. */
+    function contact_messages_decode_header(string $value): string
+    {
+        if (strpos($value, '=?') === false) {
+            return $value;
+        }
+        if (function_exists('iconv_mime_decode')) {
+            $decoded = @iconv_mime_decode($value, ICONV_MIME_DECODE_CONTINUE_ON_ERROR, 'UTF-8');
+            if (is_string($decoded) && $decoded !== '') {
+                return $decoded;
+            }
+        }
+        if (function_exists('mb_decode_mimeheader')) {
+            return mb_decode_mimeheader($value);
+        }
+        return $value;
     }
 }
 

@@ -26,7 +26,7 @@ if (!function_exists('treatment_plan_ensure_table')) {
                 item_id INT AUTO_INCREMENT PRIMARY KEY,
                 patient_id INT NOT NULL,
                 service_id INT NOT NULL,
-                tooth_number VARCHAR(4) NULL,
+                tooth_number VARCHAR(100) NULL,
                 phase TINYINT NOT NULL DEFAULT 1,
                 estimated_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
                 notes VARCHAR(255) NULL,
@@ -42,6 +42,13 @@ if (!function_exists('treatment_plan_ensure_table')) {
                 INDEX idx_tp_completed_appt (completed_appointment_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
         ");
+        // Tables created before multi-tooth items held one tooth (VARCHAR(4)); widen them
+        // so a denture or bridge can list every tooth it covers ("11,12,21").
+        $col = $conn->query("SHOW COLUMNS FROM patient_treatment_plan_items LIKE 'tooth_number'");
+        $colRow = $col ? $col->fetch_assoc() : null;
+        if ($colRow && strtolower((string)$colRow['Type']) === 'varchar(4)') {
+            $conn->query("ALTER TABLE patient_treatment_plan_items MODIFY tooth_number VARCHAR(100) NULL");
+        }
         $done = true;
     }
 }
@@ -67,6 +74,33 @@ if (!function_exists('treatment_plan_valid_tooth')) {
         $quadrant = (int)$m[1];
         $pos = (int)$m[2];
         return $quadrant <= 4 ? true : $pos <= 5;
+    }
+}
+
+if (!function_exists('treatment_plan_normalize_teeth')) {
+    /**
+     * One or more FDI teeth separated by commas (" 11 , 12,21 ") → "11,12,21". Spaces
+     * are ignored and only commas separate, so "11 12" reads as "1112" and is rejected.
+     * Duplicates dropped, entry order kept. '' means whole mouth; null means an entry
+     * isn't a valid 2-digit FDI tooth.
+     */
+    function treatment_plan_normalize_teeth(string $raw): ?string
+    {
+        $parts = array_filter(explode(',', preg_replace('/\s+/u', '', $raw)), 'strlen');
+        $teeth = [];
+        foreach ($parts as $tooth) {
+            if (!treatment_plan_valid_tooth($tooth)) return null;
+            $teeth[$tooth] = true;
+        }
+        return implode(',', array_keys($teeth));
+    }
+}
+
+if (!function_exists('treatment_plan_teeth_label')) {
+    /** Stored "11,12,21" → "11, 12, 21" for display. */
+    function treatment_plan_teeth_label(?string $stored): string
+    {
+        return str_replace(',', ', ', (string)$stored);
     }
 }
 

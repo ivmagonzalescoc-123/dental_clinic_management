@@ -192,7 +192,7 @@
           <mxGeometry x="0" y="155" width="200" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_pat" value="patients" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dcfce7;strokeColor=#86efac;fontColor=#166534;html=1;" vertex="1" parent="1">
-          <mxGeometry x="430" y="40" width="210" height="580" as="geometry"/>
+          <mxGeometry x="430" y="40" width="210" height="555" as="geometry"/>
         </mxCell>
         <mxCell id="c57" value="PK patient_id INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="30" width="210" height="25" as="geometry"/>
@@ -236,29 +236,26 @@
         <mxCell id="c70" value="FK added_by INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="355" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c71" value="is_active TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c72" value="profile_image VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="380" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c72" value="profile_image VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c73" value="must_change_password TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="405" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c73" value="must_change_password TINYINT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c74" value="password_updated_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="430" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c74" value="password_updated_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c75" value="failed_login_attempts INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="455" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c75" value="failed_login_attempts INT" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c76" value="locked_until DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="480" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c76" value="locked_until DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
+        <mxCell id="c77" value="last_login_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
           <mxGeometry x="0" y="505" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c77" value="last_login_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
-          <mxGeometry x="0" y="530" width="210" height="25" as="geometry"/>
-        </mxCell>
         <mxCell id="c78" value="created_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#dcfce7;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_pat">
-          <mxGeometry x="0" y="555" width="210" height="25" as="geometry"/>
+          <mxGeometry x="0" y="530" width="210" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_pp" value="patient_profiling" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dcfce7;strokeColor=#86efac;fontColor=#166534;html=1;" vertex="1" parent="1">
           <mxGeometry x="430" y="660" width="210" height="630" as="geometry"/>
@@ -1308,7 +1305,7 @@
           <mxGeometry x="0" y="180" width="200" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_cm" value="contact_messages" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontColor=#475569;html=1;" vertex="1" parent="1">
-          <mxGeometry x="3270" y="285" width="210" height="305" as="geometry"/>
+          <mxGeometry x="3270" y="285" width="210" height="330" as="geometry"/>
         </mxCell>
         <mxCell id="c390" value="PK message_id INT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="30" width="210" height="25" as="geometry"/>
@@ -1325,23 +1322,26 @@
         <mxCell id="c394" value="message TEXT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="130" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c395" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+        <mxCell id="c_cm_html" value="html_body MEDIUMTEXT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="155" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c396" value="source VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+        <mxCell id="c395" value="status ENUM" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="180" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c397" value="gmail_uid VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+        <mxCell id="c396" value="source VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="205" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c398" value="FK read_by INT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_cm">
+        <mxCell id="c397" value="gmail_uid VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="230" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c399" value="read_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+        <mxCell id="c398" value="FK read_by INT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;fontColor=#0066CC;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="255" width="210" height="25" as="geometry"/>
         </mxCell>
-        <mxCell id="c400" value="created_at TIMESTAMP" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+        <mxCell id="c399" value="read_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
           <mxGeometry x="0" y="280" width="210" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="c400" value="created_at TIMESTAMP" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cm">
+          <mxGeometry x="0" y="305" width="210" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_rlh" value="rate_limit_hits" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontColor=#475569;html=1;" vertex="1" parent="1">
           <mxGeometry x="3270" y="800" width="210" height="130" as="geometry"/>
@@ -1356,6 +1356,21 @@
           <mxGeometry x="0" y="80" width="210" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="c408" value="created_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_rlh">
+          <mxGeometry x="0" y="105" width="210" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cs" value="clinic_settings" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#f1f5f9;strokeColor=#cbd5e1;fontColor=#475569;html=1;" vertex="1" parent="1">
+          <mxGeometry x="3270" y="970" width="210" height="130" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cs_r0" value="PK setting_key VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
+          <mxGeometry x="0" y="30" width="210" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cs_r1" value="setting_value TEXT" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
+          <mxGeometry x="0" y="55" width="210" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cs_r2" value="description VARCHAR" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
+          <mxGeometry x="0" y="80" width="210" height="25" as="geometry"/>
+        </mxCell>
+        <mxCell id="t_cs_r3" value="updated_at DATETIME" style="shape=partialRectangle;connectable=0;fillColor=#f1f5f9;top=0;left=0;bottom=0;right=0;fontSize=10;overflow=hidden;html=1;" vertex="1" parent="t_cs">
           <mxGeometry x="0" y="105" width="210" height="25" as="geometry"/>
         </mxCell>
         <mxCell id="t_art" value="auth_remember_tokens" style="shape=table;startSize=30;container=1;collapsible=1;childLayout=tableLayout;fontStyle=1;fontSize=11;fillColor=#dbeafe;strokeColor=#93c5fd;fontColor=#1e40af;html=1;" vertex="1" parent="1">

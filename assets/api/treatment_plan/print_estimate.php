@@ -98,7 +98,7 @@ function peso(float $v): string { return '₱' . number_format($v, 2); }
                 <tbody>
                 <?php foreach ($phaseItems as $i): $sub += $i['estimated_cost']; ?>
                     <tr>
-                        <td><?php echo $i['tooth_number'] ? e($i['tooth_number']) : '—'; ?></td>
+                        <td><?php echo $i['tooth_number'] ? e(treatment_plan_teeth_label($i['tooth_number'])) : '—'; ?></td>
                         <td><?php echo e($i['service_name'] ?? 'Service #' . $i['service_id']); ?><?php if (!empty($i['notes'])): ?><br><span class="muted"><?php echo e($i['notes']); ?></span><?php endif; ?></td>
                         <td><?php echo e($statusLabels[$i['status']] ?? $i['status']); ?></td>
                         <td class="num"><?php echo peso($i['estimated_cost']); ?></td>

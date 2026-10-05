@@ -175,7 +175,7 @@ function showArrToast(msg, type) {
 }
 
 // Arrived modal logic
-let arrModalData = {};
+var arrModalData = {};
 
 function openArrivedModal(row) {
     arrModalData = row || {};

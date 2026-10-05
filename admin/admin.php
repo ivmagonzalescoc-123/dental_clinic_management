@@ -48,6 +48,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'ai_chat') {
     exit;
 }
 
+// Sidebar dots for the front-desk pages the admin can cover (same counts as the secretary portal).
+$pendingCount = 0;
+$recordsQueueCount = 0;
+try {
+    $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM appointments WHERE appointment_date = ? AND status = 'confirmed'");
+    if ($stmt) {
+        $today = date('Y-m-d');
+        $stmt->bind_param('s', $today);
+        $stmt->execute();
+        $pendingCount = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+        $stmt->close();
+    }
+    $rqRes = $conn->query("SELECT COUNT(*) AS c FROM appointments WHERE status = 'awaiting_secretary_records'");
+    if ($rqRes && ($rqRow = $rqRes->fetch_assoc())) {
+        $recordsQueueCount = (int)($rqRow['c'] ?? 0);
+    }
+} catch (Throwable $e) {
+    error_log('Error computing admin sidebar dot counts: ' . $e->getMessage());
+}
+
 $header_display_name = trim(((string)($_SESSION['first_name'] ?? '')) . ' ' . ((string)($_SESSION['last_name'] ?? '')));
 if ($header_display_name === '') {
     $header_display_name = (string)($_SESSION['email'] ?? 'User');
@@ -113,8 +133,7 @@ switch ($role_key) {
     <link href="<?= asset_url('../assets/css/dental-calendar.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/odontogram-rotate-prompt.css') ?>" rel="stylesheet">
     <link href="<?= asset_url('../assets/css/doctor-patients.css') ?>" rel="stylesheet">
-    <link href="<?= asset_url('../assets/css/patient-ledger.css') ?>" rel="stylesheet">
-</head>
+    <link href="<?= asset_url('../assets/css/patient-ledger.css') ?>" rel="stylesheet"></head>
 
 <body class="admin-portal">
     <script>
@@ -219,6 +238,20 @@ switch ($role_key) {
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=arrivals" data-tooltip="Arrivals" title="Arrivals">
+                    <i class="bi bi-person-check"></i>
+                    <span>Arrivals</span>
+                    <span class="nav-dot<?php echo (int)$pendingCount > 0 ? ' is-active' : ''; ?>" id="secretaryArrivalsDot"></span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="admin.php?page=ehr_queue" data-tooltip="EHR Queue" title="EHR Queue">
+                    <i class="bi bi-journal-medical"></i>
+                    <span>EHR Queue</span>
+                    <span class="nav-dot<?php echo (int)$recordsQueueCount > 0 ? ' is-active' : ''; ?>" id="secretaryEhrDot"></span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=records" data-tooltip="Clinical Records" title="Clinical Records">
                     <i class="bi bi-journal-medical"></i>
                     <span>Clinical Records</span>
@@ -311,6 +344,12 @@ switch ($role_key) {
                                 case "reports":
                                     include "admin_modules/reports.php";
                                     break;
+                                case "arrivals":
+                                    include "../secretary/secretary_modules/arrivals.php";
+                                    break;
+                                case "ehr_queue":
+                                    include "../secretary/secretary_modules/ehr_queue.php";
+                                    break;
                                 case "records":
                                     include "admin_modules/records.php";
                                     break;
@@ -365,6 +404,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/vendor/php-email-form/validate.js') ?>"></script>
 
     <!-- Template Main JS File -->
+    <script src="<?= asset_url('../assets/js/idempotency.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/app-toast.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/dental-cache.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/dental-ui.js') ?>"></script>
@@ -383,7 +423,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
-    <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/clinical-assessment-fields.js') ?>"></script>    <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
 
     <!-- Active Navigation Highlight -->
     <script>
@@ -414,6 +454,8 @@ switch ($role_key) {
                         "billing": ["invoices", "payments", "payment history", "balance", "receipts"],
                         "doctor_management": ["doctor", "dentist", "providers", "schedule"],
                         "records": ["clinical records", "ehr", "patient history", "odontogram", "chart"],
+                        "arrivals": ["check in", "queue", "today", "waiting"],
+                        "ehr_queue": ["records queue", "encoding", "create record"],
                         "contact_messages": ["contact us", "inquiries", "messages", "gmail", "email"],
                         "reports": ["analytics", "charts", "insights", "revenue", "bir"],
                         "reviews": ["testimonials", "feedback", "ratings"],

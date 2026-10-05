@@ -94,7 +94,7 @@ if ($visits) {
         $r = $q->get_result();
         while ($row = $r->fetch_assoc()) {
             $label = (string)($row['service_name'] ?? 'Treatment');
-            if (!empty($row['tooth_number'])) $label .= ' #' . $row['tooth_number'];
+            if (!empty($row['tooth_number'])) $label .= ' #' . str_replace(',', ', #', $row['tooth_number']);
             $visits[(int)$row['completed_appointment_id']]['treatments'][] = $label;
         }
         $q->close();

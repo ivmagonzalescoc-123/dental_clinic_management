@@ -35,3 +35,6 @@ archive/
 # PHP Dependencies (if using Composer)
 vendor/
 composer.lock
+
+# Docs
+docs/

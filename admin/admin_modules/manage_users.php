@@ -753,7 +753,7 @@ function editUser(user) {
 }
 
 // View User Function — populates the read-only details modal
-let lastViewedUser = null;
+var lastViewedUser = null;
 function viewUser(user) {
     lastViewedUser = user;
     const doctorRoleId = <?php echo (int)$doctorRoleId; ?>;

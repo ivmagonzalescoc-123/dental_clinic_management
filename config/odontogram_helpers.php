@@ -1,5 +1,35 @@
 <?php
 
+if (!function_exists('odontogram_ensure_tooth_status_schema')) {
+    /**
+     * tooth_status.tooth_selected holds the FDI tooth number (11–48) and status holds the
+     * chart code ("C", "Am", "M"…). Older databases had a foreign key from tooth_selected to
+     * tooth.tooth_id (row ids 1–32), which rejected lower teeth 33–48, and a status ENUM
+     * ('healthy','decayed',…) that blanked or rejected chart codes. Fix both once.
+     */
+    function odontogram_ensure_tooth_status_schema(mysqli $conn): void
+    {
+        static $done = false;
+        if ($done) return;
+        $done = true;
+
+        $fk = $conn->query("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+                             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tooth_status'
+                               AND COLUMN_NAME = 'tooth_selected' AND REFERENCED_TABLE_NAME IS NOT NULL");
+        if ($fk) {
+            while ($row = $fk->fetch_assoc()) {
+                $conn->query('ALTER TABLE tooth_status DROP FOREIGN KEY `' . str_replace('`', '', $row['CONSTRAINT_NAME']) . '`');
+            }
+        }
+
+        $col = $conn->query("SHOW COLUMNS FROM tooth_status LIKE 'status'");
+        $colRow = $col ? $col->fetch_assoc() : null;
+        if ($colRow && stripos((string)$colRow['Type'], 'enum') === 0) {
+            $conn->query("ALTER TABLE tooth_status MODIFY status VARCHAR(10) NULL DEFAULT NULL");
+        }
+    }
+}
+
 if (!function_exists('odontogram_normalize_data')) {
     /**
      * Normalize odontogram JSON to FDI keys with per-surface legend codes.

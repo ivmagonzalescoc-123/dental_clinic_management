@@ -300,12 +300,12 @@ if ($doc_stmt) {
 
 <script>
 // Signature canvas handling
-let signatureCanvas = null;
-let signatureCtx = null;
-let isDrawing = false;
-let lastX = 0;
-let lastY = 0;
-let strokePoints = []; // Store points for smooth rendering
+var signatureCanvas = null;
+var signatureCtx = null;
+var isDrawing = false;
+var lastX = 0;
+var lastY = 0;
+var strokePoints = []; // Store points for smooth rendering
 
 function initSignatureCanvas() {
     signatureCanvas = document.getElementById('signatureCanvas');
@@ -467,7 +467,7 @@ function resizeCanvasToContainer() {
 }
 
 // Handle window resize
-let resizeTimeout;
+var resizeTimeout;
 window.addEventListener('resize', function() {
     clearTimeout(resizeTimeout);
     resizeTimeout = setTimeout(resizeCanvasToContainer, 100);
@@ -478,7 +478,7 @@ window.addEventListener('resize', function() {
 // (a hidden modal reports 0 width), so any signature to preload is stashed
 // here by editProfile() and drawn once 'shown.bs.modal' fires — drawing it
 // immediately on click (before the modal is shown) silently no-ops.
-let pendingSignatureDrawn = null;
+var pendingSignatureDrawn = null;
 
 document.getElementById('addProfileModal')?.addEventListener('shown.bs.modal', function() {
     initSignatureCanvas();
@@ -571,7 +571,7 @@ function editProfile(doc) {
     }
 }
 
-let licenseCount = 1;
+var licenseCount = 1;
 function addLicenseField(type = '', number = '') {
     licenseCount++;
     const container = document.getElementById('licenseFields');

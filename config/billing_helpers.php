@@ -511,7 +511,7 @@ if (!function_exists('billing_sync_from_payments')) {
             $status = 'partial';
         }
 
-        $upd = $conn->prepare('UPDATE billing SET amount_paid = ?, balance = ?, status = ?, processed_by = ? WHERE billing_id = ?');
+        $upd = $conn->prepare('UPDATE billing SET amount_paid = ?, balance = ?, status = ?, processed_by = COALESCE(?, processed_by) WHERE billing_id = ?');
         if (!$upd) {
             return false;
         }

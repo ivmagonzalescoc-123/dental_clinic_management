@@ -243,6 +243,7 @@ try {
     $recordId = $crRow ? (int)$crRow['record_id'] : 0;
 
     if ($recordId > 0 && is_array($odontogramData) && !empty($odontogramData)) {
+        odontogram_ensure_tooth_status_schema($conn);
         $conn->query("DELETE FROM tooth_status WHERE record_id = $recordId");
 
         $codeToTypeId = [];
@@ -268,7 +269,8 @@ try {
                     // and violates the fk_tooth_status_type foreign key.
                     $commentOnlyTypeId = null;
                     $commentOnlySurface = '';
-                    $tsStmt->bind_param('iiisss', $recordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $comment, $commentOrNull);
+                        $commentOnlyStatus = null; // the comment lives in notes; status is the chart code
+                    $tsStmt->bind_param('iiisss', $recordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $commentOnlyStatus, $commentOrNull);
                     $tsStmt->execute();
                 }
                 continue;
@@ -277,7 +279,7 @@ try {
                 $codeList = is_array($codes) ? $codes : [$codes];
                 foreach ($codeList as $code) {
                     $code = (string)$code;
-                    $typeId = $codeToTypeId[$code] ?? 0;
+                    $typeId = $codeToTypeId[$code] ?? null;
                     $tsStmt->bind_param('iiisss', $recordId, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
                     $tsStmt->execute();
                 }

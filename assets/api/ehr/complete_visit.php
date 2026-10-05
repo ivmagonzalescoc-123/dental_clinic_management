@@ -1,5 +1,6 @@
 <?php
 include dirname(dirname(dirname(__DIR__))) . '/config/database.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 
 header('Content-Type: application/json');
 
@@ -85,11 +86,12 @@ try {
         }
     }
 
+    odontogram_ensure_tooth_status_schema($conn);
     foreach ($toothData as $toothId => $toothStatus) {
         if (!empty($toothStatus)) {
             $toothId = (int)$toothId;
             $statusCode = (string)$toothStatus;
-            $typeId = $codeToTypeId[$statusCode] ?? 0;
+            $typeId = $codeToTypeId[$statusCode] ?? null;
             $stmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, status) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE status_type_id = VALUES(status_type_id), status = VALUES(status), record_id = VALUES(record_id)');
             if ($stmt) {
                 $stmt->bind_param('iiis', $recordId, $toothId, $typeId, $statusCode);

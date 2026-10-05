@@ -24,6 +24,39 @@
 
   var API = '../assets/api/treatment_plan/'
   var PHASES = { 1: 'Phase 1 — Urgent', 2: 'Phase 2 — Restorative', 3: 'Phase 3 — Prosthetic / Maintenance' }
+
+  // tooth_number holds one or more FDI teeth ("36" or "11,12,21"); blank is the whole mouth.
+  function teethOf(i) { return i.tooth_number ? String(i.tooth_number).split(',') : [] }
+
+  function toothBadge(i) {
+    var teeth = teethOf(i)
+    if (!teeth.length) return '<span class="tp-tooth" title="Whole mouth"><i class="bi bi-circle"></i></span>'
+    if (teeth.length === 1) return '<span class="tp-tooth" title="Tooth ' + esc(teeth[0]) + '">' + esc(teeth[0]) + '</span>'
+    return '<span class="tp-tooth tp-tooth--multi" title="Teeth ' + esc(teeth.join(', ')) + '">' + teeth.length + '<small>teeth</small></span>'
+  }
+
+  /**
+   * Same rule as treatment_plan_normalize_teeth() on the server: spaces ignored, commas
+   * separate, each entry a 2-digit FDI tooth (11-48, baby teeth 51-85). Returns
+   * "11,12,21", '' for whole mouth, or null if any entry is invalid.
+   */
+  function normalizeTeeth(raw) {
+    var parts = String(raw || '').replace(/\s+/g, '').split(',').filter(Boolean)
+    var seen = {}
+    var out = []
+    for (var k = 0; k < parts.length; k++) {
+      var m = /^([1-8])([1-8])$/.exec(parts[k])
+      if (!m || (Number(m[1]) > 4 && Number(m[2]) > 5)) return null
+      if (!seen[parts[k]]) { seen[parts[k]] = true; out.push(parts[k]) }
+    }
+    return out.join(',')
+  }
+
+  /** "Teeth 11, 12, 21" under the procedure name, only when there is more than one. */
+  function teethLine(i) {
+    var teeth = teethOf(i)
+    return teeth.length > 1 ? '<div class="tp-teeth">Teeth ' + esc(teeth.join(', ')) + '</div>' : ''
+  }
   var STATUS = {
     proposed: { label: 'Proposed', cls: 'tp-badge--proposed' },
     accepted: { label: 'Accepted', cls: 'tp-badge--accepted' },
@@ -170,11 +203,17 @@
     e.preventDefault()
     var editId = form.getAttribute('data-edit-id')
     if (!form.service_id.value) { this.notify('Select a procedure.', 'warning'); return }
+    var teeth = normalizeTeeth(form.tooth_number.value)
+    if (teeth === null) {
+      this.notify('Each tooth must be a 2-digit FDI number (11–48, or 51–85 for baby teeth), separated by commas, e.g. 11, 12, 21.', 'warning')
+      form.tooth_number.focus()
+      return
+    }
     var self = this
     var data = {
       action: editId ? 'edit' : 'add',
       service_id: form.service_id.value,
-      tooth_number: form.tooth_number.value.trim(),
+      tooth_number: teeth,
       phase: form.phase.value,
       estimated_cost: form.estimated_cost.value,
       notes: form.notes.value.trim()
@@ -201,7 +240,7 @@
     return '' +
       '<form class="tp-add-form' + (item ? ' tp-edit-form' : '') + '" method="post" data-no-ajax autocomplete="off"' + (item ? ' data-edit-id="' + esc(item.item_id) + '"' : '') + '>' +
         '<select name="service_id" class="form-select form-select-sm tp-add-service" aria-label="Procedure"><option value="">' + (item ? 'Select procedure…' : 'Add planned procedure…') + '</option>' + options + '</select>' +
-        '<input name="tooth_number" class="form-control form-control-sm tp-add-tooth" inputmode="numeric" maxlength="2" placeholder="Tooth" aria-label="Tooth (FDI), blank for whole mouth" title="FDI tooth number, e.g. 36. Leave blank for whole mouth." value="' + esc(item && item.tooth_number ? item.tooth_number : '') + '">' +
+        '<input name="tooth_number" class="form-control form-control-sm tp-add-tooth" maxlength="100" placeholder="Tooth" aria-label="Teeth (FDI), separated by commas; blank for whole mouth" title="FDI tooth number, e.g. 36. For several teeth separate with commas, e.g. 11, 12, 21. Leave blank for whole mouth." value="' + esc(item && item.tooth_number ? String(item.tooth_number).split(',').join(', ') : '') + '">' +
         '<select name="phase" class="form-select form-select-sm tp-add-phase" aria-label="Phase">' +
           phaseOpt(1, 'Phase 1 — Urgent') + phaseOpt(2, 'Phase 2 — Restorative') + phaseOpt(3, 'Phase 3 — Prosthetic') +
         '</select>' +
@@ -249,9 +288,10 @@
 
     return '' +
       '<li class="tp-item tp-item--' + esc(i.status) + '">' +
-        '<span class="tp-tooth" title="' + (i.tooth_number ? 'Tooth ' + esc(i.tooth_number) : 'Whole mouth') + '">' + (i.tooth_number ? esc(i.tooth_number) : '<i class="bi bi-circle"></i>') + '</span>' +
+        toothBadge(i) +
         '<div class="tp-main">' +
           '<div class="tp-name">' + esc(i.service_name || ('Service #' + i.service_id)) + '</div>' +
+          teethLine(i) +
           (i.notes ? '<div class="tp-notes">' + esc(i.notes) + '</div>' : '') +
         '</div>' +
         '<span class="tp-badge ' + st.cls + '">' + esc(st.label) + '</span>' +
@@ -267,9 +307,10 @@
       : ''
     return '' +
       '<li class="tp-item tp-item--' + esc(i.status) + '">' +
-        '<span class="tp-tooth" title="' + (i.tooth_number ? 'Tooth ' + esc(i.tooth_number) : 'Whole mouth') + '">' + (i.tooth_number ? esc(i.tooth_number) : '<i class="bi bi-circle"></i>') + '</span>' +
+        toothBadge(i) +
         '<div class="tp-main">' +
           '<div class="tp-name">' + esc(i.service_name || ('Service #' + i.service_id)) + '</div>' +
+          teethLine(i) +
           (i.notes ? '<div class="tp-notes">' + esc(i.notes) + '</div>' : '') +
         '</div>' +
         '<span class="tp-badge ' + st.cls + '">' + esc(st.label) + '</span>' +
@@ -322,9 +363,10 @@
         : '<span class="tp-badge ' + st.cls + '">' + esc(st.label) + '</span>'
     return '' +
       '<li class="tp-item tp-item--' + esc(doneHere ? 'completed' : i.status) + '">' +
-        '<span class="tp-tooth" title="' + (i.tooth_number ? 'Tooth ' + esc(i.tooth_number) : 'Whole mouth') + '">' + (i.tooth_number ? esc(i.tooth_number) : '<i class="bi bi-circle"></i>') + '</span>' +
+        toothBadge(i) +
         '<div class="tp-main">' +
           '<div class="tp-name">' + esc(i.service_name || 'Treatment') + '</div>' +
+          teethLine(i) +
           '<div class="tp-notes">' + esc(i.phase_label || PHASES[i.phase] || '') + (i.notes ? ' · ' + esc(i.notes) : '') + '</div>' +
         '</div>' +
         badge +

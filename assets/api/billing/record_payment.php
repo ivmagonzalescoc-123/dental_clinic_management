@@ -102,7 +102,7 @@ try {
         exit;
     }
 
-    billing_sync_from_payments($conn, $billingId);
+    billing_sync_from_payments($conn, $billingId, $recordedBy ?: null);
 
     $stmt = $conn->prepare('SELECT (total_amount - amount_paid) AS balance, status, amount_paid FROM billing WHERE billing_id = ? LIMIT 1');
     $stmt->bind_param('i', $billingId);

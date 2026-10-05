@@ -138,7 +138,17 @@ $contactReadOnly = ($_SESSION['role'] ?? '') !== 'secretary';
                     <dt class="col-sm-3">Status</dt>
                     <dd class="col-sm-9" id="contactModalStatus">-</dd>
                     <dt class="col-sm-3">Message</dt>
-                    <dd class="col-sm-9"><div id="contactModalMessage" class="border rounded p-3 bg-light"></div></dd>
+                    <dd class="col-sm-9">
+                        <div class="btn-group btn-group-sm mb-2" role="group" id="contactModalViewToggle" style="display:none;">
+                            <button type="button" class="btn btn-outline-secondary active" data-view="html">Original</button>
+                            <button type="button" class="btn btn-outline-secondary" data-view="text">Plain text</button>
+                        </div>
+                        <div id="contactModalMessage" class="border rounded p-3 bg-light" style="white-space:pre-wrap;word-break:break-word;"></div>
+                        <!-- Gmail HTML shown as the sender laid it out. Sandboxed with no scripts, forms or
+                             same-origin access, so the email can't run code or reach this page. -->
+                        <iframe id="contactModalHtml" title="Original email" sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"
+                                style="display:none;width:100%;height:60vh;border:1px solid #dee2e6;border-radius:.375rem;background:#fff;"></iframe>
+                    </dd>
                 </dl>
             </div>
             <?php if (!$contactReadOnly): ?>
@@ -520,6 +530,49 @@ document.addEventListener('DOMContentLoaded', function() {
         return data;
     }
 
+    // Gmail messages keep their original HTML; show it in the sandboxed frame, with the
+    // plain-text version one click away.
+    let htmlRequestToken = 0;
+
+    function setMessageView(view) {
+        const frame = document.getElementById('contactModalHtml');
+        const text = document.getElementById('contactModalMessage');
+        frame.style.display = view === 'html' ? '' : 'none';
+        text.style.display = view === 'html' ? 'none' : '';
+        document.querySelectorAll('#contactModalViewToggle [data-view]').forEach(function(btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-view') === view);
+        });
+    }
+
+    async function showOriginalEmail(row) {
+        const token = ++htmlRequestToken;
+        const frame = document.getElementById('contactModalHtml');
+        const toggle = document.getElementById('contactModalViewToggle');
+        frame.srcdoc = '';
+        toggle.style.display = 'none';
+        setMessageView('text');
+        if (!row.has_html) return;
+
+        try {
+            const resp = await fetch('../assets/api/contact/manage_contact_messages.php?html_id=' + encodeURIComponent(row.message_id), { cache: 'no-store' });
+            const data = await resp.json();
+            if (token !== htmlRequestToken || !data.success || !data.html) return;
+            // Our <head> comes first so its CSP applies; links open in a new tab.
+            frame.srcdoc = '<!doctype html><html><head><meta charset="utf-8">' +
+                '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src https: data:; style-src \'unsafe-inline\' https:; font-src https: data:">' +
+                '<base target="_blank"><style>body{margin:12px;font-family:Arial,Helvetica,sans-serif;}img{max-width:100%;height:auto;}</style>' +
+                '</head><body>' + data.html + '</body></html>';
+            toggle.style.display = '';
+            setMessageView('html');
+        } catch (e) {
+            // Plain text stays visible.
+        }
+    }
+
+    document.querySelectorAll('#contactModalViewToggle [data-view]').forEach(function(btn) {
+        btn.addEventListener('click', function() { setMessageView(btn.getAttribute('data-view')); });
+    });
+
     function openMessageModal(messageId) {
         activeMessage = allMessages.find(function(row) {
             return Number(row.message_id) === Number(messageId);
@@ -534,6 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('contactModalPhone').innerHTML = formatPhoneLink(activeMessage.phone_number);
         document.getElementById('contactModalStatus').innerHTML = statusBadge(activeMessage.status);
         document.getElementById('contactModalMessage').textContent = activeMessage.message || '';
+        showOriginalEmail(activeMessage);
 
         if (markReadBtn) markReadBtn.style.display = String(activeMessage.status) === 'new' ? '' : 'none';
         if (archiveBtn) archiveBtn.style.display = String(activeMessage.status) === 'archived' ? 'none' : '';
