@@ -16,7 +16,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS doctor_prescription_profiles (
     signature_drawn LONGTEXT DEFAULT NULL,
     clinic_name VARCHAR(255) DEFAULT 'Azucena\'s Dental Clinic',
     clinic_address VARCHAR(500) DEFAULT 'Metz Arcade, Cagayan de Oro City, Philippines',
-    clinic_phone VARCHAR(50) DEFAULT '(088) 123 4567',
+    clinic_phone VARCHAR(50) DEFAULT '0917 984 3031',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_user_profile (user_id),
@@ -53,7 +53,7 @@ if ($action === 'save_profile' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $signature_drawn = trim((string)($_POST['signature_drawn'] ?? ''));
         $clinic_name = trim((string)($_POST['clinic_name'] ?? 'Azucena\'s Dental Clinic'));
         $clinic_address = trim((string)($_POST['clinic_address'] ?? 'Metz Arcade, Cagayan de Oro City, Philippines'));
-        $clinic_phone = trim((string)($_POST['clinic_phone'] ?? '(088) 123 4567'));
+        $clinic_phone = trim((string)($_POST['clinic_phone'] ?? '0917 984 3031'));
         
         // Handle signature image upload
         $signature_image = '';
@@ -211,7 +211,7 @@ if ($doc_stmt) {
                 <!-- Clinic details are fixed clinic-wide info, not part of a doctor's own
                      prescription credentials, so they're not editable per profile here. -->
                 <input type="hidden" name="clinic_name" value="Azucena's Dental Clinic">
-                <input type="hidden" name="clinic_phone" value="(088) 123 4567">
+                <input type="hidden" name="clinic_phone" value="0917 984 3031">
                 <input type="hidden" name="clinic_address" value="Metz Arcade, Cagayan de Oro City, Philippines">
                 <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
                     <div class="row g-3 mb-3">

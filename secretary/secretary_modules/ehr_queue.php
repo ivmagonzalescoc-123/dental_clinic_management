@@ -880,7 +880,7 @@ function generateAndPrintPrescription(rows, profile) {
     const professionalTitle = profile?.professional_title || 'DMD';
     const clinicName = profile?.clinic_name || "Azucena's Dental Clinic";
     const clinicAddress = profile?.clinic_address || 'Metz Arcade, Cagayan de Oro City, Philippines';
-    const clinicPhone = profile?.clinic_phone || '(088) 123 4567';
+    const clinicPhone = profile?.clinic_phone || '0917 984 3031';
     
     // Build license display — licenses are stored as a JSON array ({type, number} pairs)
     // in the `licenses` column, not as flat license_type_N/license_number_N fields

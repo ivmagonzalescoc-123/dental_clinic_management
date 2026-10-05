@@ -19,9 +19,26 @@ if (!function_exists('gmail_contact_sync_configured')) {
         if (!function_exists('env')) {
             return false;
         }
-        $user = trim((string)env('SMTP_USER', ''));
-        $pass = trim((string)env('SMTP_PASS', ''));
+        [$user, $pass] = gmail_contact_sync_credentials();
         return $user !== '' && $pass !== '';
+    }
+}
+
+if (!function_exists('gmail_contact_sync_credentials')) {
+    /**
+     * Gmail login for reading the inbox. IMAP_USER/IMAP_PASS take priority because outgoing
+     * mail may go through another SMTP relay (e.g. Brevo); falls back to SMTP_USER/SMTP_PASS
+     * for setups where Gmail handles both.
+     */
+    function gmail_contact_sync_credentials(): array
+    {
+        $user = trim((string)env('IMAP_USER', ''));
+        $pass = trim((string)env('IMAP_PASS', ''));
+        if ($user === '' || $pass === '') {
+            $user = trim((string)env('SMTP_USER', ''));
+            $pass = trim((string)env('SMTP_PASS', ''));
+        }
+        return [$user, $pass];
     }
 }
 
@@ -30,14 +47,15 @@ if (!function_exists('gmail_contact_sync_account_config')) {
     {
         $host = trim((string)(function_exists('env') ? env('IMAP_HOST', 'imap.gmail.com') : 'imap.gmail.com'));
         $port = (int)(function_exists('env') ? env('IMAP_PORT', 993) : 993);
+        [$user, $pass] = gmail_contact_sync_credentials();
 
         return [
             'host' => $host,
             'port' => $port,
             'encryption' => 'ssl',
             'validate_cert' => true,
-            'username' => trim((string)env('SMTP_USER', '')),
-            'password' => (string)env('SMTP_PASS', ''),
+            'username' => $user,
+            'password' => $pass,
             'authentication' => null,
         ];
     }
@@ -66,7 +84,7 @@ if (!function_exists('gmail_contact_sync_fetch')) {
     function gmail_contact_sync_fetch(mysqli $conn): array
     {
         if (!gmail_contact_sync_configured()) {
-            return ['success' => false, 'imported' => 0, 'message' => 'Gmail is not configured. Set SMTP_USER and SMTP_PASS (Google App Password) in .env.'];
+            return ['success' => false, 'imported' => 0, 'message' => 'Gmail is not configured. Set IMAP_USER and IMAP_PASS (Google App Password) in .env.'];
         }
 
         contact_messages_ensure_table($conn);

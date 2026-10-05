@@ -55,7 +55,7 @@ if ($profile) {
                     'signature_drawn' => '',
                     'clinic_name' => 'Azucena\'s Dental Clinic',
                     'clinic_address' => 'Metz Arcade, Cagayan de Oro City, Philippines',
-                    'clinic_phone' => '(088) 123 4567',
+                    'clinic_phone' => '0917 984 3031',
                 ]
             ]);
         } else {
