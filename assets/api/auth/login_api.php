@@ -7,6 +7,7 @@ include '../../../config/system_logs.php';
 include_once '../../../config/login_activity_helpers.php';
 include_once '../../../config/rate_limit_helpers.php';
 include_once '../../../config/remember_me.php';
+include_once '../../../config/captcha_helpers.php';
 
 security_start_session();
 security_ensure_auth_columns($conn);
@@ -188,7 +189,12 @@ if (!rate_limit_check($conn, 'login_ip', rate_limit_client_ip(), 20, 900)) {
 }
 
 $turnstileToken = trim((string)($input['turnstile_token'] ?? ''));
-if (!auth_verify_turnstile($turnstileToken)) {
+if ($turnstileToken === '' && captcha_math_fallback_enabled() && array_key_exists('captcha_answer', $input)) {
+    // Offline fallback (local demo): Turnstile could not load, so a math question was answered instead.
+    if (!captcha_math_verify($input['captcha_answer'])) {
+        auth_fail('Incorrect answer to the math question. Please try again.', 400);
+    }
+} elseif (!auth_verify_turnstile($turnstileToken)) {
     auth_fail('Verification failed. Please try again.', 400);
 }
 

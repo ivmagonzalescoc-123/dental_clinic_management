@@ -4,6 +4,7 @@ require_once 'config/security.php';
 require_once 'config/database.php';
 require_once 'config/feedback_helpers.php';
 require_once 'config/remember_me.php';
+require_once 'config/captcha_helpers.php';
 security_start_session();
 remember_me_try_login($conn);
 
@@ -36,6 +37,7 @@ $year = date('Y');
 $csrf_token = security_generate_csrf_token();
 $googleClientId = (string)env('GOOGLE_CLIENT_ID', '');
 $turnstileSiteKey = (string)env('TURNSTILE_SITE_KEY', '');
+$mathCaptchaFallback = captcha_math_fallback_enabled();
 $clinicLogo = 'assets/img/clinic-logo-96.webp';
 $pageBackgroundImage = 'assets/img/landing-background.webp';
 
@@ -137,7 +139,7 @@ $aboutPoints = [
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <?php endif; ?>
     <?php if ($turnstileSiteKey !== ''): ?>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer<?php if ($mathCaptchaFallback): ?> onerror="window.loginTurnstileFailed = true; if (window.useMathCaptcha) window.useMathCaptcha();"<?php endif; ?>></script>
     <?php endif; ?>
     <script>
         tailwind.config = {
@@ -1554,10 +1556,22 @@ $aboutPoints = [
                 </div>
 
                 <?php if ($turnstileSiteKey !== ''): ?>
-                <div class="flex justify-center">
-                    <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileSiteKey, ENT_QUOTES); ?>" data-theme="light" id="loginTurnstile"></div>
+                <div class="flex flex-col items-center gap-1" id="loginTurnstileWrap">
+                    <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars($turnstileSiteKey, ENT_QUOTES); ?>" data-theme="light" id="loginTurnstile"<?php if ($mathCaptchaFallback): ?> data-error-callback="onLoginTurnstileError"<?php endif; ?>></div>
+                    <?php if ($mathCaptchaFallback): ?>
+                    <button type="button" id="loginUseMathCaptcha" class="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">Verification not loading? Answer a math question instead</button>
+                    <?php endif; ?>
                 </div>
-                <?php else: ?>
+                <?php endif; ?>
+                <?php if ($mathCaptchaFallback): ?>
+                <div id="loginMathCaptcha" class="<?php echo $turnstileSiteKey !== '' ? 'hidden ' : ''; ?>space-y-1.5">
+                    <label for="login-captcha-answer" class="block text-sm font-medium text-slate-700">Verification: what is <span id="loginMathQuestion" class="font-semibold text-slate-900">&hellip;</span>?</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="login-captcha-answer" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="Your answer" class="auth-field modal-input">
+                        <button type="button" id="loginMathRefresh" class="shrink-0 text-xs font-semibold text-primary hover:text-primary/80 transition-colors">New question</button>
+                    </div>
+                </div>
+                <?php elseif ($turnstileSiteKey === ''): ?>
                 <p class="text-xs text-red-600">Bot verification is not configured (missing TURNSTILE_SITE_KEY).</p>
                 <?php endif; ?>
 
@@ -2766,16 +2780,64 @@ $aboutPoints = [
 
         // ----- Login captcha (Cloudflare Turnstile) -----
         function resetLoginTurnstile() {
+            if (mathCaptchaActive) { loadMathCaptcha(); return; }
             if (window.turnstile && document.getElementById('loginTurnstile')) {
                 try { window.turnstile.reset('#loginTurnstile'); } catch (error) { /* widget not ready yet */ }
             }
         }
 
         function getLoginTurnstileToken() {
+            if (mathCaptchaActive) return '';
             if (window.turnstile && document.getElementById('loginTurnstile')) {
                 return window.turnstile.getResponse('#loginTurnstile') || '';
             }
             return '';
+        }
+
+        // ----- Offline math captcha fallback (only when CAPTCHA_MATH_FALLBACK=true) -----
+        const mathCaptchaEnabled = <?php echo $mathCaptchaFallback ? 'true' : 'false'; ?>;
+        let mathCaptchaActive = mathCaptchaEnabled && !document.getElementById('loginTurnstile');
+
+        async function loadMathCaptcha() {
+            const questionEl = document.getElementById('loginMathQuestion');
+            const answerEl = document.getElementById('login-captcha-answer');
+            if (!questionEl) return;
+            if (answerEl) answerEl.value = '';
+            try {
+                const response = await fetch('assets/api/auth/math_captcha_api.php', { cache: 'no-store' });
+                const data = await response.json();
+                questionEl.textContent = data.success ? data.question : '?';
+            } catch (error) {
+                questionEl.textContent = '?';
+            }
+        }
+
+        window.useMathCaptcha = function() {
+            if (!mathCaptchaEnabled) return;
+            const wasActive = mathCaptchaActive;
+            mathCaptchaActive = true;
+            document.getElementById('loginTurnstileWrap')?.classList.add('hidden');
+            document.getElementById('loginMathCaptcha')?.classList.remove('hidden');
+            if (!wasActive || document.getElementById('loginMathQuestion')?.textContent === '…') loadMathCaptcha();
+        };
+
+        window.onLoginTurnstileError = function() {
+            window.useMathCaptcha();
+            return true; // handled; stops Turnstile from retrying/throwing
+        };
+
+        if (mathCaptchaEnabled) {
+            document.getElementById('loginUseMathCaptcha')?.addEventListener('click', window.useMathCaptcha);
+            document.getElementById('loginMathRefresh')?.addEventListener('click', loadMathCaptcha);
+            if (mathCaptchaActive || window.loginTurnstileFailed) {
+                window.useMathCaptcha();
+                if (!document.getElementById('loginTurnstile')) loadMathCaptcha();
+            } else {
+                // Slow or no internet: if Turnstile hasn't loaded within 10s, switch to the math question.
+                setTimeout(function() {
+                    if (!window.turnstile && !mathCaptchaActive) window.useMathCaptcha();
+                }, 10000);
+            }
         }
 
         // ----- Login -----
@@ -2811,17 +2873,21 @@ $aboutPoints = [
             const password = document.getElementById('login-password').value;
             const remember = !!document.getElementById('login-remember')?.checked;
             const turnstileToken = getLoginTurnstileToken();
+            const captchaAnswer = (document.getElementById('login-captcha-answer')?.value || '').trim();
 
-            if (!turnstileToken) {
-                setAlert('Please complete the verification before logging in.', 'warning');
+            if (mathCaptchaActive ? !captchaAnswer : !turnstileToken) {
+                setAlert(mathCaptchaActive ? 'Please answer the math question before logging in.' : 'Please complete the verification before logging in.', 'warning');
                 return;
             }
+
+            const loginPayload = { email, password, remember, turnstile_token: turnstileToken, csrf_token: csrfToken };
+            if (mathCaptchaActive) loginPayload.captcha_answer = captchaAnswer;
 
             try {
                 const response = await fetch('assets/api/auth/login_api.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, remember, turnstile_token: turnstileToken, csrf_token: csrfToken })
+                    body: JSON.stringify(loginPayload)
                 });
 
                 const data = await response.json();
@@ -3855,6 +3921,7 @@ $aboutPoints = [
         // ----- Google OAuth -----
         const googleClientId = <?php echo json_encode($googleClientId); ?>;
         let googleApiReady = false;
+        let googleLoadTimedOut = false;
         let googleTokenClient = null;
 
         function handleGoogleCredential(response) {
@@ -3910,7 +3977,11 @@ $aboutPoints = [
 
         function triggerGoogleSignIn() {
             if (!googleClientId || !googleApiReady || !googleTokenClient) {
-                setAlert('Google sign-in is still loading. Please try again in a moment.', 'warning');
+                if (googleLoadTimedOut) {
+                    setAlert('Google sign-in could not load. Check your internet connection and refresh the page.', 'error');
+                } else {
+                    setAlert('Google sign-in is still loading. Please try again in a moment.', 'warning');
+                }
                 return;
             }
             googleTokenClient.requestAccessToken({ prompt: 'consent' });
@@ -3933,12 +4004,14 @@ $aboutPoints = [
                 }
             }, 100);
 
+            // Don't alert on load failure; only tell the user when they actually click the Google button.
+            // Keep polling a while longer so slow connections can still finish loading.
             setTimeout(function() {
-                if (!googleApiReady) {
-                    clearInterval(_gsiPoll);
-                    setAlert('Google sign-in could not load. Please refresh the page.', 'error');
-                }
+                if (!googleApiReady) googleLoadTimedOut = true;
             }, 10000);
+            setTimeout(function() {
+                if (!googleApiReady) clearInterval(_gsiPoll);
+            }, 60000);
         }
 
         document.getElementById('google-login-btn')?.addEventListener('click', triggerGoogleSignIn);
