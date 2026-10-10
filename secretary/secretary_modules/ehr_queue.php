@@ -338,7 +338,6 @@ if (!function_exists('ehr_queue_waiting')) {
                                             <thead class="table-light"><tr><th>Service</th><th style="width:120px;">Price</th></tr></thead>
                                             <tbody id="billingServicesBody"><tr id="billingServicesEmptyRow"><td colspan="2" class="text-muted small">No services added.</td></tr></tbody>
                                         </table>
-                                        <small class="text-muted">Services are set by the doctor during charting and can't be added here.</small>
                                     </div>
                                 </div>
 
