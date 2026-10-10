@@ -1307,7 +1307,7 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
 // A patient who still has planned treatments (proposed or accepted) must leave with a next
 // visit: either one is already booked, or a follow-up date has to be set here. The server
 // (create_secretary_record.php) enforces the same rule; this just says so before submit.
-let currentRecordNextAppointment = null;
+window.currentRecordNextAppointment = null;
 
 function secretaryPendingPlanCount() {
     const widget = document.getElementById('secretaryTreatmentPlan')?._tpWidget;
