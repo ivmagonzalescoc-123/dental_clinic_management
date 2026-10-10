@@ -106,7 +106,7 @@ if ($sstmt) {
 
     <header class="ses-head">
         <div>
-            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, then chart their teeth, record findings and notes, and add the services done and any photos. Save the chart any time. Complete visit sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, then chart their teeth, record findings and notes, and add the services done and any photos. Save the chart any time. Complete visit sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
+            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, chart their teeth, then go step by step: assessment, clinical findings, photos, services and treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, chart their teeth, then go step by step: assessment, clinical findings, photos, services and treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
         </div>
         <?php if (!$appointment_id): ?>
         <span class="ses-head__queue"><i class="bi bi-people" aria-hidden="true"></i> <?php echo $queueCount; ?> in today's queue</span>
@@ -191,9 +191,75 @@ if ($sstmt) {
             </div>
         </section>
 
-        <div class="ses-grid">
-            <!-- Services done this visit: what billing is built from. -->
-            <section class="ses-card">
+        <!-- Session flow: everything after the chart, one step at a time. The doctor moves
+             with Back / Next (or by clicking a step); Complete session is on the last step. -->
+        <section class="ses-card ses-flow" id="sesFlow">
+            <ol class="ses-steps" id="sesSteps" aria-label="Session steps">
+                <li class="ses-steps__item"><button type="button" class="ses-step is-active" data-step="1" aria-current="step"><span class="ses-step__num">1</span><span class="ses-step__label">Assessment</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="2"><span class="ses-step__num">2</span><span class="ses-step__label">Clinical findings</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="3"><span class="ses-step__num">3</span><span class="ses-step__label">Photos</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="4"><span class="ses-step__num">4</span><span class="ses-step__label">Services &amp; plan</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="5"><span class="ses-step__num">5</span><span class="ses-step__label">Notes</span></button></li>
+            </ol>
+
+            <!-- One-click defaults for common findings (steps 1 and 2); the doctor then edits
+                 only what differs. -->
+            <div id="doctorFindingsPresets" class="ses-quickfill">
+                <span class="ses-quickfill__label"><i class="bi bi-lightning-charge"></i> Quick fill:</span>
+                <button type="button" class="ses-btn ses-btn--ghost ses-quickfill__clear" id="clearClinicalFindingsBtn"><i class="bi bi-eraser"></i> Clear</button>
+            </div>
+
+            <!-- Step 1: clinical assessment + vitals. -->
+            <div class="ses-pane" data-step-pane="1">
+                <div class="ses-card__head">
+                    <span class="ses-card__icon"><i class="bi bi-heart-pulse"></i></span>
+                    <div class="ses-card__heading">
+                        <h3 class="ses-card__title">Assessment</h3>
+                    </div>
+                </div>
+                <div id="doctorAssessmentBody">
+                    <div class="tp-empty">Select a patient to record their assessment.</div>
+                </div>
+            </div>
+
+            <!-- Step 2: occlusal classification + radiographic interpretation. -->
+            <div class="ses-pane" data-step-pane="2" hidden>
+                <div class="ses-card__head">
+                    <span class="ses-card__icon"><i class="bi bi-clipboard2-pulse"></i></span>
+                    <div class="ses-card__heading">
+                        <h3 class="ses-card__title">Clinical findings</h3>
+                    </div>
+                </div>
+                <div id="doctorFindingsBody">
+                    <div class="tp-empty">Select a patient to record their clinical findings.</div>
+                </div>
+            </div>
+
+            <!-- Step 3: clinical photos, uploaded with the session when it is completed. -->
+            <div class="ses-pane" data-step-pane="3" hidden>
+                <div class="ses-card__head">
+                    <span class="ses-card__icon"><i class="bi bi-images"></i></span>
+                    <div class="ses-card__heading">
+                        <h3 class="ses-card__title">Photos</h3>
+                    </div>
+                    <div class="ses-card__actions">
+                        <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
+                        <button type="button" class="ses-btn ses-btn--ghost" onclick="document.getElementById('finishPhotoUpload').click()" title="Upload photos">
+                            <i class="bi bi-upload"></i> Upload
+                        </button>
+                        <button type="button" class="ses-btn ses-btn--ghost" data-bs-toggle="modal" data-bs-target="#cameraModal" title="Take a photo">
+                            <i class="bi bi-camera"></i> Camera
+                        </button>
+                    </div>
+                </div>
+                <div id="photoGalleryContainer" class="ses-photos">
+                    <span class="ses-photos__empty" id="noPhotosMsg">No photos yet.</span>
+                </div>
+            </div>
+
+            <!-- Step 4: services done this visit (what billing is built from), then the
+                 treatment plan (multi-visit; an estimate only, billed via the services when done). -->
+            <div class="ses-pane" data-step-pane="4" hidden>
                 <div class="ses-card__head">
                     <span class="ses-card__icon"><i class="bi bi-receipt"></i></span>
                     <div class="ses-card__heading">
@@ -221,52 +287,36 @@ if ($sstmt) {
                     <tfoot id="ehrServicesFoot">
                     </tfoot>
                 </table>
-            </section>
-
-            <div class="ses-stack">
-                <!-- Clinical findings + doctor's notes (modal). -->
-                <section class="ses-card">
-                    <div class="ses-card__head">
-                        <span class="ses-card__icon"><i class="bi bi-clipboard2-pulse"></i></span>
-                        <div class="ses-card__heading">
-                            <h3 class="ses-card__title">Findings &amp; notes</h3>
-                        </div>
-                        <div class="ses-card__actions">
-                            <button type="button" id="viewClinicalFindingsBtn" class="ses-btn ses-btn--primary" disabled onclick="openDoctorClinicalFindingsModal()">
-                                <i class="bi bi-pencil-square"></i> Record
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Clinical photos: uploaded with the visit when it is completed. -->
-                <section class="ses-card">
-                    <div class="ses-card__head">
-                        <span class="ses-card__icon"><i class="bi bi-images"></i></span>
-                        <div class="ses-card__heading">
-                            <h3 class="ses-card__title">Photos</h3>
-                        </div>
-                        <div class="ses-card__actions">
-                            <input type="file" id="finishPhotoUpload" accept="image/*" multiple hidden>
-                            <button type="button" class="ses-btn ses-btn--ghost" onclick="document.getElementById('finishPhotoUpload').click()" title="Upload photos">
-                                <i class="bi bi-upload"></i> Upload
-                            </button>
-                            <button type="button" class="ses-btn ses-btn--ghost" data-bs-toggle="modal" data-bs-target="#cameraModal" title="Take a photo">
-                                <i class="bi bi-camera"></i> Camera
-                            </button>
-                        </div>
-                    </div>
-                    <div id="photoGalleryContainer" class="ses-photos">
-                        <span class="ses-photos__empty" id="noPhotosMsg">No photos yet.</span>
-                    </div>
-                </section>
+                <div class="ses-pane__divider"></div>
+                <div id="ehrTreatmentPlan">
+                    <div class="tp-empty">Select a patient to see their treatment plan.</div>
+                </div>
             </div>
-        </div>
 
-        <!-- Treatment plan (multi-visit; an estimate only — billed via the services above when done). -->
-        <section class="ses-card ses-card--plan">
-            <div id="ehrTreatmentPlan">
-                <div class="tp-empty">Select a patient to see their treatment plan.</div>
+            <!-- Step 5: the doctor's own notes, then Complete session. -->
+            <div class="ses-pane" data-step-pane="5" hidden>
+                <div class="ses-card__head">
+                    <span class="ses-card__icon"><i class="bi bi-journal-medical"></i></span>
+                    <div class="ses-card__heading">
+                        <h3 class="ses-card__title">Doctor's notes</h3>
+                    </div>
+                </div>
+                <label class="visually-hidden" for="doctor_notes">Doctor's notes</label>
+                <textarea id="doctor_notes" class="form-control" rows="6" placeholder="Notes for this session..."></textarea>
+                <p class="ses-pane__hint">Complete session sends everything to the secretary for records and billing.</p>
+            </div>
+
+            <div class="ses-flow__nav">
+                <button type="button" id="sesStepBackBtn" class="ses-btn ses-btn--ghost" disabled>
+                    <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <span class="ses-flow__count" id="sesStepCount" aria-live="polite">Step 1 of 5</span>
+                <button type="button" id="sesStepNextBtn" class="ses-btn ses-btn--primary">
+                    Next <i class="bi bi-arrow-right"></i>
+                </button>
+                <button type="button" id="submitFinishAppointmentBtn" class="ses-btn ses-btn--primary" hidden>
+                    <i class="bi bi-check2-circle"></i> Complete session
+                </button>
             </div>
         </section>
     </div>
@@ -310,53 +360,6 @@ if ($sstmt) {
                 <div class="modal-body text-center p-2">
                     <img id="photoViewerImg" style="max-width:100%;max-height:70vh;border-radius:8px;">
                 </div>
-            </div>
-        </div>
-    </div>
-    <div class="ses-finish" id="sesFinish">
-        <div class="ses-finish__text">
-            <strong>Done with this patient?</strong>
-        </div>
-        <button type="button" id="submitFinishAppointmentBtn" class="ses-btn ses-btn--primary ses-btn--lg">
-            <i class="bi bi-check2-circle"></i> Complete visit
-        </button>
-    </div>
-</div>
-
-<!-- Clinical Findings Modal — the doctor inputs clinical findings here during their own
-     session (Occlusal Classification is what's actually used day-to-day, so it's shown
-     first, with the doctor's own notes right after it; Clinical Assessment / Vitals & Lab
-     are optional), pre-filled with whatever the secretary already captured during Create
-     Record if any. -->
-<div class="modal fade" id="doctorClinicalFindingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-2">
-                <h5 class="modal-title" style="font-size:1rem;"><i class="bi bi-clipboard2-pulse"></i> Clinical Findings</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- One-click defaults for common findings; the doctor then edits only what differs. -->
-                <div id="doctorFindingsPresets" class="d-flex flex-wrap align-items-center gap-1 mb-2">
-                    <span class="small text-muted me-1"><i class="bi bi-lightning-charge"></i> Quick fill:</span>
-                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 ms-auto" id="clearClinicalFindingsBtn" style="font-size:0.78rem;"><i class="bi bi-eraser"></i> Clear</button>
-                </div>
-                <div id="doctorFindingsBody">
-                    <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
-                </div>
-                <!-- Parked here while the findings load; placeDoctorNotesSection() moves it to
-                     second place (after Occlusal Classification) once they render. -->
-                <div id="doctorNotesHolder">
-                    <div id="doctorNotesSection" class="pf-section mb-2">
-                        <div class="pf-section__title"><i class="bi bi-journal-medical"></i> Doctor's Notes</div>
-                        <textarea id="doctor_notes" class="form-control form-control-sm" rows="3" placeholder="Notes..." style="font-size:0.82rem;"></textarea>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" id="saveClinicalFindingsBtn" class="btn btn-primary btn-sm">
-                    <i class="bi bi-save"></i> Save Findings
-                </button>
             </div>
         </div>
     </div>
@@ -467,12 +470,10 @@ if ($sstmt) {
 .ses-idle-note > i { font-size: 1.5rem; color: #94a3b8; }
 .ses-idle-note strong { display: block; color: #334155; font-size: 0.92rem; }
 .ses.is-idle .ses-idle-note { display: flex; }
-.ses.is-idle .ses-work, .ses.is-idle .ses-finish { opacity: .45; pointer-events: none; user-select: none; }
+.ses.is-idle .ses-work { opacity: .45; pointer-events: none; user-select: none; }
 
 /* Work area */
 .ses-work { display: flex; flex-direction: column; gap: 14px; transition: opacity .2s ease; }
-.ses-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; }
-.ses-stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .ses-card { background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; padding: 14px 16px; min-width: 0; }
 .ses-card__head { display: flex; align-items: center; gap: 12px; }
 .ses-card__head + * { margin-top: 12px; }
@@ -553,29 +554,53 @@ if ($sstmt) {
 .ses-photos > div { border-radius: 10px !important; border-color: #e5eaf0 !important; }
 .ses-photos__empty, .ses-photos > .text-muted { font-size: 0.82rem; color: #94a3b8 !important; }
 
-/* Complete visit */
-.ses-finish {
-    position: sticky; bottom: 12px; z-index: 5;
-    display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-    background: #fff; border: 1px solid #cfe3ec; border-radius: 14px; padding: 12px 16px;
-    box-shadow: 0 10px 30px -18px rgba(15, 35, 60, .45);
+/* Session flow: step indicator, one pane at a time, Back / Next / Complete session. */
+.ses-flow { display: flex; flex-direction: column; gap: 14px; }
+.ses-flow [hidden] { display: none !important; }
+.ses-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
+.ses-steps__item { flex: 1 1 0; min-width: 0; }
+.ses-step {
+    width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border: 1px solid #e5eaf0; border-radius: 10px; background: #f8fafc; color: #64748b;
+    font-size: 0.8rem; font-weight: 600; text-align: left; cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
-.ses-finish__text { min-width: 0; font-size: 0.82rem; color: #64748b; }
-.ses-finish__text strong { display: block; color: #0f172a; font-size: 0.92rem; }
+.ses-step:hover { border-color: #1b7aa3; }
+.ses-step:focus-visible { outline: 3px solid rgba(27, 122, 163, .35); outline-offset: 2px; }
+.ses-step__num {
+    flex: 0 0 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 700;
+}
+.ses-step__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ses-step.is-done { color: #17698c; }
+.ses-step.is-done .ses-step__num { background: #d9eef6; color: #17698c; }
+.ses-step.is-active { background: #eef7fb; border-color: #1b7aa3; color: #0f172a; }
+.ses-step.is-active .ses-step__num { background: #1b7aa3; color: #fff; }
+.ses-quickfill { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ses-quickfill__label { font-size: 0.8rem; color: #64748b; }
+.ses-quickfill .ses-btn { padding: 4px 10px; font-size: 0.78rem; }
+.ses-quickfill__clear { margin-left: auto; }
+.ses-pane { min-width: 0; }
+.ses-pane__divider { border-top: 1px solid #eef2f6; margin: 16px 0; }
+.ses-pane__hint { margin: 8px 0 0; font-size: 0.8rem; color: #64748b; }
+.ses-flow__nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    border-top: 1px solid #eef2f6; padding-top: 12px;
+}
+.ses-flow__count { font-size: 0.8rem; color: #64748b; }
 
-@media (max-width: 991.98px) {
-    .ses-grid { grid-template-columns: minmax(0, 1fr); }
-}
 @media (max-width: 575.98px) {
     .ses-card__head { flex-wrap: wrap; }
     .ses-card__heading { flex: 1 1 0; }
     .ses-card__actions { flex-basis: 100%; padding-left: 48px; }
     .ehr-patient-card { flex-wrap: wrap; }
     .ehr-patient-details-btn { flex-basis: 100%; }
-    .ses-finish .ses-btn { flex-basis: 100%; }
+    .ses-steps__item { flex: 0 0 auto; }
+    .ses-steps__item:has(.is-active) { flex: 1 1 0; }
+    .ses-step:not(.is-active) .ses-step__label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .ses-work, .ses-chev, .ses-btn { transition: none; }
+    .ses-work, .ses-chev, .ses-btn, .ses-step { transition: none; }
 }
 
 /* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
@@ -612,9 +637,9 @@ if ($sstmt) {
     font-size: 1.05rem;
     color: #0f172a;
 }
-/* Clinical Findings & Patient Details modals (.pf-* classes) — same grouped-section/
-   pill-selector look the secretary's Create Record form uses, scoped to these modals. */
-#doctorClinicalFindingsModal .pf-section,
+/* Session steps & Patient Details modal (.pf-* classes) — same grouped-section/
+   pill-selector look the secretary's Create Record form uses, scoped to these two. */
+#sesFlow .pf-section,
 #doctorPatientDetailsModal .pf-section {
     background: #f8fafc;
     border: 1px solid #e6ebf1;
@@ -622,7 +647,7 @@ if ($sstmt) {
     padding: 0.8rem 0.9rem;
     margin-bottom: 0.75rem;
 }
-#doctorClinicalFindingsModal .pf-section__title,
+#sesFlow .pf-section__title,
 #doctorPatientDetailsModal .pf-section__title {
     display: flex;
     align-items: center;
@@ -634,17 +659,17 @@ if ($sstmt) {
     color: #1b7aa3;
     margin-bottom: 0.65rem;
 }
-#doctorClinicalFindingsModal .pf-pill-group {
+#sesFlow .pf-pill-group {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
 }
-#doctorClinicalFindingsModal .pf-pill-group input.pf-check {
+#sesFlow .pf-pill-group input.pf-check {
     position: absolute;
     clip: rect(0, 0, 0, 0);
     pointer-events: none;
 }
-#doctorClinicalFindingsModal .pf-pill {
+#sesFlow .pf-pill {
     display: inline-flex;
     align-items: center;
     padding: 0.3rem 0.7rem;
@@ -659,17 +684,17 @@ if ($sstmt) {
     user-select: none;
     line-height: 1.3;
 }
-#doctorClinicalFindingsModal .pf-pill:hover {
+#sesFlow .pf-pill:hover {
     border-color: #1b7aa3;
     color: #1b7aa3;
 }
-#doctorClinicalFindingsModal .pf-check:checked + .pf-pill {
+#sesFlow .pf-check:checked + .pf-pill {
     background: #1b7aa3;
     border-color: #1b7aa3;
     color: #fff;
     box-shadow: 0 2px 6px rgba(27, 122, 163, 0.25);
 }
-#doctorClinicalFindingsModal .pf-check:focus-visible + .pf-pill {
+#sesFlow .pf-check:focus-visible + .pf-pill {
     outline: 2px solid #1b7aa3;
     outline-offset: 1px;
 }.odontogram-viewport {
@@ -845,8 +870,8 @@ if ($sstmt) {
             const apptId = parseInt(this.value || '0', 10);
             document.getElementById('appointment_id_hidden').value = apptId;
             updateEhrPatientCard(apptId ? this.options[this.selectedIndex] : null);
-            const findingsBtn = document.getElementById('viewClinicalFindingsBtn');
-            if (findingsBtn) findingsBtn.disabled = !apptId;
+            if (typeof window.loadDoctorFindings === 'function') window.loadDoctorFindings(apptId);
+            if (typeof window.showSessionStep === 'function') window.showSessionStep(1);
             if (apptId) {
                 prefillClinicalRecord(apptId).then(() => {
                     showOdontogram();
@@ -865,8 +890,7 @@ if ($sstmt) {
                 const sel = document.getElementById('queueSelector');
                 if (sel) for (let i = 0; i < sel.options.length; i++) if (parseInt(sel.options[i].value || '0', 10) === initialAppt) { sel.selectedIndex = i; break; }
                 updateEhrPatientCard(sel ? sel.options[sel.selectedIndex] : null);
-                const findingsBtn = document.getElementById('viewClinicalFindingsBtn');
-                if (findingsBtn) findingsBtn.disabled = false;
+                if (typeof window.loadDoctorFindings === 'function') window.loadDoctorFindings(initialAppt);
                 prefillClinicalRecord(initialAppt).then(() => {
                     showOdontogram();
                     try { updateOdontogramToggle(); } catch (e) { }
@@ -1314,6 +1338,15 @@ if ($sstmt) {
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             
             try {
+                // Assessment / clinical findings (steps 1-2) are saved on their own endpoint;
+                // make sure the latest edits are in before the session is closed.
+                if (typeof window.saveDoctorFindings === 'function' && !(await window.saveDoctorFindings({ silent: true }))) {
+                    ehrFinishSubmitting = false;
+                    this.disabled = false;
+                    this.innerHTML = btnText;
+                    return;
+                }
+
                 const fd = new FormData();
                 fd.append('appointment_id', appointmentId);
                 fd.append('notes', document.getElementById('doctor_notes').value);
@@ -1353,14 +1386,14 @@ if ($sstmt) {
                     return;
                 }
                 if (!json.success) {
-                    notifyDoctor(json.message || 'Could not complete the visit.', 'danger');
+                    notifyDoctor(json.message || 'Could not complete the session.', 'danger');
                     ehrFinishSubmitting = false;
                     this.disabled = false;
                     this.innerHTML = btnText;
                     return;
                 }
                 
-                notifyDoctor(json.already_processed || json.idempotent_replay ? 'This visit was already completed.' : 'Visit completed and sent to the secretary.', 'success');
+                notifyDoctor(json.already_processed || json.idempotent_replay ? 'This session was already completed.' : 'Session completed and sent to the secretary.', 'success');
                 if (json.upload_warnings && json.upload_warnings.length > 0) {
                     notifyDoctor('Upload warnings: ' + json.upload_warnings.join('; '), 'warning');
                 }
@@ -1368,7 +1401,7 @@ if ($sstmt) {
                 setTimeout(() => window.location.href = 'doctor.php?page=appointments', 1000);
             } catch (e) {
                 console.error(e);
-                notifyDoctor('Could not complete the visit. Please try again.', 'danger');
+                notifyDoctor('Could not complete the session. Please try again.', 'danger');
                 ehrFinishSubmitting = false;
                 this.disabled = false;
                 this.innerHTML = btnText;
@@ -1619,16 +1652,16 @@ function loadPdRecordDetail(recordId) {
 </script>
 
 <script>
-// Clinical Findings modal — the doctor inputs/edits clinical findings here during their own
-// session (pre-filled with whatever the secretary already captured in Create Record, if
-// any). Mirrors the Create Record tab's field order/widgets: Occlusal Classification first
-// (what's actually used), then the optional groups. Saved via
+// Assessment (step 1) and Clinical findings (step 2) of the session flow — the doctor
+// inputs/edits them inline, pre-filled with whatever was already saved for this
+// appointment. Both steps are one record: saved together via
 // assets/api/ehr/save_clinical_findings.php, collected with the shared
 // collectVisitClinicalData() helper (assets/js/clinical-assessment-fields.js) using the
 // same 'visit-clinical-field' convention the secretary's Create Record form uses.
 var CLINICAL_FINDINGS_GROUPS = [
     {
         title: 'Occlusal Classification',
+        step: 'findings',
         optional: false,
         fields: [
             ['occlusion', 'Occlusion', 'text'], ['cl_i_type', 'Cl. I Type', 'text'],
@@ -1639,6 +1672,7 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Clinical Assessment',
+        step: 'assessment',
         optional: true,
         fields: [
             ['gingiva_consistency', 'Consistency Gingiva', 'radio', ['Firm', 'Hyper plastic', 'Smooth']],
@@ -1650,6 +1684,7 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Vitals & Lab Findings',
+        step: 'assessment',
         optional: true,
         fields: [
             ['blood_sugar', 'Blood Sugar', 'text'],
@@ -1663,15 +1698,18 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Radiographic Interpretation',
+        step: 'findings',
         optional: true,
         fields: [['radiographic_interpretation', 'Radiographic Interpretation', 'textarea']],
     },
 ];
 
-function renderClinicalFindingsHtml(findings) {
+function renderClinicalFindingsHtml(findings, step) {
     findings = findings || {};
     let idSeq = 0;
-    return CLINICAL_FINDINGS_GROUPS.map(function(group) {
+    return CLINICAL_FINDINGS_GROUPS.filter(function(group) {
+        return !step || group.step === step;
+    }).map(function(group) {
         const rows = group.fields.map(function(f) {
             const key = f[0], label = f[1], kind = f[2] || 'text';
             const value = findings[key];
@@ -1702,116 +1740,149 @@ function renderClinicalFindingsHtml(findings) {
     }).join('');
 }
 
+var DOCTOR_FINDINGS_PANES = [['doctorAssessmentBody', 'assessment'], ['doctorFindingsBody', 'findings']];
 var doctorFindingsApptId = 0;
+var doctorFindingsDirty = false;
 
-// Doctor's Notes sits second, right after Occlusal Classification. The section is one
-// persistent element (#doctor_notes is read on save/finish and filled on prefill), so it's
-// moved rather than re-rendered, and parked back in its holder before the findings body is
-// replaced so typed notes aren't lost.
-function parkDoctorNotesSection() {
-    const section = document.getElementById('doctorNotesSection');
-    const holder = document.getElementById('doctorNotesHolder');
-    if (section && holder && section.parentNode !== holder) holder.appendChild(section);
+function renderDoctorFindings(findings) {
+    DOCTOR_FINDINGS_PANES.forEach(function(pane) {
+        const bodyEl = document.getElementById(pane[0]);
+        if (!bodyEl) return;
+        bodyEl.innerHTML = renderClinicalFindingsHtml(findings, pane[1]);
+        if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+    });
+    doctorFindingsDirty = false;
 }
 
-function placeDoctorNotesSection(bodyEl) {
-    const section = document.getElementById('doctorNotesSection');
-    const first = bodyEl && bodyEl.querySelector('.pf-section');
-    if (section && first) first.insertAdjacentElement('afterend', section);
+function setDoctorFindingsPlaceholder(html) {
+    DOCTOR_FINDINGS_PANES.forEach(function(pane) {
+        const bodyEl = document.getElementById(pane[0]);
+        if (bodyEl) bodyEl.innerHTML = html;
+    });
+    doctorFindingsDirty = false;
 }
 
-function renderDoctorFindings(bodyEl, findings) {
-    parkDoctorNotesSection();
-    bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
-    placeDoctorNotesSection(bodyEl);
-    if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
-}
-
-function openDoctorClinicalFindingsModal() {
-    const sel = document.getElementById('queueSelector');
-    const apptId = sel ? parseInt(sel.value || document.getElementById('appointment_id_hidden')?.value || '0', 10) : parseInt(document.getElementById('appointment_id_hidden')?.value || '0', 10);
-    if (!apptId) {
-        window.showToast('Select a patient first.', 'warning');
-        return;
+// Called whenever the selected patient changes (see the queueSelector handler above).
+function loadDoctorFindings(apptId) {
+    apptId = parseInt(apptId || '0', 10) || 0;
+    // Switching patients with unsaved edits: keep them (saved against the previous visit).
+    if (doctorFindingsDirty && doctorFindingsApptId && doctorFindingsApptId !== apptId) {
+        saveDoctorFindings({ silent: true });
     }
     doctorFindingsApptId = apptId;
-
-    const modalEl = document.getElementById('doctorClinicalFindingsModal');
-    const bodyEl = document.getElementById('doctorFindingsBody');
-    if (!modalEl || !bodyEl) return;
-    const modal = new bootstrap.Modal(modalEl);
-    parkDoctorNotesSection();
-    bodyEl.innerHTML = '<div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>';
-    modal.show();
+    if (!apptId) {
+        setDoctorFindingsPlaceholder('<div class="tp-empty">Select a patient first.</div>');
+        return;
+    }
+    setDoctorFindingsPlaceholder('<div class="text-center text-muted py-4"><i class="bi bi-hourglass-split"></i> Loading...</div>');
 
     fetch('../assets/api/ehr/get_records_by_appointment_detailed.php?appointment_id=' + encodeURIComponent(apptId))
         .then(r => r.json())
         .then(data => {
-            const findings = (data && data.success && data.record) ? (data.record.clinical_findings || {}) : {};
-            renderDoctorFindings(bodyEl, findings);
+            if (doctorFindingsApptId !== apptId) return;
+            renderDoctorFindings((data && data.success && data.record) ? (data.record.clinical_findings || {}) : {});
         })
         .catch(() => {
-            renderDoctorFindings(bodyEl, {});
+            if (doctorFindingsApptId === apptId) renderDoctorFindings({});
         });
 }
 
-// Quick-fill buttons, one per preset in assets/js/clinical-assessment-fields.js. Nothing is
-// saved until Save Findings, so a wrong click is undone by editing or Clear.
-(function () {
-    const bar = document.getElementById('doctorFindingsPresets');
-    const clearBtn = document.getElementById('clearClinicalFindingsBtn');
-    if (!bar || !clearBtn) return;
-    (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn btn-outline-primary btn-sm py-0';
-        btn.style.fontSize = '0.78rem';
-        btn.textContent = preset.label;
-        btn.addEventListener('click', function () {
-            const bodyEl = document.getElementById('doctorFindingsBody');
-            if (!bodyEl.querySelector('.visit-clinical-field')) return;
-            window.applyClinicalFindingsPreset(bodyEl, preset.key);
-            window.showToast('"' + preset.label + '" filled in. Review, adjust, then save.', 'info');
-        });
-        bar.insertBefore(btn, clearBtn);
-    });
-    clearBtn.addEventListener('click', function () {
-        const bodyEl = document.getElementById('doctorFindingsBody');
-        if (typeof window.clearClinicalFindings === 'function') window.clearClinicalFindings(bodyEl);
-    });
-})();
-
-document.getElementById('saveClinicalFindingsBtn')?.addEventListener('click', async function() {
-    if (!doctorFindingsApptId) {
-        window.showToast('Select a patient first.', 'warning');
-        return;
-    }
-    const findings = typeof collectVisitClinicalData === 'function'
-        ? collectVisitClinicalData('#doctorFindingsBody')
-        : {};
-
-    const btnText = this.innerHTML;
-    this.disabled = true;
-    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+// Saves steps 1-2 if anything changed. Resolves false only when a save was needed and failed.
+async function saveDoctorFindings(opts) {
+    opts = opts || {};
+    const apptId = doctorFindingsApptId;
+    if (!apptId || !doctorFindingsDirty) return true;
+    const findings = typeof collectVisitClinicalData === 'function' ? collectVisitClinicalData('#sesFlow') : {};
+    doctorFindingsDirty = false;
     try {
         const fd = new FormData();
-        fd.append('appointment_id', doctorFindingsApptId);
+        fd.append('appointment_id', apptId);
         fd.append('clinical_findings', JSON.stringify(findings));
         fd.append('csrf_token', doctorCsrfToken);
         const res = await fetch('../assets/api/ehr/save_clinical_findings.php', { method: 'POST', body: fd });
         const json = await res.json();
-        if (!json.success) {
-            window.showToast(json.message || 'Failed to save clinical findings', 'danger');
-        } else {
-            window.showToast('Clinical findings saved', 'success');
-        }
+        if (!json.success) throw new Error(json.message || 'Failed to save clinical findings');
+        if (!opts.silent) window.showToast('Assessment and findings saved', 'success');
+        return true;
     } catch (e) {
         console.error(e);
-        window.showToast('Error saving clinical findings', 'danger');
-    } finally {
-        this.disabled = false;
-        this.innerHTML = btnText;
+        if (doctorFindingsApptId === apptId) doctorFindingsDirty = true;
+        window.showToast('Assessment and findings were not saved. Please try again.', 'danger');
+        return false;
     }
-});
+}
+
+// Step indicator: one pane visible at a time. Leaving step 1 or 2 saves what was entered.
+var SES_STEP_COUNT = 5;
+var sesCurrentStep = 1;
+
+function showSessionStep(step) {
+    step = Math.max(1, Math.min(SES_STEP_COUNT, parseInt(step, 10) || 1));
+    if (sesCurrentStep <= 2 && step !== sesCurrentStep) saveDoctorFindings();
+    sesCurrentStep = step;
+
+    document.querySelectorAll('#sesFlow .ses-pane').forEach(function(pane) {
+        pane.hidden = parseInt(pane.getAttribute('data-step-pane'), 10) !== step;
+    });
+    document.querySelectorAll('#sesSteps .ses-step').forEach(function(btn) {
+        const idx = parseInt(btn.getAttribute('data-step'), 10);
+        btn.classList.toggle('is-active', idx === step);
+        btn.classList.toggle('is-done', idx < step);
+        if (idx === step) btn.setAttribute('aria-current', 'step');
+        else btn.removeAttribute('aria-current');
+    });
+
+    const isLast = step === SES_STEP_COUNT;
+    document.getElementById('sesStepBackBtn').disabled = step === 1;
+    document.getElementById('sesStepNextBtn').hidden = isLast;
+    document.getElementById('submitFinishAppointmentBtn').hidden = !isLast;
+    document.getElementById('sesStepCount').textContent = 'Step ' + step + ' of ' + SES_STEP_COUNT;
+    document.getElementById('doctorFindingsPresets').hidden = step > 2;
+}
+
+(function () {
+    const flow = document.getElementById('sesFlow');
+    if (!flow) return;
+
+    document.getElementById('sesSteps').addEventListener('click', function (e) {
+        const btn = e.target.closest('.ses-step');
+        if (btn) showSessionStep(btn.getAttribute('data-step'));
+    });
+    document.getElementById('sesStepBackBtn').addEventListener('click', function () { showSessionStep(sesCurrentStep - 1); });
+    document.getElementById('sesStepNextBtn').addEventListener('click', function () { showSessionStep(sesCurrentStep + 1); });
+
+    // 'click' as well as input/change: un-checking a pill (click again to clear) fires no change.
+    ['input', 'change', 'click'].forEach(function (type) {
+        flow.addEventListener(type, function (e) {
+            if (e.target.classList && e.target.classList.contains('visit-clinical-field')) doctorFindingsDirty = true;
+        });
+    });
+
+    // Quick-fill buttons, one per preset in assets/js/clinical-assessment-fields.js. A preset
+    // fills both the Assessment and Clinical findings steps; a wrong click is undone by
+    // editing or Clear.
+    const bar = document.getElementById('doctorFindingsPresets');
+    const clearBtn = document.getElementById('clearClinicalFindingsBtn');
+    (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ses-btn ses-btn--ghost';
+        btn.textContent = preset.label;
+        btn.addEventListener('click', function () {
+            if (!flow.querySelector('.visit-clinical-field')) return;
+            window.applyClinicalFindingsPreset(flow, preset.key);
+            doctorFindingsDirty = true;
+            window.showToast('"' + preset.label + '" filled in for Assessment and Clinical findings. Review and adjust.', 'info');
+        });
+        bar.insertBefore(btn, clearBtn);
+    });
+    clearBtn.addEventListener('click', function () {
+        if (!flow.querySelector('.visit-clinical-field')) return;
+        if (typeof window.clearClinicalFindings === 'function') window.clearClinicalFindings(flow);
+        doctorFindingsDirty = true;
+    });
+
+    showSessionStep(1);
+})();
 </script>
 

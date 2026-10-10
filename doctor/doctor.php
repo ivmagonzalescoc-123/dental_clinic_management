@@ -388,7 +388,7 @@ switch ($role_key) {
                         "schedule": ["availability", "calendar", "time slots", "leave"],
                         "patients": ["patient list", "profiles", "history", "charts", "add patient", "patient accounts"],
                         "arrivals": ["today", "queue", "checked in", "waiting"],
-                        "ehr": ["patient visit", "visit", "session", "treatment", "charting", "odontogram", "clinical notes", "complete visit"],
+                        "ehr": ["patient visit", "visit", "session", "treatment", "charting", "odontogram", "clinical notes", "complete visit", "complete session"],
                         "records": ["clinical records", "history", "odontogram"],
                         "notifications": ["alerts", "updates"],
                         "settings": ["preferences", "configuration", "password"],
