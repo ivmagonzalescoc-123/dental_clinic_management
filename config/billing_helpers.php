@@ -314,6 +314,90 @@ if (!function_exists('billing_get_patient_outstanding_installments')) {
     }
 }
 
+if (!function_exists('billing_get_installment_plan_breakdown')) {
+    /**
+     * Everything that makes up one installment plan: the visit and line items it was billed
+     * for, discount, total, down payment, what has been paid so far, and every term.
+     */
+    function billing_get_installment_plan_breakdown(mysqli $conn, int $billingId, int $installmentId): array
+    {
+        $plan = [
+            'visit_date' => null, 'visit_reference' => null, 'items' => [],
+            'subtotal' => 0.0, 'discount_type' => 'none', 'discount_percent' => 0.0, 'discount_amount' => 0.0,
+            'total' => 0.0, 'down_payment' => 0.0, 'num_terms' => 0,
+            'amount_paid' => 0.0, 'balance' => 0.0, 'terms' => [],
+        ];
+
+        $stmt = $conn->prepare('
+            SELECT b.subtotal_amount, b.total_amount, b.amount_paid, b.balance, b.discount_type, b.discount_percent,
+                   bi.down_payment_amount, bi.num_terms, a.appointment_date, a.reference_code
+            FROM billing b
+            INNER JOIN billing_installments bi ON bi.billing_id = b.billing_id
+            LEFT JOIN appointments a ON a.appointment_id = b.appointment_id
+            WHERE b.billing_id = ? AND bi.installment_id = ?
+            LIMIT 1
+        ');
+        if ($stmt) {
+            $stmt->bind_param('ii', $billingId, $installmentId);
+            $stmt->execute();
+            if ($row = $stmt->get_result()->fetch_assoc()) {
+                $plan['visit_date'] = $row['appointment_date'] ? substr((string)$row['appointment_date'], 0, 10) : null;
+                $plan['visit_reference'] = $row['reference_code'] ?: null;
+                $plan['subtotal'] = round((float)$row['subtotal_amount'], 2);
+                $plan['total'] = round((float)$row['total_amount'], 2);
+                $plan['discount_type'] = (string)$row['discount_type'];
+                $plan['discount_percent'] = round((float)$row['discount_percent'], 2);
+                $plan['discount_amount'] = round(max(0, $plan['subtotal'] - $plan['total']), 2);
+                $plan['down_payment'] = round((float)$row['down_payment_amount'], 2);
+                $plan['num_terms'] = (int)$row['num_terms'];
+                $plan['amount_paid'] = round((float)$row['amount_paid'], 2);
+                $plan['balance'] = round((float)$row['balance'], 2);
+            }
+            $stmt->close();
+        }
+
+        $stmt = $conn->prepare('SELECT description, amount, item_type FROM billing_line_items WHERE billing_id = ? ORDER BY item_id');
+        if ($stmt) {
+            $stmt->bind_param('i', $billingId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $plan['items'][] = [
+                    'description' => (string)$row['description'],
+                    'amount' => round((float)$row['amount'], 2),
+                    'item_type' => (string)$row['item_type'],
+                ];
+            }
+            $stmt->close();
+        }
+
+        $stmt = $conn->prepare('
+            SELECT term_number, due_date, amount, paid_amount, status
+            FROM billing_installment_terms
+            WHERE installment_id = ?
+            ORDER BY term_number ASC
+        ');
+        if ($stmt) {
+            $stmt->bind_param('i', $installmentId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($row = $res->fetch_assoc()) {
+                $plan['terms'][] = [
+                    'term_number' => (int)$row['term_number'],
+                    'due_date' => (string)$row['due_date'],
+                    'amount' => round((float)$row['amount'], 2),
+                    'paid_amount' => round((float)$row['paid_amount'], 2),
+                    'remaining_amount' => round((float)$row['amount'] - (float)$row['paid_amount'], 2),
+                    'status' => (string)$row['status'],
+                ];
+            }
+            $stmt->close();
+        }
+
+        return $plan;
+    }
+}
+
 if (!function_exists('billing_get_installment_plan_for_followup')) {
     /**
      * Resolve whether a given appointment is a follow-up visit (rescheduled_from) of an
@@ -326,7 +410,10 @@ if (!function_exists('billing_get_installment_plan_for_followup')) {
      * generate its own unrelated ₱[consultation fee] charge instead of the real installment
      * amount, which lives on a completely different billing_id tied to the original visit.
      *
-     * @return array{source_appointment_id:int, billing_id:int, installment_id:int, pending_terms:array}|null
+     * `plan` is the full picture for display (what was billed, down payment, every term and
+     * how much of each is paid) so the secretary can see what the "next payment due" is part of.
+     *
+     * @return array{source_appointment_id:int, billing_id:int, installment_id:int, pending_terms:array, plan:array}|null
      */
     function billing_get_installment_plan_for_followup(mysqli $conn, int $appointmentId): ?array
     {
@@ -397,6 +484,7 @@ if (!function_exists('billing_get_installment_plan_for_followup')) {
             'billing_id' => $billingId,
             'installment_id' => $installmentId,
             'pending_terms' => $terms,
+            'plan' => billing_get_installment_plan_breakdown($conn, $billingId, $installmentId),
         ];
     }
 }

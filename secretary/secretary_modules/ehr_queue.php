@@ -327,6 +327,7 @@ if (!function_exists('ehr_queue_waiting')) {
                     <div class="tab-pane fade" id="tabBilling" role="tabpanel">
                         <div id="outstandingInstallmentBanner" class="alert alert-warning py-2 px-3 mb-3" style="display:none; font-size:0.85rem;">
                             <i class="bi bi-exclamation-triangle-fill"></i> <span id="outstandingInstallmentBannerText"></span>
+                            <div id="installmentPlanBreakdown" class="inst-breakdown" hidden></div>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-7">
@@ -533,6 +534,17 @@ if (!function_exists('ehr_queue_waiting')) {
     transition: width 0.25s ease;
 }
 #ehrRecordView .form-label { margin-bottom: 2px; font-size: 0.82rem; }
+/* Installment plan breakdown inside the Billing notice. */
+.inst-breakdown { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(0, 0, 0, 0.1); color: #0f172a; }
+.inst-breakdown__title { font-weight: 700; font-size: 0.8rem; margin-bottom: 6px; }
+.inst-breakdown__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; }
+.inst-breakdown__line { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8rem; padding: 2px 0; }
+.inst-breakdown__line.is-strong { font-weight: 700; border-top: 1px dashed rgba(0, 0, 0, 0.15); margin-top: 2px; padding-top: 4px; }
+.inst-breakdown__terms { width: 100%; font-size: 0.78rem; border-collapse: collapse; background: rgba(255, 255, 255, 0.6); }
+.inst-breakdown__terms th, .inst-breakdown__terms td { padding: 3px 8px; text-align: left; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.inst-breakdown__terms th { font-weight: 700; }
+.inst-breakdown__terms tr.is-next td { font-weight: 700; background: rgba(255, 255, 255, 0.9); }
+@media (max-width: 767.98px) { .inst-breakdown__cols { grid-template-columns: minmax(0, 1fr); } }
 #ehrRecordView .form-check-sm .form-check-input { width: 16px; height: 16px; }
 #ehrRecordView .form-check-sm .form-check-label { font-size: 0.8rem; }
 
@@ -1136,11 +1148,73 @@ window.recordBillingServiceIds = new Set();
 // being stuck at ₱0.00 (this visit has no billable service of its own).
 window.currentVisitInstallmentInfo = null;
 
+// What an installment plan is made of, shown under the "part of an existing installment
+// plan" notice: what was billed, discount, total, down payment, paid so far, and every term —
+// so "next payment due" isn't just a bare number. Built with textContent only.
+function renderInstallmentPlanBreakdown(plan) {
+    const host = document.getElementById('installmentPlanBreakdown');
+    if (!host) return;
+    host.innerHTML = '';
+    host.hidden = true;
+    if (!plan || !Array.isArray(plan.terms) || plan.terms.length === 0) return;
+
+    const peso = v => '₱' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const el = (tag, cls, text) => {
+        const node = document.createElement(tag);
+        if (cls) node.className = cls;
+        if (text !== undefined) node.textContent = text;
+        return node;
+    };
+    const line = (label, value, cls) => {
+        const row = el('div', 'inst-breakdown__line' + (cls ? ' ' + cls : ''));
+        row.appendChild(el('span', '', label));
+        row.appendChild(el('span', '', value));
+        return row;
+    };
+
+    const origin = [plan.visit_date ? 'visit on ' + plan.visit_date : '', plan.visit_reference ? 'Ref ' + plan.visit_reference : ''].filter(Boolean).join(', ');
+    host.appendChild(el('div', 'inst-breakdown__title', 'Installment plan breakdown' + (origin ? ' (' + origin + ')' : '')));
+
+    const cols = el('div', 'inst-breakdown__cols');
+    const summary = el('div', 'inst-breakdown__col');
+    (plan.items || []).forEach(item => summary.appendChild(line(item.description || 'Item', peso(item.amount))));
+    if (Number(plan.discount_amount) > 0) {
+        const pct = Number(plan.discount_percent) > 0 ? ' (' + Number(plan.discount_percent) + '%)' : '';
+        summary.appendChild(line('Discount' + pct, '− ' + peso(plan.discount_amount)));
+    }
+    summary.appendChild(line('Plan total', peso(plan.total), 'is-strong'));
+    summary.appendChild(line('Down payment', peso(plan.down_payment)));
+    summary.appendChild(line('Paid so far', peso(plan.amount_paid)));
+    summary.appendChild(line('Remaining balance', peso(plan.balance), 'is-strong'));
+    cols.appendChild(summary);
+
+    const termsCol = el('div', 'inst-breakdown__col');
+    const table = el('table', 'inst-breakdown__terms');
+    const head = el('tr');
+    ['Term', 'Due', 'Amount', 'Paid', 'Status'].forEach(h => head.appendChild(el('th', '', h)));
+    table.appendChild(head);
+    const nextTerm = plan.terms.find(t => t.status !== 'paid');
+    plan.terms.forEach(t => {
+        const tr = el('tr', t === nextTerm ? 'is-next' : '');
+        tr.appendChild(el('td', '', Number(t.term_number) === 0 ? 'Down payment' : String(t.term_number)));
+        tr.appendChild(el('td', '', t.due_date));
+        tr.appendChild(el('td', '', peso(t.amount)));
+        tr.appendChild(el('td', '', peso(t.paid_amount)));
+        tr.appendChild(el('td', '', t.status === 'paid' ? 'Paid' : (t === nextTerm ? 'Due next' : (t.status === 'partial' ? 'Partly paid' : 'Pending'))));
+        table.appendChild(tr);
+    });
+    termsCol.appendChild(table);
+    cols.appendChild(termsCol);
+    host.appendChild(cols);
+    host.hidden = false;
+}
+
 async function checkOutstandingInstallments(patientId, appointmentId) {
     const banner = document.getElementById('outstandingInstallmentBanner');
     const bannerText = document.getElementById('outstandingInstallmentBannerText');
     currentVisitInstallmentInfo = null;
     if (banner) banner.style.display = 'none';
+    renderInstallmentPlanBreakdown(null);
 
     try {
         const url = '../assets/api/billing/get_patient_outstanding_installments.php?patient_id=' + patientId
@@ -1158,6 +1232,7 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
                 + `Next payment due: ₱${Number(nextTerm.remaining_amount).toFixed(2)} (term ${nextTerm.term_number}, due ${nextTerm.due_date}). `
                 + `Check "Record a payment now" below to collect it.`;
             if (bannerText) bannerText.textContent = label;
+            renderInstallmentPlanBreakdown(currentVisitInstallmentInfo.plan);
             if (banner) {
                 banner.className = 'alert alert-info py-2 px-3 mb-3';
                 banner.style.display = '';
@@ -1213,11 +1288,6 @@ function refreshFollowUpRequirement() {
         note.className = 'small mt-1 text-success';
         note.textContent = 'Next appointment already booked on ' +
             currentRecordNextAppointment.appointment_date + '. A follow-up date is optional.';
-        note.hidden = false;
-    } else if (pending > 0) {
-        note.className = 'small mt-1 text-danger';
-        note.textContent = 'Required: ' + pending + ' planned treatment' +
-            (pending === 1 ? '' : 's') + ' pending and no upcoming appointment.';
         note.hidden = false;
     } else {
         note.hidden = true;
