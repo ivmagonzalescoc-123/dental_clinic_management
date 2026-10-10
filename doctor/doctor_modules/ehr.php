@@ -8,6 +8,25 @@ check_session(['doctor']);
 // Allow either appointment_id via GET OR selection by queue number
 $appointment_id = isset($_GET['appointment_id']) ? (int) $_GET['appointment_id'] : 0;
 
+// Once the doctor completes a session the visit belongs to the secretary's EHR queue (and
+// then to the finished record): it must no longer be selectable here, or the doctor could
+// go on editing a visit that has already been handed over.
+$sessionClosedStatuses = ['completed_by_doctor', 'awaiting_secretary_records', 'records_complete', 'completed', 'cancelled', 'no_show'];
+$sessionClosedSqlList = "'" . implode("','", $sessionClosedStatuses) . "'";
+
+// A link to a visit that is already handed over (an old bookmark, or Back after completing)
+// falls back to the normal queue with nothing selected.
+if ($appointment_id) {
+    $closedStmt = $conn->prepare('SELECT status FROM appointments WHERE appointment_id = ?');
+    $closedStmt->bind_param('i', $appointment_id);
+    $closedStmt->execute();
+    $closedRow = $closedStmt->get_result()->fetch_assoc();
+    $closedStmt->close();
+    if ($closedRow && in_array((string)$closedRow['status'], $sessionClosedStatuses, true)) {
+        $appointment_id = 0;
+    }
+}
+
 // If no appointment_id provided, fetch today's arrived patients for this doctor
 $queueItems = [];
 if (!$appointment_id) {
@@ -44,7 +63,7 @@ if (!$appointment_id) {
                             AND COALESCE(t.slot_date, a.appointment_date) = ?
                             AND (
                                 a.status IN ('arrived','checked_in','in_progress','confirmed')
-                                OR (cr.record_id IS NOT NULL AND a.status NOT IN ('completed','records_complete','cancelled','no_show'))
+                                OR (cr.record_id IS NOT NULL AND a.status NOT IN ($sessionClosedSqlList))
                             )
                         ORDER BY a.is_emergency DESC, COALESCE(t.start_time, '00:00:00') ASC";
 
