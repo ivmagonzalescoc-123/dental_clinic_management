@@ -6,15 +6,28 @@
     <title>Odontogram</title>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
-    <link rel="stylesheet" href="./style.css" />
-    <script type="importmap">
-{
-  "imports": {
-    "three": "../assets/vendor/three/build/three.module.js",
-    "three/addons/": "../assets/vendor/three/examples/jsm/"
-  }
-}
-</script>
+    <script>
+    /* Cache busting. Every page embeds this chart as index.html?v=<newest file time in
+       this folder> (odontogram_embed_src() in config/odontogram_helpers.php), so that one
+       value is passed on to the stylesheet and to every chart module: re-uploading any
+       chart file makes the browser fetch them all fresh, with no version to bump by hand.
+       The import map is what versions the modules that import each other by plain path;
+       a new module file must be added to the list below. */
+    (function () {
+      var v = new URLSearchParams(location.search).get('v') || '20261010a';
+      var q = '?v=' + encodeURIComponent(v);
+      var modules = ['chart-constants', 'main', 'svg-chart', 'teeth-3d', 'tooth-2d-art',
+        'tooth-2d-surfaces', 'tooth-detail-2d', 'tooth-names', 'tooth-surface-3d'];
+      var imports = {
+        'three': '../assets/vendor/three/build/three.module.js',
+        'three/addons/': '../assets/vendor/three/examples/jsm/'
+      };
+      modules.forEach(function (name) { imports['./' + name + '.js'] = './' + name + '.js' + q; });
+      window.CHART_ASSET_QUERY = q;
+      document.write('<link rel="stylesheet" href="./style.css' + q + '" />');
+      document.write('<script type="importmap">' + JSON.stringify({ imports: imports }) + '<\/script>');
+    })();
+    </script>
   </head>
   <body>
     <div class="app is-panel-collapsed" id="app">
@@ -102,7 +115,7 @@
         </div>
       </section>
     </div>
-    <script type="module" src="./main.js?v=20261010a"></script>
+    <script>document.write('<script type="module" src="./main.js' + window.CHART_ASSET_QUERY + '"><\/script>');</script>
     <script>
     (function() {
       var toggle = document.getElementById('panelToggle');

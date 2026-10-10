@@ -315,7 +315,7 @@ if (!function_exists('ehr_queue_waiting')) {
                             <small class="text-muted">Use 2D chart to set status and comments.</small>
                         </div>
                         <div id="secretaryOdontogramViewport" class="odontogram-viewport">
-                            <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;"><i class="bi bi-x-lg"></i></button>
+                            <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" style="display:none;"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                             <div id="secretaryOdontogramContainer" class="secretary-odontogram-container">
                                 <iframe id="odontogramFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>"></iframe>
                             </div>
@@ -566,13 +566,6 @@ if (!function_exists('ehr_queue_waiting')) {
 .odontogram-viewport:fullscreen .secretary-odontogram-container,
 .odontogram-viewport:-webkit-full-screen .secretary-odontogram-container {
     height: 100% !important;
-}
-
-.odontogram-fs-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 30;
 }
 
 @media (max-width: 768px) {

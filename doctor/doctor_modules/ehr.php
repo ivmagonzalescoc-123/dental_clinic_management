@@ -180,9 +180,7 @@ if ($sstmt) {
                         </button>
                     </div>
                     <div id="odontogramViewport" class="odontogram-viewport">
-                        <button type="button" id="closeOdontogramFullscreenBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                            <i class="bi bi-x-lg"></i> Close
-                        </button>
+                        <button type="button" id="closeOdontogramFullscreenBtn" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" style="display:none;"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                         <div id="odontogramContainer"></div>
                         <?php odontogram_render_rotate_prompt(); ?>
                     </div>
@@ -757,13 +755,6 @@ if ($sstmt) {
 .odontogram-viewport:fullscreen #odontogramContainer,
 .odontogram-viewport:-webkit-full-screen #odontogramContainer {
     height: 100% !important;
-}
-
-.odontogram-fs-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 30;
 }
 
 @media (max-width: 768px) {

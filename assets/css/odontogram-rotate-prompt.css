@@ -114,3 +114,44 @@ body.odontogram-pseudo-fullscreen-lock {
     color: #fff;
     outline: none;
 }
+
+/* Exit-full-screen button — one look and one position on every page that embeds the chart
+ * (doctor session, visit history, secretary Create Record, patient profile charting).
+ * A small, quiet icon in the top-right corner, which the chart's own toolbar keeps empty
+ * for it (.view-tabs padding-right in odontogram/style.css), so it never sits on top of
+ * Print or the legend toggle. It only turns red when pointed at. */
+.odontogram-fs-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 30;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.odontogram-fs-close[hidden] {
+    display: none;
+}
+.odontogram-fs-close:hover {
+    background: rgba(220, 38, 38, 0.85);
+    border-color: rgba(220, 38, 38, 0.9);
+    color: #fff;
+}
+.odontogram-fs-close:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.85);
+    outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .odontogram-fs-close { transition: none; }
+}

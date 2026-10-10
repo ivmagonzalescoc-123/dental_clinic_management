@@ -686,9 +686,7 @@ if ($stmt) {
                                             <button type="button" id="histOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
                                         </div>
                                         <div id="histOdontogramViewport" class="odontogram-viewport">
-                                            <button type="button" id="histOdontogramFullscreenCloseBtn" class="btn btn-sm btn-danger odontogram-fs-close" style="display:none;">
-                                                <i class="bi bi-x-lg"></i> Close
-                                            </button>
+                                            <button type="button" id="histOdontogramFullscreenCloseBtn" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" style="display:none;"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                                             <div id="histOdontogramWrap" style="border:1px solid #ddd; height:<?php echo (int) odontogram_embed_height_px(); ?>px;">
                                                 <iframe id="histOdontoFrame" src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" style="width:100%;height:100%;border:0;"></iframe>
                                             </div>
@@ -889,13 +887,6 @@ if ($stmt) {
 
 .odontogram-viewport {
     position: relative;
-}
-
-.odontogram-fs-close {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 30;
 }
 
 .hist-patient-header {

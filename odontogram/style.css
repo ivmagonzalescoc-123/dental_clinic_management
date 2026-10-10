@@ -82,6 +82,9 @@ html, body { height: 100%; margin: 0; font-family: 'Plus Jakarta Sans', ui-sans-
   display: flex;
   gap: 8px;
   padding: 10px 12px;
+  /* The top-right corner stays empty: the host page puts its exit-full-screen button
+     there (.odontogram-fs-close in assets/css/odontogram-rotate-prompt.css). */
+  padding-right: 56px;
   border-bottom: 1px solid var(--line);
   background: rgba(16,24,42,.85);
   flex-shrink: 0;
@@ -968,6 +971,7 @@ html, body { height: 100%; margin: 0; font-family: 'Plus Jakarta Sans', ui-sans-
   .view-tabs {
     padding: 8px 12px;
     padding-left: 118px; /* space for the fixed "Controls" toggle button */
+    padding-right: 56px; /* space for the host page's exit-full-screen button */
   }
 
   /* Chart takes full space */

@@ -311,7 +311,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
                 </div>
                 <div class="dp-charting__note" id="dpChartingNote"></div>
                 <div class="odontogram-viewport dp-charting__viewport" id="dpChartingViewport">
-                    <button type="button" id="dpChartingFsClose" class="btn btn-sm btn-danger odontogram-fs-close" hidden><i class="bi bi-x-lg"></i> Close</button>
+                    <button type="button" id="dpChartingFsClose" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" hidden><i class="bi bi-x-lg" aria-hidden="true"></i></button>
                     <div class="dp-charting__frame" style="height:<?php echo (int)odontogram_embed_height_px(); ?>px;">
                         <iframe id="dpChartingFrame" data-src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" title="Dental chart (read-only)"></iframe>
                     </div>
