@@ -1289,15 +1289,9 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
         currentPatientInstallments = { terms: Array.isArray(data.terms) ? data.terms : [], total_outstanding: Number(data.total_outstanding) || 0, has_overdue: !!data.has_overdue };
         updatePaymentCalculation();
 
+        // Shown in the Billing step only (no toast on open): the submit rules stop the
+        // record there anyway if the plan affects what has to be paid today.
         refreshInstallmentNotice();
-        // A banner tucked inside the Billing tab is easy to miss if the secretary doesn't
-        // click that far — a toast up front makes sure it's seen on open. Shown a moment
-        // later, once this visit's services have loaded, since the wording depends on them.
-        setTimeout(function () {
-            if (currentRecordAppointmentId !== appointmentId) return;
-            const notice = refreshInstallmentNotice();
-            if (notice) notifySecretary(notice.label, notice.tone === 'alert-danger' ? 'danger' : (notice.tone === 'alert-warning' ? 'warning' : 'info'));
-        }, 1500);
     } catch (e) {
         console.error('checkOutstandingInstallments failed:', e);
     }
