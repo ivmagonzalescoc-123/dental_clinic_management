@@ -200,6 +200,117 @@ try {
         }
     }
 
+    // What this visit will be billed for. Worked out here, before anything is saved, so the
+    // installment rules below can refuse the record without leaving half of it behind.
+    $lineItems = [];
+    $subtotal = 0.0;
+
+    if (!empty($billingItems)) {
+        foreach ($billingItems as $item) {
+            $serviceId = (int)($item['service_id'] ?? 0);
+            if ($serviceId > 0) {
+                $svcStmt = $conn->prepare('
+                    SELECT service_name, initial_price
+                    FROM services
+                    WHERE service_id = ? AND is_active = 1
+                    LIMIT 1
+                ');
+                if (!$svcStmt) {
+                    continue;
+                }
+                $svcStmt->bind_param('i', $serviceId);
+                $svcStmt->execute();
+                $svcRow = $svcStmt->get_result()->fetch_assoc();
+                $svcStmt->close();
+                if (!$svcRow) {
+                    continue;
+                }
+                $amt = round((float)($svcRow['initial_price'] ?? 0), 2);
+                $desc = trim((string)($svcRow['service_name'] ?? ''));
+                if ($desc === '' || $amt <= 0) {
+                    continue;
+                }
+                $subtotal += $amt;
+                $lineItems[] = [
+                    'service_id' => $serviceId,
+                    'description' => $desc,
+                    'amount' => $amt,
+                    'item_type' => 'service',
+                ];
+                continue;
+            }
+
+            $desc = trim((string)($item['description'] ?? ''));
+            $amt = round((float)($item['amount'] ?? 0), 2);
+            if ($desc === '' && $amt <= 0) {
+                continue;
+            }
+            if ($desc === '') {
+                $desc = 'Additional charge';
+            }
+            $subtotal += $amt;
+            $lineItems[] = [
+                'service_id' => null,
+                'description' => $desc,
+                'amount' => $amt,
+                'item_type' => 'extra',
+            ];
+        }
+    }
+
+    if (empty($lineItems)) {
+        [, $serviceItems] = billing_sum_appointment_services($conn, $appointmentId);
+        foreach ($serviceItems as $svc) {
+            $subtotal += (float)$svc['amount'];
+            $lineItems[] = $svc;
+        }
+    }
+
+    // A patient who is still paying an installment plan gets no further credit by default:
+    //  - today's services are paid in full today, or
+    //  - they go on a second installment plan, which is only possible while every term of
+    //    the existing plan is up to date, and only after the secretary confirms it (the
+    //    clinic owner approves a second plan verbally — nothing is recorded for that).
+    // A follow-up visit with nothing new to bill is untouched: there is no charge to settle.
+    $existingPlanTerms = [];
+    foreach (billing_get_patient_outstanding_installments($conn, $patientId)['terms'] as $term) {
+        if ((int)$term['appointment_id'] !== $appointmentId) {
+            $existingPlanTerms[] = $term;
+        }
+    }
+    $todayTotal = (float)billing_apply_discount(round($subtotal, 2), $discountType, $discountPercent)['total_amount'];
+    if (!empty($existingPlanTerms) && $todayTotal > 0) {
+        $existingPlanBalance = 0.0;
+        $existingPlanOverdue = 0.0;
+        foreach ($existingPlanTerms as $term) {
+            $existingPlanBalance += (float)$term['remaining_amount'];
+            if (!empty($term['overdue'])) {
+                $existingPlanOverdue += (float)$term['remaining_amount'];
+            }
+        }
+        $installmentProblem = null;
+        $installmentProblemCode = '';
+        if ($useInstallment === 1 && $installmentTerms > 0) {
+            if ($existingPlanOverdue > 0) {
+                $installmentProblemCode = 'installment_overdue';
+                $installmentProblem = 'This patient has ₱' . number_format($existingPlanOverdue, 2)
+                    . ' in overdue installment payments. A new installment plan cannot be started until the existing plan is up to date. Today\'s services must be paid in full.';
+            } elseif ((int)($_POST['confirm_second_installment'] ?? 0) !== 1) {
+                $installmentProblemCode = 'installment_confirm_required';
+                $installmentProblem = 'This patient already has an installment plan with ₱' . number_format($existingPlanBalance, 2)
+                    . ' remaining. Confirm that a second installment plan has been approved before submitting.';
+            }
+        } elseif ($recordPayment !== 1 || $paymentAmountApplied + 0.005 < $todayTotal) {
+            $installmentProblemCode = 'full_payment_required';
+            $installmentProblem = 'This patient is still paying an installment plan (₱' . number_format($existingPlanBalance, 2)
+                . ' remaining), so today\'s services (₱' . number_format($todayTotal, 2) . ') must be paid in full today.';
+        }
+        if ($installmentProblem !== null) {
+            idempotency_clear_processing($idempotencyScope, $idempotencyKey);
+            api_respond(['success' => false, 'message' => $installmentProblem, 'code' => $installmentProblemCode]);
+        }
+    }
+
     // Follow-ups created below get a reference number; make sure the column exists first,
     // since adding it later would commit this transaction early.
     appointments_ensure_reference_column($conn);
@@ -329,70 +440,6 @@ try {
                 $rxIns->execute();
             }
             $rxIns->close();
-        }
-    }
-
-    $lineItems = [];
-    $subtotal = 0.0;
-
-    if (!empty($billingItems)) {
-        foreach ($billingItems as $item) {
-            $serviceId = (int)($item['service_id'] ?? 0);
-            if ($serviceId > 0) {
-                $svcStmt = $conn->prepare('
-                    SELECT service_name, initial_price
-                    FROM services
-                    WHERE service_id = ? AND is_active = 1
-                    LIMIT 1
-                ');
-                if (!$svcStmt) {
-                    continue;
-                }
-                $svcStmt->bind_param('i', $serviceId);
-                $svcStmt->execute();
-                $svcRow = $svcStmt->get_result()->fetch_assoc();
-                $svcStmt->close();
-                if (!$svcRow) {
-                    continue;
-                }
-                $amt = round((float)($svcRow['initial_price'] ?? 0), 2);
-                $desc = trim((string)($svcRow['service_name'] ?? ''));
-                if ($desc === '' || $amt <= 0) {
-                    continue;
-                }
-                $subtotal += $amt;
-                $lineItems[] = [
-                    'service_id' => $serviceId,
-                    'description' => $desc,
-                    'amount' => $amt,
-                    'item_type' => 'service',
-                ];
-                continue;
-            }
-
-            $desc = trim((string)($item['description'] ?? ''));
-            $amt = round((float)($item['amount'] ?? 0), 2);
-            if ($desc === '' && $amt <= 0) {
-                continue;
-            }
-            if ($desc === '') {
-                $desc = 'Additional charge';
-            }
-            $subtotal += $amt;
-            $lineItems[] = [
-                'service_id' => null,
-                'description' => $desc,
-                'amount' => $amt,
-                'item_type' => 'extra',
-            ];
-        }
-    }
-
-    if (empty($lineItems)) {
-        [, $serviceItems] = billing_sum_appointment_services($conn, $appointmentId);
-        foreach ($serviceItems as $svc) {
-            $subtotal += (float)$svc['amount'];
-            $lineItems[] = $svc;
         }
     }
 

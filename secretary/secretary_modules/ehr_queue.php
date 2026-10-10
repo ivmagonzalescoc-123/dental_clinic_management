@@ -1147,6 +1147,68 @@ window.recordBillingServiceIds = new Set();
 // getAmountDueNow() so "Record a payment now" collects the real next-term amount instead of
 // being stuck at ₱0.00 (this visit has no billable service of its own).
 window.currentVisitInstallmentInfo = null;
+// Every unpaid installment term this patient has (any earlier bill), from the same request.
+// Drives the Billing notice and the submit rules: with a plan still running, today's
+// services are paid in full, or go on a second plan only if nothing is overdue.
+window.currentPatientInstallments = null;
+
+function billingPeso(value) {
+    return '₱' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// The notice depends on whether this visit has anything to bill, which changes as services
+// and charges load or are edited — so it is re-evaluated with the totals, not set once.
+function refreshInstallmentNotice() {
+    const banner = document.getElementById('outstandingInstallmentBanner');
+    const bannerText = document.getElementById('outstandingInstallmentBannerText');
+    if (!banner || !bannerText) return null;
+
+    const visitPlan = currentVisitInstallmentInfo;
+    const visitTerms = (visitPlan && Array.isArray(visitPlan.pending_terms)) ? visitPlan.pending_terms : [];
+    const allTerms = (currentPatientInstallments && Array.isArray(currentPatientInstallments.terms)) ? currentPatientInstallments.terms : [];
+    const todayTotal = typeof getBillingTotalDue === 'function' ? getBillingTotalDue() : 0;
+
+    let label = '';
+    let tone = 'alert-info';
+    if (visitTerms.length > 0 && todayTotal <= 0) {
+        const next = visitTerms[0];
+        label = `This visit is part of an existing installment plan — no new charge will be added. `
+            + `Next payment due: ${billingPeso(next.remaining_amount)} (term ${next.term_number}, due ${next.due_date}). `
+            + `Check "Record a payment now" below to collect it.`;
+    } else if (allTerms.length > 0) {
+        const remaining = billingPeso(currentPatientInstallments.total_outstanding);
+        const overdue = allTerms.filter(t => t.overdue).reduce((sum, t) => sum + Number(t.remaining_amount || 0), 0);
+        const next = allTerms[0];
+        if (overdue > 0) {
+            tone = 'alert-danger';
+            label = `This patient has ${billingPeso(overdue)} in overdue installment payments (${remaining} remaining on the plan). `
+                + `Today's services must be paid in full, and a new installment plan cannot be started until the plan is up to date. `
+                + `Plan payments are collected from the Billing page.`;
+        } else {
+            tone = 'alert-warning';
+            label = `This patient is still paying an installment plan: ${remaining} remaining, next payment ${billingPeso(next.remaining_amount)} due ${next.due_date}. `
+                + `Today's services must be paid in full today, or put on a second plan with the owner's approval. `
+                + `Plan payments are collected from the Billing page.`;
+        }
+    }
+
+    if (!label) {
+        banner.style.display = 'none';
+        renderInstallmentPlanBreakdown(null);
+        return null;
+    }
+    bannerText.textContent = label;
+    renderInstallmentPlanBreakdown(visitPlan ? visitPlan.plan : null);
+    banner.className = 'alert py-2 px-3 mb-3 ' + tone;
+    banner.style.display = '';
+    return { label: label, tone: tone };
+}
+
+function showBillingProblem(message) {
+    notifySecretary(message, 'warning');
+    const tabLink = document.querySelector('#recordTabs .ehr-stepper__link[href="#tabBilling"]');
+    if (tabLink) bootstrap.Tab.getOrCreateInstance(tabLink).show();
+}
 
 // What an installment plan is made of, shown under the "part of an existing installment
 // plan" notice: what was billed, discount, total, down payment, paid so far, and every term —
@@ -1213,6 +1275,7 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
     const banner = document.getElementById('outstandingInstallmentBanner');
     const bannerText = document.getElementById('outstandingInstallmentBannerText');
     currentVisitInstallmentInfo = null;
+    currentPatientInstallments = null;
     if (banner) banner.style.display = 'none';
     renderInstallmentPlanBreakdown(null);
 
@@ -1224,42 +1287,18 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
         if (!data.success) return;
 
         currentVisitInstallmentInfo = data.current_visit_installment || null;
+        currentPatientInstallments = { terms: Array.isArray(data.terms) ? data.terms : [], total_outstanding: Number(data.total_outstanding) || 0, has_overdue: !!data.has_overdue };
         updatePaymentCalculation();
 
-        if (currentVisitInstallmentInfo && Array.isArray(currentVisitInstallmentInfo.pending_terms) && currentVisitInstallmentInfo.pending_terms.length > 0) {
-            const nextTerm = currentVisitInstallmentInfo.pending_terms[0];
-            const label = `This visit is part of an existing installment plan — no new charge will be added. `
-                + `Next payment due: ₱${Number(nextTerm.remaining_amount).toFixed(2)} (term ${nextTerm.term_number}, due ${nextTerm.due_date}). `
-                + `Check "Record a payment now" below to collect it.`;
-            if (bannerText) bannerText.textContent = label;
-            renderInstallmentPlanBreakdown(currentVisitInstallmentInfo.plan);
-            if (banner) {
-                banner.className = 'alert alert-info py-2 px-3 mb-3';
-                banner.style.display = '';
-            }
-            notifySecretary(label, 'info');
-            return;
-        }
-
-        if (!Array.isArray(data.terms) || data.terms.length === 0) {
-            return;
-        }
-
-        const total = Number(data.total_outstanding) || 0;
-        const count = data.terms.length;
-        const label = data.has_overdue
-            ? `This patient has ${count} unpaid installment term${count === 1 ? '' : 's'} from an earlier billing — ₱${total.toFixed(2)} overdue. Collecting only today's amount will apply to the oldest unpaid term first, not this visit.`
-            : `This patient has ${count} pending installment term${count === 1 ? '' : 's'} totaling ₱${total.toFixed(2)}. Confirm which term you're collecting for before recording payment.`;
-
-        if (bannerText) bannerText.textContent = label;
-        if (banner) {
-            banner.className = 'alert py-2 px-3 mb-3 ' + (data.has_overdue ? 'alert-danger' : 'alert-warning');
-            banner.style.display = '';
-        }
-
+        refreshInstallmentNotice();
         // A banner tucked inside the Billing tab is easy to miss if the secretary doesn't
-        // click that far — a toast up front makes sure it's seen immediately on open.
-        notifySecretary(label, data.has_overdue ? 'danger' : 'warning');
+        // click that far — a toast up front makes sure it's seen on open. Shown a moment
+        // later, once this visit's services have loaded, since the wording depends on them.
+        setTimeout(function () {
+            if (currentRecordAppointmentId !== appointmentId) return;
+            const notice = refreshInstallmentNotice();
+            if (notice) notifySecretary(notice.label, notice.tone === 'alert-danger' ? 'danger' : (notice.tone === 'alert-warning' ? 'warning' : 'info'));
+        }, 1500);
     } catch (e) {
         console.error('checkOutstandingInstallments failed:', e);
     }
@@ -1533,6 +1572,7 @@ function getSelectedBillingDiscount() {
 }
 
 function updateBillingTotals() {
+    refreshInstallmentNotice();
     const subtotal = getBillingSubtotal();
     const discount = getSelectedBillingDiscount();
     const discountAmount = (discount.type === 'none' || discount.percent <= 0)
@@ -1836,9 +1876,45 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             }
         }
 
+        // Patient still paying an installment plan: today's services are paid in full, or go
+        // on a second plan only when nothing is overdue. Either way the secretary confirms
+        // before the record goes through (the server enforces the same rules).
+        const existingPlanTerms = (currentPatientInstallments && currentPatientInstallments.terms) || [];
+        const todayTotal = getBillingTotalDue();
+        let confirmSecondInstallment = false;
+        if (existingPlanTerms.length > 0 && todayTotal > 0) {
+            const planRemaining = billingPeso(currentPatientInstallments.total_outstanding);
+            const overdueAmount = existingPlanTerms.filter(t => t.overdue).reduce((sum, t) => sum + Number(t.remaining_amount || 0), 0);
+            let confirmMessage;
+            if (document.getElementById('useInstallment')?.checked) {
+                if (overdueAmount > 0) {
+                    showBillingProblem(`This patient has ${billingPeso(overdueAmount)} in overdue installment payments. A new installment plan cannot be started until the existing plan is up to date. Today's services must be paid in full.`);
+                    secretaryRecordSubmitting = false;
+                    return;
+                }
+                confirmMessage = `This patient already has an installment plan with ${planRemaining} remaining, and its payments are up to date. `
+                    + `Starting a second installment plan for today's services (${billingPeso(todayTotal)}) needs the owner's approval. Has it been approved?`;
+                confirmSecondInstallment = true;
+            } else {
+                if (!recordPaymentNow || paymentAmountApplied + 0.005 < todayTotal) {
+                    showBillingProblem(`This patient is still paying an installment plan (${planRemaining} remaining), so today's services (${billingPeso(todayTotal)}) must be paid in full today. Tick "Record a payment now" and enter the full amount.`);
+                    secretaryRecordSubmitting = false;
+                    return;
+                }
+                confirmMessage = `This patient has an existing installment plan with ${planRemaining} remaining. `
+                    + `Today's payment of ${billingPeso(todayTotal)} covers today's services only and does not reduce the plan. Proceed?`;
+            }
+            const proceed = await window.appConfirm(confirmMessage, { title: 'Existing installment plan', confirmText: 'Proceed' });
+            if (!proceed) {
+                secretaryRecordSubmitting = false;
+                return;
+            }
+        }
+
         const fd = new FormData();
         fd.append('appointment_id', currentRecordAppointmentId);
         fd.append('patient_id', currentRecordPatientId);
+        fd.append('confirm_second_installment', confirmSecondInstallment ? '1' : '0');
         fd.append('visit_clinical', JSON.stringify(visitClinicalData));
         fd.append('odontogram', JSON.stringify(odontogramData));
         fd.append('billing_items', JSON.stringify(billingItems));
@@ -1881,6 +1957,8 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         if (!json.success) {
             if (json.code === 'follow_up_required') {
                 showFollowUpDateProblem(json.message || 'Set a follow-up date before submitting the record.');
+            } else if (['installment_overdue', 'installment_confirm_required', 'full_payment_required'].includes(json.code)) {
+                showBillingProblem(json.message);
             } else {
                 notifySecretary(json.message || 'The system encountered an issue. Please try again.', 'danger');
             }
