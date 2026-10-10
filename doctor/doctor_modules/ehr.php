@@ -218,6 +218,7 @@ if ($sstmt) {
                         <h3 class="ses-card__title">Clinical findings</h3>
                     </div>
                 </div>
+                <p class="ses-pane__hint ses-pane__hint--carried" id="doctorFindingsCarriedNote" hidden></p>
                 <div id="doctorFindingsBody">
                     <div class="tp-empty">Select a patient to record their clinical findings.</div>
                 </div>
@@ -573,6 +574,7 @@ if ($sstmt) {
 .ses-quickfill__clear { margin-left: auto; }
 .ses-pane { min-width: 0; }
 .ses-pane__hint { margin: 8px 0 0; font-size: 0.8rem; color: #64748b; }
+.ses-pane__hint--carried { margin: 12px 0 10px; padding: 8px 12px; border-radius: 8px; background: #eef7fb; color: #17698c; }
 .ses-flow__nav {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     border-top: 1px solid #eef2f6; padding-top: 12px;
@@ -1739,6 +1741,40 @@ function setDoctorFindingsPlaceholder(html) {
     const bodyEl = document.getElementById('doctorFindingsBody');
     if (bodyEl) bodyEl.innerHTML = html;
     doctorFindingsDirty = false;
+    setDoctorFindingsCarriedNote('');
+}
+
+function setDoctorFindingsCarriedNote(text) {
+    const note = document.getElementById('doctorFindingsCarriedNote');
+    if (!note) return;
+    note.textContent = text;
+    note.hidden = !text;
+}
+
+function hasClinicalFindingValues(findings) {
+    return Object.keys(findings || {}).some(function(key) {
+        const v = findings[key];
+        return v !== '' && v !== null && v !== undefined && v !== false && v !== 0 && v !== '0';
+    });
+}
+
+// Nothing recorded for this visit yet: start from the patient's last visit instead of a
+// blank form. Each visit keeps its own findings, so these are marked unsaved and become
+// this visit's record (with whatever the doctor changes) on the next save. Only what stays
+// the same between visits comes back (occlusal classification, allergy, blood diseases,
+// fainting — see clinical_findings_carry_over_field_keys()); the rest is recorded fresh.
+function prefillDoctorFindingsFromLastVisit(apptId) {
+    fetch('../assets/api/ehr/get_previous_clinical_findings.php?appointment_id=' + encodeURIComponent(apptId))
+        .then(r => r.json())
+        .then(data => {
+            if (doctorFindingsApptId !== apptId || doctorFindingsDirty) return;
+            if (!data || !data.success || !hasClinicalFindingValues(data.findings)) return;
+            renderDoctorFindings(data.findings);
+            doctorFindingsDirty = true;
+            setDoctorFindingsCarriedNote('Occlusal classification and medical history (allergy, blood diseases, fainting) carried over from the last visit' +
+                (data.visit_date ? ' (' + data.visit_date + ')' : '') + '. Everything else is recorded fresh for this visit.');
+        })
+        .catch(() => {});
 }
 
 // Called whenever the selected patient changes (see the queueSelector handler above).
@@ -1759,7 +1795,9 @@ function loadDoctorFindings(apptId) {
         .then(r => r.json())
         .then(data => {
             if (doctorFindingsApptId !== apptId) return;
-            renderDoctorFindings((data && data.success && data.record) ? (data.record.clinical_findings || {}) : {});
+            const findings = (data && data.success && data.record) ? (data.record.clinical_findings || {}) : {};
+            renderDoctorFindings(findings);
+            if (!hasClinicalFindingValues(findings)) prefillDoctorFindingsFromLastVisit(apptId);
         })
         .catch(() => {
             if (doctorFindingsApptId === apptId) renderDoctorFindings({});

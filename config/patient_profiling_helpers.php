@@ -186,6 +186,72 @@ if (!function_exists('get_clinical_findings_by_record')) {
     }
 }
 
+if (!function_exists('clinical_findings_carry_over_field_keys')) {
+    /**
+     * The only findings carried from one visit to the next: facts about the patient that
+     * stay the same between visits — the occlusal classification (changes only with
+     * orthodontic treatment or surgery) and standing medical history. Everything else is
+     * what the doctor sees or measures on the day (gingiva, oral hygiene, tongue, lymph
+     * nodes, vitals and lab readings, radiographic interpretation, any operation done) and
+     * must be recorded fresh for every visit.
+     */
+    function clinical_findings_carry_over_field_keys(): array
+    {
+        return [
+            'occlusion', 'cl_i_type', 'cl_ii_division', 'cl_ii_subdivision', 'cl_ii_type',
+            'cl_iii_division', 'cl_iii_subdivision',
+            'allergy_notes', 'blood_diseases', 'fainting',
+        ];
+    }
+}
+
+if (!function_exists('get_previous_clinical_findings')) {
+    /**
+     * The patient's most recent carry-over findings from another visit (see
+     * clinical_findings_carry_over_field_keys()), used as the starting values of a new
+     * session. Null when there is nothing to carry over.
+     *
+     * @return array{findings: array, visit_date: ?string}|null
+     */
+    function get_previous_clinical_findings($conn, int $patientId, int $excludeAppointmentId): ?array
+    {
+        if ($patientId <= 0) return null;
+        ensure_clinical_findings_table($conn);
+        $stmt = $conn->prepare('
+            SELECT cf.findings_json, a.appointment_date
+            FROM clinical_findings cf
+            INNER JOIN clinical_records cr ON cr.record_id = cf.record_id
+            LEFT JOIN appointments a ON a.appointment_id = cr.appointment_id
+            WHERE cr.patient_id = ? AND cr.appointment_id <> ?
+            ORDER BY a.appointment_date DESC, cf.record_id DESC
+            LIMIT 10
+        ');
+        if (!$stmt) return null;
+        $stmt->bind_param('ii', $patientId, $excludeAppointmentId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $found = null;
+        $carryOver = array_flip(clinical_findings_carry_over_field_keys());
+        // A visit with none of these fields filled has nothing to offer — look further back.
+        while ($found === null && ($row = $res->fetch_assoc())) {
+            $decoded = json_decode((string)$row['findings_json'], true);
+            if (!is_array($decoded)) continue;
+            $carried = array_filter(
+                array_intersect_key(filter_visit_clinical_data($decoded), $carryOver),
+                function ($v) { return $v !== '' && $v !== null && $v !== false && $v !== 0 && $v !== '0'; }
+            );
+            if ($carried) {
+                $found = [
+                    'findings' => $carried,
+                    'visit_date' => $row['appointment_date'] ? substr((string)$row['appointment_date'], 0, 10) : null,
+                ];
+            }
+        }
+        $stmt->close();
+        return $found;
+    }
+}
+
 // Fields the doctor actually relies on day-to-day; shown first / promoted in the UI.
 // The rest (Clinical Assessment, Vitals & Lab Findings) are optional and render as N/A when blank.
 if (!function_exists('occlusal_classification_field_keys')) {
