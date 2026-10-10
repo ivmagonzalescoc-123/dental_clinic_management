@@ -77,15 +77,24 @@
       </aside>
 
       <section class="workspace">
-        <div class="view-tabs" role="tablist" aria-label="Chart view">
-          <button type="button" id="viewTabChart" class="view-tab is-active" role="tab" aria-selected="true">2D Chart</button>
-          <button type="button" id="viewTab3d" class="view-tab" role="tab" aria-selected="false">3D Preview</button>
-          <button type="button" id="legendToggleBtn" class="view-tab view-tab--legend" aria-expanded="false" aria-controls="sidePanel" title="Show or hide the selection and chart legend panel">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg><span id="legendToggleLabel">Show legend</span>
-          </button>
-          <button type="button" id="printChartBtn" class="view-tab view-tab--print" title="Print 2D chart">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>Print
-          </button>
+        <!-- Toolbar: legend toggle on the left (next to the panel it opens), the 2D / 3D
+             switch in the middle, Print on the right. The three groups only become real
+             boxes on desktop; on narrow screens they dissolve into one row (style.css). -->
+        <div class="view-tabs">
+          <div class="view-tabs__group view-tabs__group--start">
+            <button type="button" id="legendToggleBtn" class="view-tab view-tab--legend" aria-expanded="false" aria-controls="sidePanel" title="Show or hide the selection and chart legend panel">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg><span id="legendToggleLabel">Show legend</span>
+            </button>
+          </div>
+          <div class="view-tabs__group view-tabs__group--center" role="tablist" aria-label="Chart view">
+            <button type="button" id="viewTabChart" class="view-tab is-active" role="tab" aria-selected="true">2D Chart</button>
+            <button type="button" id="viewTab3d" class="view-tab" role="tab" aria-selected="false">3D Preview</button>
+          </div>
+          <div class="view-tabs__group view-tabs__group--end">
+            <button type="button" id="printChartBtn" class="view-tab view-tab--print" title="Print 2D chart">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>Print
+            </button>
+          </div>
         </div>
         <div class="workspace__body">
           <div id="chartPane" class="chart-pane" role="tabpanel">

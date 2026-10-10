@@ -99,10 +99,15 @@ function setSidePanelOpen(open) {
   legendToggleBtn?.classList.toggle("is-active", open);
   legendToggleBtn?.setAttribute("aria-expanded", open ? "true" : "false");
   if (legendToggleLabel) legendToggleLabel.textContent = open ? "Hide legend" : "Show legend";
-  // The workspace just changed width: let the 3D canvas pick up its new size.
-  requestAnimationFrame(() => {
+  // The workspace changes width as the panel slides: keep the 3D canvas in step with it
+  // for the length of the slide (the render loop only resizes while the 3D tab is active
+  // and already moving), then once more when the slide has finished.
+  const started = performance.now();
+  const follow = () => {
     try { resizeToDisplaySize(); } catch (e) { /* 3D not ready yet */ }
-  });
+    if (performance.now() - started < 400) requestAnimationFrame(follow);
+  };
+  requestAnimationFrame(follow);
 }
 
 // Opens for each newly selected tooth and closes when the selection is cleared. Picking
