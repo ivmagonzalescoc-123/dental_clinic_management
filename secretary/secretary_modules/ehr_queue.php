@@ -369,7 +369,7 @@ if (!function_exists('ehr_queue_waiting')) {
                                     <div class="pf-section__title"><i class="bi bi-calculator"></i> Totals</div>
                                     <div class="p-2 bg-light border rounded" id="billingTotalsSummary">
                                         <div class="d-flex justify-content-between small"><span>Subtotal</span><span id="billingSubtotalDisplay">₱0.00</span></div>
-                                        <div class="d-flex justify-content-between small text-success billing-discount-summary-row" id="billingDiscountRow" style="display:none;"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
+                                        <div class="d-flex justify-content-between small text-success billing-discount-summary-row d-none" id="billingDiscountRow"><span id="billingDiscountLabel">Discount</span><span id="billingDiscountDisplay">-₱0.00</span></div>
                                         <div class="d-flex justify-content-between fw-bold border-top pt-1 mt-1"><span>Total Due</span><span id="billingTotalDisplay">₱0.00</span></div>
                                     </div>
                                 </div>
@@ -1598,10 +1598,10 @@ function updateBillingTotals() {
             else if (discount.type === 'custom') label = 'Custom Discount (' + discount.percent + '%)';
             discountLabel.textContent = label;
             discountDisplay.textContent = '-₱' + formatBillingAmount(discountAmount);
-            discountRow.style.display = '';
-        } else {
-            discountRow.style.display = 'none';
         }
+        // The row is a Bootstrap .d-flex (display: flex !important), which an inline
+        // display:none cannot override — so "None" used to leave the last discount showing.
+        discountRow.classList.toggle('d-none', discountAmount <= 0);
     }
     updatePaymentCalculation();
     updateInstallmentNotice();

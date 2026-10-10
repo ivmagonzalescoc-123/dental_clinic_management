@@ -641,6 +641,16 @@ if ($sstmt) {
 .ses-phrase:hover { border-color: #1b7aa3; color: #1b7aa3; }
 .ses-phrase:focus-visible { outline: 2px solid #1b7aa3; outline-offset: 1px; }
 .ses-phrase.is-used { background: #eef7fb; border-color: #9fcfe2; color: #17698c; }
+.ses-phrase:disabled { opacity: .5; cursor: default; }
+/* "+ Add" / "Edit" and the add box sit at the end of the row, quieter than the phrases. */
+.ses-phrases__tools { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.ses-phrases__tools [hidden], .ses-phrases__form[hidden] { display: none; }
+.ses-phrases__form { display: inline-flex; align-items: center; gap: 5px; }
+.ses-phrases__form input { width: 220px; max-width: 60vw; font-size: 0.78rem; padding: 2px 8px; border-radius: 999px; }
+.ses-phrase--tool { border-style: dashed; color: #64748b; background: transparent; }
+/* Edit mode: every phrase becomes a remove button. */
+.ses-phrases.is-editing .ses-phrase[data-phrase-id] { border-color: #fca5a5; background: #fff5f5; color: #b91c1c; }
+.ses-phrases.is-editing .ses-phrase[data-phrase-id]::after { content: " \00d7"; font-weight: 700; }
 .ses-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .ses-field-grid > .ses-field { margin-bottom: 0; }
 .ses-pane__hint--carried { margin: 12px 0 10px; padding: 8px 12px; border-radius: 8px; background: #eef7fb; color: #17698c; }
@@ -1910,47 +1920,19 @@ async function saveDoctorFindings(opts) {
     }
 }
 
-// Quick phrases for the Summary step: common entries the doctor can add with one click
-// instead of typing them every visit. Clicking adds the phrase to the field (on a new line
-// for notes and summary, after a comma for the short fields); clicking it again takes it
-// back out. Everything stays editable. Edit the lists here to change what is offered.
-var DOCTOR_QUICK_PHRASES = {
-    doctor_notes: {
-        separator: '\n',
-        phrases: [
-            'Follow-up appointment needed.',
-            'Return after 1 week.',
-            'Return after 6 months for check-up and cleaning.',
-            'Patient tolerated the procedure well.',
-            'Post-operative instructions given.',
-            'Oral hygiene instructions given.',
-            'Prescription given.',
-            'No complications.',
-            'Referred for X-ray.',
-        ],
-    },
-    doctor_summary: {
-        separator: '\n',
-        phrases: [
-            'Treatment completed as planned.',
-            'Oral prophylaxis done.',
-            'Tooth restored with composite filling.',
-            'Tooth extracted, bleeding controlled.',
-            'Treatment ongoing, to be continued next visit.',
-            'For observation.',
-        ],
-    },
-    doctor_chief_complaint: {
-        separator: ', ',
-        phrases: ['Toothache', 'Tooth sensitivity', 'Bleeding gums', 'Swelling', 'Broken or chipped tooth',
-            'Loose tooth', 'Routine check-up', 'Cleaning', 'Braces adjustment'],
-    },
-    doctor_case_history: {
-        separator: ', ',
-        phrases: ['No relevant medical history', 'No known allergies', 'Hypertensive, on maintenance medication',
-            'Diabetic', 'Previous extraction', 'Currently in orthodontic treatment', 'First dental visit'],
-    },
+// Quick phrases for the Summary step: common entries the doctor adds with one click instead
+// of typing them every visit. Clicking adds the phrase to the field (on a new line for notes
+// and summary, after a comma for the short fields); clicking it again takes it back out.
+// Each doctor keeps their own lists (assets/api/ehr/quick_phrases.php): "+ Add" saves a new
+// phrase, and "Edit" turns the phrases into remove buttons. The starting lists are in
+// config/quick_phrase_helpers.php.
+var DOCTOR_QUICK_PHRASE_SEPARATORS = {
+    doctor_notes: '\n',
+    doctor_summary: '\n',
+    doctor_chief_complaint: ', ',
+    doctor_case_history: ', ',
 };
+var DOCTOR_QUICK_PHRASES_API = '../assets/api/ehr/quick_phrases.php';
 
 function toggleDoctorQuickPhrase(field, phrase, separator) {
     // Only the phrase itself (and the separator next to it) is added or removed, so
@@ -1974,35 +1956,165 @@ function syncDoctorQuickPhrases() {
     document.querySelectorAll('.ses-phrases[data-phrases-for]').forEach(function (row) {
         const field = document.getElementById(row.getAttribute('data-phrases-for'));
         if (!field) return;
-        row.querySelectorAll('.ses-phrase').forEach(function (btn) {
-            const used = field.value.indexOf(btn.textContent) !== -1;
+        row.querySelectorAll('.ses-phrase[data-phrase-id]').forEach(function (btn) {
+            const used = field.value.indexOf(btn.dataset.phrase) !== -1;
             btn.classList.toggle('is-used', used);
             btn.setAttribute('aria-pressed', used ? 'true' : 'false');
         });
     });
 }
 
-(function () {
-    document.querySelectorAll('.ses-phrases[data-phrases-for]').forEach(function (row) {
-        const fieldId = row.getAttribute('data-phrases-for');
-        const config = DOCTOR_QUICK_PHRASES[fieldId];
-        const field = document.getElementById(fieldId);
-        if (!config || !field) return;
-        config.phrases.forEach(function (phrase) {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'ses-phrase';
-            btn.textContent = phrase;
-            btn.setAttribute('aria-pressed', 'false');
-            btn.addEventListener('click', function () {
-                toggleDoctorQuickPhrase(field, phrase, config.separator);
+async function postDoctorQuickPhrase(params) {
+    const fd = new FormData();
+    Object.keys(params).forEach(function (key) { fd.append(key, params[key]); });
+    fd.append('csrf_token', doctorCsrfToken);
+    const res = await fetch(DOCTOR_QUICK_PHRASES_API, { method: 'POST', body: fd });
+    return res.json();
+}
+
+// One row: the phrases, then "+ Add" (opens a small box to type a new one) and "Edit".
+function buildDoctorQuickPhraseRow(row, field, items) {
+    const fieldId = field.id;
+    const separator = DOCTOR_QUICK_PHRASE_SEPARATORS[fieldId] || '\n';
+    row.innerHTML = '';
+    row.classList.remove('is-editing');
+
+    function addChip(item, before) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ses-phrase';
+        btn.textContent = item.phrase;
+        btn.dataset.phraseId = item.id;
+        btn.dataset.phrase = item.phrase;
+        btn.setAttribute('aria-pressed', 'false');
+        btn.addEventListener('click', async function () {
+            if (!row.classList.contains('is-editing')) {
+                toggleDoctorQuickPhrase(field, item.phrase, separator);
                 syncDoctorQuickPhrases();
                 field.focus();
-            });
-            row.appendChild(btn);
+                return;
+            }
+            // Edit mode: the click removes the phrase from this doctor's list (text already
+            // written in the field is not touched).
+            btn.disabled = true;
+            try {
+                const json = await postDoctorQuickPhrase({ action: 'delete', phrase_id: item.id });
+                if (!json.success) window.showToast(json.message || 'Could not remove the phrase.', 'warning');
+                btn.remove();
+                if (!row.querySelector('.ses-phrase[data-phrase-id]')) setEditing(false);
+            } catch (e) {
+                btn.disabled = false;
+                window.showToast('Could not remove the phrase. Please try again.', 'danger');
+            }
         });
-        field.addEventListener('input', syncDoctorQuickPhrases);
+        row.insertBefore(btn, before || tools);
+    }
+
+    const tools = document.createElement('span');
+    tools.className = 'ses-phrases__tools';
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'ses-phrase ses-phrase--tool';
+    addBtn.textContent = '+ Add';
+    addBtn.title = 'Add your own phrase to this list';
+
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'ses-phrase ses-phrase--tool';
+    editBtn.textContent = 'Edit';
+    editBtn.title = 'Remove phrases from this list';
+
+    const form = document.createElement('span');
+    form.className = 'ses-phrases__form';
+    form.hidden = true;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control form-control-sm';
+    input.maxLength = 150;
+    input.placeholder = 'New phrase...';
+    input.setAttribute('aria-label', 'New phrase');
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'ses-phrase ses-phrase--tool';
+    saveBtn.textContent = 'Save';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'ses-phrase ses-phrase--tool';
+    cancelBtn.textContent = 'Cancel';
+    form.appendChild(input);
+    form.appendChild(saveBtn);
+    form.appendChild(cancelBtn);
+
+    function setEditing(on) {
+        row.classList.toggle('is-editing', on);
+        editBtn.textContent = on ? 'Done' : 'Edit';
+        addBtn.hidden = on;
+        if (on) setAdding(false);
+    }
+
+    function setAdding(on) {
+        form.hidden = !on;
+        addBtn.hidden = on || row.classList.contains('is-editing');
+        editBtn.hidden = on;
+        if (on) { input.value = ''; input.focus(); }
+    }
+
+    async function saveNewPhrase() {
+        const phrase = input.value.trim();
+        if (!phrase) { input.focus(); return; }
+        saveBtn.disabled = true;
+        try {
+            const json = await postDoctorQuickPhrase({ action: 'add', field_key: fieldId, phrase: phrase });
+            if (!json.success) {
+                window.showToast(json.message || 'Could not add the phrase.', 'warning');
+                input.focus();
+                return;
+            }
+            addChip(json.phrase);
+            setAdding(false);
+            syncDoctorQuickPhrases();
+        } catch (e) {
+            window.showToast('Could not add the phrase. Please try again.', 'danger');
+        } finally {
+            saveBtn.disabled = false;
+        }
+    }
+
+    addBtn.addEventListener('click', function () { setAdding(true); });
+    cancelBtn.addEventListener('click', function () { setAdding(false); });
+    saveBtn.addEventListener('click', saveNewPhrase);
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); saveNewPhrase(); }
+        else if (e.key === 'Escape') { e.stopPropagation(); setAdding(false); }
     });
+    editBtn.addEventListener('click', function () { setEditing(!row.classList.contains('is-editing')); });
+
+    tools.appendChild(form);
+    tools.appendChild(addBtn);
+    tools.appendChild(editBtn);
+    row.appendChild(tools);
+    items.forEach(function (item) { addChip(item); });
+}
+
+(function () {
+    const rows = Array.from(document.querySelectorAll('.ses-phrases[data-phrases-for]'));
+    if (!rows.length) return;
+    rows.forEach(function (row) {
+        const field = document.getElementById(row.getAttribute('data-phrases-for'));
+        if (field) field.addEventListener('input', syncDoctorQuickPhrases);
+    });
+    fetch(DOCTOR_QUICK_PHRASES_API)
+        .then(function (r) { return r.json(); })
+        .then(function (json) {
+            if (!json || !json.success) return;
+            rows.forEach(function (row) {
+                const field = document.getElementById(row.getAttribute('data-phrases-for'));
+                if (field) buildDoctorQuickPhraseRow(row, field, json.phrases[field.id] || []);
+            });
+            syncDoctorQuickPhrases();
+        })
+        .catch(function (e) { console.warn('quick phrases failed to load', e); });
 })();
 
 // Step indicator: one pane visible at a time. Leaving a step saves any findings edited on it.
