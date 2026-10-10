@@ -106,7 +106,7 @@ if ($sstmt) {
 
     <header class="ses-head">
         <div>
-            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, chart their teeth, then go step by step: assessment, clinical findings, photos, services and treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, chart their teeth, then go step by step: assessment, clinical findings, photos, services and treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
+            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
         </div>
         <?php if (!$appointment_id): ?>
         <span class="ses-head__queue"><i class="bi bi-people" aria-hidden="true"></i> <?php echo $queueCount; ?> in today's queue</span>
@@ -195,35 +195,23 @@ if ($sstmt) {
              with Back / Next (or by clicking a step); Complete session is on the last step. -->
         <section class="ses-card ses-flow" id="sesFlow">
             <ol class="ses-steps" id="sesSteps" aria-label="Session steps">
-                <li class="ses-steps__item"><button type="button" class="ses-step is-active" data-step="1" aria-current="step"><span class="ses-step__num">1</span><span class="ses-step__label">Assessment</span></button></li>
-                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="2"><span class="ses-step__num">2</span><span class="ses-step__label">Clinical findings</span></button></li>
-                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="3"><span class="ses-step__num">3</span><span class="ses-step__label">Photos</span></button></li>
-                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="4"><span class="ses-step__num">4</span><span class="ses-step__label">Services &amp; plan</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step is-active" data-step="1" aria-current="step"><span class="ses-step__num">1</span><span class="ses-step__label">Clinical findings</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="2"><span class="ses-step__num">2</span><span class="ses-step__label">Photos</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="3"><span class="ses-step__num">3</span><span class="ses-step__label">Services</span></button></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="4"><span class="ses-step__num">4</span><span class="ses-step__label">Treatment plan</span></button></li>
                 <li class="ses-steps__item"><button type="button" class="ses-step" data-step="5"><span class="ses-step__num">5</span><span class="ses-step__label">Notes</span></button></li>
             </ol>
 
-            <!-- One-click defaults for common findings (steps 1 and 2); the doctor then edits
+            <!-- One-click defaults for common findings (step 1); the doctor then edits
                  only what differs. -->
             <div id="doctorFindingsPresets" class="ses-quickfill">
                 <span class="ses-quickfill__label"><i class="bi bi-lightning-charge"></i> Quick fill:</span>
                 <button type="button" class="ses-btn ses-btn--ghost ses-quickfill__clear" id="clearClinicalFindingsBtn"><i class="bi bi-eraser"></i> Clear</button>
             </div>
 
-            <!-- Step 1: clinical assessment + vitals. -->
+            <!-- Step 1: all clinical findings (occlusal classification, clinical assessment,
+                 vitals & lab, radiographic interpretation). -->
             <div class="ses-pane" data-step-pane="1">
-                <div class="ses-card__head">
-                    <span class="ses-card__icon"><i class="bi bi-heart-pulse"></i></span>
-                    <div class="ses-card__heading">
-                        <h3 class="ses-card__title">Assessment</h3>
-                    </div>
-                </div>
-                <div id="doctorAssessmentBody">
-                    <div class="tp-empty">Select a patient to record their assessment.</div>
-                </div>
-            </div>
-
-            <!-- Step 2: occlusal classification + radiographic interpretation. -->
-            <div class="ses-pane" data-step-pane="2" hidden>
                 <div class="ses-card__head">
                     <span class="ses-card__icon"><i class="bi bi-clipboard2-pulse"></i></span>
                     <div class="ses-card__heading">
@@ -235,8 +223,8 @@ if ($sstmt) {
                 </div>
             </div>
 
-            <!-- Step 3: clinical photos, uploaded with the session when it is completed. -->
-            <div class="ses-pane" data-step-pane="3" hidden>
+            <!-- Step 2: clinical photos, uploaded with the session when it is completed. -->
+            <div class="ses-pane" data-step-pane="2" hidden>
                 <div class="ses-card__head">
                     <span class="ses-card__icon"><i class="bi bi-images"></i></span>
                     <div class="ses-card__heading">
@@ -257,9 +245,8 @@ if ($sstmt) {
                 </div>
             </div>
 
-            <!-- Step 4: services done this visit (what billing is built from), then the
-                 treatment plan (multi-visit; an estimate only, billed via the services when done). -->
-            <div class="ses-pane" data-step-pane="4" hidden>
+            <!-- Step 3: services done this visit — what billing is built from. -->
+            <div class="ses-pane" data-step-pane="3" hidden>
                 <div class="ses-card__head">
                     <span class="ses-card__icon"><i class="bi bi-receipt"></i></span>
                     <div class="ses-card__heading">
@@ -287,7 +274,11 @@ if ($sstmt) {
                     <tfoot id="ehrServicesFoot">
                     </tfoot>
                 </table>
-                <div class="ses-pane__divider"></div>
+            </div>
+
+            <!-- Step 4: treatment plan (multi-visit; an estimate only). Marking an item done
+                 adds its service to step 3, which is what gets billed. -->
+            <div class="ses-pane" data-step-pane="4" hidden>
                 <div id="ehrTreatmentPlan">
                     <div class="tp-empty">Select a patient to see their treatment plan.</div>
                 </div>
@@ -581,7 +572,6 @@ if ($sstmt) {
 .ses-quickfill .ses-btn { padding: 4px 10px; font-size: 0.78rem; }
 .ses-quickfill__clear { margin-left: auto; }
 .ses-pane { min-width: 0; }
-.ses-pane__divider { border-top: 1px solid #eef2f6; margin: 16px 0; }
 .ses-pane__hint { margin: 8px 0 0; font-size: 0.8rem; color: #64748b; }
 .ses-flow__nav {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -1338,7 +1328,7 @@ if ($sstmt) {
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             
             try {
-                // Assessment / clinical findings (steps 1-2) are saved on their own endpoint;
+                // Clinical findings (step 1) are saved on their own endpoint;
                 // make sure the latest edits are in before the session is closed.
                 if (typeof window.saveDoctorFindings === 'function' && !(await window.saveDoctorFindings({ silent: true }))) {
                     ehrFinishSubmitting = false;
@@ -1652,16 +1642,15 @@ function loadPdRecordDetail(recordId) {
 </script>
 
 <script>
-// Assessment (step 1) and Clinical findings (step 2) of the session flow — the doctor
-// inputs/edits them inline, pre-filled with whatever was already saved for this
-// appointment. Both steps are one record: saved together via
-// assets/api/ehr/save_clinical_findings.php, collected with the shared
+// Clinical findings (step 1 of the session flow) — the doctor inputs/edits them inline,
+// pre-filled with whatever was already saved for this appointment. Occlusal Classification
+// is what's actually used day-to-day, so it's first; the other groups are optional. Saved
+// via assets/api/ehr/save_clinical_findings.php, collected with the shared
 // collectVisitClinicalData() helper (assets/js/clinical-assessment-fields.js) using the
 // same 'visit-clinical-field' convention the secretary's Create Record form uses.
 var CLINICAL_FINDINGS_GROUPS = [
     {
         title: 'Occlusal Classification',
-        step: 'findings',
         optional: false,
         fields: [
             ['occlusion', 'Occlusion', 'text'], ['cl_i_type', 'Cl. I Type', 'text'],
@@ -1672,7 +1661,6 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Clinical Assessment',
-        step: 'assessment',
         optional: true,
         fields: [
             ['gingiva_consistency', 'Consistency Gingiva', 'radio', ['Firm', 'Hyper plastic', 'Smooth']],
@@ -1684,7 +1672,6 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Vitals & Lab Findings',
-        step: 'assessment',
         optional: true,
         fields: [
             ['blood_sugar', 'Blood Sugar', 'text'],
@@ -1698,18 +1685,15 @@ var CLINICAL_FINDINGS_GROUPS = [
     },
     {
         title: 'Radiographic Interpretation',
-        step: 'findings',
         optional: true,
         fields: [['radiographic_interpretation', 'Radiographic Interpretation', 'textarea']],
     },
 ];
 
-function renderClinicalFindingsHtml(findings, step) {
+function renderClinicalFindingsHtml(findings) {
     findings = findings || {};
     let idSeq = 0;
-    return CLINICAL_FINDINGS_GROUPS.filter(function(group) {
-        return !step || group.step === step;
-    }).map(function(group) {
+    return CLINICAL_FINDINGS_GROUPS.map(function(group) {
         const rows = group.fields.map(function(f) {
             const key = f[0], label = f[1], kind = f[2] || 'text';
             const value = findings[key];
@@ -1740,25 +1724,20 @@ function renderClinicalFindingsHtml(findings, step) {
     }).join('');
 }
 
-var DOCTOR_FINDINGS_PANES = [['doctorAssessmentBody', 'assessment'], ['doctorFindingsBody', 'findings']];
 var doctorFindingsApptId = 0;
 var doctorFindingsDirty = false;
 
 function renderDoctorFindings(findings) {
-    DOCTOR_FINDINGS_PANES.forEach(function(pane) {
-        const bodyEl = document.getElementById(pane[0]);
-        if (!bodyEl) return;
-        bodyEl.innerHTML = renderClinicalFindingsHtml(findings, pane[1]);
-        if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
-    });
+    const bodyEl = document.getElementById('doctorFindingsBody');
+    if (!bodyEl) return;
+    bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
+    if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
     doctorFindingsDirty = false;
 }
 
 function setDoctorFindingsPlaceholder(html) {
-    DOCTOR_FINDINGS_PANES.forEach(function(pane) {
-        const bodyEl = document.getElementById(pane[0]);
-        if (bodyEl) bodyEl.innerHTML = html;
-    });
+    const bodyEl = document.getElementById('doctorFindingsBody');
+    if (bodyEl) bodyEl.innerHTML = html;
     doctorFindingsDirty = false;
 }
 
@@ -1787,7 +1766,7 @@ function loadDoctorFindings(apptId) {
         });
 }
 
-// Saves steps 1-2 if anything changed. Resolves false only when a save was needed and failed.
+// Saves step 1 if anything changed. Resolves false only when a save was needed and failed.
 async function saveDoctorFindings(opts) {
     opts = opts || {};
     const apptId = doctorFindingsApptId;
@@ -1802,23 +1781,23 @@ async function saveDoctorFindings(opts) {
         const res = await fetch('../assets/api/ehr/save_clinical_findings.php', { method: 'POST', body: fd });
         const json = await res.json();
         if (!json.success) throw new Error(json.message || 'Failed to save clinical findings');
-        if (!opts.silent) window.showToast('Assessment and findings saved', 'success');
+        if (!opts.silent) window.showToast('Clinical findings saved', 'success');
         return true;
     } catch (e) {
         console.error(e);
         if (doctorFindingsApptId === apptId) doctorFindingsDirty = true;
-        window.showToast('Assessment and findings were not saved. Please try again.', 'danger');
+        window.showToast('Clinical findings were not saved. Please try again.', 'danger');
         return false;
     }
 }
 
-// Step indicator: one pane visible at a time. Leaving step 1 or 2 saves what was entered.
+// Step indicator: one pane visible at a time. Leaving step 1 saves the findings entered.
 var SES_STEP_COUNT = 5;
 var sesCurrentStep = 1;
 
 function showSessionStep(step) {
     step = Math.max(1, Math.min(SES_STEP_COUNT, parseInt(step, 10) || 1));
-    if (sesCurrentStep <= 2 && step !== sesCurrentStep) saveDoctorFindings();
+    if (sesCurrentStep === 1 && step !== 1) saveDoctorFindings();
     sesCurrentStep = step;
 
     document.querySelectorAll('#sesFlow .ses-pane').forEach(function(pane) {
@@ -1837,7 +1816,7 @@ function showSessionStep(step) {
     document.getElementById('sesStepNextBtn').hidden = isLast;
     document.getElementById('submitFinishAppointmentBtn').hidden = !isLast;
     document.getElementById('sesStepCount').textContent = 'Step ' + step + ' of ' + SES_STEP_COUNT;
-    document.getElementById('doctorFindingsPresets').hidden = step > 2;
+    document.getElementById('doctorFindingsPresets').hidden = step !== 1;
 }
 
 (function () {
@@ -1858,9 +1837,8 @@ function showSessionStep(step) {
         });
     });
 
-    // Quick-fill buttons, one per preset in assets/js/clinical-assessment-fields.js. A preset
-    // fills both the Assessment and Clinical findings steps; a wrong click is undone by
-    // editing or Clear.
+    // Quick-fill buttons, one per preset in assets/js/clinical-assessment-fields.js. A wrong
+    // click is undone by editing or Clear.
     const bar = document.getElementById('doctorFindingsPresets');
     const clearBtn = document.getElementById('clearClinicalFindingsBtn');
     (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
@@ -1872,7 +1850,7 @@ function showSessionStep(step) {
             if (!flow.querySelector('.visit-clinical-field')) return;
             window.applyClinicalFindingsPreset(flow, preset.key);
             doctorFindingsDirty = true;
-            window.showToast('"' + preset.label + '" filled in for Assessment and Clinical findings. Review and adjust.', 'info');
+            window.showToast('"' + preset.label + '" filled in. Review and adjust.', 'info');
         });
         bar.insertBefore(btn, clearBtn);
     });
