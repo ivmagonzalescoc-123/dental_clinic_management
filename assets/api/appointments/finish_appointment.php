@@ -117,6 +117,9 @@ if (!security_validate_csrf_token($csrf)) {
 
 $appointmentId = isset($_POST['appointment_id']) ? (int)$_POST['appointment_id'] : 0;
 $notes = isset($_POST['notes']) ? trim($_POST['notes']) : '';
+// The doctor's clinical summary (optional). Null = not sent, so an older client or an
+// untouched field never wipes a summary that is already on the record.
+$summary = isset($_POST['summary']) ? trim((string)$_POST['summary']) : null;
 $odontogramRaw = isset($_POST['odontogram']) && $_POST['odontogram'] !== '' ? $_POST['odontogram'] : null;
 $odontogramData = null;
 if ($odontogramRaw !== null) {
@@ -223,13 +226,13 @@ try {
     $stmt->close();
     
     if ($existingCr) {
-        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = IFNULL(?, doctor_notes), status = ?, submitted_by = ?, submitted_at = NOW() WHERE appointment_id = ?');
-        $stmt->bind_param('iisisi', $doctorId, $patientId, $notes, $crStatus, $doctorId, $appointmentId);
+        $stmt = $conn->prepare('UPDATE clinical_records SET doctor_id = ?, patient_id = ?, doctor_notes = IFNULL(?, doctor_notes), summary = IFNULL(?, summary), status = ?, submitted_by = ?, submitted_at = NOW() WHERE appointment_id = ?');
+        $stmt->bind_param('iisssii', $doctorId, $patientId, $notes, $summary, $crStatus, $doctorId, $appointmentId);
         $stmt->execute();
         $stmt->close();
     } else {
-        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-        $stmt->bind_param('iiissi', $appointmentId, $doctorId, $patientId, $notes, $crStatus, $doctorId);
+        $stmt = $conn->prepare('INSERT INTO clinical_records (appointment_id, doctor_id, patient_id, doctor_notes, summary, status, submitted_by, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->bind_param('iiisssi', $appointmentId, $doctorId, $patientId, $notes, $summary, $crStatus, $doctorId);
         $stmt->execute();
         $stmt->close();
     }

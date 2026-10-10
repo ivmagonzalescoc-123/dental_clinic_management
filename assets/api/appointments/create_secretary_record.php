@@ -175,7 +175,9 @@ try {
 
     // A patient who still has planned treatments must leave with a next visit: either one
     // is already booked, or this record has to set a follow-up date that can really be
-    // booked. Checked before anything is saved so a refused record changes nothing.
+    // booked. Checked before anything is saved so a refused record changes nothing — this
+    // has to happen up front: the save below can't be undone with a rollback, because the
+    // table-setup statements it runs along the way commit the transaction early.
     $followUpRequired = treatment_plan_pending_count($conn, $patientId) > 0
         && treatment_plan_next_appointment($conn, $patientId, $appointmentId) === null;
     if ($followUpRequired) {
@@ -188,6 +190,8 @@ try {
             [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doctorId, $followUpDateDb);
             if (!$bookable) {
                 $followUpProblem = 'The follow-up date cannot be booked: ' . $bookableMsg . ' Choose another date.';
+            } elseif (!workflow_followup_slot_available($conn, $doctorId, $followUpDateDb)) {
+                $followUpProblem = 'There is no free slot on ' . $followUpDateDb . ' for the follow-up visit. Choose another date.';
             }
         }
         if ($followUpProblem !== null) {
@@ -540,20 +544,6 @@ try {
                 $followUpSchedulingError = $e->getMessage();
             }
         }
-    }
-
-    // The follow-up is the patient's only next visit here, so a record without it must not
-    // go through — undo everything and let the secretary pick a date that has a free slot.
-    if ($followUpRequired && $followUpAppointmentId === null) {
-        $conn->rollback();
-        idempotency_clear_processing($idempotencyScope, $idempotencyKey);
-        $slotProblem = $followUpSchedulingError
-            ?? ($recurringFollowUps['failed'][0]['error'] ?? 'No slot could be booked on that date.');
-        api_respond([
-            'success' => false,
-            'message' => 'The follow-up visit could not be booked, so the record was not submitted. ' . $slotProblem . ' Choose another follow-up date.',
-            'code' => 'follow_up_required',
-        ]);
     }
 
     $recordsCompletedAt = date('Y-m-d H:i:s');

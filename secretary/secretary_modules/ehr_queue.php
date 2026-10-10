@@ -211,7 +211,6 @@ if (!function_exists('ehr_queue_waiting')) {
                                         <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;" title="Total number of visits to auto-book"></div>
                                     </div>
                                     <div class="small mt-1" id="followUpRequirementNote" hidden></div>
-                                    <div class="small text-muted mt-1">Set "Mo." + "Visits" &gt; 1 for a recurring case (e.g. braces adjustments) — all visits are booked up front, spaced that many months apart.</div>
                                 </div>
                             </div>
                         </div>
@@ -1880,7 +1879,7 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
 <script>
 window.CURRENT_ROLE = '<?php echo $_SESSION['role'] ?? ''; ?>';
 window.CURRENT_USER = <?php echo (int)($_SESSION['user_id'] ?? 0); ?>;
-window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/')); ?>';
+window.MEDIA_BASE_URL = '<?php echo htmlspecialchars(rtrim(str_replace('\\', '/', dirname(dirname($_SERVER['SCRIPT_NAME']))), '/')); ?>';
 
 function notifySecretary(message, type) {
     window.showToast(String(message || ''), type || 'info');

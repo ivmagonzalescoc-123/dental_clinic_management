@@ -1325,6 +1325,35 @@ html, body { height: 100%; margin: 0; font-family: 'Plus Jakarta Sans', ui-sans-
 }
 
 /* ============================================
+   Desktop: the side panel (selection, chart legend,
+   tooth notes) stays out of the way until a tooth is
+   selected or the "Show legend" button is pressed, so
+   the chart gets the full width. Narrow screens keep
+   their own "Controls" drawer instead.
+   ============================================ */
+.view-tab--legend {
+  display: none;
+}
+
+@media (min-width: 861px) {
+  .view-tab--legend {
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+  }
+  .view-tab--legend + .view-tab--print {
+    margin-left: 0;
+  }
+
+  .app.is-panel-collapsed {
+    grid-template-columns: 1fr;
+  }
+  .app.is-panel-collapsed .panel {
+    display: none;
+  }
+}
+
+/* ============================================
    Print: chart only — hide the side panel, tabs,
    3D viewport and any overlay/loading chrome, and
    let the 2D odontogram flow onto the printed page

@@ -4,6 +4,34 @@ include_once __DIR__ . '/reminders.php';
 include_once dirname(__DIR__) . '/assets/api/appointments/availability_guard.php';
 include_once __DIR__ . '/booking_helpers.php';
 
+if (!function_exists('workflow_followup_slot_available')) {
+    /**
+     * Whether workflow_create_followup_appointment() would find a slot on that date. Lets a
+     * caller that requires the follow-up refuse before saving anything.
+     */
+    function workflow_followup_slot_available(mysqli $conn, int $doctorId, string $followDateYmd): bool
+    {
+        if ($doctorId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $followDateYmd)) {
+            return false;
+        }
+        appt_ensure_standard_timeslots_for_doctor_date($conn, $doctorId, $followDateYmd);
+        $stmt = $conn->prepare(
+            "SELECT 1 FROM timeslot
+             WHERE doctor_id = ? AND slot_date = ? AND status = 'available'
+               AND TIMESTAMPDIFF(MINUTE, start_time, end_time) = " . (int) APPT_BASE_SLOT_MINUTES . "
+             LIMIT 1"
+        );
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('is', $doctorId, $followDateYmd);
+        $stmt->execute();
+        $found = (bool)$stmt->get_result()->fetch_row();
+        $stmt->close();
+        return $found;
+    }
+}
+
 if (!function_exists('workflow_create_followup_appointment')) {
     /**
      * Create a follow-up appointment + schedule when secretary sets a follow-up date.

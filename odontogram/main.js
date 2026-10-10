@@ -85,6 +85,38 @@ let activeView = "chart";
 let render3d = false;
 const legendButtons = new Map();
 
+// Desktop side panel (selection, chart legend, tooth notes): hidden until a tooth is
+// selected or the "Show legend" button is pressed. On narrow screens the same class has
+// no effect — the panel is the "Controls" drawer there (see index.html).
+const appEl = document.getElementById("app");
+const legendToggleBtn = document.getElementById("legendToggleBtn");
+const legendToggleLabel = document.getElementById("legendToggleLabel");
+let panelToothShown = null;
+
+function setSidePanelOpen(open) {
+  if (!appEl) return;
+  appEl.classList.toggle("is-panel-collapsed", !open);
+  legendToggleBtn?.classList.toggle("is-active", open);
+  legendToggleBtn?.setAttribute("aria-expanded", open ? "true" : "false");
+  if (legendToggleLabel) legendToggleLabel.textContent = open ? "Hide legend" : "Show legend";
+  // The workspace just changed width: let the 3D canvas pick up its new size.
+  requestAnimationFrame(() => {
+    try { resizeToDisplaySize(); } catch (e) { /* 3D not ready yet */ }
+  });
+}
+
+// Opens for each newly selected tooth and closes when the selection is cleared. Picking
+// another surface on the same tooth leaves it as the user set it with the button.
+function syncSidePanelWithSelection() {
+  if (selectedTooth === panelToothShown) return;
+  panelToothShown = selectedTooth;
+  setSidePanelOpen(!!selectedTooth);
+}
+
+legendToggleBtn?.addEventListener("click", () => {
+  setSidePanelOpen(appEl.classList.contains("is-panel-collapsed"));
+});
+
 function setView(view) {
   activeView = view;
   const isChart = view === "chart";
@@ -188,6 +220,7 @@ function updateLegendButtons() {
 }
 
 function updateStatusUI() {
+  syncSidePanelWithSelection();
   if (!selectedTooth || !selectedSurface) {
     selectedToothEl.textContent = "—";
     selectedSurfaceEl.textContent = "—";

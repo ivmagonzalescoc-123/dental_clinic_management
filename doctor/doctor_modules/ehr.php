@@ -106,7 +106,7 @@ if ($sstmt) {
 
     <header class="ses-head">
         <div>
-            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and notes. Save the chart any time. Complete session sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
+            <h2 class="ses-head__title">Patient Visit <button type="button" class="ses-tip" aria-label="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and summary. Save the chart any time. Complete session sends everything to the secretary for records and billing." data-tip="Pick the patient in the chair, chart their teeth, then go step by step: clinical findings, photos, services, treatment plan, and summary. Save the chart any time. Complete session sends everything to the secretary for records and billing."><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></h2>
         </div>
         <?php if (!$appointment_id): ?>
         <span class="ses-head__queue"><i class="bi bi-people" aria-hidden="true"></i> <?php echo $queueCount; ?> in today's queue</span>
@@ -196,10 +196,14 @@ if ($sstmt) {
         <section class="ses-card ses-flow" id="sesFlow">
             <ol class="ses-steps" id="sesSteps" aria-label="Session steps">
                 <li class="ses-steps__item"><button type="button" class="ses-step is-active" data-step="1" aria-current="step"><span class="ses-step__num">1</span><span class="ses-step__label">Clinical findings</span></button></li>
+                <li class="ses-steps__track" aria-hidden="true"><span class="ses-steps__fill"></span></li>
                 <li class="ses-steps__item"><button type="button" class="ses-step" data-step="2"><span class="ses-step__num">2</span><span class="ses-step__label">Photos</span></button></li>
+                <li class="ses-steps__track" aria-hidden="true"><span class="ses-steps__fill"></span></li>
                 <li class="ses-steps__item"><button type="button" class="ses-step" data-step="3"><span class="ses-step__num">3</span><span class="ses-step__label">Services</span></button></li>
+                <li class="ses-steps__track" aria-hidden="true"><span class="ses-steps__fill"></span></li>
                 <li class="ses-steps__item"><button type="button" class="ses-step" data-step="4"><span class="ses-step__num">4</span><span class="ses-step__label">Treatment plan</span></button></li>
-                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="5"><span class="ses-step__num">5</span><span class="ses-step__label">Notes</span></button></li>
+                <li class="ses-steps__track" aria-hidden="true"><span class="ses-steps__fill"></span></li>
+                <li class="ses-steps__item"><button type="button" class="ses-step" data-step="5"><span class="ses-step__num">5</span><span class="ses-step__label">Summary</span></button></li>
             </ol>
 
             <!-- One-click defaults for common findings (step 1); the doctor then edits
@@ -285,16 +289,42 @@ if ($sstmt) {
                 </div>
             </div>
 
-            <!-- Step 5: the doctor's own notes, then Complete session. -->
+            <!-- Step 5: summary — the same Visit Wrap-up and Reason for Visit sections the
+                 secretary's Create Record form has, so the doctor can fill them in first. The
+                 secretary sees whatever is entered here and can still add to it. -->
             <div class="ses-pane" data-step-pane="5" hidden>
                 <div class="ses-card__head">
-                    <span class="ses-card__icon"><i class="bi bi-journal-medical"></i></span>
+                    <span class="ses-card__icon"><i class="bi bi-journal-check"></i></span>
                     <div class="ses-card__heading">
-                        <h3 class="ses-card__title">Doctor's notes</h3>
+                        <h3 class="ses-card__title">Summary</h3>
                     </div>
                 </div>
-                <label class="visually-hidden" for="doctor_notes">Doctor's notes</label>
-                <textarea id="doctor_notes" class="form-control" rows="6" placeholder="Notes for this session..."></textarea>
+                <div>
+                    <div class="pf-section">
+                        <div class="pf-section__title"><i class="bi bi-journal-check"></i> Visit Wrap-up</div>
+                        <div class="ses-field">
+                            <label for="doctor_notes">Doctor's Notes</label>
+                            <textarea id="doctor_notes" class="form-control form-control-sm" rows="4" placeholder="Notes for this session..."></textarea>
+                        </div>
+                        <div class="ses-field">
+                            <label for="doctor_summary">Clinical Summary <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span></label>
+                            <textarea id="doctor_summary" class="form-control form-control-sm" rows="3" placeholder="Treatment results, findings, recommendations..."></textarea>
+                        </div>
+                    </div>
+                    <div class="pf-section mb-0">
+                        <div class="pf-section__title"><i class="bi bi-chat-square-text"></i> Reason for Visit <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span></div>
+                        <div class="ses-field-grid">
+                            <div class="ses-field">
+                                <label for="doctor_chief_complaint">Chief Complaint</label>
+                                <textarea id="doctor_chief_complaint" class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit, in the patient's words"></textarea>
+                            </div>
+                            <div class="ses-field">
+                                <label for="doctor_case_history">Case History</label>
+                                <textarea id="doctor_case_history" class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <p class="ses-pane__hint">Complete session sends everything to the secretary for records and billing.</p>
             </div>
 
@@ -549,31 +579,39 @@ if ($sstmt) {
 /* Session flow: step indicator, one pane at a time, Back / Next / Complete session. */
 .ses-flow { display: flex; flex-direction: column; gap: 14px; }
 .ses-flow [hidden] { display: none !important; }
-.ses-steps { list-style: none; margin: 0; padding: 0; display: flex; gap: 6px; }
-.ses-steps__item { flex: 1 1 0; min-width: 0; }
+.ses-steps { list-style: none; margin: 0; padding: 4px 0 0; display: flex; align-items: flex-start; }
+.ses-steps__item { flex: 0 0 auto; }
 .ses-step {
-    width: 100%; display: flex; align-items: center; gap: 8px; padding: 8px 10px;
-    border: 1px solid #e5eaf0; border-radius: 10px; background: #f8fafc; color: #64748b;
-    font-size: 0.8rem; font-weight: 600; text-align: left; cursor: pointer;
-    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 76px; padding: 0 4px;
+    border: 0; background: none; color: #64748b; font-size: 0.78rem; font-weight: 600; cursor: pointer;
 }
-.ses-step:hover { border-color: #1b7aa3; }
-.ses-step:focus-visible { outline: 3px solid rgba(27, 122, 163, .35); outline-offset: 2px; }
+.ses-step:focus-visible { outline: 3px solid rgba(22, 163, 74, .35); outline-offset: 3px; border-radius: 8px; }
 .ses-step__num {
-    flex: 0 0 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 700;
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: #fff; border: 2px solid #dde3ee; color: #64748b; font-size: 0.85rem; font-weight: 700;
+    transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
 }
-.ses-step__label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ses-step.is-done { color: #17698c; }
-.ses-step.is-done .ses-step__num { background: #d9eef6; color: #17698c; }
-.ses-step.is-active { background: #eef7fb; border-color: #1b7aa3; color: #0f172a; }
-.ses-step.is-active .ses-step__num { background: #1b7aa3; color: #fff; }
+.ses-step:hover .ses-step__num { border-color: #16a34a; }
+.ses-step__label { white-space: nowrap; transition: color .2s ease; }
+.ses-step.is-done .ses-step__num { background: #d1f3e0; border-color: #16a34a; color: #15803d; }
+.ses-step.is-active .ses-step__num {
+    background: #16a34a; border-color: #16a34a; color: #fff; box-shadow: 0 0 0 4px rgba(22, 163, 74, .15);
+}
+.ses-step.is-done .ses-step__label, .ses-step.is-active .ses-step__label { color: #15803d; }
+.ses-steps__track { flex: 1 1 auto; height: 2px; margin: 17px 2px 0; border-radius: 2px; background: #dde3ee; overflow: hidden; }
+.ses-steps__fill { display: block; height: 100%; width: 0; background: #16a34a; transition: width .25s ease; }
 .ses-quickfill { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .ses-quickfill__label { font-size: 0.8rem; color: #64748b; }
 .ses-quickfill .ses-btn { padding: 4px 10px; font-size: 0.78rem; }
 .ses-quickfill__clear { margin-left: auto; }
 .ses-pane { min-width: 0; }
 .ses-pane__hint { margin: 8px 0 0; font-size: 0.8rem; color: #64748b; }
+.ses-field { margin-bottom: 10px; }
+.ses-field:last-child { margin-bottom: 0; }
+.ses-field > label { display: block; margin-bottom: 4px; font-size: 0.78rem; font-weight: 600; color: #475569; }
+.ses-field textarea { font-size: 0.85rem; }
+.ses-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ses-field-grid > .ses-field { margin-bottom: 0; }
 .ses-pane__hint--carried { margin: 12px 0 10px; padding: 8px 12px; border-radius: 8px; background: #eef7fb; color: #17698c; }
 .ses-flow__nav {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -587,12 +625,12 @@ if ($sstmt) {
     .ses-card__actions { flex-basis: 100%; padding-left: 48px; }
     .ehr-patient-card { flex-wrap: wrap; }
     .ehr-patient-details-btn { flex-basis: 100%; }
-    .ses-steps__item { flex: 0 0 auto; }
-    .ses-steps__item:has(.is-active) { flex: 1 1 0; }
+    .ses-field-grid { grid-template-columns: minmax(0, 1fr); }
+    .ses-step { min-width: 0; padding: 0; }
     .ses-step:not(.is-active) .ses-step__label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .ses-work, .ses-chev, .ses-btn, .ses-step { transition: none; }
+    .ses-work, .ses-chev, .ses-btn, .ses-step__num, .ses-step__label, .ses-steps__fill { transition: none; }
 }
 
 /* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
@@ -760,7 +798,13 @@ if ($sstmt) {
                 if (!data) return;
                 const rec = data.record || {};
 
-                if (rec.doctor_notes) document.getElementById('doctor_notes').value = rec.doctor_notes;
+                // Notes and summary belong to this visit only. With no record yet, `rec` is the
+                // patient's latest earlier record (used for the chart below), so its text must
+                // not leak in — and the fields are always reset so nothing stays from the
+                // previously selected patient.
+                const ownRecord = parseInt(rec.appointment_id || '0', 10) === parseInt(appointmentId, 10);
+                document.getElementById('doctor_notes').value = ownRecord ? (rec.doctor_notes || '') : '';
+                document.getElementById('doctor_summary').value = ownRecord ? (rec.summary || '') : '';
 
                 const odEl = document.getElementById('odontogram_data');
                 if (odEl) {
@@ -1330,7 +1374,7 @@ if ($sstmt) {
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             
             try {
-                // Clinical findings (step 1) are saved on their own endpoint;
+                // Clinical findings (step 1) and Reason for Visit (step 5) are saved on their own endpoint;
                 // make sure the latest edits are in before the session is closed.
                 if (typeof window.saveDoctorFindings === 'function' && !(await window.saveDoctorFindings({ silent: true }))) {
                     ehrFinishSubmitting = false;
@@ -1342,6 +1386,7 @@ if ($sstmt) {
                 const fd = new FormData();
                 fd.append('appointment_id', appointmentId);
                 fd.append('notes', document.getElementById('doctor_notes').value);
+                fd.append('summary', document.getElementById('doctor_summary').value);
                 fd.append('csrf_token', doctorCsrfToken);
                 fd.append('idempotency_key', ehrFinishIdempotencyKey);
 
@@ -1729,17 +1774,29 @@ function renderClinicalFindingsHtml(findings) {
 var doctorFindingsApptId = 0;
 var doctorFindingsDirty = false;
 
+// Chief Complaint / Case History (step 5, Reason for Visit) are part of the same findings
+// record as step 1, so they load and save together with it.
+function setDoctorReasonForVisit(findings) {
+    findings = findings || {};
+    const complaint = document.getElementById('doctor_chief_complaint');
+    const history = document.getElementById('doctor_case_history');
+    if (complaint) complaint.value = findings.chief_complaint || '';
+    if (history) history.value = findings.case_history || '';
+}
+
 function renderDoctorFindings(findings) {
     const bodyEl = document.getElementById('doctorFindingsBody');
     if (!bodyEl) return;
     bodyEl.innerHTML = renderClinicalFindingsHtml(findings);
     if (typeof initToggleableClinicalRadios === 'function') initToggleableClinicalRadios(bodyEl);
+    setDoctorReasonForVisit(findings);
     doctorFindingsDirty = false;
 }
 
 function setDoctorFindingsPlaceholder(html) {
     const bodyEl = document.getElementById('doctorFindingsBody');
     if (bodyEl) bodyEl.innerHTML = html;
+    setDoctorReasonForVisit({});
     doctorFindingsDirty = false;
     setDoctorFindingsCarriedNote('');
 }
@@ -1804,7 +1861,7 @@ function loadDoctorFindings(apptId) {
         });
 }
 
-// Saves step 1 if anything changed. Resolves false only when a save was needed and failed.
+// Saves the findings record (step 1 + Reason for Visit) if anything changed. Resolves false only when a save was needed and failed.
 async function saveDoctorFindings(opts) {
     opts = opts || {};
     const apptId = doctorFindingsApptId;
@@ -1819,23 +1876,23 @@ async function saveDoctorFindings(opts) {
         const res = await fetch('../assets/api/ehr/save_clinical_findings.php', { method: 'POST', body: fd });
         const json = await res.json();
         if (!json.success) throw new Error(json.message || 'Failed to save clinical findings');
-        if (!opts.silent) window.showToast('Clinical findings saved', 'success');
+        if (!opts.silent) window.showToast('Saved', 'success');
         return true;
     } catch (e) {
         console.error(e);
         if (doctorFindingsApptId === apptId) doctorFindingsDirty = true;
-        window.showToast('Clinical findings were not saved. Please try again.', 'danger');
+        window.showToast('Your changes were not saved. Please try again.', 'danger');
         return false;
     }
 }
 
-// Step indicator: one pane visible at a time. Leaving step 1 saves the findings entered.
+// Step indicator: one pane visible at a time. Leaving a step saves any findings edited on it.
 var SES_STEP_COUNT = 5;
 var sesCurrentStep = 1;
 
 function showSessionStep(step) {
     step = Math.max(1, Math.min(SES_STEP_COUNT, parseInt(step, 10) || 1));
-    if (sesCurrentStep === 1 && step !== 1) saveDoctorFindings();
+    if (step !== sesCurrentStep) saveDoctorFindings();
     sesCurrentStep = step;
 
     document.querySelectorAll('#sesFlow .ses-pane').forEach(function(pane) {
@@ -1847,6 +1904,10 @@ function showSessionStep(step) {
         btn.classList.toggle('is-done', idx < step);
         if (idx === step) btn.setAttribute('aria-current', 'step');
         else btn.removeAttribute('aria-current');
+    });
+    // Line between steps: full behind the current step, half-way out of it, empty ahead.
+    document.querySelectorAll('#sesSteps .ses-steps__fill').forEach(function(fill, i) {
+        fill.style.width = (i + 1 < step) ? '100%' : ((i + 1 === step) ? '50%' : '0%');
     });
 
     const isLast = step === SES_STEP_COUNT;
@@ -1879,22 +1940,33 @@ function showSessionStep(step) {
     // click is undone by editing or Clear.
     const bar = document.getElementById('doctorFindingsPresets');
     const clearBtn = document.getElementById('clearClinicalFindingsBtn');
-    (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ses-btn ses-btn--ghost';
-        btn.textContent = preset.label;
-        btn.addEventListener('click', function () {
-            if (!flow.querySelector('.visit-clinical-field')) return;
-            window.applyClinicalFindingsPreset(flow, preset.key);
-            doctorFindingsDirty = true;
-            window.showToast('"' + preset.label + '" filled in. Review and adjust.', 'info');
+    // The presets script (clinical-assessment-fields.js) is loaded after this module's
+    // markup, so the buttons are built once the page has finished loading.
+    function buildPresetButtons() {
+        if (bar.querySelector('[data-preset]')) return;
+        (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ses-btn ses-btn--ghost';
+            btn.textContent = preset.label;
+            btn.setAttribute('data-preset', preset.key);
+            btn.addEventListener('click', function () {
+                const bodyEl = document.getElementById('doctorFindingsBody');
+                if (!bodyEl.querySelector('.visit-clinical-field')) return;
+                window.applyClinicalFindingsPreset(bodyEl, preset.key);
+                doctorFindingsDirty = true;
+                window.showToast('"' + preset.label + '" filled in. Review and adjust.', 'info');
+            });
+            bar.insertBefore(btn, clearBtn);
         });
-        bar.insertBefore(btn, clearBtn);
-    });
+    }
+    if (window.CLINICAL_FINDINGS_PRESETS) buildPresetButtons();
+    else document.addEventListener('DOMContentLoaded', buildPresetButtons);
     clearBtn.addEventListener('click', function () {
-        if (!flow.querySelector('.visit-clinical-field')) return;
-        if (typeof window.clearClinicalFindings === 'function') window.clearClinicalFindings(flow);
+        // Step 1 only — Clear must not wipe the Reason for Visit typed on step 5.
+        const bodyEl = document.getElementById('doctorFindingsBody');
+        if (!bodyEl.querySelector('.visit-clinical-field')) return;
+        if (typeof window.clearClinicalFindings === 'function') window.clearClinicalFindings(bodyEl);
         doctorFindingsDirty = true;
     });
 
