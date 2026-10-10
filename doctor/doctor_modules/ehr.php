@@ -322,10 +322,12 @@ if ($sstmt) {
                         <div class="ses-field">
                             <label for="doctor_notes">Doctor's Notes</label>
                             <textarea id="doctor_notes" class="form-control form-control-sm" rows="4" placeholder="Notes for this session..."></textarea>
+                            <div class="ses-phrases" data-phrases-for="doctor_notes" aria-label="Common entries"></div>
                         </div>
                         <div class="ses-field">
                             <label for="doctor_summary">Clinical Summary <span class="badge bg-secondary fw-normal" style="font-size:0.65rem;">Optional</span></label>
                             <textarea id="doctor_summary" class="form-control form-control-sm" rows="3" placeholder="Treatment results, findings, recommendations..."></textarea>
+                            <div class="ses-phrases" data-phrases-for="doctor_summary" aria-label="Common entries"></div>
                         </div>
                     </div>
                     <div class="pf-section mb-0">
@@ -334,10 +336,12 @@ if ($sstmt) {
                             <div class="ses-field">
                                 <label for="doctor_chief_complaint">Chief Complaint</label>
                                 <textarea id="doctor_chief_complaint" class="form-control form-control-sm visit-clinical-field" name="chief_complaint" rows="2" placeholder="Primary reason for visit, in the patient's words"></textarea>
+                                <div class="ses-phrases" data-phrases-for="doctor_chief_complaint" aria-label="Common entries"></div>
                             </div>
                             <div class="ses-field">
                                 <label for="doctor_case_history">Case History</label>
                                 <textarea id="doctor_case_history" class="form-control form-control-sm visit-clinical-field" name="case_history" rows="2" placeholder="Relevant past dental/medical history"></textarea>
+                                <div class="ses-phrases" data-phrases-for="doctor_case_history" aria-label="Common entries"></div>
                             </div>
                         </div>
                     </div>
@@ -627,6 +631,16 @@ if ($sstmt) {
 .ses-field:last-child { margin-bottom: 0; }
 .ses-field > label { display: block; margin-bottom: 4px; font-size: 0.78rem; font-weight: 600; color: #475569; }
 .ses-field textarea { font-size: 0.85rem; }
+/* Quick phrases: one click adds a common entry to the field above. */
+.ses-phrases { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.ses-phrase {
+    padding: 3px 10px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff;
+    color: #475569; font-size: 0.74rem; font-weight: 600; line-height: 1.3; cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+.ses-phrase:hover { border-color: #1b7aa3; color: #1b7aa3; }
+.ses-phrase:focus-visible { outline: 2px solid #1b7aa3; outline-offset: 1px; }
+.ses-phrase.is-used { background: #eef7fb; border-color: #9fcfe2; color: #17698c; }
 .ses-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .ses-field-grid > .ses-field { margin-bottom: 0; }
 .ses-pane__hint--carried { margin: 12px 0 10px; padding: 8px 12px; border-radius: 8px; background: #eef7fb; color: #17698c; }
@@ -647,7 +661,7 @@ if ($sstmt) {
     .ses-step:not(.is-active) .ses-step__label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .ses-work, .ses-chev, .ses-btn, .ses-step__num, .ses-step__label, .ses-steps__fill { transition: none; }
+    .ses-work, .ses-chev, .ses-btn, .ses-step__num, .ses-step__label, .ses-steps__fill, .ses-phrase { transition: none; }
 }
 
 /* Patient Details modal identity strip — photo + name + Age/Gender/Phone, shown once
@@ -1896,6 +1910,101 @@ async function saveDoctorFindings(opts) {
     }
 }
 
+// Quick phrases for the Summary step: common entries the doctor can add with one click
+// instead of typing them every visit. Clicking adds the phrase to the field (on a new line
+// for notes and summary, after a comma for the short fields); clicking it again takes it
+// back out. Everything stays editable. Edit the lists here to change what is offered.
+var DOCTOR_QUICK_PHRASES = {
+    doctor_notes: {
+        separator: '\n',
+        phrases: [
+            'Follow-up appointment needed.',
+            'Return after 1 week.',
+            'Return after 6 months for check-up and cleaning.',
+            'Patient tolerated the procedure well.',
+            'Post-operative instructions given.',
+            'Oral hygiene instructions given.',
+            'Prescription given.',
+            'No complications.',
+            'Referred for X-ray.',
+        ],
+    },
+    doctor_summary: {
+        separator: '\n',
+        phrases: [
+            'Treatment completed as planned.',
+            'Oral prophylaxis done.',
+            'Tooth restored with composite filling.',
+            'Tooth extracted, bleeding controlled.',
+            'Treatment ongoing, to be continued next visit.',
+            'For observation.',
+        ],
+    },
+    doctor_chief_complaint: {
+        separator: ', ',
+        phrases: ['Toothache', 'Tooth sensitivity', 'Bleeding gums', 'Swelling', 'Broken or chipped tooth',
+            'Loose tooth', 'Routine check-up', 'Cleaning', 'Braces adjustment'],
+    },
+    doctor_case_history: {
+        separator: ', ',
+        phrases: ['No relevant medical history', 'No known allergies', 'Hypertensive, on maintenance medication',
+            'Diabetic', 'Previous extraction', 'Currently in orthodontic treatment', 'First dental visit'],
+    },
+};
+
+function toggleDoctorQuickPhrase(field, phrase, separator) {
+    // Only the phrase itself (and the separator next to it) is added or removed, so
+    // whatever the doctor typed around it is left exactly as written.
+    const value = field.value;
+    if (value.indexOf(phrase) === -1) {
+        const base = value.replace(/\s+$/, '');
+        field.value = base ? base + separator + phrase : phrase;
+    } else if (value.indexOf(separator + phrase) !== -1) {
+        field.value = value.replace(separator + phrase, '');
+    } else if (value.indexOf(phrase + separator) !== -1) {
+        field.value = value.replace(phrase + separator, '');
+    } else {
+        field.value = value.replace(phrase, '').replace(/^\s+|\s+$/g, '');
+    }
+    // Lets the step's own listeners react (Reason for Visit is saved with the findings).
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function syncDoctorQuickPhrases() {
+    document.querySelectorAll('.ses-phrases[data-phrases-for]').forEach(function (row) {
+        const field = document.getElementById(row.getAttribute('data-phrases-for'));
+        if (!field) return;
+        row.querySelectorAll('.ses-phrase').forEach(function (btn) {
+            const used = field.value.indexOf(btn.textContent) !== -1;
+            btn.classList.toggle('is-used', used);
+            btn.setAttribute('aria-pressed', used ? 'true' : 'false');
+        });
+    });
+}
+
+(function () {
+    document.querySelectorAll('.ses-phrases[data-phrases-for]').forEach(function (row) {
+        const fieldId = row.getAttribute('data-phrases-for');
+        const config = DOCTOR_QUICK_PHRASES[fieldId];
+        const field = document.getElementById(fieldId);
+        if (!config || !field) return;
+        config.phrases.forEach(function (phrase) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ses-phrase';
+            btn.textContent = phrase;
+            btn.setAttribute('aria-pressed', 'false');
+            btn.addEventListener('click', function () {
+                toggleDoctorQuickPhrase(field, phrase, config.separator);
+                syncDoctorQuickPhrases();
+                field.focus();
+            });
+            row.appendChild(btn);
+        });
+        field.addEventListener('input', syncDoctorQuickPhrases);
+    });
+})();
+
 // Step indicator: one pane visible at a time. Leaving a step saves any findings edited on it.
 var SES_STEP_COUNT = 5;
 var sesCurrentStep = 1;
@@ -1925,6 +2034,7 @@ function showSessionStep(step) {
     document.getElementById('sesStepNextBtn').hidden = isLast;
     document.getElementById('submitFinishAppointmentBtn').hidden = !isLast;
     document.getElementById('sesStepCount').textContent = 'Step ' + step + ' of ' + SES_STEP_COUNT;
+    syncDoctorQuickPhrases();
     document.getElementById('doctorFindingsPresets').hidden = step !== 1;
 }
 
