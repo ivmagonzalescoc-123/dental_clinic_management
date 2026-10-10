@@ -336,6 +336,11 @@ if ($sstmt) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- One-click defaults for common findings; the doctor then edits only what differs. -->
+                <div id="doctorFindingsPresets" class="d-flex flex-wrap align-items-center gap-1 mb-2">
+                    <span class="small text-muted me-1"><i class="bi bi-lightning-charge"></i> Quick fill:</span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 ms-auto" id="clearClinicalFindingsBtn" style="font-size:0.78rem;"><i class="bi bi-eraser"></i> Clear</button>
+                </div>
                 <div id="doctorFindingsBody">
                     <div class="text-center text-muted py-5"><i class="bi bi-hourglass-split"></i> Loading...</div>
                 </div>
@@ -1749,6 +1754,32 @@ function openDoctorClinicalFindingsModal() {
             renderDoctorFindings(bodyEl, {});
         });
 }
+
+// Quick-fill buttons, one per preset in assets/js/clinical-assessment-fields.js. Nothing is
+// saved until Save Findings, so a wrong click is undone by editing or Clear.
+(function () {
+    const bar = document.getElementById('doctorFindingsPresets');
+    const clearBtn = document.getElementById('clearClinicalFindingsBtn');
+    if (!bar || !clearBtn) return;
+    (window.CLINICAL_FINDINGS_PRESETS || []).forEach(function (preset) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-outline-primary btn-sm py-0';
+        btn.style.fontSize = '0.78rem';
+        btn.textContent = preset.label;
+        btn.addEventListener('click', function () {
+            const bodyEl = document.getElementById('doctorFindingsBody');
+            if (!bodyEl.querySelector('.visit-clinical-field')) return;
+            window.applyClinicalFindingsPreset(bodyEl, preset.key);
+            window.showToast('"' + preset.label + '" filled in. Review, adjust, then save.', 'info');
+        });
+        bar.insertBefore(btn, clearBtn);
+    });
+    clearBtn.addEventListener('click', function () {
+        const bodyEl = document.getElementById('doctorFindingsBody');
+        if (typeof window.clearClinicalFindings === 'function') window.clearClinicalFindings(bodyEl);
+    });
+})();
 
 document.getElementById('saveClinicalFindingsBtn')?.addEventListener('click', async function() {
     if (!doctorFindingsApptId) {

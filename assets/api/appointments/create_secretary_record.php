@@ -19,6 +19,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notification
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/followup_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/treatment_plan_helpers.php';
 
 // Discard any PHP warnings/notices buffered during includes
 if (ob_get_level()) ob_end_clean();
@@ -170,6 +171,29 @@ try {
     $followUpDateDb = null;
     if ($followUpDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $followUpDate)) {
         $followUpDateDb = $followUpDate;
+    }
+
+    // A patient who still has planned treatments must leave with a next visit: either one
+    // is already booked, or this record has to set a follow-up date that can really be
+    // booked. Checked before anything is saved so a refused record changes nothing.
+    $followUpRequired = treatment_plan_pending_count($conn, $patientId) > 0
+        && treatment_plan_next_appointment($conn, $patientId, $appointmentId) === null;
+    if ($followUpRequired) {
+        $followUpProblem = null;
+        if ($followUpDateDb === null) {
+            $followUpProblem = 'This patient still has planned treatments and no upcoming appointment. Set a follow-up date before submitting the record.';
+        } elseif ($followUpDateDb <= date('Y-m-d')) {
+            $followUpProblem = 'The follow-up date must be after today.';
+        } else {
+            [$bookable, $bookableMsg] = appt_assert_doctor_bookable($conn, $doctorId, $followUpDateDb);
+            if (!$bookable) {
+                $followUpProblem = 'The follow-up date cannot be booked: ' . $bookableMsg . ' Choose another date.';
+            }
+        }
+        if ($followUpProblem !== null) {
+            idempotency_clear_processing($idempotencyScope, $idempotencyKey);
+            api_respond(['success' => false, 'message' => $followUpProblem, 'code' => 'follow_up_required']);
+        }
     }
 
     // Follow-ups created below get a reference number; make sure the column exists first,
@@ -516,6 +540,20 @@ try {
                 $followUpSchedulingError = $e->getMessage();
             }
         }
+    }
+
+    // The follow-up is the patient's only next visit here, so a record without it must not
+    // go through — undo everything and let the secretary pick a date that has a free slot.
+    if ($followUpRequired && $followUpAppointmentId === null) {
+        $conn->rollback();
+        idempotency_clear_processing($idempotencyScope, $idempotencyKey);
+        $slotProblem = $followUpSchedulingError
+            ?? ($recurringFollowUps['failed'][0]['error'] ?? 'No slot could be booked on that date.');
+        api_respond([
+            'success' => false,
+            'message' => 'The follow-up visit could not be booked, so the record was not submitted. ' . $slotProblem . ' Choose another follow-up date.',
+            'code' => 'follow_up_required',
+        ]);
     }
 
     $recordsCompletedAt = date('Y-m-d H:i:s');

@@ -9,6 +9,7 @@ include dirname(dirname(dirname(__DIR__))) . '/config/session_check.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/treatment_plan_helpers.php';
 
 // Discard any warnings from includes, then start fresh buffer
 if (ob_get_level()) ob_end_clean();
@@ -211,6 +212,8 @@ try {
         'summary' => $summary,
         'follow_up_date' => $followUpDate,
         'treatment_plan' => $treatmentPlan,
+        // Lets Create Record tell the secretary up front whether a follow-up date is needed.
+        'next_appointment' => treatment_plan_next_appointment($conn, (int)$appointment['patient_id'], $appointmentId),
         'prescriptions' => $prescriptions,
     ]);
 } catch (Exception $e) {

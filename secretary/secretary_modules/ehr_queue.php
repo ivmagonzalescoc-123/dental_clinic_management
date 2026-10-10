@@ -210,6 +210,7 @@ if (!function_exists('ehr_queue_waiting')) {
                                         <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpInterval" placeholder="Mo." style="font-size: 0.8rem;" title="Repeat every N months"></div>
                                         <div class="col-3"><input type="number" min="1" class="form-control form-control-sm" id="followUpTotalVisits" placeholder="Visits" style="font-size: 0.8rem;" title="Total number of visits to auto-book"></div>
                                     </div>
+                                    <div class="small mt-1" id="followUpRequirementNote" hidden></div>
                                     <div class="small text-muted mt-1">Set "Mo." + "Visits" &gt; 1 for a recurring case (e.g. braces adjustments) — all visits are booked up front, spaced that many months apart.</div>
                                 </div>
                             </div>
@@ -1197,9 +1198,70 @@ async function checkOutstandingInstallments(patientId, appointmentId) {
     }
 }
 
+// A patient who still has planned treatments (proposed or accepted) must leave with a next
+// visit: either one is already booked, or a follow-up date has to be set here. The server
+// (create_secretary_record.php) enforces the same rule; this just says so before submit.
+let currentRecordNextAppointment = null;
+
+function secretaryPendingPlanCount() {
+    const widget = document.getElementById('secretaryTreatmentPlan')?._tpWidget;
+    return ((widget && widget.items) || []).filter(i => i.status === 'proposed' || i.status === 'accepted').length;
+}
+
+function isFollowUpDateRequired() {
+    return secretaryPendingPlanCount() > 0 && !currentRecordNextAppointment;
+}
+
+function refreshFollowUpRequirement() {
+    const note = document.getElementById('followUpRequirementNote');
+    const input = document.getElementById('followUpDate');
+    if (!note || !input) return;
+    const pending = secretaryPendingPlanCount();
+    if (pending > 0 && currentRecordNextAppointment) {
+        note.className = 'small mt-1 text-success';
+        note.textContent = 'Next appointment already booked on ' +
+            currentRecordNextAppointment.appointment_date + '. A follow-up date is optional.';
+        note.hidden = false;
+    } else if (pending > 0) {
+        note.className = 'small mt-1 text-danger';
+        note.textContent = 'Required: ' + pending + ' planned treatment' +
+            (pending === 1 ? '' : 's') + ' pending and no upcoming appointment.';
+        note.hidden = false;
+    } else {
+        note.hidden = true;
+    }
+    if (!isFollowUpDateRequired() || input.value) input.classList.remove('is-invalid');
+}
+
+function secretaryTodayYmd() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function showFollowUpDateProblem(message) {
+    notifySecretary(message, 'warning');
+    const tabLink = document.querySelector('#recordTabs .ehr-stepper__link[href="#tabNotes"]');
+    if (tabLink) bootstrap.Tab.getOrCreateInstance(tabLink).show();
+    const input = document.getElementById('followUpDate');
+    if (input) {
+        input.classList.add('is-invalid');
+        input.focus();
+    }
+}
+
+document.getElementById('followUpDate')?.addEventListener('input', refreshFollowUpRequirement);
+// The plan widget re-renders whenever items load or change (added, accepted, declined).
+(function () {
+    const planHost = document.getElementById('secretaryTreatmentPlan');
+    if (planHost && planHost.parentNode) {
+        new MutationObserver(refreshFollowUpRequirement).observe(planHost.parentNode, { childList: true, subtree: true });
+    }
+})();
+
 async function openSecretaryRecordModal(appointmentId, patientId) {
     currentRecordAppointmentId = appointmentId;
     currentRecordPatientId = patientId;
+    currentRecordNextAppointment = null;
 
     if (window.TreatmentPlan) {
         window.TreatmentPlan.mount(document.getElementById('secretaryTreatmentPlan'), {
@@ -1294,6 +1356,8 @@ async function openSecretaryRecordModal(appointmentId, patientId) {
 
         document.getElementById('recordSummary').value = data.summary || '';
         document.getElementById('followUpDate').value = data.follow_up_date || '';
+        currentRecordNextAppointment = data.next_appointment || null;
+        refreshFollowUpRequirement();
         const tp = data.treatment_plan || {};
         document.getElementById('followUpInterval').value = tp.follow_up_interval_months || '';
         document.getElementById('followUpTotalVisits').value = tp.follow_up_total_visits || '';
@@ -1669,6 +1733,20 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
 
         const prescriptions = collectPrescriptionRows();
 
+        const followUpDateValue = document.getElementById('followUpDate')?.value || '';
+        if (isFollowUpDateRequired()) {
+            if (!followUpDateValue) {
+                showFollowUpDateProblem('This patient still has planned treatments and no upcoming appointment. Set a follow-up date before submitting the record.');
+                secretaryRecordSubmitting = false;
+                return;
+            }
+            if (followUpDateValue <= secretaryTodayYmd()) {
+                showFollowUpDateProblem('The follow-up date must be after today.');
+                secretaryRecordSubmitting = false;
+                return;
+            }
+        }
+
         // Optional payment recorded at record-creation time
         const recordPaymentNow = document.getElementById('recordPaymentNow')?.checked || false;
         const paymentTendered = parseFloat(document.getElementById('paymentAmountTendered')?.value || '0') || 0;
@@ -1739,7 +1817,11 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             return;
         }
         if (!json.success) {
-            notifySecretary(json.message || 'The system encountered an issue. Please try again.', 'danger');
+            if (json.code === 'follow_up_required') {
+                showFollowUpDateProblem(json.message || 'Set a follow-up date before submitting the record.');
+            } else {
+                notifySecretary(json.message || 'The system encountered an issue. Please try again.', 'danger');
+            }
             secretaryRecordSubmitting = false;
             return;
         }

@@ -213,3 +213,51 @@ if (!function_exists('treatment_plan_totals')) {
         return $t;
     }
 }
+
+if (!function_exists('treatment_plan_pending_count')) {
+    /** Planned treatments still to be done (proposed or accepted; not done, not declined). */
+    function treatment_plan_pending_count(mysqli $conn, int $patientId): int
+    {
+        if ($patientId <= 0) return 0;
+        treatment_plan_ensure_table($conn);
+        $stmt = $conn->prepare("SELECT COUNT(*) AS c FROM patient_treatment_plan_items WHERE patient_id = ? AND status IN ('proposed','accepted')");
+        if (!$stmt) return 0;
+        $stmt->bind_param('i', $patientId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return (int)($row['c'] ?? 0);
+    }
+}
+
+if (!function_exists('treatment_plan_next_appointment')) {
+    /**
+     * The patient's next booked visit (today or later, still open), other than the visit
+     * being recorded. A patient with pending planned treatments must have one before their
+     * record can be submitted — otherwise the secretary has to set a follow-up date.
+     */
+    function treatment_plan_next_appointment(mysqli $conn, int $patientId, int $excludeAppointmentId = 0): ?array
+    {
+        if ($patientId <= 0) return null;
+        $stmt = $conn->prepare("
+            SELECT appointment_id, appointment_date, status
+            FROM appointments
+            WHERE patient_id = ? AND appointment_id <> ?
+              AND DATE(appointment_date) >= CURDATE()
+              AND status IN ('pending','scheduled','confirmed','rescheduled')
+            ORDER BY appointment_date ASC, appointment_id ASC
+            LIMIT 1
+        ");
+        if (!$stmt) return null;
+        $stmt->bind_param('ii', $patientId, $excludeAppointmentId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if (!$row) return null;
+        return [
+            'appointment_id' => (int)$row['appointment_id'],
+            'appointment_date' => substr((string)$row['appointment_date'], 0, 10),
+            'status' => (string)$row['status'],
+        ];
+    }
+}
