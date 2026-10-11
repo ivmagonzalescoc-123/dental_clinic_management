@@ -880,8 +880,16 @@ if (!function_exists('billing_save_line_items')) {
 }
 
 if (!function_exists('billing_create_installment_plan')) {
-    function billing_create_installment_plan($conn, $billingId, $totalAmount, $numTerms, $downPaymentPercent = 50.0)
+    /**
+     * $firstDueDate (Y-m-d) is for a plan carried over from paper records, where the down
+     * payment was settled long ago: term 1 falls due on that date and the rest monthly after
+     * it, and no down-payment term is created. Left null, the plan starts today as usual.
+     */
+    function billing_create_installment_plan($conn, $billingId, $totalAmount, $numTerms, $downPaymentPercent = 50.0, ?string $firstDueDate = null)
     {
+        if ($firstDueDate !== null) {
+            $downPaymentPercent = 0.0;
+        }
         $billingId = (int)$billingId;
         $numTerms = max(1, (int)$numTerms);
         $downPaymentPercent = max(0, min(100, (float)$downPaymentPercent));
@@ -962,7 +970,7 @@ if (!function_exists('billing_create_installment_plan')) {
             $termNumber = 0;
             $dueDate = date('Y-m-d');
             $termIns->bind_param('iisds', $installmentId, $termNumber, $dueDate, $downPaymentAmount, $pending);
-            if (!$termIns->execute()) {
+            if ($firstDueDate === null && !$termIns->execute()) {
                 $termIns->close();
                 throw new Exception('Failed to insert down payment term');
             }
@@ -973,7 +981,15 @@ if (!function_exists('billing_create_installment_plan')) {
                     ? round($remaining - ($termAmount * ($numTerms - 1)), 2)
                     : $termAmount;
                 $distributed += $amount;
-                $due = date('Y-m-d', strtotime('+' . $i . ' month'));
+                if ($firstDueDate !== null) {
+                    // Same day each month, held to the month's last day: "+1 month" from
+                    // Oct 31 would otherwise roll over to Dec 1 and skip November.
+                    $first = new DateTime($firstDueDate);
+                    $month = (new DateTime($first->format('Y-m-01')))->modify('+' . ($i - 1) . ' month');
+                    $due = $month->format('Y-m-') . str_pad((string)min((int)$first->format('d'), (int)$month->format('t')), 2, '0', STR_PAD_LEFT);
+                } else {
+                    $due = date('Y-m-d', strtotime('+' . $i . ' month'));
+                }
                 $termIns->bind_param('iisds', $installmentId, $i, $due, $amount, $pending);
                 if (!$termIns->execute()) {
                     $termIns->close();

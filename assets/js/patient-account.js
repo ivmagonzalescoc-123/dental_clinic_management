@@ -89,29 +89,123 @@
         if (el) el.value = value == null ? '' : String(value);
     }
 
+    // ---------- field validation (Add Patient and the Details form) ----------
+    // Same rules as config/patient_input_helpers.php; keep the two in step.
+    var NAME_RULE = /^\p{L}[\p{L}\p{M} .'’-]*$/u;
+    var EMAIL_RULE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    var NAME_LABELS = { first_name: 'first name', middle_name: 'middle name', last_name: 'last name' };
+    var VALIDATED_FORMS = ['paAddForm', 'paEditForm'];
+
+    function isoDay(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function mobileDigits(raw) {
+        if (!/^\+?[\d\s().-]+$/.test(raw)) return null;
+        var digits = raw.replace(/\D+/g, '');
+        if (digits.length === 12 && digits.indexOf('639') === 0) digits = '0' + digits.slice(2);
+        else if (digits.length === 10 && digits.charAt(0) === '9') digits = '0' + digits;
+        return /^09\d{9}$/.test(digits) ? digits : null;
+    }
+    // The problem with one field's value, or '' when it is fine.
+    function fieldProblem(el) {
+        var name = el.name;
+        var value = String(el.value || '').replace(/\s+/g, ' ').trim();
+        if (NAME_LABELS[name]) {
+            var label = NAME_LABELS[name];
+            if (!value) return el.required ? 'Enter the ' + label + '.' : '';
+            if (!NAME_RULE.test(value)) return 'The ' + label + ' can only contain letters, spaces, hyphens, apostrophes and periods.';
+            if (name !== 'middle_name' && value.length < 2) return 'The ' + label + ' must be at least 2 letters.';
+            return '';
+        }
+        if (name === 'email') {
+            if (!value) return 'Enter the email address. It is needed for the patient portal account.';
+            return EMAIL_RULE.test(value) ? '' : 'Enter a valid email address, e.g. name@example.com.';
+        }
+        if (name === 'phone_number') {
+            return !value || mobileDigits(value) ? '' : 'Enter an 11-digit mobile number starting with 09, e.g. 0917 123 4567.';
+        }
+        if (name === 'date_of_birth') {
+            if (el.validity && el.validity.badInput) return 'Enter a valid birthdate.';
+            if (!value) return el.required ? 'Enter the birthdate.' : '';
+            var today = new Date();
+            if (value > isoDay(today)) return 'The birthdate cannot be in the future.';
+            var oldest = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate());
+            if (value < isoDay(oldest)) return 'Check the birth year. It is more than 120 years ago.';
+        }
+        return '';
+    }
+    function setFieldError(el, message) {
+        var field = el.closest('.pa-field');
+        if (!field) return;
+        var note = field.querySelector('.pa-field__error');
+        if (!message) {
+            if (note) note.remove();
+            field.classList.remove('is-invalid');
+            el.removeAttribute('aria-invalid');
+            return;
+        }
+        if (!note) {
+            note = document.createElement('small');
+            note.className = 'pa-field__error';
+            field.appendChild(note);
+        }
+        note.textContent = message;
+        field.classList.add('is-invalid');
+        el.setAttribute('aria-invalid', 'true');
+    }
+    function checkField(el) {
+        var message = fieldProblem(el);
+        setFieldError(el, message);
+        return !message;
+    }
+    // Checks every field, shows each problem under its field and focuses the first one.
+    function checkForm(form) {
+        var firstBad = null;
+        Array.prototype.forEach.call(form.elements, function (el) {
+            if (!el.name || el.type === 'hidden' || !el.closest('.pa-field')) return;
+            if (!checkField(el) && !firstBad) firstBad = el;
+        });
+        if (firstBad) firstBad.focus();
+        return !firstBad;
+    }
+    function clearFormErrors(form) {
+        form.querySelectorAll('.pa-field').forEach(function (field) {
+            var el = field.querySelector('input, select');
+            if (el) setFieldError(el, '');
+        });
+    }
+    // Problems the server found (res.errors is keyed by field name).
+    function showServerErrors(form, errors) {
+        var firstBad = null;
+        Object.keys(errors || {}).forEach(function (name) {
+            var el = form.elements[name];
+            if (!el || !el.closest) return;
+            setFieldError(el, errors[name]);
+            if (!firstBad) firstBad = el;
+        });
+        if (firstBad) firstBad.focus();
+        return !!firstBad;
+    }
+
     // ---------- Add Patient ----------
     function openAdd() {
         var form = $('paAddForm');
         if (!form) return;
         form.reset();
-        form.classList.remove('was-validated');
+        clearFormErrors(form);
         showAlert('paAddAlert', '');
         var m = modal('paAddModal');
         if (m) m.show();
     }
     function submitAdd(form) {
         showAlert('paAddAlert', '');
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            form.reportValidity();
-            return;
-        }
+        if (!checkForm(form)) return;
         var btn = $('paAddSubmit');
         busy(btn, true, 'Creating…');
         postForm(API + 'create_walkin.php', new FormData(form)).then(function (res) {
             busy(btn, false);
             if (!res.success) {
-                showAlert('paAddAlert', res.message || 'Unable to create the patient.');
+                if (!showServerErrors(form, res.errors)) showAlert('paAddAlert', res.message || 'Unable to create the patient.');
                 return;
             }
             var m = modal('paAddModal');
@@ -175,7 +269,7 @@
         current = p;
 
         form.reset();
-        form.classList.remove('was-validated');
+        clearFormErrors(form);
         ['patient_id', 'first_name', 'middle_name', 'last_name', 'email', 'phone_number', 'date_of_birth', 'address', 'occupation']
             .forEach(function (k) { setField(form, k, p[k]); });
         var gender = String(p.gender || '');
@@ -195,23 +289,24 @@
     function submitEdit(form) {
         showAlert('paEditAlert', '');
         if (!current) return;
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            form.reportValidity();
-            return;
-        }
+        if (!checkForm(form)) return;
         var data = new FormData(form);
         var btn = $('paEditSubmit');
         busy(btn, true);
         postForm(API + 'update_patient.php', data).then(function (res) {
             busy(btn, false);
             if (!res.success) {
-                showAlert('paEditAlert', res.message || 'Unable to update the patient.');
+                if (!showServerErrors(form, res.errors)) showAlert('paEditAlert', res.message || 'Unable to update the patient.');
                 return;
             }
             var fields = {};
             ['first_name', 'middle_name', 'last_name', 'email', 'phone_number', 'date_of_birth', 'gender', 'address', 'occupation']
-                .forEach(function (k) { fields[k] = String(data.get(k) || '').trim(); });
+                .forEach(function (k) { fields[k] = String(data.get(k) || '').replace(/\s+/g, ' ').trim(); });
+            // The server saves the phone number in one format (09XXXXXXXXX).
+            if (typeof res.phone_number === 'string') {
+                fields.phone_number = res.phone_number;
+                setField(form, 'phone_number', res.phone_number);
+            }
             global.DoctorPatients.updatePatient(current.patient_id, fields);
             renderHead(current);
             renderFacts(current);
@@ -336,6 +431,20 @@
     });
     document.addEventListener('hidden.bs.modal', function (e) {
         if (e.target && e.target.id === 'paSettingsModal') { current = null; resetTemp(); }
+    });
+    // A field is checked when the user leaves it; once it shows a problem, it is re-checked
+    // on every keystroke so the message goes away as soon as the value is fixed.
+    function validatedField(e) {
+        var el = e.target;
+        return el && el.name && el.form && VALIDATED_FORMS.indexOf(el.form.id) !== -1 && el.closest('.pa-field') ? el : null;
+    }
+    document.addEventListener('focusout', function (e) {
+        var el = validatedField(e);
+        if (el) checkField(el);
+    });
+    document.addEventListener('input', function (e) {
+        var el = validatedField(e);
+        if (el && el.closest('.pa-field').classList.contains('is-invalid')) checkField(el);
     });
 
     global.PatientAccount = { openAdd: openAdd, openSettings: openSettings };

@@ -421,6 +421,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/media-gallery.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/past-visit.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/appointment-service-manager.js') ?>"></script>
 

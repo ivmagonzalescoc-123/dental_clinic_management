@@ -312,6 +312,63 @@
 .dp-settings-btn:hover .bi { transform: rotate(60deg); }
 .dp-settings-btn:focus-visible { outline: 3px solid rgba(27, 122, 163, .35); outline-offset: 2px; }
 
+/* ---------- Add past visit (assets/js/past-visit.js) ---------- */
+.dp-chart__title-row { flex-wrap: wrap; }
+.dp-past-visit-btn { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; border-radius: 999px; font-weight: 600; }
+.dp-pill--paper { background: #f1f5f9; color: #475569; font-weight: 600; }
+/* Patients settings (admin): the gear beside Add Patient and its past visit entry switch */
+.dp-page__actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.pv-access__row { display: flex; align-items: center; gap: 6px; }
+.pv-access__confirm { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eef2f6; }
+/* The guide bubble hangs below the switch, so this small dialog must not clip it. */
+.pa-modal--access .modal-content, .pa-modal--access .pa-modal__body { overflow: visible; }
+.pa-modal--access .pa-modal__head { border-radius: 16px 16px 0 0; }
+.pa-modal--access .pa-modal__body { border-radius: 0 0 16px 16px; }
+/* Guide: the ! shows a summary on hover, or on tap/focus on touch (same pattern as the
+   doctor EHR page guide). */
+.pa-tip {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+    width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%;
+    background: none; color: #94a3b8; font-size: 0.9rem; line-height: 1; cursor: help;
+}
+.pa-tip:hover, .pa-tip:focus-visible { color: #1b7aa3; }
+.pa-tip:focus-visible { outline: 2px solid rgba(27, 122, 163, .4); outline-offset: 1px; }
+.pa-tip::after {
+    content: attr(data-tip); position: absolute; right: 0; top: calc(100% + 8px); z-index: 20;
+    width: max-content; max-width: min(340px, 70vw); transform: translateY(4px);
+    padding: 7px 10px; border-radius: 8px; background: #0f172a; color: #fff;
+    font-size: 0.76rem; font-weight: 500; line-height: 1.4; text-align: left; white-space: normal;
+    box-shadow: 0 8px 20px -8px rgba(15, 23, 42, .5);
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .15s ease, transform .15s ease, visibility .15s;
+}
+.pa-tip:hover::after, .pa-tip:focus::after { opacity: 1; visibility: visible; transform: translateY(0); }
+@media (max-width: 575.98px) {
+    .dp-page__actions { width: 100%; }
+    .dp-page__actions .dp-add-btn { flex: 1 1 auto; width: auto; }
+    /* On phones the bubble becomes a strip at the bottom of the screen, so it always fits. */
+    .pa-tip::after, .pa-tip:hover::after, .pa-tip:focus::after {
+        position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; z-index: 1080;
+        width: auto; max-width: none; transform: none; font-size: 0.82rem; padding: 10px 12px;
+    }
+}
+
+.pv-rows { display: flex; flex-direction: column; gap: 8px; }
+.pv-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.pv-row__remove { width: 2.6rem; height: 2.6rem; border-radius: 10px; border: 1px solid #e5eaf0; background: #fff; color: #b91c1c; }
+.pv-row__remove:hover { background: #fef2f2; border-color: #fecaca; }
+.pv-hint { margin: 8px 0 0; font-size: 0.78rem; color: #64748b; }
+.pv-toggle { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 0.9rem; font-weight: 600; color: #0f172a; cursor: pointer; }
+.pv-toggle input { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
+.pv-installment { margin-top: 12px; }
+.pv-chart summary { cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #1b7aa3; }
+.pv-chart__frame { margin-top: 10px; border: 1px solid #e5eaf0; border-radius: 12px; overflow: hidden; }
+.pv-chart__frame iframe { display: block; width: 100%; height: 100%; border: 0; }
+.pv-saved { margin-right: auto; align-self: center; font-size: 0.82rem; color: #15803d; font-weight: 600; }
+@media (max-width: 575.98px) {
+    .pv-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .pv-row select { grid-column: 1 / -1; }
+}
+
 .pa-modal .modal-content { border: 0; border-radius: 16px; overflow: hidden; box-shadow: 0 24px 60px -20px rgba(15, 35, 60, .35); }
 .pa-modal__head { display: flex; align-items: center; gap: 12px; padding: 18px 20px 14px; background: #fff; }
 .pa-modal__head .btn-close { margin-left: auto; align-self: flex-start; }
@@ -349,6 +406,9 @@
 .pa-field__label em { font-style: normal; color: #dc2626; }
 .pa-modal .form-control, .pa-modal .form-select { min-height: 2.6rem; font-size: 0.9rem; }
 .pa-modal .was-validated .form-control:invalid, .pa-modal .was-validated .form-select:invalid { border-color: #ef4444; background-color: #fff; }
+
+.pa-field__error { font-size: 0.75rem; line-height: 1.3; color: #b91c1c; }
+.pa-field.is-invalid .form-control, .pa-field.is-invalid .form-select { border-color: #ef4444; }
 
 .pa-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .pa-alert { margin-top: 12px; padding: 9px 12px; border-radius: 10px; font-size: 0.84rem; border: 1px solid #fecaca; background: #fef2f2; color: #b91c1c; }

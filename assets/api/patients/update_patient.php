@@ -8,6 +8,7 @@ include '../../../config/database.php';
 include '../../../config/security.php';
 include '../../../config/session_check.php';
 include '../../../config/capabilities.php';
+include_once '../../../config/patient_input_helpers.php';
 
 security_start_session();
 check_session(['admin', 'secretary', 'doctor']);
@@ -61,38 +62,26 @@ if ($isPartialUpdate) {
     exit;
 }
 
-// Full update - validate all required fields
-$first_name = security_clean_string($_POST['first_name'] ?? '', 100);
-$middle_name = security_clean_string($_POST['middle_name'] ?? '', 100);
-if ($middle_name === '') {
-    $middle_name = 'N/A'; // keep the column's convention consistent — never store a blank string
+// Full update - validate every field (same rules as Add Patient)
+$checked = patient_validate_details($_POST, ['require_dob' => true]);
+if (!empty($checked['errors'])) {
+    echo json_encode(['success' => false, 'message' => reset($checked['errors']), 'errors' => $checked['errors']]);
+    exit;
 }
-$last_name = security_clean_string($_POST['last_name'] ?? '', 100);
-$email = security_clean_string($_POST['email'] ?? '', 150);
-$date_of_birth = security_clean_string($_POST['date_of_birth'] ?? '', 20);
-$gender = security_clean_string($_POST['gender'] ?? '', 20);
-if ($gender === '') {
-    $gender = 'N/A'; // keep the column's convention consistent — never store a blank string
-}
-$phone_number = security_clean_string($_POST['phone_number'] ?? '', 30);
-$address = security_clean_string($_POST['address'] ?? '', 500);
-$occupation = security_clean_string($_POST['occupation'] ?? '', 150);
-if ($occupation === '') {
-    $occupation = 'N/A'; // keep the column's convention consistent — never store a blank string
-}
+$details = $checked['values'];
+$first_name = $details['first_name'];
+// "N/A" keeps the columns' convention consistent — never store a blank string
+$middle_name = $details['middle_name'] !== '' ? $details['middle_name'] : 'N/A';
+$last_name = $details['last_name'];
+$email = $details['email'];
+$date_of_birth = $details['date_of_birth'];
+$gender = $details['gender'] !== '' ? $details['gender'] : 'N/A';
+$phone_number = $details['phone_number'];
+$address = $details['address'];
+$occupation = $details['occupation'] !== '' ? $details['occupation'] : 'N/A';
 
 // Ensure occupation column exists in patients table
 $conn->query("ALTER TABLE patients ADD COLUMN IF NOT EXISTS occupation varchar(150) DEFAULT NULL AFTER address");
-
-if (empty($first_name) || empty($last_name) || empty($email) || empty($date_of_birth)) {
-    echo json_encode(['success' => false, 'message' => 'All required fields must be filled.']);
-    exit;
-}
-
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
-    exit;
-}
 
 $check_sql = 'SELECT patient_id FROM patients WHERE email = ? AND patient_id != ?';
 $check_stmt = $conn->prepare($check_sql);
@@ -118,7 +107,8 @@ if (!$stmt) {
 $stmt->bind_param('sssssssssi', $first_name, $middle_name, $last_name, $email, $date_of_birth, $gender, $phone_number, $address, $occupation, $patient_id);
 
 if ($stmt->execute()) {
-    echo json_encode(['success' => true, 'message' => 'Patient updated successfully.']);
+    // phone_number comes back because it is saved in one format (09XXXXXXXXX).
+    echo json_encode(['success' => true, 'message' => 'Patient updated successfully.', 'phone_number' => $phone_number]);
 } else {
     error_log('update_patient.php: update failed: ' . $stmt->error);
     echo json_encode(['success' => false, 'message' => 'Error updating patient. Please try again.']);

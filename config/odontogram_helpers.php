@@ -30,6 +30,60 @@ if (!function_exists('odontogram_ensure_tooth_status_schema')) {
     }
 }
 
+if (!function_exists('odontogram_save_for_record')) {
+    /**
+     * Replace a clinical record's tooth chart with $odontogramData (already passed through
+     * odontogram_normalize_data): one tooth_status row per tooth, surface and chart code.
+     * A tooth with only a comment gets a single row holding the comment.
+     */
+    function odontogram_save_for_record(mysqli $conn, int $clinicalRecordId, array $odontogramData): void
+    {
+        odontogram_ensure_tooth_status_schema($conn);
+        $conn->query("DELETE FROM tooth_status WHERE record_id = $clinicalRecordId");
+
+        $codeToTypeId = [];
+        $codeRes = $conn->query('SELECT status_type_id, code FROM tooth_status_type');
+        if ($codeRes) {
+            while ($crow = $codeRes->fetch_assoc()) {
+                $codeToTypeId[$crow['code']] = (int)$crow['status_type_id'];
+            }
+        }
+
+        $tsStmt = $conn->prepare('INSERT INTO tooth_status (record_id, tooth_selected, status_type_id, tooth_surface, status, notes) VALUES (?, ?, ?, ?, ?, ?)');
+        foreach ($odontogramData as $fdiKey => $td) {
+            if (!is_array($td)) continue;
+            $toothNum = (int)$fdiKey;
+            if ($toothNum <= 0) continue;
+            $surfaces = $td['surfaces'] ?? [];
+            $comment = trim((string)($td['comment'] ?? ''));
+            $commentOrNull = $comment !== '' ? $comment : null;
+            if (empty($surfaces)) {
+                if ($comment !== '') {
+                    // bind_param() requires variables, not literals, for by-reference args.
+                    // status_type_id must be NULL, not 0 — 0 doesn't exist in tooth_status_type
+                    // and violates the fk_tooth_status_type foreign key.
+                    $commentOnlyTypeId = null;
+                    $commentOnlySurface = '';
+                    $commentOnlyStatus = null; // the comment lives in notes; status is the chart code
+                    $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $commentOnlyTypeId, $commentOnlySurface, $commentOnlyStatus, $commentOrNull);
+                    $tsStmt->execute();
+                }
+                continue;
+            }
+            foreach ($surfaces as $surfaceName => $codes) {
+                $codeList = is_array($codes) ? $codes : [$codes];
+                foreach ($codeList as $code) {
+                    $code = (string)$code;
+                    $typeId = $codeToTypeId[$code] ?? null;
+                    $tsStmt->bind_param('iiisss', $clinicalRecordId, $toothNum, $typeId, $surfaceName, $code, $commentOrNull);
+                    $tsStmt->execute();
+                }
+            }
+        }
+        $tsStmt->close();
+    }
+}
+
 if (!function_exists('odontogram_normalize_data')) {
     /**
      * Normalize odontogram JSON to FDI keys with per-surface legend codes.

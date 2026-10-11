@@ -15,6 +15,7 @@ include_once dirname(__DIR__) . '/config/session_check.php';
 include_once dirname(__DIR__) . '/config/security.php';
 include_once dirname(__DIR__) . '/config/capabilities.php';
 include_once dirname(__DIR__) . '/config/odontogram_helpers.php';
+include_once dirname(__DIR__) . '/config/clinic_settings.php';
 
 $patientsRole = in_array($patientsRole ?? '', ['doctor', 'secretary', 'admin'], true) ? $patientsRole : 'doctor';
 check_session([$patientsRole]);
@@ -26,6 +27,10 @@ $pmCsrf = (string)($csrf_token ?? security_generate_csrf_token());
 $canManagePatients = capabilities_can($patientsRole === 'admin' ? 'manage_users' : 'patient.manage');
 // The ledger shows money, so only the roles that work Billing see it.
 $canViewLedger = in_array($patientsRole, ['secretary', 'admin'], true);
+// Encoding visits from the old paper records: the admin always, the secretary only while
+// the admin has switched it on in Settings (assets/js/past-visit.js).
+$canAddPastVisit = !$isDoctorView && past_visits_allowed($conn);
+appointments_ensure_historical_column($conn);
 
 if (!function_exists('pm_clean_na')) {
     // The patients table stores "N/A" for blank optional fields.
@@ -90,7 +95,7 @@ if (isset($pstmt) && $pstmt) {
 // ---- appointments (the doctor's own, or every doctor's for staff) ----
 $apptSql = "
     SELECT
-        a.patient_id, a.appointment_id, a.appointment_date, a.status, a.is_online_appointment, a.reason, a.notes,
+        a.patient_id, a.appointment_id, a.appointment_date, a.status, a.is_online_appointment, a.is_historical, a.reason, a.notes,
         TRIM(CONCAT(COALESCE(d.first_name, ''), ' ', COALESCE(d.last_name, ''))) AS doctor_name,
         (SELECT DATE_FORMAT(s.scheduled_start, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY s.scheduled_start DESC LIMIT 1) AS start_time,
         (SELECT DATE_FORMAT(s.scheduled_end, '%Y-%m-%d %H:%i') FROM patient_schedules s WHERE s.appointment_id = a.appointment_id ORDER BY s.scheduled_start DESC LIMIT 1) AS end_time,
@@ -121,6 +126,7 @@ if ($astmt) {
                 'date' => (string)$row['appointment_date'],
                 'status' => (string)$row['status'],
                 'is_online' => (int)$row['is_online_appointment'] === 1,
+                'is_historical' => (int)$row['is_historical'] === 1,
                 'reason' => (string)($row['reason'] ?? ''),
                 'notes' => (string)($row['notes'] ?? ''),
                 'doctor' => (string)($row['doctor_name'] ?? ''),
@@ -214,10 +220,24 @@ if ($tres) {
     }
 }
 
+$pastVisitDoctors = [];
+if ($canAddPastVisit) {
+    $dres = $conn->query("
+        SELECT u.user_id, u.first_name, u.last_name
+        FROM users u INNER JOIN role r ON r.role_id = u.role_id
+        WHERE r.role_name = 'doctor'
+        ORDER BY u.is_active DESC, u.first_name ASC, u.last_name ASC
+    ");
+    while ($dres && ($doc = $dres->fetch_assoc())) {
+        $pastVisitDoctors[] = ['user_id' => (int)$doc['user_id'], 'name' => trim($doc['first_name'] . ' ' . $doc['last_name'])];
+    }
+}
+
 $patientsConfig = [
     'role' => $patientsRole,
     'canManage' => $canManagePatients,
     'canViewLedger' => $canViewLedger,
+    'canAddPastVisit' => $canAddPastVisit,
     'patients' => array_values($patients),
     'services' => $services,
     'toothLabels' => $toothLabels,
@@ -242,9 +262,14 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
             <p class="dp-page__sub mb-0"><?php echo htmlspecialchars($pmSubtitle, ENT_QUOTES, 'UTF-8'); ?></p>
         </div>
         <?php if ($canManagePatients): ?>
-        <button type="button" class="btn btn-primary dp-add-btn" data-pa-add>
-            <i class="bi bi-person-plus" aria-hidden="true"></i> <span>Add Patient</span>
-        </button>
+        <div class="dp-page__actions">
+            <button type="button" class="btn btn-primary dp-add-btn" data-pa-add>
+                <i class="bi bi-person-plus" aria-hidden="true"></i> <span>Add Patient</span>
+            </button>
+            <?php if ($patientsRole === 'admin'): ?>
+            <button type="button" class="dp-settings-btn" data-pv-access aria-label="Patients settings" title="Patients settings"><i class="bi bi-gear"></i></button>
+            <?php endif; ?>
+        </div>
         <?php endif; ?>
     </div>
 
@@ -343,6 +368,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
             </div>
             <form id="paAddForm" class="pa-modal__body" novalidate autocomplete="off" data-no-ajax>
                 <input type="hidden" name="csrf_token" value="<?php echo $pmCsrfAttr; ?>">
+                <input type="hidden" name="validate" value="strict">
                 <div class="pa-section">
                     <h6 class="pa-section__title"><i class="bi bi-person"></i> Personal details</h6>
                     <div class="pa-grid">
@@ -364,7 +390,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
                     <h6 class="pa-section__title"><i class="bi bi-telephone"></i> Contact</h6>
                     <div class="pa-grid">
                         <label class="pa-field"><span class="pa-field__label">Email <em>*</em></span><input type="email" name="email" class="form-control" required maxlength="150" placeholder="name@example.com"></label>
-                        <label class="pa-field"><span class="pa-field__label">Phone</span><input type="tel" name="phone_number" class="form-control" maxlength="30" placeholder="09XX XXX XXXX"></label>
+                        <label class="pa-field"><span class="pa-field__label">Phone</span><input type="tel" name="phone_number" class="form-control" maxlength="30" inputmode="tel" placeholder="09XX XXX XXXX"></label>
                         <label class="pa-field pa-field--wide"><span class="pa-field__label">Address</span><input type="text" name="address" class="form-control" maxlength="500"></label>
                     </div>
                 </div>
@@ -421,7 +447,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
                             <h6 class="pa-section__title"><i class="bi bi-telephone"></i> Contact</h6>
                             <div class="pa-grid">
                                 <label class="pa-field"><span class="pa-field__label">Email <em>*</em></span><input type="email" name="email" class="form-control" required maxlength="150"></label>
-                                <label class="pa-field"><span class="pa-field__label">Phone</span><input type="tel" name="phone_number" class="form-control" maxlength="30"></label>
+                                <label class="pa-field"><span class="pa-field__label">Phone</span><input type="tel" name="phone_number" class="form-control" maxlength="30" inputmode="tel" placeholder="09XX XXX XXXX"></label>
                                 <label class="pa-field pa-field--wide"><span class="pa-field__label">Address</span><input type="text" name="address" class="form-control" maxlength="500"></label>
                             </div>
                         </div>
@@ -469,6 +495,130 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
                         </div>
                     </div>
                 </section>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($patientsRole === 'admin'): ?>
+<!-- Patients settings (admin): opens past visit entry to the secretary, after a password check
+     (assets/js/past-visit.js -> api/admin/set_past_visit_access.php) -->
+<?php $pvAccessGuide = "While this is on, the secretary sees an Add past visit button on each patient's chart for encoding visits from the old paper records. Past visits send no notifications and record no payments. Turn it off again once the encoding is finished."; ?>
+<div class="modal fade pa-modal pa-modal--access" id="pvAccessModal" tabindex="-1" aria-labelledby="pvAccessTitle" aria-hidden="true" data-enabled="<?php echo past_visits_entry_enabled($conn) ? '1' : '0'; ?>">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="pa-modal__head">
+                <span class="pa-modal__icon" aria-hidden="true"><i class="bi bi-gear"></i></span>
+                <div class="pa-modal__heading">
+                    <h5 class="pa-modal__title" id="pvAccessTitle">Patients settings</h5>
+                    <p class="pa-modal__sub">Past visit entry</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="pvAccessForm" class="pa-modal__body" novalidate autocomplete="off" data-no-ajax>
+                <div class="pa-section">
+                    <div class="pv-access__row">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" id="pvAccessSwitch">
+                            <label class="form-check-label" for="pvAccessSwitch">Allow the secretary to add past visits</label>
+                        </div>
+                        <button type="button" class="pa-tip" aria-label="<?php echo htmlspecialchars($pvAccessGuide, ENT_QUOTES, 'UTF-8'); ?>" data-tip="<?php echo htmlspecialchars($pvAccessGuide, ENT_QUOTES, 'UTF-8'); ?>"><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="pv-access__confirm" id="pvAccessConfirm" hidden>
+                        <p class="pv-hint">Enter your password to turn this on.</p>
+                        <?php
+                        $password_field_id = 'pvAccessPassword';
+                        $password_field_label = 'Password';
+                        $password_field_attrs = 'autocomplete="current-password"';
+                        include __DIR__ . '/password_field.php';
+                        ?>
+                        <div class="pa-actions">
+                            <button type="button" class="btn btn-light me-2" id="pvAccessCancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="pvAccessSubmit"><i class="bi bi-check2"></i> Turn on</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="pa-alert" id="pvAccessAlert" role="alert" hidden></div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($canAddPastVisit): ?>
+<!-- Add past visit: one visit from the old paper records (assets/js/past-visit.js) -->
+<div class="modal fade pa-modal" id="pvModal" tabindex="-1" aria-labelledby="pvTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-md-down">
+        <div class="modal-content">
+            <div class="pa-modal__head">
+                <span class="pa-modal__icon" aria-hidden="true"><i class="bi bi-clock-history"></i></span>
+                <div class="pa-modal__heading">
+                    <h5 class="pa-modal__title" id="pvTitle">Add past visit</h5>
+                    <p class="pa-modal__sub" id="pvSub">Encode a visit from the old paper records. The patient is not notified.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="pvForm" class="pa-modal__body" novalidate autocomplete="off" data-no-ajax>
+                <input type="hidden" name="csrf_token" value="<?php echo $pmCsrfAttr; ?>">
+                <input type="hidden" name="patient_id" value="">
+                <div class="pa-section">
+                    <h6 class="pa-section__title"><i class="bi bi-calendar3"></i> Visit</h6>
+                    <div class="pa-grid">
+                        <label class="pa-field"><span class="pa-field__label">Date of visit <em>*</em></span><input type="date" name="visit_date" class="form-control" required min="1950-01-01" max="<?php echo date('Y-m-d', strtotime('-1 day')); ?>"></label>
+                        <label class="pa-field"><span class="pa-field__label">Dentist</span>
+                            <select name="doctor_id" class="form-select">
+                                <option value="">Not in the system / unknown</option>
+                                <?php foreach ($pastVisitDoctors as $doc): ?>
+                                <option value="<?php echo (int)$doc['user_id']; ?>"><?php echo htmlspecialchars($doc['name'], ENT_QUOTES, 'UTF-8'); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <label class="pa-field"><span class="pa-field__label">Chief complaint</span><input type="text" name="chief_complaint" class="form-control" maxlength="500" placeholder="e.g. Toothache, lower right"></label>
+                    </div>
+                </div>
+                <div class="pa-section">
+                    <h6 class="pa-section__title"><i class="bi bi-list-check"></i> Procedures done</h6>
+                    <div class="pv-rows" id="pvRows"></div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="pvAddRow"><i class="bi bi-plus-lg"></i> Add procedure</button>
+                    <p class="pv-hint">Teeth use 2-digit FDI numbers separated by commas (e.g. 11, 12, 21). Leave blank for the whole mouth. A procedure that is not in the list goes in the notes below.</p>
+                </div>
+                <div class="pa-section">
+                    <h6 class="pa-section__title"><i class="bi bi-pencil-square"></i> Notes</h6>
+                    <textarea name="summary" class="form-control" rows="3" maxlength="5000" placeholder="What was done, findings, materials, anything else written on the chart"></textarea>
+                </div>
+                <div class="pa-section">
+                    <details class="pv-chart" id="pvChart">
+                        <summary><i class="bi bi-grid-3x3-gap"></i> Tooth chart (optional)</summary>
+                        <p class="pv-hint">Mark the conditions recorded on the paper chart for this visit.</p>
+                        <div class="pv-chart__frame" style="height:<?php echo (int)odontogram_embed_height_px(); ?>px;">
+                            <iframe id="pvChartFrame" data-src="<?php echo htmlspecialchars(odontogram_embed_src(), ENT_QUOTES, 'UTF-8'); ?>" title="Tooth chart for this past visit"></iframe>
+                        </div>
+                    </details>
+                </div>
+                <div class="pa-section">
+                    <label class="pv-toggle"><input type="checkbox" name="has_installment" value="1" id="pvHasInstallment"> This treatment is still being paid in installments</label>
+                    <p class="pv-hint">Only for a plan with a balance left. Past visits that were fully paid need no billing.</p>
+                    <div class="pv-installment" id="pvInstallment" hidden>
+                        <div class="pa-grid">
+                            <label class="pa-field pa-field--wide"><span class="pa-field__label">Treatment being paid</span><input type="text" name="inst_treatment" class="form-control" maxlength="120" placeholder="e.g. Braces"></label>
+                            <label class="pa-field"><span class="pa-field__label">Remaining balance (₱) <em>*</em></span><input type="number" name="inst_balance" class="form-control" min="0.01" max="10000000" step="0.01" inputmode="decimal"></label>
+                            <label class="pa-field"><span class="pa-field__label">Monthly payments left <em>*</em></span><input type="number" name="inst_terms" class="form-control" min="1" max="60" step="1" inputmode="numeric"></label>
+                            <label class="pa-field"><span class="pa-field__label">Next payment due <em>*</em></span><input type="date" name="inst_next_due" class="form-control"></label>
+                            <label class="pa-field"><span class="pa-field__label">Each payment</span><input type="text" class="form-control" id="pvInstEach" readonly tabindex="-1" value="—"></label>
+                            <label class="pa-field"><span class="pa-field__label">Original total (₱)</span><input type="number" name="inst_original_total" class="form-control" min="0" step="0.01" inputmode="decimal"></label>
+                            <label class="pa-field"><span class="pa-field__label">Already paid (₱)</span><input type="number" name="inst_paid" class="form-control" min="0" step="0.01" inputmode="decimal"></label>
+                        </div>
+                        <p class="pv-hint">The remaining balance becomes a bill with monthly terms starting on the next due date. Take the payments from Billing as they come in. The original total and amount already paid are kept as a note only.</p>
+                    </div>
+                </div>
+                <div class="pa-alert" id="pvAlert" role="alert" hidden></div>
+            </form>
+            <div class="pa-modal__foot">
+                <span class="pv-saved" id="pvSaved" hidden></span>
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary" id="pvSubmitAnother"><i class="bi bi-plus-lg"></i> Save and add another</button>
+                <button type="submit" form="pvForm" class="btn btn-primary" id="pvSubmit"><i class="bi bi-check2"></i> Save visit</button>
             </div>
         </div>
     </div>

@@ -14,6 +14,7 @@ try {
     include_once dirname(dirname(dirname(__DIR__))) . '/config/reminders.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/email_templates.php';
     include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_profiling_helpers.php';
+    include_once dirname(dirname(dirname(__DIR__))) . '/config/patient_input_helpers.php';
     security_ensure_auth_columns($conn);
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -25,28 +26,24 @@ try {
         throw new Exception('Please refresh the page and try again.');
     }
 
-    $first_name = trim($_POST['first_name'] ?? '');
-    $middle_name = trim($_POST['middle_name'] ?? '');
-    if ($middle_name === '') { $middle_name = 'N/A'; }
-    $last_name = trim($_POST['last_name'] ?? '');
-    $date_of_birth = trim($_POST['date_of_birth'] ?? '');
-    $gender = trim($_POST['gender'] ?? '');
-    if ($gender === '') { $gender = 'N/A'; }
-    $phone_number = trim($_POST['phone_number'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $address = trim($_POST['address'] ?? '');
-
-    if (empty($first_name) || empty($last_name)) {
-        throw new Exception('First name and last name are required');
+    // The Add Patient form sends validate=strict. Converting a guest booking does not: the
+    // secretary cannot correct what the guest typed there, so only the essentials are checked.
+    $checked = patient_validate_details($_POST, ['strict' => ($_POST['validate'] ?? '') === 'strict']);
+    if (!empty($checked['errors'])) {
+        ob_end_clean();
+        http_response_code(422);
+        echo json_encode(['success' => false, 'message' => reset($checked['errors']), 'errors' => $checked['errors']]);
+        exit;
     }
-
-    if ($email === '') {
-        throw new Exception('Email is required to create a patient portal account.');
-    }
-
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Please enter a valid email address.');
-    }
+    $details = $checked['values'];
+    $first_name = $details['first_name'];
+    $middle_name = $details['middle_name'] !== '' ? $details['middle_name'] : 'N/A';
+    $last_name = $details['last_name'];
+    $date_of_birth = $details['date_of_birth']; // null when not given
+    $gender = $details['gender'] !== '' ? $details['gender'] : 'N/A';
+    $phone_number = $details['phone_number'];
+    $email = $details['email'];
+    $address = $details['address'];
 
     // Check by email or phone to avoid duplicate patient records.
     $identifier_sql = 'SELECT patient_id FROM patients WHERE (email = ? AND email != "") OR (phone_number = ? AND phone_number != "") LIMIT 1';
@@ -75,16 +72,20 @@ try {
 
     $sql = "INSERT INTO patients (first_name, middle_name, last_name, password_hash, date_of_birth, gender, phone_number, email, address, added_by, must_change_password, password_updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
     $stmt = $conn->prepare($sql);
+    // Database errors go to the log, not to the screen.
     if (!$stmt) {
-        throw new Exception('Prepare failed: ' . $conn->error);
+        error_log('create_walkin: prepare failed: ' . $conn->error);
+        throw new Exception('The patient could not be saved. Please try again.');
     }
 
     if (!$stmt->bind_param('sssssssssii', $first_name, $middle_name, $last_name, $password_hash, $date_of_birth, $gender, $phone_number, $email, $address, $added_by, $must_change_password)) {
-        throw new Exception('Bind failed: ' . $stmt->error);
+        error_log('create_walkin: bind failed: ' . $stmt->error);
+        throw new Exception('The patient could not be saved. Please try again.');
     }
 
     if (!$stmt->execute()) {
-        throw new Exception('Execute failed: ' . $stmt->error);
+        error_log('create_walkin: insert failed: ' . $stmt->error);
+        throw new Exception('The patient could not be saved. Please try again.');
     }
 
     $patient_id = (int)$conn->insert_id;

@@ -422,6 +422,7 @@ switch ($role_key) {
     <script src="<?= asset_url('../assets/js/doctor-patient-profile.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/doctor-patients.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-account.js') ?>"></script>
+    <script src="<?= asset_url('../assets/js/past-visit.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/patient-ledger.js') ?>"></script>
     <script src="<?= asset_url('../assets/js/clinical-assessment-fields.js') ?>"></script>    <script src="<?= asset_url('../assets/js/session-idle.js') ?>"></script>
 

@@ -98,6 +98,10 @@
         var name = String(a.doctor).trim();
         return /^dr\.?\s/i.test(name) ? name : 'Dr. ' + name;
     }
+    // Marks a visit encoded from the old paper records (assets/js/past-visit.js).
+    function paperTag(a) {
+        return a && a.is_historical ? ' <span class="dp-pill dp-pill--paper" title="Encoded from the old paper records"><i class="bi bi-file-earmark-text"></i> Paper record</span>' : '';
+    }
     function fullName(p) {
         var mid = String(p.middle_name || '').trim();
         var mi = mid && mid.toUpperCase() !== 'N/A' ? ' ' + mid.charAt(0).toUpperCase() + '.' : '';
@@ -298,6 +302,7 @@
             '<div class="dp-chart__who">' +
                 '<div class="dp-chart__title-row"><h3 class="dp-chart__name" id="dpChartName">' + esc(fullName(p)) + '</h3>' +
                     (state.cfg.canManage ? '<button type="button" class="dp-settings-btn" data-pa-settings="' + p.patient_id + '" aria-label="Patient settings" title="Edit patient details and account"><i class="bi bi-gear"></i></button>' : '') +
+                    (state.cfg.canAddPastVisit ? '<button type="button" class="btn btn-sm btn-outline-primary dp-past-visit-btn" data-pv-add="' + p.patient_id + '" title="Encode a visit from the old paper records"><i class="bi bi-clock-history"></i> Add past visit</button>' : '') +
                 '</div>' +
                 '<div class="dp-chart__meta">' + meta.join(' · ') + (contact.length ? '<span class="dp-chart__contact">' + contact.join('') + '</span>' : '') + '</div>' +
                 (flags.length ? '<div class="dp-chart__flags">' + flags.join('') + '</div>' : '<div class="dp-chart__flags"><span class="dp-flag dp-flag--ok"><i class="bi bi-check-circle-fill"></i>No medical alerts on file</span></div>') +
@@ -514,7 +519,7 @@
             : '<span class="dp-muted dp-appt__none">' + (future ? '' : 'No record') + '</span>';
         return '<li class="dp-appt' + (future ? ' is-future' : '') + '">' +
             '<span class="dp-appt__date"><strong>' + esc(fmtDate(a.date, false)) + '</strong><small>' + esc(a.date.slice(0, 4)) + '</small></span>' +
-            '<span class="dp-appt__main"><span class="dp-appt__title">' + esc(title) + '</span>' +
+            '<span class="dp-appt__main"><span class="dp-appt__title">' + esc(title) + paperTag(a) + '</span>' +
                 '<span class="dp-appt__sub">' + esc(sub.filter(Boolean).join(' · ')) + (future && relative(a.date) ? ' <span class="dp-pill">' + esc(relative(a.date)) + '</span>' : '') + '</span></span>' +
             statusBadge(a.status) +
             '<span class="dp-appt__action">' + action + '</span>' +
@@ -546,7 +551,7 @@
                 return '<button type="button" class="dp-rec-item" data-dp-record="' + a.appointment_id + '">' +
                     '<strong>' + esc(fmtDate(a.date)) + '</strong>' +
                     '<span>' + esc(a.services.length ? a.services.join(', ') : (meaningful(a.reason) ? a.reason : 'Visit')) + '</span>' +
-                    (a.record_status ? '<small>' + esc(humanStatus(a.record_status)) + '</small>' : '') +
+                    (a.record_status ? '<small>' + esc(humanStatus(a.record_status)) + (a.is_historical ? ' · Paper record' : '') + '</small>' : '') +
                 '</button>';
             }).join('') + '</nav>' +
             '<div class="dp-records__detail" id="dpRecordDetail" aria-live="polite"></div>' +
@@ -570,7 +575,7 @@
         loadVisit(appointmentId).then(function (j) {
             if (!stillCurrent(cur)) return;
             detail.innerHTML =
-                '<div class="dp-rec-head"><div><h5 class="dp-rec-head__title">Visit on ' + esc(fmtDate(appt.date)) + '</h5>' +
+                '<div class="dp-rec-head"><div><h5 class="dp-rec-head__title">Visit on ' + esc(fmtDate(appt.date)) + paperTag(appt) + '</h5>' +
                 '<div class="dp-muted">' + esc([timeRange(appt), appt.is_online ? 'Online' : 'In-person', doctorLabel(appt)].filter(Boolean).join(' · ')) + '</div></div>' +
                 '<div class="dp-rec-head__side">' + statusBadge(appt.status) +
                 '<button type="button" class="dp-link" data-dp-open-chart="' + appt.appointment_id + '"><i class="bi bi-grid-3x3-gap"></i> View chart</button></div></div>' +
@@ -956,11 +961,28 @@
         if (state.current && state.current.patient === p) renderIdentity(p);
     }
 
+    // past-visit.js adds each saved visit here, then redraws the open chart once it is done.
+    function addAppointment(id, appt) {
+        var p = getPatient(id);
+        if (!p || !appt) return;
+        p.appointments.unshift(appt);
+        p._sum = summarize(p);
+        renderList();
+    }
+    function refreshChart() {
+        if (!state || !state.current) return;
+        var active = document.querySelector('#dpChartView .dp-tab.is-active');
+        openChart(state.current.patient.patient_id, active ? active.getAttribute('data-dp-tab') : 'overview');
+    }
+
     global.DoctorPatients = {
         init: init,
         open: function (id, tab) { if (state) openChart(Number(id), tab); },
         getPatient: getPatient,
         updatePatient: updatePatient,
+        addAppointment: addAppointment,
+        refreshChart: refreshChart,
+        config: function () { return state ? state.cfg : {}; },
         role: function () { return state ? (state.cfg.role || 'doctor') : null; }
     };
 })(window);
