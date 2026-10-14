@@ -1,6 +1,9 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/doctor_schedule_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
+include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 
 security_start_session();
 $csrf_token = security_generate_csrf_token();
@@ -113,8 +116,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        // ---- Schedule changes: the doctor's own apply at once; the secretary's wait for them ----
+        if ($action === 'add_schedule_change') {
+            [$values, $problem] = dsc_validate($_POST);
+            if ($problem !== null) {
+                $message = $problem;
+                $messageType = 'danger';
+            } elseif (($changeId = dsc_create($conn, $doctorId, $values, $doctorId, 'doctor')) > 0) {
+                $flagged = dsc_flag_conflicts($conn, $doctorId, $values['start_date'], $values['end_date']);
+                $change = dsc_get($conn, $changeId);
+                log_system_event($conn, 'schedule.change.add', 'doctor_schedule_changes', $changeId, 'Doctor changed own schedule: ' . dsc_summary($change));
+                $message = 'Schedule updated: ' . dsc_summary($change) . '.';
+                if ($flagged > 0) {
+                    $message .= ' ' . $flagged . ' booked appointment' . ($flagged === 1 ? ' falls' : 's fall') . ' outside these hours; the secretary has been asked to move ' . ($flagged === 1 ? 'it' : 'them') . '.';
+                    wf_notify_secretaries($conn, 'Appointments to move', 'A doctor changed their schedule (' . dsc_summary($change) . '). ' . $flagged . ' booked appointment' . ($flagged === 1 ? ' needs' : 's need') . ' a new time.', 'secretary.php?page=appointments&view=needs_reassignment');
+                }
+                $messageType = $flagged > 0 ? 'warning' : 'success';
+            } else {
+                $message = 'The schedule change could not be saved. Please try again.';
+                $messageType = 'danger';
+            }
+        }
+
+        if (in_array($action, ['remove_schedule_change', 'approve_schedule_change', 'decline_schedule_change'], true)) {
+            $change = dsc_get($conn, (int)($_POST['change_id'] ?? 0));
+            if (!$change || (int)$change['user_id'] !== $doctorId) {
+                $message = 'That schedule change was not found.';
+                $messageType = 'danger';
+            } elseif ($action === 'remove_schedule_change') {
+                if (dsc_set_status($conn, (int)$change['change_id'], (string)$change['status'], 'cancelled')) {
+                    // The usual hours come back for those days; anything booked that no longer fits is flagged.
+                    $flagged = $change['status'] === 'approved' ? dsc_flag_conflicts($conn, $doctorId, (string)$change['start_date'], (string)$change['end_date']) : 0;
+                    log_system_event($conn, 'schedule.change.remove', 'doctor_schedule_changes', (int)$change['change_id'], 'Doctor removed schedule change: ' . dsc_summary($change));
+                    $message = 'Schedule change removed. Your usual hours apply on those days again.';
+                    $messageType = 'success';
+                    if ($flagged > 0) {
+                        wf_notify_secretaries($conn, 'Appointments to move', $flagged . ' booked appointment' . ($flagged === 1 ? ' needs' : 's need') . ' a new time after a doctor schedule change.', 'secretary.php?page=appointments&view=needs_reassignment');
+                    }
+                } else {
+                    $message = 'That schedule change can no longer be removed.';
+                    $messageType = 'warning';
+                }
+            } else {
+                $approve = $action === 'approve_schedule_change';
+                if ($change['status'] !== 'pending') {
+                    $message = 'That request has already been answered.';
+                    $messageType = 'warning';
+                } elseif ($approve && (string)$change['end_date'] < date('Y-m-d')) {
+                    dsc_set_status($conn, (int)$change['change_id'], 'pending', 'declined');
+                    $message = 'That request is for dates that have already passed, so it was closed.';
+                    $messageType = 'warning';
+                } elseif (dsc_set_status($conn, (int)$change['change_id'], 'pending', $approve ? 'approved' : 'declined')) {
+                    $flagged = $approve ? dsc_flag_conflicts($conn, $doctorId, (string)$change['start_date'], (string)$change['end_date']) : 0;
+                    log_system_event($conn, $approve ? 'schedule.change.approve' : 'schedule.change.decline', 'doctor_schedule_changes', (int)$change['change_id'], ($approve ? 'Approved' : 'Declined') . ' schedule change: ' . dsc_summary($change));
+                    if (!empty($change['requested_by'])) {
+                        wf_notify_user(
+                            $conn,
+                            (int)$change['requested_by'],
+                            $approve ? 'Schedule change approved' : 'Schedule change declined',
+                            'The doctor ' . ($approve ? 'approved' : 'declined') . ' the schedule change: ' . dsc_summary($change) . '.'
+                                . ($flagged > 0 ? ' ' . $flagged . ' booked appointment' . ($flagged === 1 ? ' needs' : 's need') . ' a new time.' : ''),
+                            $flagged > 0 ? 'secretary.php?page=appointments&view=needs_reassignment' : 'secretary.php?page=doctor_schedule'
+                        );
+                    }
+                    $message = $approve ? 'Schedule change approved. It now applies to your schedule.' : 'Schedule change declined.';
+                    $messageType = 'success';
+                } else {
+                    $message = 'That request has already been answered.';
+                    $messageType = 'warning';
+                }
+            }
+        }
     }
 }
+
+// Schedule changes still ahead (or running now), newest first.
+$scheduleChanges = array_reverse(dsc_load_changes($conn, $doctorId, date('Y-m-d'), null, ['approved', 'pending']));
+$pendingScheduleRequests = array_values(array_filter($scheduleChanges, function ($c) { return $c['status'] === 'pending'; }));
+$approvedScheduleChanges = array_values(array_filter($scheduleChanges, function ($c) { return $c['status'] === 'approved'; }));
+// Every approved change, for the calendar (older ones can still cover days in the shown month).
+$allApprovedChanges = dsc_load_changes($conn, $doctorId);
 
 $leaves = [];
 $stmt = $conn->prepare(
@@ -242,23 +324,25 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
         continue;
     }
 
-    $hasAvailability = ($workType === 'part_time') ? !empty($availabilityWeekdays[$weekday]) : true;
-    if ($hasAvailability) {
+    if (dsc_hours_for_date($workType, $availabilityTimes, $allApprovedChanges, $dateStr) !== null) {
         $availableDays++;
     }
 }
 
 $activePage = trim((string)($_GET['page'] ?? 'schedule'));
 $scheduleView = trim((string)($_GET['view'] ?? ''));
-if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
+if (!in_array($scheduleView, ['calendar', 'changes', 'leave_requests'], true)) {
     $scheduleView = ($activePage === 'leave_requests') ? 'leave_requests' : 'calendar';
 }
+// A form posted from one tab shows its result on that tab.
+$postedAction = (string)($_POST['action'] ?? '');
+if (strpos($postedAction, 'schedule_change') !== false) $scheduleView = 'changes';
 ?>
 
 <div class="module-page-header mb-3">
     <h4 class="mb-0">
         <span class="module-page-header__crumb">Scheduling</span> <span class="module-page-header__sep">&gt;</span>
-        <?php echo $scheduleView === 'leave_requests' ? 'Leave Requests' : 'My Schedule'; ?>
+        <?php echo $scheduleView === 'leave_requests' ? 'Leave Requests' : ($scheduleView === 'changes' ? 'Schedule Changes' : 'My Schedule'); ?>
     </h4>
 </div>
 
@@ -268,6 +352,12 @@ if (!in_array($scheduleView, ['calendar', 'leave_requests'], true)) {
             <li class="nav-item">
                 <a class="nav-link <?php echo $scheduleView === 'calendar' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=calendar&month=<?php echo urlencode($selectedMonth); ?>">
                     <i class="bi bi-calendar3 me-1"></i> My Schedule
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?php echo $scheduleView === 'changes' ? 'active' : ''; ?>" href="doctor.php?page=schedule&view=changes&month=<?php echo urlencode($selectedMonth); ?>">
+                    <i class="bi bi-clock-history me-1"></i> Schedule Changes
+                    <?php if ($pendingScheduleRequests): ?><span class="badge bg-warning text-dark ms-1"><?php echo count($pendingScheduleRequests); ?></span><?php endif; ?>
                 </a>
             </li>
             <li class="nav-item">
@@ -370,7 +460,14 @@ $todayWeekday = (int)date('w');
             $isClosed = ($weekday === 0);
             $isApprovedLeave = !empty($approvedLeaveByDate[$dateStr]);
             $isPendingLeave = !empty($pendingLeaveByDate[$dateStr]);
-            $isAvailable = !$isClosed && isset($workHours[$weekday]);
+            // The day's hours: the usual week, or a schedule change covering this date.
+            $dayHours = dsc_hours_for_date($workType, $availabilityTimes, $allApprovedChanges, $dateStr);
+            $isAvailable = !$isClosed && $dayHours !== null;
+            $dayHoursLabel = $dayHours ? dsc_time_label($dayHours['start']) . ' – ' . dsc_time_label($dayHours['end']) : '';
+            $dayChanged = false;
+            foreach ($allApprovedChanges as $chg) {
+                if (dsc_change_applies($chg, $dateStr)) { $dayChanged = true; break; }
+            }
 
             if ($isClosed) {
                 $calendarDays[$dateStr] = ['state' => 'closed', 'title' => 'Clinic closed'];
@@ -384,11 +481,13 @@ $todayWeekday = (int)date('w');
             } elseif ($isPendingLeave) {
                 $calendarDays[$dateStr] = ['state' => 'pending', 'tags' => [['text' => 'Leave pending', 'tone' => 'warn']]];
             } elseif ($isAvailable && $dateStr < date('Y-m-d')) {
-                $calendarDays[$dateStr] = ['state' => 'past', 'title' => 'Worked · ' . $workHours[$weekday]];
+                $calendarDays[$dateStr] = ['state' => 'past', 'title' => 'Worked · ' . $dayHoursLabel];
             } elseif ($isAvailable) {
-                $calendarDays[$dateStr] = ['state' => 'available', 'mark' => 'info', 'title' => 'Working · ' . $workHours[$weekday]];
+                $calendarDays[$dateStr] = ['state' => 'available', 'mark' => 'info', 'title' => ($dayChanged ? 'Changed hours · ' : 'Working · ') . $dayHoursLabel]
+                    + ($dayChanged ? ['tags' => [['text' => $dayHoursLabel, 'tone' => 'info']]] : []);
             } else {
-                $calendarDays[$dateStr] = ['state' => 'unavailable', 'title' => 'Day off'];
+                $calendarDays[$dateStr] = ['state' => 'unavailable', 'title' => $dayChanged ? 'Not available (schedule change)' : 'Day off']
+                    + ($dayChanged && $dateStr >= date('Y-m-d') ? ['tags' => [['text' => 'Off', 'tone' => 'muted']]] : []);
             }
         }
         ?>
@@ -413,6 +512,175 @@ $todayWeekday = (int)date('w');
         </script>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if ($scheduleView === 'changes'): ?>
+<?php
+$timeOptions = dsc_time_options();
+$weekdayChoices = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'];
+// After a failed save, keep what the doctor typed.
+$keep = ($_SERVER['REQUEST_METHOD'] === 'POST' && $postedAction === 'add_schedule_change' && $messageType === 'danger') ? $_POST : [];
+$keepDays = isset($keep['weekdays']) ? array_map('intval', (array)$keep['weekdays']) : array_keys($weekdayChoices);
+?>
+<?php if ($message !== ''): ?>
+    <div class="alert alert-<?php echo htmlspecialchars($messageType); ?> alert-dismissible fade show mt-3" role="alert">
+        <?php echo htmlspecialchars($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+<?php endif; ?>
+
+<?php if ($pendingScheduleRequests): ?>
+<div class="card border-0 mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+            Requests from the secretary
+            <button type="button" class="guide-tip" data-tip="These only change your schedule if you approve them." aria-label="These only change your schedule if you approve them.">
+                <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            </button>
+        </h5>
+    </div>
+    <div class="card-body">
+        <?php foreach ($pendingScheduleRequests as $req): ?>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom py-2">
+                <div>
+                    <div class="fw-semibold"><?php echo htmlspecialchars(dsc_summary($req)); ?></div>
+                    <div class="small text-muted">
+                        Asked by <?php echo htmlspecialchars(trim((string)($req['requested_by_name'] ?? '')) ?: 'the secretary'); ?>
+                        on <?php echo htmlspecialchars(date('M j, Y g:i A', strtotime((string)$req['created_at']))); ?>
+                        <?php if (!empty($req['note'])): ?> · <?php echo htmlspecialchars((string)$req['note']); ?><?php endif; ?>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <form method="POST" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                        <input type="hidden" name="action" value="approve_schedule_change">
+                        <input type="hidden" name="change_id" value="<?php echo (int)$req['change_id']; ?>">
+                        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i> Approve</button>
+                    </form>
+                    <form method="POST" class="d-inline" data-confirm="Decline this schedule change?" data-confirm-title="Decline Request" data-confirm-variant="danger" data-confirm-ok="Decline">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                        <input type="hidden" name="action" value="decline_schedule_change">
+                        <input type="hidden" name="change_id" value="<?php echo (int)$req['change_id']; ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Decline</button>
+                    </form>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="card border-0 mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0 d-flex align-items-center gap-2">
+            Change my schedule
+            <?php $dscHelp = 'Set your working hours for one day, some days or whole weeks. It applies right away and patients can only book inside these hours. For a whole day off, file a leave request.'; ?>
+            <button type="button" class="guide-tip" data-tip="<?php echo htmlspecialchars($dscHelp); ?>" aria-label="<?php echo htmlspecialchars($dscHelp); ?>">
+                <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            </button>
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="row g-3" id="dscForm">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+            <input type="hidden" name="action" value="add_schedule_change">
+            <div class="col-md-3">
+                <label class="form-label" for="dscStart">From</label>
+                <input type="date" class="form-control" id="dscStart" name="start_date" required min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars((string)($keep['start_date'] ?? '')); ?>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label" for="dscEnd">To</label>
+                <input type="date" class="form-control" id="dscEnd" name="end_date" min="<?php echo date('Y-m-d'); ?>" value="<?php echo htmlspecialchars((string)($keep['end_date'] ?? '')); ?>">
+                <div class="form-text">Leave empty for one day.</div>
+            </div>
+            <div class="col-md-6">
+                <span class="form-label d-block">On these days</span>
+                <div class="d-flex flex-wrap gap-3 pt-1">
+                    <?php foreach ($weekdayChoices as $num => $label): ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="weekdays[]" value="<?php echo $num; ?>" id="dscDay<?php echo $num; ?>" <?php echo in_array($num, $keepDays, true) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="dscDay<?php echo $num; ?>"><?php echo $label; ?></label>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label" for="dscFrom">Start time</label>
+                <select class="form-select" id="dscFrom" name="start_time">
+                    <?php foreach ($timeOptions as $t): ?>
+                        <option value="<?php echo $t; ?>" <?php echo ($keep['start_time'] ?? '09:00:00') === $t ? 'selected' : ''; ?>><?php echo dsc_time_label($t); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label" for="dscTo">End time</label>
+                <select class="form-select" id="dscTo" name="end_time">
+                    <?php foreach ($timeOptions as $t): ?>
+                        <option value="<?php echo $t; ?>" <?php echo ($keep['end_time'] ?? '17:00:00') === $t ? 'selected' : ''; ?>><?php echo dsc_time_label($t); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label" for="dscNote">Note (optional)</label>
+                <input type="text" class="form-control" id="dscNote" name="note" maxlength="255" value="<?php echo htmlspecialchars((string)($keep['note'] ?? '')); ?>">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Save schedule change</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">My schedule changes</h5>
+    </div>
+    <div class="card-body">
+        <?php if (!$approvedScheduleChanges): ?>
+            <div class="text-muted small">No changes coming up. Your usual weekly hours apply.</div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Dates</th><th>Days</th><th>Hours</th><th>Set by</th><th></th></tr></thead>
+                    <tbody>
+                        <?php foreach ($approvedScheduleChanges as $chg): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars(dsc_dates_label($chg)); ?></td>
+                                <td><?php echo htmlspecialchars(dsc_days_label($chg)); ?></td>
+                                <td><?php echo $chg['kind'] === 'off' ? '<span class="badge bg-secondary">Not available</span>' : htmlspecialchars(dsc_what_label($chg)); ?></td>
+                                <td class="small text-muted">
+                                    <?php echo $chg['requested_role'] === 'doctor' ? 'You' : htmlspecialchars('Secretary (' . trim((string)($chg['requested_by_name'] ?? '')) . '), approved by you'); ?>
+                                    <?php if (!empty($chg['note'])): ?><br><?php echo htmlspecialchars((string)$chg['note']); ?><?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <form method="POST" class="d-inline" data-confirm="Remove this schedule change? Your usual hours will apply on those days again." data-confirm-title="Remove Change" data-confirm-variant="danger" data-confirm-ok="Remove">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                        <input type="hidden" name="action" value="remove_schedule_change">
+                                        <input type="hidden" name="change_id" value="<?php echo (int)$chg['change_id']; ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+<script>
+(function () {
+    var form = document.getElementById('dscForm');
+    if (!form) return;
+    // The end date can't be before the start date.
+    var start = document.getElementById('dscStart');
+    var end = document.getElementById('dscEnd');
+    start.addEventListener('change', function () {
+        end.min = start.value || end.min;
+        if (end.value && end.value < start.value) end.value = start.value;
+    });
+})();
+</script>
 <?php endif; ?>
 
 <?php if ($scheduleView === 'leave_requests'): ?>

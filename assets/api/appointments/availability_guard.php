@@ -1,5 +1,8 @@
 <?php
 
+// Doctors' own schedule changes (hours / days off for chosen dates) decide when they work.
+include_once dirname(dirname(dirname(__DIR__))) . '/config/doctor_schedule_helpers.php';
+
 if (!defined('APPT_BASE_SLOT_MINUTES')) {
     define('APPT_BASE_SLOT_MINUTES', 10);
 }
@@ -101,24 +104,14 @@ function appt_ensure_standard_timeslots_for_doctor_date(mysqli $conn, $doctorId,
         return;
     }
 
-    // Respect clinic days and doctor availability.
-    if (!appt_doctor_has_schedule_on_date($conn, $doctorId, $date)) {
-        return;
-    }
-
-    // Do not generate slots when doctor is on approved leave.
-    if (appt_has_doctor_leave($conn, $doctorId, $date)) {
-        return;
-    }
-
     // 10-minute slots, lunch break 12:00-13:00, clinic hours 09:00-17:00. The last bookable
     // slot must START by 16:30 (4:30 PM cut-off) even though the clinic itself stays open
     // until 17:00 (5:00 PM) — so the afternoon window extends 10 minutes past the cut-off to
-    // 16:40 to include that final 16:30-16:40 slot as a valid starting time.
-    $windows = [
-        ['09:00:00', '12:00:00'],
-        ['13:00:00', '16:40:00'],
-    ];
+    // 16:40 to include that final 16:30-16:40 slot as a valid starting time. The doctor's
+    // hours for the day (their usual week or a schedule change) narrow those windows; a day
+    // they don't work, or approved leave, has none.
+    $hours = appt_has_doctor_leave($conn, $doctorId, $date) ? null : dsc_hours_on($conn, $doctorId, $date);
+    $windows = $hours ? dsc_slot_windows($hours['start'], $hours['end']) : [];
     $slotSeconds = APPT_BASE_SLOT_MINUTES * 60;
 
     // Build the full set of (start,end) pairs this day should have.
@@ -130,6 +123,25 @@ function appt_ensure_standard_timeslots_for_doctor_date(mysqli $conn, $doctorId,
             $wantedSlots[] = [date('H:i:s', $cur), date('H:i:s', $cur + $slotSeconds)];
         }
     }
+
+    // Open slots left over from earlier hours (the doctor changed their schedule) can't be
+    // booked any more. Booked slots, and slots an appointment still points to, are kept.
+    $keep = [];
+    foreach ($wantedSlots as [$slotStart]) {
+        $keep[] = "'" . $conn->real_escape_string($slotStart) . "'";
+    }
+    $stale = $conn->prepare(
+        "DELETE t FROM timeslot t
+         WHERE t.doctor_id = ? AND t.slot_date = ? AND t.status = 'available' AND t.appointment_id IS NULL"
+        . ($keep ? ' AND t.start_time NOT IN (' . implode(',', $keep) . ')' : '')
+        . ' AND NOT EXISTS (SELECT 1 FROM appointments a WHERE a.timeslot_id = t.timeslot_id)'
+    );
+    if ($stale) {
+        $stale->bind_param('is', $doctorId, $date);
+        $stale->execute();
+        $stale->close();
+    }
+
     if (empty($wantedSlots)) {
         return;
     }
@@ -277,33 +289,10 @@ function appt_doctor_has_schedule_on_date(mysqli $conn, $doctorId, $date)
         return false;
     }
 
-    $weekday = (int)date('w', strtotime($date)); // 0..6
-
-    // Clinic is open Monday-Saturday only.
-    if ($weekday === 0) {
-        return false;
-    }
-
-    $doctorWorkType = appt_get_doctor_work_type($conn, $doctorId);
-    if ($doctorWorkType === 'regular') {
-        return true;
-    }
-
-    if (appt_table_exists($conn, 'doctor_availability')) {
-        $stmt = $conn->prepare('SELECT 1 FROM doctor_availability WHERE user_id = ? AND weekday = ? LIMIT 1');
-        if ($stmt) {
-            $stmt->bind_param('ii', $doctorId, $weekday);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            $row = $res ? $res->fetch_assoc() : null;
-            $stmt->close();
-            if (!empty($row)) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    // Clinic is open Monday-Saturday; within that, the doctor's usual week (regular:
+    // every day, part-time: their weekdays) unless a schedule change says otherwise.
+    appt_ensure_work_type_column($conn);
+    return dsc_hours_on($conn, (int)$doctorId, $date) !== null;
 }
 
 /**
@@ -333,23 +322,10 @@ function appt_build_bookable_checker(mysqli $conn, int $doctorId): callable
         }
     }
 
-    $workType = appt_get_doctor_work_type($conn, $doctorId);
-    $availableWeekdays = null; // null = regular (every Mon-Sat), array = specific weekdays only
-    if ($workType !== 'regular' && appt_table_exists($conn, 'doctor_availability')) {
-        $availableWeekdays = [];
-        $stmt = $conn->prepare('SELECT DISTINCT weekday FROM doctor_availability WHERE user_id = ?');
-        if ($stmt) {
-            $stmt->bind_param('i', $doctorId);
-            $stmt->execute();
-            $res = $stmt->get_result();
-            while ($row = $res->fetch_assoc()) {
-                $availableWeekdays[(int)$row['weekday']] = true;
-            }
-            $stmt->close();
-        }
-    }
+    appt_ensure_work_type_column($conn);
+    $ctx = dsc_doctor_context($conn, $doctorId);
 
-    return function (string $date) use ($leaveRanges, $availableWeekdays): array {
+    return function (string $date) use ($leaveRanges, $ctx): array {
         if (!appt_validate_appointment_date($date)) {
             return [false, 'Invalid appointment date format.'];
         }
@@ -360,11 +336,7 @@ function appt_build_bookable_checker(mysqli $conn, int $doctorId): callable
             }
         }
 
-        $weekday = (int)date('w', strtotime($date));
-        if ($weekday === 0) {
-            return [false, 'Doctor has no active schedule on the selected date.'];
-        }
-        if ($availableWeekdays !== null && !isset($availableWeekdays[$weekday])) {
+        if (dsc_hours_for_date($ctx['work_type'], $ctx['availability'], $ctx['changes'], $date) === null) {
             return [false, 'Doctor has no active schedule on the selected date.'];
         }
 

@@ -2285,3 +2285,60 @@ body.patient-portal #main .history-table-wrap.table-responsive > table.patient-a
   font-size: var(--fs-sm);
   color: #1e293b;
 }
+/* Guide text beside a section title: a small "!" icon that shows its text on hover or tap
+   (keyboard focus too). CSS only, so it works however the page was loaded.
+   Markup: <button type="button" class="guide-tip" data-tip="..." aria-label="..."><i class="bi bi-exclamation-circle"></i></button> */
+.guide-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: help;
+}
+.guide-tip:hover,
+.guide-tip:focus-visible {
+  color: #1b7aa3;
+}
+.guide-tip:focus-visible {
+  outline: 2px solid rgba(27, 122, 163, 0.35);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+.guide-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: -10px;
+  z-index: 1080;
+  width: max-content;
+  max-width: min(280px, 80vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.guide-tip:hover::after,
+.guide-tip:focus::after {
+  opacity: 1;
+  visibility: visible;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-tip::after { transition: none; }
+}

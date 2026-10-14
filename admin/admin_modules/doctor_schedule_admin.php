@@ -1,6 +1,7 @@
 <?php
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include dirname(dirname(__DIR__)) . '/config/security.php';
+include_once dirname(dirname(__DIR__)) . '/config/doctor_schedule_helpers.php';
 
 security_start_session();
 security_ensure_work_type_column($conn);
@@ -101,6 +102,8 @@ $daysInMonth = (int)date('t', strtotime($monthStart));
 $monthLabel = date('F Y', strtotime($monthStart));
 $today = date('Y-m-d');
 
+$approvedChangesByDoctor = dsc_load_changes($conn, 0, $monthStart, $monthEnd);
+
 // Build day data for JS
 $dayData = [];
 for ($d = 1; $d <= $daysInMonth; $d++) {
@@ -111,18 +114,13 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
         $uid = (int)$doc['user_id'];
         $isApproved = !empty($approvedLeaveByDate[$dateStr][$uid]);
         $isPending = !empty($pendingLeaveByDate[$dateStr][$uid]);
-        $hasSched = admin_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
-        $times = $availabilityByDoctor[$uid][$weekday] ?? null;
+        // Usual week, or a schedule change the doctor set or approved for this date.
+        $dayHours = dsc_hours_for_date(strtolower((string)$doc['work_type']) === 'part_time' ? 'part_time' : 'regular', $availabilityByDoctor[$uid] ?? [], $approvedChangesByDoctor[$uid] ?? [], $dateStr);
         $status = 'none';
         if ($isApproved) $status = 'leave';
         elseif ($isPending) $status = 'pending';
-        elseif ($hasSched) $status = 'available';
-        $hours = '';
-        if ($times) {
-            $hours = date('g:i A', strtotime($times['start'])) . ' – ' . date('g:i A', strtotime($times['end']));
-        } elseif ($status === 'available' && strtolower((string)$doc['work_type']) !== 'part_time') {
-            $hours = '9:00 AM – 5:00 PM';
-        }
+        elseif ($dayHours !== null) $status = 'available';
+        $hours = $dayHours ? dsc_time_label($dayHours['start']) . ' – ' . dsc_time_label($dayHours['end']) . ($dayHours['change'] ? ' (changed)' : '') : '';
         $dayDoctors[] = ['name' => 'Dr. ' . htmlspecialchars((string)$doc['last_name']), 'status' => $status, 'hours' => $hours, 'work_type' => (string)$doc['work_type']];
     }
     $dayData[$d] = $dayDoctors;

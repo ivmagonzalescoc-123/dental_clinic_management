@@ -405,6 +405,30 @@ if (!function_exists('email_appointment_leave_conflict_html')) {
     }
 }
 
+if (!function_exists('email_appointment_rescheduled_html')) {
+    /** Sent when the clinic moves a patient's appointment to a new date/time (or doctor). */
+    function email_appointment_rescheduled_html(string $patientName, string $oldDate, string $newDate, string $newTime, string $doctorName): string
+    {
+        $name = email_e(trim($patientName) ?: 'there');
+        $date = email_date_label($newDate);
+        $details = [['New date', email_e($date)]];
+        if (trim($newTime) !== '') $details[] = ['Time', email_e($newTime)];
+        if (trim($doctorName) !== '') $details[] = ['Doctor', 'Dr. ' . email_e(trim($doctorName))];
+        if ($oldDate !== '' && $oldDate !== $newDate) $details[] = ['Previous date', email_e(email_date_label($oldDate))];
+        return email_layout([
+            'title' => 'Appointment rescheduled',
+            'preheader' => "Your appointment is now on {$date}" . (trim($newTime) !== '' ? ' at ' . trim($newTime) : '') . '.',
+            'tone' => 'info',
+            'label' => 'Rescheduled',
+            'heading' => 'Your appointment has a new schedule',
+            'intro' => "Hi {$name}, the clinic has moved your appointment. Here is the new schedule.",
+            'details' => $details,
+            'notice' => ['tone' => 'info', 'html' => "Doesn't work for you? Call the clinic at <strong>" . email_e(email_clinic_phone()) . '</strong> to arrange another time.'],
+            'cta' => ['text' => 'View my appointments', 'url' => email_app_url()],
+        ]);
+    }
+}
+
 if (!function_exists('email_appointment_reminder_html')) {
     function email_appointment_reminder_html(string $patientName, string $scheduledStart, string $doctorName, string $appointmentId, string $type = '24h'): string
     {

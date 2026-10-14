@@ -2,6 +2,9 @@
 include dirname(dirname(__DIR__)) . '/config/database.php';
 include dirname(dirname(__DIR__)) . '/config/security.php';
 include_once dirname(dirname(__DIR__)) . '/config/session_check.php';
+include_once dirname(dirname(__DIR__)) . '/config/doctor_schedule_helpers.php';
+include_once dirname(dirname(__DIR__)) . '/config/workflow_notifications.php';
+include_once dirname(dirname(__DIR__)) . '/config/system_logs.php';
 check_session(['secretary']);
 
 security_start_session();
@@ -57,8 +60,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+
+        // A schedule change asked for by the secretary waits for the doctor's approval.
+        if ($action === 'request_schedule_change') {
+            $doctorId = (int)($_POST['doctor_id'] ?? 0);
+            $docCheck = $conn->prepare('SELECT user_id FROM users WHERE user_id = ? AND role_id = 2 AND is_active = 1 LIMIT 1');
+            $docOk = false;
+            if ($docCheck) {
+                $docCheck->bind_param('i', $doctorId);
+                $docCheck->execute();
+                $docOk = (bool)$docCheck->get_result()->fetch_assoc();
+                $docCheck->close();
+            }
+            [$values, $problem] = dsc_validate($_POST);
+            if (!$docOk) {
+                $message = 'Please select a doctor.';
+                $messageType = 'danger';
+            } elseif ($problem !== null) {
+                $message = $problem;
+                $messageType = 'danger';
+            } elseif (($changeId = dsc_create($conn, $doctorId, $values, $secretaryId, 'secretary')) > 0) {
+                $change = dsc_get($conn, $changeId);
+                log_system_event($conn, 'schedule.change.request', 'doctor_schedule_changes', $changeId, 'Secretary asked for a schedule change: ' . dsc_summary($change));
+                wf_notify_user($conn, $doctorId, 'Schedule change to approve', 'The secretary asked to change your schedule: ' . dsc_summary($change) . '. It applies only if you approve it.', 'doctor.php?page=schedule&view=changes');
+                $message = 'Request sent. The schedule changes once the doctor approves it.';
+                $messageType = 'success';
+            } else {
+                $message = 'The request could not be saved. Please try again.';
+                $messageType = 'danger';
+            }
+        }
+
+        if ($action === 'withdraw_schedule_change') {
+            $change = dsc_get($conn, (int)($_POST['change_id'] ?? 0));
+            if ($change && $change['status'] === 'pending' && $change['requested_role'] !== 'doctor'
+                && dsc_set_status($conn, (int)$change['change_id'], 'pending', 'cancelled')) {
+                log_system_event($conn, 'schedule.change.withdraw', 'doctor_schedule_changes', (int)$change['change_id'], 'Secretary withdrew a schedule change request: ' . dsc_summary($change));
+                $message = 'Request withdrawn.';
+                $messageType = 'success';
+            } else {
+                $message = 'That request has already been answered.';
+                $messageType = 'warning';
+            }
+        }
     }
 }
+
+// Approved schedule changes shape each doctor's days; requests still waiting show beside them.
+$approvedChangesByDoctor = dsc_load_changes($conn, 0, $monthStart, $monthEnd);
+$scheduleRequests = array_reverse(dsc_load_changes($conn, 0, null, null, ['pending', 'approved', 'declined']) ?: []);
+$recentScheduleRequests = [];
+foreach ($scheduleRequests as $doctorRequests) {
+    foreach ($doctorRequests as $req) {
+        if ($req['requested_role'] !== 'doctor') $recentScheduleRequests[] = $req;
+    }
+}
+usort($recentScheduleRequests, function ($a, $b) { return (int)$b['change_id'] <=> (int)$a['change_id']; });
+$recentScheduleRequests = array_slice($recentScheduleRequests, 0, 10);
 
 $doctors = [];
 $docRes = $conn->query("SELECT user_id, first_name, last_name, CONCAT(first_name, ' ', last_name) AS display_name, work_type FROM users WHERE role_id = 2 AND is_active = 1 ORDER BY last_name, first_name");
@@ -87,10 +145,11 @@ for ($d = 1; $d <= $daysInMonth; $d++) {
         $uid = (int)$doc['user_id'];
         $isApproved = !empty($approvedLeaveByDate[$dateStr][$uid]);
         $isPending = !empty($pendingLeaveByDate[$dateStr][$uid]);
-        $hasSched = secretary_doctor_has_schedule_on_weekday($doc, $availabilityByDoctor, $weekday);
-        $times = $availabilityByDoctor[$uid][$weekday] ?? null;
+        // Usual week, or an approved schedule change for this date.
+        $dayHours = dsc_hours_for_date(strtolower((string)$doc['work_type']) === 'part_time' ? 'part_time' : 'regular', $availabilityByDoctor[$uid] ?? [], $approvedChangesByDoctor[$uid] ?? [], $dateStr);
+        $hasSched = $dayHours !== null;
         $status = $isApproved ? 'leave' : ($isPending ? 'pending' : ($hasSched ? 'available' : 'none'));
-        $hours = $times ? date('g:i A', strtotime($times['start'])) . ' – ' . date('g:i A', strtotime($times['end'])) : ($status === 'available' && strtolower((string)$doc['work_type']) !== 'part_time' ? '9:00 AM – 5:00 PM' : '');
+        $hours = $dayHours ? dsc_time_label($dayHours['start']) . ' – ' . dsc_time_label($dayHours['end']) . ($dayHours['change'] ? ' (changed)' : '') : '';
         $dayDoctors[] = ['name' => 'Dr. ' . htmlspecialchars((string)$doc['last_name']), 'status' => $status, 'hours' => $hours, 'work_type' => (string)$doc['work_type']];
     }
     $dayData[$d] = $dayDoctors;
@@ -168,6 +227,68 @@ if ($recentStmt) { $recentStmt->execute(); $rr = $recentStmt->get_result(); whil
                 </form>
             </div>
         </div>
+
+        <?php $secDscHelp = "Change a doctor's working hours for chosen days. It applies only after the doctor approves it. For a whole day off, use File Leave."; ?>
+        <div class="card border-0 mb-3"><div class="card-header d-flex align-items-center gap-2"><strong><i class="bi bi-clock me-1"></i>Request Schedule Change</strong>
+                <button type="button" class="guide-tip" data-tip="<?php echo htmlspecialchars($secDscHelp); ?>" aria-label="<?php echo htmlspecialchars($secDscHelp); ?>"><i class="bi bi-exclamation-circle" aria-hidden="true"></i></button></div>
+            <div class="card-body">
+                <form method="POST" id="secDscForm">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                    <input type="hidden" name="action" value="request_schedule_change">
+                    <div class="mb-2"><label class="form-label small" for="secDscDoctor">Doctor</label>
+                        <select class="form-select" name="doctor_id" id="secDscDoctor" required><option value="">Select</option><?php foreach ($doctors as $doc): ?><option value="<?php echo (int)$doc['user_id']; ?>">Dr. <?php echo htmlspecialchars((string)$doc['last_name']); ?></option><?php endforeach; ?></select></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label small" for="secDscStart">From</label><input type="date" class="form-control" name="start_date" id="secDscStart" min="<?php echo $today; ?>" required></div>
+                        <div class="col-6"><label class="form-label small" for="secDscEnd">To</label><input type="date" class="form-control" name="end_date" id="secDscEnd" min="<?php echo $today; ?>" placeholder="Same day"></div>
+                    </div>
+                    <div class="mb-2"><span class="form-label small d-block">Days</span>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach ([1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'] as $num => $label): ?>
+                                <div class="form-check form-check-inline me-0"><input class="form-check-input" type="checkbox" name="weekdays[]" value="<?php echo $num; ?>" id="secDscDay<?php echo $num; ?>" checked><label class="form-check-label small" for="secDscDay<?php echo $num; ?>"><?php echo $label; ?></label></div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label small" for="secDscFrom">Start</label><select class="form-select" name="start_time" id="secDscFrom"><?php foreach (dsc_time_options() as $t): ?><option value="<?php echo $t; ?>" <?php echo $t === '09:00:00' ? 'selected' : ''; ?>><?php echo dsc_time_label($t); ?></option><?php endforeach; ?></select></div>
+                        <div class="col-6"><label class="form-label small" for="secDscTo">End</label><select class="form-select" name="end_time" id="secDscTo"><?php foreach (dsc_time_options() as $t): ?><option value="<?php echo $t; ?>" <?php echo $t === '17:00:00' ? 'selected' : ''; ?>><?php echo dsc_time_label($t); ?></option><?php endforeach; ?></select></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label small" for="secDscNote">Note</label><input type="text" class="form-control" name="note" id="secDscNote" maxlength="255" placeholder="Optional"></div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Send to doctor</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 mb-3"><div class="card-header"><strong><i class="bi bi-hourglass-split me-1"></i>Schedule Change Requests</strong></div>
+            <div class="card-body" style="max-height:260px;overflow-y:auto;">
+                <?php if (empty($recentScheduleRequests)): ?><div class="text-muted small">No requests.</div>
+                <?php else: foreach ($recentScheduleRequests as $req): $st = (string)$req['status']; $badge = match($st) { 'approved'=>'success','pending'=>'warning','declined'=>'danger',default=>'secondary' }; ?>
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center"><strong class="small"><?php echo htmlspecialchars('Dr. ' . trim((string)($req['doctor_name'] ?? ''))); ?></strong><span class="badge bg-<?php echo $badge; ?>"><?php echo htmlspecialchars($st === 'pending' ? 'Waiting for doctor' : ucfirst($st)); ?></span></div>
+                        <div class="text-muted small"><?php echo htmlspecialchars(dsc_summary($req)); ?></div>
+                        <?php if ($st === 'pending'): ?>
+                            <form method="POST" class="mt-1" data-confirm="Withdraw this request?" data-confirm-title="Withdraw Request" data-confirm-variant="danger" data-confirm-ok="Withdraw">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+                                <input type="hidden" name="action" value="withdraw_schedule_change">
+                                <input type="hidden" name="change_id" value="<?php echo (int)$req['change_id']; ?>">
+                                <button type="submit" class="btn btn-link btn-sm p-0 text-danger">Withdraw</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; endif; ?>
+            </div>
+        </div>
+        <script>
+        (function () {
+            var form = document.getElementById('secDscForm');
+            if (!form) return;
+            var start = document.getElementById('secDscStart');
+            var end = document.getElementById('secDscEnd');
+            start.addEventListener('change', function () {
+                end.min = start.value || end.min;
+                if (end.value && end.value < start.value) end.value = start.value;
+            });
+        })();
+        </script>
 
         <div class="card border-0"><div class="card-header"><strong><i class="bi bi-clock-history me-1"></i>Recent Leaves</strong></div>
             <div class="card-body" style="max-height:250px;overflow-y:auto;">

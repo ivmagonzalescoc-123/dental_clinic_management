@@ -217,6 +217,66 @@ if (!function_exists('wf_notify_reschedule_decision')) {
     }
 }
 
+if (!function_exists('wf_notify_appointment_moved')) {
+    /**
+     * The clinic moved an appointment to a new date, time or doctor: the patient gets an
+     * in-app notice and an email with the new schedule; the doctor an in-app notice.
+     */
+    function wf_notify_appointment_moved($conn, $appointmentId, $patientId, $doctorId, $oldDate, $newDate, $startTime = '')
+    {
+        $timeLabel = $startTime !== '' && strtotime($startTime) !== false ? date('g:i A', strtotime($startTime)) : '';
+        $when = $newDate . ($timeLabel !== '' ? ' at ' . $timeLabel : '');
+
+        $doctorName = '';
+        $dStmt = $conn->prepare('SELECT first_name, last_name FROM users WHERE user_id = ? LIMIT 1');
+        if ($dStmt) {
+            $dStmt->bind_param('i', $doctorId);
+            $dStmt->execute();
+            $dRow = $dStmt->get_result()->fetch_assoc();
+            $dStmt->close();
+            $doctorName = $dRow ? trim($dRow['first_name'] . ' ' . $dRow['last_name']) : '';
+        }
+
+        $ref = wf_format_patient_appointment($conn, $patientId, $appointmentId);
+        wf_notify_patient($conn, $patientId, 'Appointment rescheduled', 'Your appointment has been moved to ' . $when . ($doctorName !== '' ? ' with Dr. ' . $doctorName : '') . '.', 'patient.php?page=appointments');
+        if ($doctorId) {
+            wf_notify_user($conn, $doctorId, 'Appointment rescheduled', $ref . ' has been moved to ' . $when . '.', 'doctor.php?page=appointments');
+        }
+
+        if (function_exists('reminder_send_email') && function_exists('email_appointment_rescheduled_html')) {
+            $pStmt = $conn->prepare('SELECT first_name, last_name, email FROM patients WHERE patient_id = ? LIMIT 1');
+            if ($pStmt) {
+                $pStmt->bind_param('i', $patientId);
+                $pStmt->execute();
+                $pRow = $pStmt->get_result()->fetch_assoc();
+                $pStmt->close();
+                $email = trim((string)($pRow['email'] ?? ''));
+                if ($email !== '') {
+                    $patientName = trim(($pRow['first_name'] ?? '') . ' ' . ($pRow['last_name'] ?? '')) ?: 'Patient';
+                    $plain = 'Your appointment has been moved to ' . $when . ($doctorName !== '' ? ' with Dr. ' . $doctorName : '') . '.';
+                    reminder_send_email($email, 'Your Appointment Was Rescheduled', $plain, email_appointment_rescheduled_html($patientName, (string)$oldDate, (string)$newDate, $timeLabel, $doctorName));
+                }
+            }
+        }
+    }
+}
+
+if (!function_exists('wf_notify_appointment_needs_new_time')) {
+    /** In-app only: the doctor's hours changed and this appointment no longer fits. */
+    function wf_notify_appointment_needs_new_time($conn, $patientId, $appointmentDate, $startTime, $doctorName)
+    {
+        $when = $appointmentDate . ($startTime !== '' && strtotime($startTime) !== false ? ' at ' . date('g:i A', strtotime($startTime)) : '');
+        wf_notify_patient(
+            $conn,
+            $patientId,
+            'Your appointment needs a new time',
+            ($doctorName !== '' ? 'Dr. ' . $doctorName : 'Your dentist') . ' changed their clinic hours, so your appointment on ' . $when
+                . ' needs to be moved. The clinic will reschedule it and email you the new schedule.',
+            'patient.php?page=appointments'
+        );
+    }
+}
+
 if (!function_exists('wf_notify_patient_arrived')) {
     function wf_notify_patient_arrived($conn, $appointmentId, $patientId, $doctorId)
     {

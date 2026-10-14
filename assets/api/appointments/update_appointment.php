@@ -248,8 +248,17 @@ try {
 
         $conn->commit();
 
-        if (($doctorChanged || $dateChanged) && function_exists('wf_notify_reschedule_decision')) {
-            wf_notify_reschedule_decision($conn, $appointment_id, (int)$current['patient_id'], $user_id, true, $appointment_date);
+        // Moved to a new day, time or doctor: tell the patient (in-app and email) and the doctor.
+        if (($doctorChanged || $dateChanged || $timeslotChanged) && !$statusBecameTerminal && function_exists('wf_notify_appointment_moved')) {
+            wf_notify_appointment_moved(
+                $conn,
+                $appointment_id,
+                (int)$current['patient_id'],
+                $user_id,
+                (string)$current['appointment_date'],
+                $appointment_date,
+                isset($ts['start_time']) ? (string)$ts['start_time'] : ''
+            );
         }
 
         if (function_exists('log_system_event')) {

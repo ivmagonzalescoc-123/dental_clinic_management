@@ -2269,7 +2269,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                         <span class="badge bg-secondary"><?php echo htmlspecialchars(ucfirst(str_replace('_', ' ', $status))); ?></span>
                                     <?php endif; ?>
                                     <?php if (!empty($appointment['needs_reassignment']) && !in_array($status, ['completed', 'cancelled', 'no_show'], true)): ?>
-                                        <br><span class="badge bg-danger mt-1"><i class="bi bi-exclamation-triangle"></i> Doctor on Leave — Needs Reassignment</span>
+                                        <br><span class="badge bg-danger mt-1"><i class="bi bi-exclamation-triangle"></i> Doctor not available — Needs reassignment</span>
                                     <?php endif; ?>
                                 </td>
 
