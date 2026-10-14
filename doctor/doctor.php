@@ -211,13 +211,13 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=schedule" data-tooltip="Schedule" title="Schedule">
-                    <i class="bi bi-calendar3"></i>
+                    <i class="bi bi-clock"></i>
                     <span>Schedule</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=patients" data-tooltip="Patients" title="Patients">
-                    <i class="bi bi-person-lines-fill"></i>
+                    <i class="bi bi-people"></i>
                     <span>Patients</span>
                 </a>
             </li>
@@ -231,7 +231,7 @@ switch ($role_key) {
 
             <li class="nav-item">
                 <a class="nav-link collapsed" href="doctor.php?page=ehr" data-tooltip="Patient Visit" title="Patient Visit">
-                    <i class="bi bi-journal-medical"></i>
+                    <i class="bi bi-clipboard2-pulse"></i>
                     <span>Patient Visit</span>
                 </a>
             </li>

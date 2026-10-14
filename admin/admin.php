@@ -214,7 +214,7 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=manage_users" data-tooltip="Manage Users" title="Manage Users">
-                    <i class="bi bi-person"></i>
+                    <i class="bi bi-person-gear"></i>
                     <span>Manage Users</span>
                 </a>
             </li>
@@ -233,7 +233,7 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=doctor_management&tab=schedule" data-tooltip="Doctor Management" title="Doctor Management">
-                    <i class="bi bi-calendar2-check"></i>
+                    <i class="bi bi-person-badge"></i>
                     <span>Doctor Management</span>
                 </a>
             </li>
@@ -253,7 +253,7 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="admin.php?page=records" data-tooltip="Clinical Records" title="Clinical Records">
-                    <i class="bi bi-journal-medical"></i>
+                    <i class="bi bi-folder2-open"></i>
                     <span>Clinical Records</span>
                 </a>
             </li>

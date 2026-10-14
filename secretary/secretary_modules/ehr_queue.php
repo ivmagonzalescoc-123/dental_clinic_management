@@ -27,7 +27,7 @@ $ehrRes = $conn->query("
     LEFT JOIN users u ON u.user_id = a.user_id
     LEFT JOIN timeslot t ON t.timeslot_id = a.timeslot_id
     WHERE a.status = 'awaiting_secretary_records'
-    ORDER BY a.completed_by_doctor_at ASC, a.appointment_id ASC
+    ORDER BY a.completed_by_doctor_at DESC, a.appointment_id DESC
 ");
 if ($ehrRes) {
     while ($row = $ehrRes->fetch_assoc()) $ehrQueue[] = $row;
@@ -311,8 +311,7 @@ if (!function_exists('ehr_queue_waiting')) {
                     <!-- Odontogram / Charting -->
                     <div class="tab-pane fade" id="tabOdontogram" role="tabpanel">
                         <div class="d-flex align-items-center mb-2 gap-2">
-                            <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark"><i class="bi bi-fullscreen"></i> Full Screen</button>
-                            <small class="text-muted">Use 2D chart to set status and comments.</small>
+                            <button type="button" id="openSecretaryOdontogramFullscreenBtn" class="odontogram-fs-open">Full screen</button>
                         </div>
                         <div id="secretaryOdontogramViewport" class="odontogram-viewport">
                             <button type="button" id="closeSecretaryOdontogramFullscreenBtn" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" style="display:none;"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
@@ -1043,7 +1042,7 @@ function syncSecretaryOdontogramFullscreenUI() {
     const active = isSecretaryOdontogramFullscreen();
 
     if (closeBtn) closeBtn.style.display = active ? '' : 'none';
-    if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+    if (openBtn) openBtn.textContent = active ? 'Exit full screen' : 'Full screen';
     if (container) {
         container.style.height = active ? '100%' : (SECRETARY_ODONTOGRAM_IFRAME_HEIGHT + 'px');
     }
@@ -1826,6 +1825,15 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
             }
         });
 
+        // At least one service is needed to finish a record (an extra charge alone is not a
+        // service) — unless this visit is covered by an existing installment plan. The
+        // server enforces the same rule.
+        if (!billingItems.some(item => item.item_type === 'service') && !currentVisitInstallmentInfo) {
+            showBillingProblem('Add at least one service in Billing before submitting the record.');
+            secretaryRecordSubmitting = false;
+            return;
+        }
+
         const prescriptions = collectPrescriptionRows();
 
         const followUpDateValue = document.getElementById('followUpDate')?.value || '';
@@ -1950,7 +1958,7 @@ document.getElementById('submitSecretaryRecordBtn')?.addEventListener('click', a
         if (!json.success) {
             if (json.code === 'follow_up_required') {
                 showFollowUpDateProblem(json.message || 'Set a follow-up date before submitting the record.');
-            } else if (['installment_overdue', 'installment_confirm_required', 'full_payment_required'].includes(json.code)) {
+            } else if (['services_required', 'installment_overdue', 'installment_confirm_required', 'full_payment_required'].includes(json.code)) {
                 showBillingProblem(json.message);
             } else {
                 notifySecretary(json.message || 'The system encountered an issue. Please try again.', 'danger');

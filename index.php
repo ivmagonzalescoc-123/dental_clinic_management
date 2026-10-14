@@ -1239,10 +1239,7 @@ $aboutPoints = [
                                 </div>
                             </div>
 
-                            <div id="trackLive" class="track-card-foot hidden">
-                                <span class="track-live-dot" aria-hidden="true"></span>
-                                Live &middot; this updates automatically when the clinic changes your status
-                            </div>
+
                         </div>
                     </div>
                 </div>

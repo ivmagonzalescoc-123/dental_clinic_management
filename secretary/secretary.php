@@ -259,7 +259,7 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=doctor_schedule" data-tooltip="Doctor Schedule" title="Doctor Schedule">
-                    <i class="bi bi-calendar2-check"></i>
+                    <i class="bi bi-clock"></i>
                     <span>Doctor Schedule</span>
                 </a>
             </li>
@@ -291,7 +291,7 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="secretary.php?page=services" data-tooltip="Services" title="Services">
-                    <i class="bi bi-clipboard2-pulse"></i>
+                    <i class="bi bi-bag-heart"></i>
                     <span>Services</span>
                 </a>
             </li>

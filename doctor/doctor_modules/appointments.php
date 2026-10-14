@@ -683,7 +683,7 @@ if ($stmt) {
                                     <div class="hist-section">
                                         <div class="d-flex align-items-center justify-content-between mb-2 gap-2">
                                             <span class="hist-section-title mb-0">Odontogram (read-only)</span>
-                                            <button type="button" id="histOdontogramFullscreenBtn" class="btn btn-sm btn-outline-dark">Full Screen</button>
+                                            <button type="button" id="histOdontogramFullscreenBtn" class="odontogram-fs-open">Full screen</button>
                                         </div>
                                         <div id="histOdontogramViewport" class="odontogram-viewport">
                                             <button type="button" id="histOdontogramFullscreenCloseBtn" class="odontogram-fs-close" aria-label="Exit full screen" title="Exit full screen" style="display:none;"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
@@ -1170,7 +1170,7 @@ function syncHistoryOdontogramFullscreenUI() {
     const openBtn = document.getElementById('histOdontogramFullscreenBtn');
     const active = isHistoryOdontogramFullscreen();
     if (closeBtn) closeBtn.style.display = active ? '' : 'none';
-    if (openBtn) openBtn.textContent = active ? 'Exit Full Screen' : 'Full Screen';
+    if (openBtn) openBtn.textContent = active ? 'Exit full screen' : 'Full screen';
 }
 
 document.getElementById('histOdontogramFullscreenBtn')?.addEventListener('click', function() {
@@ -2032,7 +2032,12 @@ document.getElementById('submitFinishAppointmentBtn').addEventListener('click', 
             return;
         }
         if (!json.success) {
-            notifyDoctor(json.message || 'Failed to finish appointment', 'danger');
+            if (json.code === 'services_required') {
+                notifyDoctor(json.message, 'warning');
+                document.getElementById('finishServiceSelect')?.focus();
+            } else {
+                notifyDoctor(json.message || 'Failed to finish appointment', 'danger');
+            }
             finishAppointmentSubmitting = false;
             this.disabled = false;
             this.innerHTML = btnText;

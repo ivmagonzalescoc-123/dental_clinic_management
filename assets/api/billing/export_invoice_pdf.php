@@ -174,6 +174,39 @@ foreach ($payments as $p) {
 
 $clinicName = function_exists('email_clinic_name') ? email_clinic_name() : "Azucena's Dental Clinic";
 
+/**
+ * The clinic logo as an inline image (remote/file loading is off for Dompdf). The source
+ * PNG is 1024px and ~1.4 MB, so it is scaled down first to keep the PDF small.
+ */
+function invoice_logo_data_uri(): string
+{
+    $path = dirname(dirname(__DIR__)) . '/img/clinic-logo.png';
+    if (!is_file($path)) {
+        return '';
+    }
+    if (function_exists('imagecreatefrompng') && function_exists('imagecopyresampled')) {
+        $src = @imagecreatefrompng($path);
+        if ($src) {
+            $size = 200;
+            $dst = imagecreatetruecolor($size, $size);
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 0, 0, 0, 127));
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $size, $size, imagesx($src), imagesy($src));
+            ob_start();
+            imagepng($dst, null, 9);
+            $png = ob_get_clean();
+            imagedestroy($src);
+            imagedestroy($dst);
+            if ($png) {
+                return 'data:image/png;base64,' . base64_encode($png);
+            }
+        }
+    }
+    return 'data:image/png;base64,' . base64_encode((string)file_get_contents($path));
+}
+$logoUri = invoice_logo_data_uri();
+
 $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1e293b; }
 h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
@@ -186,7 +219,10 @@ th { background: #f1f5f9; }
 .info-table td { border: none; padding: 2px 0; }
 .section-title { font-size: 13px; font-weight: bold; margin: 14px 0 6px; }
 .footer { text-align: center; color: #64748b; margin-top: 16px; font-size: 11px; }
+.logo { text-align: center; margin: 0 0 6px; }
+.logo img { width: 80px; height: 80px; }
 </style></head><body>
+' . ($logoUri !== '' ? '<div class="logo"><img src="' . $logoUri . '" alt=""></div>' : '') . '
 <h1>' . pdf_esc($clinicName) . '</h1>
 <p class="sub">Patient Invoice</p>
 <table class="info-table" style="border:none;">

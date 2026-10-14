@@ -22,6 +22,7 @@ include_once dirname(dirname(dirname(__DIR__))) . '/config/workflow_notification
 include_once dirname(dirname(dirname(__DIR__))) . '/config/idempotency_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/odontogram_helpers.php';
 include_once dirname(dirname(dirname(__DIR__))) . '/config/system_logs.php';
+include_once dirname(dirname(dirname(__DIR__))) . '/config/billing_helpers.php';
 include_once __DIR__ . '/availability_guard.php';
 
 // Discard any PHP warnings buffered during includes
@@ -192,6 +193,36 @@ try {
         exit;
     }
     
+    // A session cannot be finished with no service on it: billing is built from the
+    // services, so the secretary would receive a visit with nothing to bill. Services
+    // chosen at booking or arrival count. The one exception is a follow-up visit of an
+    // existing installment plan (e.g. a monthly braces adjustment), which is already
+    // covered by that plan. Checked before anything is saved.
+    $selectedServiceIds = $_POST['selected_service_ids'] ?? [];
+    $selectedServiceIds = is_array($selectedServiceIds)
+        ? array_values(array_unique(array_filter(array_map('intval', $selectedServiceIds), function ($sid) { return $sid > 0; })))
+        : [];
+    if (empty($selectedServiceIds)) {
+        $svcStmt = $conn->prepare('SELECT COUNT(*) AS c FROM selected_services WHERE appointment_id = ?');
+        $svcStmt->bind_param('i', $appointmentId);
+        $svcStmt->execute();
+        $existingServiceCount = (int)($svcStmt->get_result()->fetch_assoc()['c'] ?? 0);
+        $svcStmt->close();
+
+        if ($existingServiceCount === 0 && billing_get_installment_plan_for_followup($conn, $appointmentId) === null) {
+            idempotency_clear_processing($idempotencyScope, $idempotencyKey);
+            if (ob_get_length()) {
+                ob_clean();
+            }
+            echo json_encode([
+                'success' => false,
+                'message' => 'Add at least one service performed before completing the session.',
+                'code' => 'services_required',
+            ]);
+            exit;
+        }
+    }
+
     // Upload directory setup
     $uploadDir = dirname(dirname(__DIR__)) . '/uploads/appointment_media/';
     if (!file_exists($uploadDir)) {
@@ -425,8 +456,7 @@ try {
     }
     
     // 3. Save selected services
-    $selectedServiceIds = $_POST['selected_service_ids'] ?? [];
-    if (is_array($selectedServiceIds) && !empty($selectedServiceIds)) {
+    if (!empty($selectedServiceIds)) {
         // Clear existing selected_services for this appointment
         $delStmt = $conn->prepare('DELETE FROM selected_services WHERE appointment_id = ?');
         $delStmt->bind_param('i', $appointmentId);
@@ -437,11 +467,8 @@ try {
         $insStmt = $conn->prepare('INSERT INTO selected_services (appointment_id, service_id, notes) VALUES (?, ?, ?)');
         $note = 'Added by doctor during session';
         foreach ($selectedServiceIds as $sid) {
-            $sid = (int)$sid;
-            if ($sid > 0) {
-                $insStmt->bind_param('iis', $appointmentId, $sid, $note);
-                $insStmt->execute();
-            }
+            $insStmt->bind_param('iis', $appointmentId, $sid, $note);
+            $insStmt->execute();
         }
         $insStmt->close();
     }

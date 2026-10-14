@@ -1457,7 +1457,16 @@ if ($sstmt) {
                     return;
                 }
                 if (!json.success) {
-                    notifyDoctor(json.message || 'Could not complete the session.', 'danger');
+                    if (json.code === 'services_required') {
+                        notifyDoctor(json.message, 'warning');
+                        const serviceSelect = document.getElementById('ehrServiceSelect');
+                        if (serviceSelect) {
+                            serviceSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            serviceSelect.focus({ preventScroll: true });
+                        }
+                    } else {
+                        notifyDoctor(json.message || 'Could not complete the session.', 'danger');
+                    }
                     ehrFinishSubmitting = false;
                     this.disabled = false;
                     this.innerHTML = btnText;

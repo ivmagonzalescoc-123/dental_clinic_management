@@ -332,7 +332,7 @@ $pmCsrfAttr = htmlspecialchars($pmCsrf, ENT_QUOTES, 'UTF-8');
             <div class="dp-charting">
                 <div class="dp-charting__bar">
                     <div class="dp-charting__dates" id="dpChartingDates" role="group" aria-label="Choose a visit"></div>
-                    <button type="button" class="dp-link dp-charting__fs" id="dpChartingFullscreen"><i class="bi bi-arrows-fullscreen"></i> <span>Full screen</span></button>
+                    <button type="button" class="odontogram-fs-open dp-charting__fs" id="dpChartingFullscreen"><span>Full screen</span></button>
                 </div>
                 <div class="dp-charting__note" id="dpChartingNote"></div>
                 <div class="odontogram-viewport dp-charting__viewport" id="dpChartingViewport">

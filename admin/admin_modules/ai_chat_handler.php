@@ -86,7 +86,8 @@ TASK: Given a question, output ONLY a JSON object with three keys:
 - "answer": a 1-sentence label describing what the query measures (NOT repeating the user's question)
 
 SCOPE: Only Azucena's Dental Clinic: appointments, services, treatment plans, patient visit
-history and clinical records, prescriptions, billing and payments, doctor schedules.
+history and clinical records, prescriptions, billing and payments, patient balances and
+installment plans, doctor schedules.
 NEVER select or mention passwords, password hashes, emails, phone numbers, addresses, OTPs,
 tokens, login details or any account/credential information - use category "credentials".
 
@@ -106,6 +107,19 @@ CRITICAL DISTINCTION — BILLING vs PAYMENTS:
 - payments table = actual payment transactions (when money was received). Use py.amount, py.payment_method, py.paid_at.
 - When the user asks about PAYMENTS MADE (collected, received, paid) on a date, you MUST query the payments table using py.paid_at as the date filter. NEVER use billing.created_at or a.appointment_date for payment date questions.
 - When the user asks about BILLING or INVOICES (what was billed, total billed, outstanding), query the billing table.
+
+PATIENT BALANCES AND INSTALLMENTS (critical):
+- The billing table has NO patient_id. To get the patient of an invoice, payment or installment, ALWAYS go
+  billing b -> appointments a ON a.appointment_id = b.appointment_id -> patients p ON p.patient_id = a.patient_id.
+- A patient "still has a balance" / "owes" / "has unpaid bills" when b.balance > 0. Sum b.balance per patient.
+- An installment plan is one row in billing_installments bi (bi.billing_id = b.billing_id). Its scheduled payments
+  are the rows of billing_installment_terms bt (bt.installment_id = bi.installment_id).
+- A term is unpaid while bt.status <> 'paid' (statuses: pending, partial, paid). What is left on a term is (bt.amount - bt.paid_amount).
+- A plan is CURRENT / ACTIVE / ONGOING / "still being paid" when it has at least one term with bt.status <> 'paid'.
+  It is FULLY PAID / FINISHED when it has no such term.
+- A term is OVERDUE when bt.status <> 'paid' AND bt.due_date < CURDATE().
+- The NEXT PAYMENT of a plan is its unpaid term with the earliest bt.due_date.
+- "How many installments" means how many plans: COUNT(DISTINCT bi.installment_id), not the number of terms.
 
 TIME-BASED QUERIES (critical for "busiest hour", "peak hours", etc.):
 - The timeslot table has start_time and end_time columns. Use these for hourly analysis.
@@ -135,6 +149,8 @@ COLUMN -> TABLE MAP (use these exact aliases):
   doctor_leaves dl -> dl.user_id, dl.leave_start_date, dl.leave_end_date, dl.status
   billing_line_items bli -> bli.item_id, bli.billing_id, bli.appointment_id, bli.service_id, bli.description, bli.amount, bli.item_type
   timeslot t       -> t.timeslot_id, t.doctor_id, t.slot_date, t.start_time, t.end_time, t.status
+  billing_installments bi -> bi.installment_id, bi.billing_id, bi.total_amount, bi.down_payment_amount, bi.num_terms, bi.created_at
+  billing_installment_terms bt -> bt.term_id, bt.installment_id, bt.term_number, bt.due_date, bt.amount, bt.paid_amount, bt.status[pending|partial|paid], bt.paid_at
 
 DATE PATTERNS (always qualify with table alias):
   APPOINTMENTS:
@@ -230,6 +246,24 @@ A: {"category":"data","sql":"SELECT pr.prescription_date, pr.medicine_name, pr.d
 Q: How many treatment plan items are still pending?
 A: {"category":"data","sql":"SELECT tpi.status, COUNT(*) AS items, COALESCE(SUM(tpi.estimated_cost),0) AS estimated_total FROM patient_treatment_plan_items tpi WHERE tpi.status IN ('proposed','accepted') GROUP BY tpi.status","answer":"Open treatment plan items by status."}
 
+Q: How many installments are current?
+A: {"category":"data","sql":"SELECT COUNT(DISTINCT bi.installment_id) AS active_plans, COUNT(DISTINCT a.patient_id) AS patients, COALESCE(SUM(bt.amount - bt.paid_amount),0) AS remaining_balance FROM billing_installments bi INNER JOIN billing_installment_terms bt ON bt.installment_id = bi.installment_id INNER JOIN billing b ON b.billing_id = bi.billing_id INNER JOIN appointments a ON a.appointment_id = b.appointment_id WHERE bt.status <> 'paid'","answer":"Installment plans that are still being paid, with the patients involved and the amount remaining."}
+
+Q: Which patients are on installment and still have a balance?
+A: {"category":"data","sql":"SELECT p.first_name, p.last_name, COUNT(bt.term_id) AS unpaid_terms, COALESCE(SUM(bt.amount - bt.paid_amount),0) AS remaining_balance, MIN(bt.due_date) AS next_due_date FROM billing_installments bi INNER JOIN billing_installment_terms bt ON bt.installment_id = bi.installment_id INNER JOIN billing b ON b.billing_id = bi.billing_id INNER JOIN appointments a ON a.appointment_id = b.appointment_id INNER JOIN patients p ON p.patient_id = a.patient_id WHERE bt.status <> 'paid' GROUP BY p.patient_id, p.first_name, p.last_name ORDER BY remaining_balance DESC LIMIT 20","answer":"Patients with an installment plan that is not yet fully paid."}
+
+Q: Which patients still have a balance?
+A: {"category":"data","sql":"SELECT p.first_name, p.last_name, COALESCE(SUM(b.balance),0) AS balance, COUNT(b.billing_id) AS unpaid_invoices FROM billing b INNER JOIN appointments a ON a.appointment_id = b.appointment_id INNER JOIN patients p ON p.patient_id = a.patient_id WHERE b.balance > 0 GROUP BY p.patient_id, p.first_name, p.last_name ORDER BY balance DESC LIMIT 20","answer":"Patients with an unpaid balance."}
+
+Q: How much does Maria Santos still owe?
+A: {"category":"data","sql":"SELECT p.first_name, p.last_name, COALESCE(SUM(b.total_amount),0) AS total_billed, COALESCE(SUM(b.amount_paid),0) AS total_paid, COALESCE(SUM(b.balance),0) AS balance FROM patients p LEFT JOIN appointments a ON a.patient_id = p.patient_id LEFT JOIN billing b ON b.appointment_id = a.appointment_id WHERE p.first_name LIKE '%Maria%' AND p.last_name LIKE '%Santos%' GROUP BY p.patient_id, p.first_name, p.last_name LIMIT 10","answer":"The patient's total billed, paid and remaining balance."}
+
+Q: Show the installment plan of Juan Dela Cruz
+A: {"category":"data","sql":"SELECT bt.term_number, bt.due_date, bt.amount, bt.paid_amount, bt.status FROM billing_installment_terms bt INNER JOIN billing_installments bi ON bi.installment_id = bt.installment_id INNER JOIN billing b ON b.billing_id = bi.billing_id INNER JOIN appointments a ON a.appointment_id = b.appointment_id INNER JOIN patients p ON p.patient_id = a.patient_id WHERE p.first_name LIKE '%Juan%' AND p.last_name LIKE '%Dela Cruz%' ORDER BY bi.installment_id, bt.term_number LIMIT 36","answer":"The patient's installment terms with due dates and what has been paid."}
+
+Q: Who has overdue installment payments?
+A: {"category":"data","sql":"SELECT p.first_name, p.last_name, COUNT(bt.term_id) AS overdue_terms, COALESCE(SUM(bt.amount - bt.paid_amount),0) AS overdue_amount, MIN(bt.due_date) AS oldest_due_date FROM billing_installment_terms bt INNER JOIN billing_installments bi ON bi.installment_id = bt.installment_id INNER JOIN billing b ON b.billing_id = bi.billing_id INNER JOIN appointments a ON a.appointment_id = b.appointment_id INNER JOIN patients p ON p.patient_id = a.patient_id WHERE bt.status <> 'paid' AND bt.due_date < CURDATE() GROUP BY p.patient_id, p.first_name, p.last_name ORDER BY overdue_amount DESC LIMIT 20","answer":"Patients with installment payments past their due date."}
+
 Q: Hello!
 A: {"category":"greeting","sql":null,"answer":""}
 
@@ -260,6 +294,9 @@ billing(billing_id, appointment_id, total_amount, amount_paid, balance, status[u
 clinical_records(record_id, appointment_id, doctor_id, patient_id, summary, doctor_notes, follow_up_date, status[in_progress|submitted|finalized])
 patient_treatment_plan_items(item_id, patient_id, service_id, tooth_number, phase, estimated_cost, notes, status[proposed|accepted|completed|declined], created_at, accepted_at, completed_at)
 prescriptions(prescription_id, appointment_id, prescription_date, medicine_name, dosage, medicine_brand, duration, notes)
+billing_installments(installment_id, billing_id, total_amount, down_payment_amount, num_terms, created_at)
+  -> one installment plan per billing row; the patient is reached through billing -> appointments -> patients.
+billing_installment_terms(term_id, installment_id, term_number, due_date, amount, paid_amount, status[pending|partial|paid], paid_at)
 SCHEMA;
 
 // ── STEP 1: Generate SQL via Groq ──
@@ -270,7 +307,8 @@ $payload = [
         ['role' => 'user',   'content' => $userMessage],
     ],
     'temperature' => 0.05,
-    'max_tokens'  => 600,
+    // Room for the longer joins that balance / installment questions need.
+    'max_tokens'  => 900,
     'reasoning_effort' => 'low',
 ];
 

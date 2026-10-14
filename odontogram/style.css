@@ -325,6 +325,21 @@ html, body { height: 100%; margin: 0; font-family: 'Plus Jakarta Sans', ui-sans-
 
 .svg-tooth__pick {
   cursor: pointer;
+  transition: stroke 0.18s ease-out, stroke-width 0.18s ease-out, fill 0.18s ease-out;
+}
+
+/* Surfaces ease between plain, hover and selected instead of switching in one frame. */
+.svg-surface,
+.detail-surface {
+  transition: fill 0.18s ease-out, stroke 0.18s ease-out, stroke-width 0.18s ease-out, filter 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .svg-tooth__pick,
+  .svg-surface,
+  .detail-surface {
+    transition: none;
+  }
 }
 
 .svg-tooth.is-active .svg-tooth__pick {
@@ -456,7 +471,6 @@ html, body { height: 100%; margin: 0; font-family: 'Plus Jakarta Sans', ui-sans-
 
 .svg-surface {
   cursor: pointer;
-  transition: filter .1s ease;
 }
 
 .svg-surface:hover {

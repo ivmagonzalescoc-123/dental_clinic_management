@@ -15,9 +15,6 @@ if ($res) {
 
 $totalSize = 0;
 foreach ($backups as $b) $totalSize += (float)($b['file_size'] ?? 0);
-
-$backupApiUrl = rtrim((string)env('APP_URL', ''), '/') . '/scripts/cron_backup.php';
-$backupCronKey = env('CRON_SECRET_KEY', '');
 ?>
 
 <?php if (isset($_SESSION['message'])): ?>
@@ -118,8 +115,7 @@ $backupCronKey = env('CRON_SECRET_KEY', '');
 
 
 <script>
-var backupApiUrl = <?php echo json_encode($backupApiUrl); ?>;
-var backupCronKey = <?php echo json_encode($backupCronKey); ?>;
+var backupCsrfToken = <?php echo json_encode($csrf_token); ?>;
 async function runBackupNow() {
     var btn = document.getElementById('backupNowBtn');
     var status = document.getElementById('backupStatus');
@@ -129,12 +125,18 @@ async function runBackupNow() {
     status.textContent = 'Backup in progress...';
     status.classList.remove('d-none');
     try {
-        var res = await fetch(backupApiUrl + '?key=' + encodeURIComponent(backupCronKey), { method: 'GET' });
+        var res = await fetch('../assets/api/admin/create_backup.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ csrf_token: backupCsrfToken })
+        });
         var json = await res.json();
         if (json.success) {
             status.className = 'alert alert-success';
             status.textContent = 'Backup completed: ' + json.file + ' (' + json.size_kb + ' KB, ' + json.rows + ' rows)';
+            // Reload so the new backup shows in the history (the button stays off until then).
             setTimeout(function() { location.reload(); }, 1500);
+            return;
         } else {
             status.className = 'alert alert-danger';
             status.textContent = 'Backup failed: ' + (json.message || 'Unknown error');

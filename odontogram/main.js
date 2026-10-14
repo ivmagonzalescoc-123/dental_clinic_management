@@ -878,9 +878,11 @@ function focusCameraOnIsolatedTooth(mesh) {
   camAnim.start(camera.position.clone(), desiredCamPos, controls.target.clone(), focusTarget, 700);
 }
 
-function enterToothIsolation(fdi) {
+function enterToothIsolation(fdi, archCamera = null) {
   fdi = String(fdi);
-  savedArchCamera = {
+  // archCamera: where the view was before the click that started this double-click, so
+  // leaving the close-up returns there rather than to a point mid-way through a move.
+  savedArchCamera = archCamera || {
     pos: camera.position.clone(),
     target: controls.target.clone(),
   };
@@ -919,7 +921,7 @@ function exitToothIsolation() {
   if (prevSelected) setHighlight(prevSelected);
 }
 
-function toggleToothIsolation(fdi) {
+function toggleToothIsolation(fdi, archCamera = null) {
   fdi = String(fdi);
   if (isolatedToothFdi === fdi) {
     exitToothIsolation();
@@ -936,21 +938,46 @@ function toggleToothIsolation(fdi) {
     updateIsolationStatusPanel();
     return;
   }
-  enterToothIsolation(fdi);
+  enterToothIsolation(fdi, archCamera);
+}
+
+// The selected tooth's glow fades in and out (stepped in animate()) instead of switching.
+const HIGHLIGHT_INTENSITY = 0.45;
+const HIGHLIGHT_FADE_MS = 220;
+const highlightFades = new Map(); // fdi -> { from, to, t0 }
+
+function currentGlow(fdi) {
+  let level = 0;
+  forEachToothMeshMaterial(fdi, (material) => {
+    if (material.emissive) level = Math.max(level, material.emissiveIntensity || 0);
+  });
+  return level;
+}
+
+function fadeGlow(fdi, to) {
+  highlightFades.set(fdi, { from: currentGlow(fdi), to, t0: performance.now() });
+  requestRender();
+}
+
+function stepHighlightFades(now) {
+  if (!highlightFades.size) return false;
+  for (const [fdi, fade] of highlightFades) {
+    const t = Math.min((now - fade.t0) / HIGHLIGHT_FADE_MS, 1);
+    const level = fade.from + (fade.to - fade.from) * (1 - Math.pow(1 - t, 3));
+    forEachToothMeshMaterial(fdi, (material) => {
+      if (!material.emissive) material.emissive = new THREE.Color(0x000000);
+      material.emissive.set(level > 0 ? 0x7aa2ff : 0x000000);
+      material.emissiveIntensity = level;
+    });
+    if (t >= 1) highlightFades.delete(fdi);
+  }
+  return true;
 }
 
 function clearHighlight() {
   if (!highlightMesh) return;
-  requestRender();
   const prev = String(highlightMesh.userData.toothFdi || "");
-  if (prev) {
-    forEachToothMeshMaterial(prev, (material) => {
-      if (material.emissive) {
-        material.emissive.set(0x000000);
-        material.emissiveIntensity = 0;
-      }
-    });
-  }
+  if (prev) fadeGlow(prev, 0);
   highlightMesh = null;
 }
 
@@ -962,28 +989,19 @@ function setHighlight(fdi) {
   }
   if (highlightMesh) {
     const prev = String(highlightMesh.userData.toothFdi || "");
-    if (prev && prev !== fdi) {
-      forEachToothMeshMaterial(prev, (material) => {
-        if (material.emissive) {
-          material.emissive.set(0x000000);
-          material.emissiveIntensity = 0;
-        }
-      });
-    }
+    if (prev && prev !== fdi) fadeGlow(prev, 0);
     highlightMesh = null;
   }
   const mesh = toothMeshes.get(fdi);
   if (!mesh) return;
-  forEachToothMeshMaterial(fdi, (material) => {
-    if (!material.emissive) material.emissive = new THREE.Color(0x000000);
-    material.emissive.set(0x7aa2ff);
-    material.emissiveIntensity = 0.45;
-  });
+  fadeGlow(fdi, HIGHLIGHT_INTENSITY);
   mesh.userData.toothFdi = fdi;
   highlightMesh = mesh;
-  requestRender();
 }
 
+// Camera moves orbit around the point being looked at (angle and distance are blended,
+// not the raw position), so the camera swings round the arch instead of cutting through
+// it, and zooming in or out keeps a steady pace.
 const camAnim = {
   active: false,
   t0: 0,
@@ -992,7 +1010,18 @@ const camAnim = {
   toPos: new THREE.Vector3(),
   fromTarget: new THREE.Vector3(),
   toTarget: new THREE.Vector3(),
+  fromOrbit: new THREE.Spherical(),
+  toOrbit: new THREE.Spherical(),
   start(fromPos, toPos, fromTarget, toTarget, durMs) {
+    // Let any leftover drag momentum finish now; otherwise it resumes the moment the
+    // move ends and the view jerks.
+    if (controls.enableDamping && !this.active) {
+      controls.enableDamping = false;
+      controls.update();
+      controls.enableDamping = true;
+      fromPos = camera.position;
+      fromTarget = controls.target;
+    }
     this.active = true;
     this.t0 = performance.now();
     this.dur = durMs;
@@ -1000,8 +1029,31 @@ const camAnim = {
     this.toPos.copy(toPos);
     this.fromTarget.copy(fromTarget);
     this.toTarget.copy(toTarget);
+    this.fromOrbit.setFromVector3(_camOffset.subVectors(this.fromPos, this.fromTarget));
+    this.toOrbit.setFromVector3(_camOffset.subVectors(this.toPos, this.toTarget));
+    // Go the short way round.
+    let dTheta = this.toOrbit.theta - this.fromOrbit.theta;
+    if (dTheta > Math.PI) this.toOrbit.theta -= Math.PI * 2;
+    else if (dTheta < -Math.PI) this.toOrbit.theta += Math.PI * 2;
+    requestRender();
+  },
+  /** Camera position and target at eased progress tt (0..1). */
+  apply(tt) {
+    controls.target.lerpVectors(this.fromTarget, this.toTarget, tt);
+    const r0 = Math.max(this.fromOrbit.radius, 1e-3);
+    const r1 = Math.max(this.toOrbit.radius, 1e-3);
+    _camOrbit.set(
+      r0 * Math.pow(r1 / r0, tt),
+      THREE.MathUtils.lerp(this.fromOrbit.phi, this.toOrbit.phi, tt),
+      THREE.MathUtils.lerp(this.fromOrbit.theta, this.toOrbit.theta, tt)
+    );
+    _camOrbit.makeSafe();
+    camera.position.copy(controls.target).add(_camOffset.setFromSpherical(_camOrbit));
+    camera.lookAt(controls.target);
   },
 };
+const _camOffset = new THREE.Vector3();
+const _camOrbit = new THREE.Spherical();
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -1048,10 +1100,6 @@ document.addEventListener("keydown", (e) => {
  * the records pages reuse this iframe for every patient/visit.
  */
 function resetViewerToDefault() {
-  if (pendingClickTimer) {
-    clearTimeout(pendingClickTimer);
-    pendingClickTimer = null;
-  }
   lastPointerDown = { t: 0, fdi: null };
   lastBackgroundDown = 0;
   camAnim.active = false;
@@ -1071,7 +1119,6 @@ function resetViewerToDefault() {
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const DBL_CLICK_MS = 320;
-let pendingClickTimer = null;
 let lastPointerDown = { t: 0, fdi: null };
 
 function isObjectShown(obj) {
@@ -1117,25 +1164,24 @@ canvas.addEventListener("pointerdown", (e) => {
     return;
   }
   if (lastPointerDown.fdi === fdi && now - lastPointerDown.t <= DBL_CLICK_MS) {
-    if (pendingClickTimer) {
-      clearTimeout(pendingClickTimer);
-      pendingClickTimer = null;
-    }
-    lastPointerDown.t = 0;
-    lastPointerDown.fdi = null;
-    toggleToothIsolation(fdi);
+    const archCamera = lastPointerDown.camera;
+    lastPointerDown = { t: 0, fdi: null };
+    // The first click already started flying to the tooth; the close-up carries on
+    // from wherever that move has got to.
+    toggleToothIsolation(fdi, archCamera);
     selectedTooth = fdi;
     selectedSurface = "O";
     updateStatusUI();
     return;
   }
-  lastPointerDown.t = now;
-  lastPointerDown.fdi = fdi;
-  if (pendingClickTimer) clearTimeout(pendingClickTimer);
-  pendingClickTimer = setTimeout(() => {
-    pendingClickTimer = null;
-    selectSurface(fdi, "O");
-  }, DBL_CLICK_MS);
+  // Respond to a single click straight away (no wait to see whether a second click
+  // follows); a double-click then turns this into the close-up.
+  lastPointerDown = {
+    t: now,
+    fdi,
+    camera: isolatedToothFdi ? null : { pos: camera.position.clone(), target: controls.target.clone() },
+  };
+  selectSurface(fdi, "O");
 });
 
 let lastCanvasSize = "";
@@ -1158,9 +1204,14 @@ function animate() {
   requestAnimationFrame(animate);
   if (!render3d) return;
   resizeToDisplaySize();
-  // update() returns true while the camera is still moving (including damping).
-  if (controls.update()) needsRender = true;
-  if (!camAnim.active) {
+
+  if (camAnim.active) {
+    const t = (performance.now() - camAnim.t0) / camAnim.dur;
+    camAnim.apply(easeInOutCubic(Math.min(Math.max(t, 0), 1)));
+    if (t >= 1) camAnim.active = false;
+    needsRender = true;
+  } else {
+    if (controls.update()) needsRender = true;
     const distance = camera.position.distanceTo(controls.target);
     if (distance < controls.minDistance || distance > controls.maxDistance) {
       const dir = camera.position.clone().sub(controls.target).normalize();
@@ -1169,14 +1220,8 @@ function animate() {
       needsRender = true;
     }
   }
-  if (camAnim.active) {
-    const t = (performance.now() - camAnim.t0) / camAnim.dur;
-    const tt = easeInOutCubic(Math.min(Math.max(t, 0), 1));
-    camera.position.lerpVectors(camAnim.fromPos, camAnim.toPos, tt);
-    controls.target.lerpVectors(camAnim.fromTarget, camAnim.toTarget, tt);
-    if (t >= 1) camAnim.active = false;
-    needsRender = true;
-  }
+  if (stepHighlightFades(performance.now())) needsRender = true;
+
   if (!needsRender) return;
   needsRender = false;
   renderer.render(scene, camera);

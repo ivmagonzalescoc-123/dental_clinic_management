@@ -73,7 +73,7 @@ if (!function_exists('ai_chat_validate_sql')) {
     {
         $replies = [
             'greeting' => "Hello! I'm the clinic assistant. Ask me about appointments, services, treatment plans, patient visit history and records, billing, or doctor schedules.",
-            'capabilities' => 'I can answer questions about appointments (schedules, counts, no-shows), services, treatment plans, patient visit history and clinical records, billing and payments, and doctor schedules. I only answer questions about the clinic.',
+            'capabilities' => 'I can answer questions about appointments (schedules, counts, no-shows), services, treatment plans, patient visit history and clinical records, billing and payments, patient balances and installment plans, and doctor schedules. I only answer questions about the clinic.',
             'thanks' => "You're welcome! Let me know if you have more questions about the clinic.",
             'credentials' => "I can't share passwords, login details, email addresses, OTPs or other account information. I can help with appointments, services, treatment plans, patient records, and billing.",
             'off_topic' => "I can only help with Azucena's Dental Clinic: appointments, services, treatment plans, patient records, billing, and doctor schedules.",

@@ -266,6 +266,25 @@ try {
         }
     }
 
+    // A record cannot be finished with no service on it — an extra charge on its own is
+    // not a service. The one exception is a follow-up visit of an existing installment
+    // plan, which is already covered by that plan.
+    $hasServiceItem = false;
+    foreach ($lineItems as $lineItem) {
+        if (($lineItem['item_type'] ?? '') === 'service') {
+            $hasServiceItem = true;
+            break;
+        }
+    }
+    if (!$hasServiceItem && $installmentFollowUp === null) {
+        idempotency_clear_processing($idempotencyScope, $idempotencyKey);
+        api_respond([
+            'success' => false,
+            'message' => 'Add at least one service in Billing before submitting the record.',
+            'code' => 'services_required',
+        ]);
+    }
+
     // A patient who is still paying an installment plan gets no further credit by default:
     //  - today's services are paid in full today, or
     //  - they go on a second installment plan, which is only possible while every term of

@@ -152,19 +152,19 @@ switch ($role_key) {
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="patient.php?page=services" data-tooltip="Services" title="Services">
-                    <i class="bi bi-receipt"></i>
+                    <i class="bi bi-bag-heart"></i>
                     <span>Services</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="patient.php?page=clinic_records" data-tooltip="Clinic Records" title="Clinic Records">
-                    <i class="bi bi-journal-medical"></i>
+                    <i class="bi bi-folder2-open"></i>
                     <span>Clinic Records</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="patient.php?page=transactions" data-tooltip="Billing" title="Billing">
-                    <i class="bi bi-cart"></i>
+                    <i class="bi bi-receipt"></i>
                     <span>Billing</span>
                 </a>
             </li>
@@ -235,7 +235,7 @@ switch ($role_key) {
 
     <nav class="patient-mobile-nav d-lg-none" aria-label="Patient navigation">
         <a class="patient-mobile-nav-item" href="patient.php?page=services" data-page="services">
-            <i class="bi bi-receipt" aria-hidden="true"></i>
+            <i class="bi bi-bag-heart" aria-hidden="true"></i>
             <span>Services</span>
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=appointments" data-page="appointments">
@@ -247,11 +247,11 @@ switch ($role_key) {
             <span>Dashboard</span>
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=clinic_records" data-page="clinic_records">
-            <i class="bi bi-journal-medical" aria-hidden="true"></i>
+            <i class="bi bi-folder2-open" aria-hidden="true"></i>
             <span>Records</span>
         </a>
         <a class="patient-mobile-nav-item" href="patient.php?page=transactions" data-page="transactions">
-            <i class="bi bi-cart" aria-hidden="true"></i>
+            <i class="bi bi-receipt" aria-hidden="true"></i>
             <span>Billing</span>
         </a>
     </nav>

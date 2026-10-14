@@ -123,9 +123,26 @@ function dFmtT(t) {
     return (h > 12 ? h - 12 : (h || 12)) + ':' + p[1] + ' ' + (h >= 12 ? 'PM' : 'AM');
 }
 
+// The patient being seen now goes on top, then those ready to start, then those still to
+// arrive (by appointment time), then the ones already finished — most recently finished first.
+function sortDocRows(rows) {
+    const rank = { in_progress: 0, arrived: 1, late: 1, pending: 2, overdue: 2, served: 3, completed: 3, no_show: 4 };
+    return rows.slice().sort(function(a, b) {
+        const ra = rank[a.arrival_status] ?? 2;
+        const rb = rank[b.arrival_status] ?? 2;
+        if (ra !== rb) return ra - rb;
+        if (ra === 3) {
+            const byFinished = String(b.completed_by_doctor_at || '').localeCompare(String(a.completed_by_doctor_at || ''));
+            if (byFinished !== 0) return byFinished;
+        }
+        return String(a.start_time || '').localeCompare(String(b.start_time || ''));
+    });
+}
+
 function renderDocTable(rows, date) {
     const c       = document.getElementById('docArrContainer');
     const isToday = (date === DOC_TODAY);
+    rows = sortDocRows(rows);
     if (!rows.length) {
         c.innerHTML = '<div class="alert alert-info">No appointments scheduled for ' + date + '.</div>';
         return;
