@@ -45,23 +45,59 @@ try {
     $email = $details['email'];
     $address = $details['address'];
 
-    // Check by email or phone to avoid duplicate patient records.
-    $identifier_sql = 'SELECT patient_id FROM patients WHERE (email = ? AND email != "") OR (phone_number = ? AND phone_number != "") LIMIT 1';
-    $identifier_stmt = $conn->prepare($identifier_sql);
-    if ($identifier_stmt) {
-        $identifier_stmt->bind_param('ss', $email, $phone_number);
-        $identifier_stmt->execute();
-        $res = $identifier_stmt->get_result();
-        if ($res && ($existing = $res->fetch_assoc())) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Patient already exists',
-                'patient_id' => (int)$existing['patient_id'],
-                'already_exists' => true,
-            ]);
+    // Avoid duplicate records without merging different people. The email is the portal
+    // login, so it belongs to one patient: the same email under the same name is that
+    // patient again, under another name it is refused (it used to quietly return the other
+    // patient, so a child's booking landed on the parent's record). A shared phone number
+    // is common in a family, so a phone match counts only when the name matches too.
+    $sameName = function (array $row) use ($first_name, $last_name): bool {
+        return mb_strtolower(trim((string)$row['first_name'])) === mb_strtolower($first_name)
+            && mb_strtolower(trim((string)$row['last_name'])) === mb_strtolower($last_name);
+    };
+    $alreadyExists = function (int $patientId) {
+        ob_end_clean();
+        echo json_encode([
+            'success' => true,
+            'message' => 'Patient already exists',
+            'patient_id' => $patientId,
+            'already_exists' => true,
+        ]);
+        exit;
+    };
+
+    $emailStmt = $conn->prepare("SELECT patient_id, first_name, last_name FROM patients WHERE email = ? AND email <> '' ORDER BY patient_id LIMIT 1");
+    if ($emailStmt) {
+        $emailStmt->bind_param('s', $email);
+        $emailStmt->execute();
+        $byEmail = $emailStmt->get_result()->fetch_assoc();
+        $emailStmt->close();
+        if ($byEmail) {
+            if ($sameName($byEmail)) {
+                $alreadyExists((int)$byEmail['patient_id']);
+            }
+            $owner = trim($byEmail['first_name'] . ' ' . $byEmail['last_name']);
+            $inUse = 'This email is already used by ' . $owner . "'s account. Each patient needs their own email address.";
+            ob_end_clean();
+            http_response_code(422);
+            echo json_encode(['success' => false, 'message' => $inUse, 'errors' => ['email' => $inUse], 'code' => 'email_in_use']);
             exit;
         }
-        $identifier_stmt->close();
+    }
+
+    if ($phone_number !== '') {
+        $phoneStmt = $conn->prepare("SELECT patient_id, first_name, last_name FROM patients WHERE phone_number = ? AND phone_number <> ''");
+        if ($phoneStmt) {
+            $phoneStmt->bind_param('s', $phone_number);
+            $phoneStmt->execute();
+            $phoneRes = $phoneStmt->get_result();
+            while ($row = $phoneRes->fetch_assoc()) {
+                if ($sameName($row)) {
+                    $phoneStmt->close();
+                    $alreadyExists((int)$row['patient_id']);
+                }
+            }
+            $phoneStmt->close();
+        }
     }
 
     $added_by = $_SESSION['user_id'] ?? null;

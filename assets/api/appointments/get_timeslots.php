@@ -59,6 +59,17 @@ if (!appt_validate_appointment_date($date)) {
     exit;
 }
 
+// Nothing can be booked in the past. Today, a time is offered only while its slot is
+// still running (a walk-in can take the slot that started a few minutes ago).
+if ($date < date('Y-m-d')) {
+    echo json_encode(['success' => true, 'slots' => [], 'message' => 'This date has already passed.', 'duration' => $duration]);
+    exit;
+}
+$slotCutoff = $date === date('Y-m-d') ? date('H:i:s') : null;
+$slotStillOpen = function ($endTime) use ($slotCutoff) {
+    return $slotCutoff === null || (string)$endTime > $slotCutoff;
+};
+
 // ── No-doctor mode: merged slots across all available doctors ────────────
 if (!$doctor_id) {
     // Find all active doctors who are available on this date
@@ -115,6 +126,7 @@ if (!$doctor_id) {
 
     $mergedSlots = [];
     while ($row = $res->fetch_assoc()) {
+        if (!$slotStillOpen($row['end_time'])) continue;
         $firstAvailableId = (int)(explode(',', $row['available_ids'])[0]);
         $spotsAvail = (int)$row['spots_available'];
         $spotsTotal = (int)$row['spots_total'];
@@ -226,6 +238,7 @@ try {
     $res   = $stmt->get_result();
     $rawSlots = [];
     while ($row = $res->fetch_assoc()) {
+        if (!$slotStillOpen($row['end_time'])) continue;
         $rawSlots[] = [
             'timeslot_id' => (int)$row['timeslot_id'],
             'start_time'  => $row['start_time'],

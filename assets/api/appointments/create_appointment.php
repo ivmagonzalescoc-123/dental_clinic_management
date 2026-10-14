@@ -51,7 +51,10 @@ try {
     // Backward-compatible: some older clients may still post service_id.
     $service_id            = isset($_POST['service_id'])            ? (int)$_POST['service_id']            : 0;
     // New: support multiple selected services
-    $selected_service_ids  = isset($_POST['selected_service_ids'])  ? $_POST['selected_service_ids']       : [];
+    $selected_service_ids  = isset($_POST['selected_service_ids']) && is_array($_POST['selected_service_ids'])
+        // Each service once: a repeated id would double its time and its charge.
+        ? array_values(array_unique(array_filter(array_map('intval', $_POST['selected_service_ids']), function ($sid) { return $sid > 0; })))
+        : [];
     $allow_duplicate_day   = isset($_POST['allow_duplicate_day'])   ? (int)$_POST['allow_duplicate_day']   : 0;
     $booking_id            = isset($_POST['booking_id'])            ? (int)$_POST['booking_id']            : 0;
 
@@ -85,6 +88,10 @@ try {
 
     if (!appt_validate_appointment_date($appointment_date)) {
         echo json_encode(['success' => false, 'message' => 'Invalid appointment date. Use YYYY-MM-DD format.']);
+        exit;
+    }
+    if ($appointment_date < date('Y-m-d')) {
+        echo json_encode(['success' => false, 'message' => 'That date has already passed. Choose today or a later date.']);
         exit;
     }
 
@@ -166,10 +173,17 @@ try {
         $service_ids_clean = array_values(array_filter(array_map('intval', $selected_service_ids)));
         if (count($service_ids_clean) > 0) {
             $in = implode(',', $service_ids_clean);
+            // One duration per service: the latest timeslot_service row (a service can have
+            // several, which used to count it more than once), else the service default —
+            // the same figure manage_services.php gives the booking form.
             $durSql = "
-                SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 20) AS duration_minutes
+                SELECT COALESCE(ts.duration_minutes, s.default_duration_minutes, 30) AS duration_minutes
                 FROM services s
-                LEFT JOIN timeslot_service ts ON ts.service_id = s.service_id
+                LEFT JOIN (
+                    SELECT t1.service_id, t1.duration_minutes
+                    FROM timeslot_service t1
+                    INNER JOIN (SELECT service_id, MAX(id) AS max_id FROM timeslot_service GROUP BY service_id) t2 ON t2.max_id = t1.id
+                ) ts ON ts.service_id = s.service_id
                 WHERE s.service_id IN ($in)
             ";
             $durRes = $conn->query($durSql);
@@ -222,6 +236,11 @@ try {
             echo json_encode(['success' => false, 'message' => 'Timeslot date does not match selected appointment date.']);
             exit;
         }
+        // Today: the slot must still be running (same rule as get_timeslots.php).
+        if ($appointment_date === date('Y-m-d') && (string)$ts['end_time'] <= date('H:i:s')) {
+            echo json_encode(['success' => false, 'message' => 'That time has already passed. Please choose a later time.']);
+            exit;
+        }
 
         // Validate consecutive slots for the full duration
         if ($total_duration_minutes > APPT_BASE_SLOT_MINUTES) {
@@ -259,9 +278,10 @@ try {
         }
     }
 
-    // Check for duplicate patient booking on same date
+    // Check for duplicate patient booking on same date. Cancelled, rescheduled (moved to
+    // another appointment) and no-show visits don't count as an appointment that day.
     $dup_stmt = $conn->prepare(
-        'SELECT COUNT(*) AS cnt FROM appointments WHERE patient_id = ? AND appointment_date = ? AND status != "cancelled"'
+        "SELECT COUNT(*) AS cnt FROM appointments WHERE patient_id = ? AND appointment_date = ? AND status NOT IN ('cancelled', 'rescheduled', 'no_show')"
     );
     $dup_stmt->bind_param('is', $patient_id, $appointment_date);
     $dup_stmt->execute();
@@ -428,9 +448,13 @@ try {
 
     wf_notify_appointment_created($conn, $appointment_id, $patient_id, $user_id, $appointment_date, $status);
 
-    $responseMsg = ($status === 'confirmed')
-        ? 'Appointment created and confirmed.'
-        : 'Appointment created successfully! Awaiting secretary approval.';
+    if ($status === 'confirmed') {
+        $responseMsg = 'Appointment created and confirmed.';
+    } elseif ($status === 'checked_in' || $status === 'arrived') {
+        $responseMsg = 'Appointment created and the patient is checked in.';
+    } else {
+        $responseMsg = 'Appointment created successfully! Awaiting secretary approval.';
+    }
 
     ob_end_clean();
     echo json_encode([

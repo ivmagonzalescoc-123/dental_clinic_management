@@ -46,8 +46,10 @@ function appointment_can_transition_secretary(string $from, string $to): bool
     $matrix = [
         'scheduled' => ['confirmed', 'cancelled', 'no_show'],
         'confirmed' => ['arrived', 'checked_in', 'cancelled', 'no_show'],
+        // A patient who has arrived / checked in can still be cancelled (e.g. had to leave
+        // for an emergency) until the doctor starts the session.
         'arrived' => ['in_progress', 'cancelled'],
-        'checked_in' => ['in_progress', 'no_show'],
+        'checked_in' => ['in_progress', 'cancelled', 'no_show'],
         'in_progress' => ['completed'],
         'completed' => [],
         'cancelled' => [],
@@ -2295,7 +2297,7 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                                                 <i class="bi bi-person-walking"></i>
                                             </button>
                                         <?php endif; ?>
-                                        <?php elseif (in_array($status, ['confirmed','checked_in']) && !$isDisabled): ?>
+                                        <?php elseif (in_array($status, ['confirmed', 'arrived', 'checked_in'], true) && !$isDisabled): ?>
                                             <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#declineModal" onclick="setDeclineAppointment(<?php echo htmlspecialchars($appointment['appointment_id']); ?>)" title="Decline appointment">
                                                 <i class="bi bi-x-circle"></i>
                                             </button>
@@ -2998,7 +3000,10 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
 
         // Handle book appointment form: booking requires existing patient_id
         const bookForm = document.getElementById('bookAppointmentForm');
-        if (bookForm) {
+        // This runs on page load and again on every in-page visit ('page-loaded'), and those
+        // listeners pile up — set up each page's form once, or one click books it twice.
+        if (bookForm && bookForm.dataset.secInit !== '1') {
+            bookForm.dataset.secInit = '1';
             // Patient selection (single dropdown)
             const bookPatientSelect = document.getElementById('bookPatientSelect');
             if (bookPatientSelect) {
@@ -3292,6 +3297,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             const bookModal = document.getElementById('bookAppointmentModal');
             if (bookModal) {
                 bookModal.addEventListener('show.bs.modal', function () {
+                    // Patient, type, reason and emergency from the last booking too.
+                    bookForm.reset();
                     const doctorSelect = document.getElementById('bookDoctorSelect');
                     if (doctorSelect) doctorSelect.value = '';
 
@@ -3528,16 +3535,6 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                 }
             }
 
-            // Load services when modal opens (after doctor is selected)
-            if (bookModal) {
-                bookModal.addEventListener('shown.bs.modal', function () {
-                    const doctorId = document.getElementById('bookDoctorSelect')?.value;
-                    if (doctorId) {
-                        initializeSecretaryServiceManager();
-                    }
-                });
-            }
-
             // Load available timeslots based on selected doctor + date + service
             window.loadTimeslots = async function() {
                 const doctorId = document.getElementById('bookDoctorSelect')?.value;
@@ -3590,8 +3587,10 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
             };
 
             // Booking submit
+            let bookSubmitting = false;
             bookForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
+                if (bookSubmitting) return; // a second click while saving would book twice
                 const patientId = bookPatientSelect ? parseInt(bookPatientSelect.value) || 0 : 0;
                 const appointmentDate = document.getElementById('bookAppointmentDateInput') ? document.getElementById('bookAppointmentDateInput').value : '';
                 const reason = document.getElementById('bookReason').value.trim();
@@ -3615,6 +3614,9 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     ? secretaryServiceManager.selectedServices.map(s => parseInt(s.service_id))
                     : [];
 
+                const bookSubmitBtn = document.getElementById('bookSubmitBtn');
+                bookSubmitting = true;
+                if (bookSubmitBtn) bookSubmitBtn.disabled = true;
                 try {
                     let allowDuplicateDay = false;
                     const ad = new FormData();
@@ -3649,6 +3651,8 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                             variant: 'warning'
                         });
                         if (!proceed) {
+                            bookSubmitting = false;
+                            if (bookSubmitBtn) bookSubmitBtn.disabled = false;
                             return;
                         }
                         allowDuplicateDay = true;
@@ -3660,13 +3664,15 @@ document.getElementById('convertBookingForm')?.addEventListener('submit', async 
                     if (ajson.success) {
                         showSecretaryActionFeedback('Appointment created successfully', 'success');
                         location.reload();
-                    } else {
-                        showSecretaryActionFeedback('Error creating appointment: ' + (ajson.message || 'unknown'), 'danger');
+                        return; // stay disabled until the page reloads
                     }
+                    showSecretaryActionFeedback('Error creating appointment: ' + (ajson.message || 'unknown'), 'danger');
                 } catch (err) {
                     console.error(err);
                     showSecretaryActionFeedback('Error: ' + (err.message || err), 'danger');
                 }
+                bookSubmitting = false;
+                if (bookSubmitBtn) bookSubmitBtn.disabled = false;
             });
         }
     }

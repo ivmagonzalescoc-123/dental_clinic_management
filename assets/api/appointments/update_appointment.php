@@ -108,7 +108,10 @@ try {
         // checked in on the spot, without needing a separate "confirm" step.
         'scheduled' => ['confirmed', 'checked_in', 'cancelled', 'no_show'],
         'confirmed' => ['checked_in', 'cancelled', 'no_show', 'scheduled'],
-        'checked_in' => ['in_progress', 'no_show'],
+        // Arrived / checked in can still be cancelled (e.g. the patient had to leave for an
+        // emergency) until the doctor starts the session; after that it can't.
+        'arrived' => ['in_progress', 'cancelled', 'no_show'],
+        'checked_in' => ['in_progress', 'cancelled', 'no_show'],
         'in_progress' => ['completed'],
         'completed' => [],
         'cancelled' => [],

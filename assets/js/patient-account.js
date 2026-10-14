@@ -213,7 +213,7 @@
             var id = Number(res.patient_id || 0);
             var known = id && global.DoctorPatients && global.DoctorPatients.getPatient(id);
             if (res.already_exists) {
-                notify('A patient with this email or phone already exists. Opening their chart.', 'info');
+                notify('This patient is already registered. Opening their chart.', 'info');
                 if (known) global.DoctorPatients.open(id);
                 else notify('That patient is not in this list yet.', 'info');
                 return;
