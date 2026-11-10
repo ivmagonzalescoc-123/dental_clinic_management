@@ -31,6 +31,12 @@ archive/
 # Database dumps (may contain patient data)
 *.sql
 *.zip
+# ...except the clean starter database (no patient data) and schema migrations
+!sql/final/dental_management_production_v1.sql
+!sql/migrations/*.sql
+
+# Runtime lock files written by the auto-cron
+scripts/.cron_auto_lock*
 
 # PHP Dependencies (if using Composer)
 vendor/
